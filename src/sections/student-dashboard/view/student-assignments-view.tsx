@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
@@ -101,6 +102,10 @@ export function StudentAssignmentsView() {
         <Stack spacing={1.5}>
           {overview.assignments.map((assignment) => {
             const status = STATUS_CONFIG[assignment.status];
+            const overdue =
+              !!assignment.due_at &&
+              new Date(assignment.due_at).getTime() < new Date(data.generated_at).getTime() &&
+              !isSubmitted(assignment.status);
             return (
               <Card
                 key={assignment.id}
@@ -146,6 +151,68 @@ export function StudentAssignmentsView() {
                     {assignment.subject.code && `${assignment.subject.code} · `}
                     {assignment.subject.name}
                   </Typography>
+                  {assignment.due_at && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        gap: 0.5,
+                        mt: 0.75,
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: overdue ? 'error.main' : 'text.secondary',
+                        fontWeight: overdue ? 700 : 500,
+                      }}
+                    >
+                      <Iconify icon="solar:clock-circle-bold" width={16} />
+                      {overdue ? 'เลยกำหนดส่ง' : 'กำหนดส่ง'}{' '}
+                      {formatSubmissionDeadline(assignment.due_at)}
+                    </Typography>
+                  )}
+                  {assignment.description && (
+                    <Typography variant="body2" sx={{ mt: 0.75, whiteSpace: 'pre-line' }}>
+                      {assignment.description}
+                    </Typography>
+                  )}
+                  {!!assignment.attachments.length && (
+                    <Stack
+                      direction="row"
+                      spacing={0.75}
+                      useFlexGap
+                      flexWrap="wrap"
+                      sx={{ mt: 1.25 }}
+                    >
+                      {assignment.attachments.map((file) => (
+                        <Link
+                          key={file.id}
+                          href={file.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          underline="none"
+                          sx={{
+                            gap: 0.5,
+                            px: 1,
+                            py: 0.5,
+                            display: 'inline-flex',
+                            borderRadius: 1,
+                            alignItems: 'center',
+                            typography: 'caption',
+                            color: 'primary.main',
+                            bgcolor: 'primary.lighter',
+                          }}
+                        >
+                          <Iconify
+                            icon={
+                              file.mime_type.startsWith('image/')
+                                ? 'solar:gallery-wide-bold'
+                                : 'solar:file-text-bold'
+                            }
+                            width={16}
+                          />
+                          {file.file_name}
+                        </Link>
+                      ))}
+                    </Stack>
+                  )}
                   {assignment.feedback && (
                     <Typography
                       variant="caption"
@@ -241,4 +308,11 @@ function OverviewRow({ label, value, color }: { label: string; value: string; co
       </Typography>
     </Stack>
   );
+}
+
+function formatSubmissionDeadline(value: string) {
+  return new Intl.DateTimeFormat('th-TH', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }

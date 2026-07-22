@@ -69,8 +69,8 @@ const shouldForwardProp = (prop: string) => !['open', 'active', 'sx'].includes(p
  */
 const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({ theme }) => {
   const openStyles: CSSObject = {
-    color: theme.vars.palette.text.primary,
-    backgroundColor: theme.vars.palette.action.hover,
+    color: theme.vars.palette.primary.main,
+    backgroundColor: varAlpha(theme.vars.palette.primary.mainChannel, 0.08),
   };
 
   const activeStyles: CSSObject = {
@@ -85,7 +85,11 @@ const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({ theme
     width: '100%',
     paddingLeft: theme.spacing(2.5),
     paddingRight: theme.spacing(1.5),
-    color: theme.vars.palette.text.secondary,
+    color: theme.vars.palette.primary.main,
+    '&:hover': {
+      color: theme.vars.palette.primary.dark,
+      backgroundColor: varAlpha(theme.vars.palette.primary.mainChannel, 0.08),
+    },
     variants: [
       { props: { open: true }, style: openStyles },
       { props: { active: true }, style: activeStyles },

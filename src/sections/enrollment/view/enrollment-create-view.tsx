@@ -62,7 +62,7 @@ export function EnrollmentCreateView() {
     data: classrooms = [],
     isLoading: classroomsLoading,
     isError: classroomsError,
-  } = useQuery({ queryKey: ['classrooms'], queryFn: listClassrooms });
+  } = useQuery({ queryKey: ['classrooms'], queryFn: () => listClassrooms() });
 
   const methods = useForm<EnrollmentCreateSchemaType>({
     resolver: zodResolver(EnrollmentCreateSchema),
@@ -115,7 +115,7 @@ export function EnrollmentCreateView() {
     : '';
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,
@@ -200,7 +200,8 @@ export function EnrollmentCreateView() {
                     loading={studentsLoading}
                     disabled={studentsLoading || studentsError}
                     getOptionLabel={(option) =>
-                      `${option.first_name ?? ''} ${option.last_name ?? ''}`.trim() || option.username
+                      `${option.first_name ?? ''} ${option.last_name ?? ''}`.trim() ||
+                      option.username
                     }
                     isOptionEqualToValue={(option, value) => option.id === value.id}
                     onChange={(_, value) =>
@@ -235,7 +236,9 @@ export function EnrollmentCreateView() {
                         label="นักเรียน *"
                         placeholder="ค้นหาชื่อนักเรียน"
                         error={!!errors.studentId}
-                        helperText={errors.studentId?.message ?? 'เลือกนักเรียนที่ต้องการเพิ่มเข้าห้อง'}
+                        helperText={
+                          errors.studentId?.message ?? 'เลือกนักเรียนที่ต้องการเพิ่มเข้าห้อง'
+                        }
                       />
                     )}
                   />
@@ -284,7 +287,9 @@ export function EnrollmentCreateView() {
                           label="ห้องเรียน *"
                           placeholder="ค้นหาห้องเรียน"
                           error={!!errors.classroomId}
-                          helperText={errors.classroomId?.message ?? 'ห้องที่ต้องการเพิ่มนักเรียนเข้าไป'}
+                          helperText={
+                            errors.classroomId?.message ?? 'ห้องที่ต้องการเพิ่มนักเรียนเข้าไป'
+                          }
                         />
                       )}
                     />
@@ -354,7 +359,9 @@ export function EnrollmentCreateView() {
             bgcolor: 'background.neutral',
           }}
         >
-          <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box
+            sx={{ mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+          >
             <Box>
               <Typography variant="overline" sx={{ color: 'primary.main' }}>
                 ตรวจสอบก่อนยืนยัน
@@ -459,7 +466,11 @@ function SummaryRow({ icon, label, value, ready }: SummaryRowProps) {
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           {label}
         </Typography>
-        <Typography variant="body2" noWrap sx={{ fontWeight: 600, color: ready ? 'text.primary' : 'text.disabled' }}>
+        <Typography
+          variant="body2"
+          noWrap
+          sx={{ fontWeight: 600, color: ready ? 'text.primary' : 'text.disabled' }}
+        >
           {value}
         </Typography>
       </Box>

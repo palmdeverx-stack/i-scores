@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { loadTeacherAssignment, canAccessTeacherAssignment } from 'src/lib/teacher-assignment-access';
+import {
+  loadTeacherAssignment,
+  canAccessTeacherAssignment,
+} from 'src/lib/teacher-assignment-access';
 
 // ----------------------------------------------------------------------
 
@@ -20,7 +23,7 @@ const VALID_STATUSES = [
 async function loadAssignmentWithAccess(id: string) {
   const { data: assignment } = await supabaseAdmin
     .from('assignments')
-    .select('id, title, full_score, teacher_assignment_id')
+    .select('id, title, description, full_score, teacher_assignment_id, created_at')
     .eq('id', id)
     .single();
 
@@ -51,7 +54,9 @@ export async function GET(request: Request, { params }: RouteParams) {
     await Promise.all([
       supabaseAdmin
         .from('enrollments')
-        .select('student_number, student:app_users(id, username, first_name, last_name)')
+        .select(
+          'student_number, student:app_users(id, username, first_name, last_name, avatar_url)'
+        )
         .eq('classroom_id', classroomId)
         .order('student_number'),
       supabaseAdmin.from('scores').select('*').eq('assignment_id', id),
@@ -76,7 +81,16 @@ export async function GET(request: Request, { params }: RouteParams) {
     };
   });
 
-  return NextResponse.json({ assignment: loaded.assignment, rows });
+  return NextResponse.json({
+    assignment: {
+      ...loaded.assignment,
+      subject_name: (loaded.teacherAssignment as any)?.subjects?.name ?? null,
+      subject_code: (loaded.teacherAssignment as any)?.subjects?.code ?? null,
+      classroom_name: (loaded.teacherAssignment as any)?.classrooms?.name ?? null,
+      semester_name: (loaded.teacherAssignment as any)?.semesters?.name ?? null,
+    },
+    rows,
+  });
 }
 
 export async function POST(request: Request, { params }: RouteParams) {

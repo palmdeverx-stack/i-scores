@@ -1,18 +1,18 @@
 'use client';
 
-import * as z from 'zod';
-import { useMemo, useState, useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import type { TeacherAssignment } from '../teacher-assignment-actions';
+
+import { useMemo, useState } from 'react';
+import { varAlpha } from 'minimal-shared/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
@@ -28,16 +28,11 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
-import { Form, Field } from 'src/components/hook-form';
-
-import { listUsers } from 'src/sections/user/user-actions';
-import { listSubjects } from 'src/sections/subject/subject-actions';
-import { listClassrooms } from 'src/sections/classroom/classroom-actions';
-import { listSemesters, listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
 
 import { useAuthContext } from 'src/auth/hooks';
 
-import { listTeacherAssignments, createTeacherAssignment } from '../teacher-assignment-actions';
+import { TeacherAssignmentFormDialog } from '../components/teacher-assignment-form-dialog';
+import { listTeacherAssignments, deleteTeacherAssignment } from '../teacher-assignment-actions';
 
 // ----------------------------------------------------------------------
 
@@ -46,31 +41,39 @@ const summaryItems = [
     key: 'classes',
     label: 'ชั้นเรียนทั้งหมด',
     icon: 'solar:notebook-bold-duotone',
-    color: '#0B7A57',
+    color: 'success.main',
+    bgcolor: 'success.lighter',
   },
-  { key: 'subjects', label: 'รายวิชา', icon: 'solar:notes-bold-duotone', color: '#3D5AFE' },
+  {
+    key: 'subjects',
+    label: 'รายวิชา',
+    icon: 'solar:notes-bold-duotone',
+    color: 'primary.main',
+    bgcolor: 'primary.lighter',
+  },
   {
     key: 'classrooms',
     label: 'ห้องเรียน',
     icon: 'solar:users-group-rounded-bold-duotone',
-    color: '#E77817',
+    color: 'warning.main',
+    bgcolor: 'warning.lighter',
   },
-  { key: 'semesters', label: 'ภาคเรียน', icon: 'solar:calendar-date-bold', color: '#8E4EC6' },
+  {
+    key: 'semesters',
+    label: 'ภาคเรียน',
+    icon: 'solar:calendar-date-bold',
+    color: 'secondary.dark',
+    bgcolor: 'secondary.lighter',
+  },
 ] as const;
-
-const CreateSchema = z.object({
-  teacherId: z.string().min(1, { error: 'กรุณาเลือกครูผู้สอน!' }),
-  subjectId: z.string().min(1, { error: 'กรุณาเลือกรายวิชา!' }),
-  classroomId: z.string().min(1, { error: 'กรุณาเลือกห้องเรียน!' }),
-  academicYearId: z.string().min(1, { error: 'กรุณาเลือกปีการศึกษา!' }),
-  semesterId: z.string().min(1, { error: 'กรุณาเลือกภาคเรียน!' }),
-});
 
 export function TeacherAssignmentListView() {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState<TeacherAssignment | null>(null);
+  const [deletingRow, setDeletingRow] = useState<TeacherAssignment | null>(null);
   const queryClient = useQueryClient();
 
   const detailPath = (id: string) =>
@@ -86,80 +89,29 @@ export function TeacherAssignmentListView() {
     queryFn: listTeacherAssignments,
   });
 
-  const { data: teachers = [], isLoading: teachersLoading } = useQuery({
-    queryKey: ['users', 'teacher'],
-    queryFn: () => listUsers('teacher'),
-    enabled: !isTeacher,
-  });
-  const { data: subjects = [], isLoading: subjectsLoading } = useQuery({
-    queryKey: ['subjects'],
-    queryFn: () => listSubjects(),
-    enabled: !isTeacher,
-  });
-  const { data: classrooms = [], isLoading: classroomsLoading } = useQuery({
-    queryKey: ['classrooms'],
-    queryFn: listClassrooms,
-    enabled: !isTeacher,
-  });
-  const { data: academicYears = [], isLoading: yearsLoading } = useQuery({
-    queryKey: ['academic-years'],
-    queryFn: listAcademicYears,
-    enabled: !isTeacher,
-  });
-
-  const methods = useForm({
-    resolver: zodResolver(CreateSchema),
-    defaultValues: {
-      teacherId: '',
-      subjectId: '',
-      classroomId: '',
-      academicYearId: '',
-      semesterId: '',
-    },
-  });
-  const { handleSubmit, control, reset, setValue } = methods;
-  const academicYearId = useWatch({ control, name: 'academicYearId' });
-  const semesterId = useWatch({ control, name: 'semesterId' });
-  const availableSubjects = subjects.filter((subject) => subject.semester_id === semesterId);
-  const { data: semesters = [], isLoading: semestersLoading } = useQuery({
-    queryKey: ['semesters', academicYearId],
-    queryFn: () => listSemesters(academicYearId),
-    enabled: !isTeacher && !!academicYearId,
-  });
-
-  useEffect(() => {
-    setValue('semesterId', '');
-    setValue('subjectId', '');
-  }, [academicYearId, setValue]);
-
-  useEffect(() => {
-    setValue('subjectId', '');
-  }, [semesterId, setValue]);
-
-  const createMutation = useMutation({
-    mutationFn: createTeacherAssignment,
+  const deleteMutation = useMutation({
+    mutationFn: deleteTeacherAssignment,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['teacher-assignments'] });
-      setDialogOpen(false);
-      reset();
+      await queryClient.invalidateQueries({ queryKey: ['teacher-dashboard'] });
+      setDeletingRow(null);
     },
   });
 
-  const closeDialog = () => {
-    if (createMutation.isPending) return;
-    setDialogOpen(false);
-    reset();
-    createMutation.reset();
+  const openCreateDialog = () => {
+    setEditingRow(null);
+    setDialogOpen(true);
   };
 
-  const onSubmit = handleSubmit((data) =>
-    createMutation.mutate({
-      teacherId: data.teacherId,
-      subjectId: data.subjectId,
-      classroomId: data.classroomId,
-      semesterId: data.semesterId,
-    })
-  );
+  const openEditDialog = (row: TeacherAssignment) => {
+    setEditingRow(row);
+    setDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingRow(null);
+  };
 
   const filteredRows = useMemo(() => {
     const keyword = search.trim().toLocaleLowerCase('th');
@@ -193,7 +145,7 @@ export function TeacherAssignmentListView() {
   );
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Card
         sx={{
           mb: 4,
@@ -201,7 +153,8 @@ export function TeacherAssignmentListView() {
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
-          background: 'linear-gradient(135deg, #123D2B 0%, #176B4D 100%)',
+          background: (theme) =>
+            `linear-gradient(135deg, ${theme.vars.palette.primary.darker} 0%, ${theme.vars.palette.primary.main} 100%)`,
           '&::after': {
             width: 240,
             height: 240,
@@ -210,7 +163,7 @@ export function TeacherAssignmentListView() {
             position: 'absolute',
             right: { xs: -150, sm: -80 },
             bottom: -150,
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            backgroundColor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.08),
           },
         }}
       >
@@ -236,32 +189,31 @@ export function TeacherAssignmentListView() {
             <Typography component="h1" variant="h3" sx={{ mb: 1 }}>
               {isTeacher ? 'รายวิชาที่รับผิดชอบ' : 'ครูประจำวิชา'}
             </Typography>
-            <Typography sx={{ maxWidth: 600, color: 'rgba(255, 255, 255, 0.76)' }}>
+            <Typography
+              sx={(theme) => ({
+                maxWidth: 600,
+                color: varAlpha(theme.vars.palette.common.whiteChannel, 0.76),
+              })}
+            >
               {isTeacher
                 ? 'เลือกวิชาและห้องเรียน เพื่อสร้างงาน ตรวจสอบรายชื่อนักเรียน และบันทึกคะแนน'
                 : 'จัดการครูผู้สอน รายวิชา และห้องเรียนที่ได้รับมอบหมาย'}
             </Typography>
           </Box>
 
-          {!isTeacher && (
-            <Button
-              variant="contained"
-              onClick={() => {
-                reset();
-                createMutation.reset();
-                setDialogOpen(true);
-              }}
-              startIcon={<Iconify icon="mingcute:add-line" />}
-              sx={{
-                flexShrink: 0,
-                color: 'primary.darker',
-                bgcolor: 'common.white',
-                '&:hover': { bgcolor: 'grey.200' },
-              }}
-            >
-              เพิ่มครูประจำวิชา
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            onClick={openCreateDialog}
+            startIcon={<Iconify icon="mingcute:add-line" />}
+            sx={{
+              flexShrink: 0,
+              color: 'primary.darker',
+              bgcolor: 'common.white',
+              '&:hover': { bgcolor: 'grey.200' },
+            }}
+          >
+            {isTeacher ? 'เพิ่มรายวิชาที่สอน' : 'เพิ่มครูประจำวิชา'}
+          </Button>
         </Box>
       </Card>
 
@@ -285,7 +237,7 @@ export function TeacherAssignmentListView() {
                   borderRadius: 1.5,
                   placeItems: 'center',
                   color: item.color,
-                  bgcolor: `${item.color}14`,
+                  bgcolor: item.bgcolor,
                 }}
               >
                 <Iconify icon={item.icon} width={25} />
@@ -315,10 +267,10 @@ export function TeacherAssignmentListView() {
       >
         <Box>
           <Typography component="h2" variant="h5">
-            ชั้นเรียนของฉัน
+            วิชาของฉัน
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {isLoading ? 'กำลังโหลดข้อมูล...' : `พบ ${filteredRows.length} ชั้นเรียน`}
+            {isLoading ? 'กำลังโหลดข้อมูล...' : `พบ ${filteredRows.length} วิชา`}
           </Typography>
         </Box>
 
@@ -393,12 +345,14 @@ export function TeacherAssignmentListView() {
                 variant="outlined"
                 sx={{
                   height: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
                   transition:
                     'transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease',
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     borderColor: 'primary.main',
-                    boxShadow: '0 14px 32px rgba(18, 61, 43, 0.12)',
+                    boxShadow: (theme) => theme.customShadows.card,
                   },
                   '&:focus-within': { outline: '3px solid', outlineColor: 'primary.lighter' },
                 }}
@@ -407,25 +361,25 @@ export function TeacherAssignmentListView() {
                   component={RouterLink}
                   href={detailPath(row.id)}
                   aria-label={`เปิดรายวิชา ${row.subject.name} ห้อง ${row.classroom.name}`}
-                  sx={{ height: 1, p: 3, display: 'flex', alignItems: 'stretch' }}
+                  sx={{ width: 1, flex: 1, p: 3, display: 'flex', alignItems: 'stretch' }}
                 >
                   <Box sx={{ width: 1, display: 'flex', flexDirection: 'column' }}>
                     <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'flex-start' }}>
-                      <Box
+                      <Avatar
+                        src={row.subject.image_url ?? undefined}
+                        variant="rounded"
                         sx={{
                           width: 48,
                           height: 48,
                           mr: 2,
                           flexShrink: 0,
-                          display: 'grid',
                           borderRadius: 1.75,
                           color: 'primary.main',
-                          placeItems: 'center',
                           bgcolor: 'primary.lighter',
                         }}
                       >
                         <Iconify icon="solar:notebook-bold-duotone" width={28} />
-                      </Box>
+                      </Avatar>
                       <Box sx={{ minWidth: 0 }}>
                         <Typography variant="h6" sx={{ lineHeight: 1.35 }}>
                           {row.subject.name}
@@ -473,6 +427,38 @@ export function TeacherAssignmentListView() {
                     </Box>
                   </Box>
                 </CardActionArea>
+                <Box
+                  sx={{
+                    gap: 1,
+                    px: 2,
+                    py: 1.25,
+                    width: 1,
+                    display: 'flex',
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  <Button
+                    size="small"
+                    color="inherit"
+                    onClick={() => openEditDialog(row)}
+                    startIcon={<Iconify icon="solar:pen-bold" />}
+                  >
+                    แก้ไข
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    onClick={() => {
+                      deleteMutation.reset();
+                      setDeletingRow(row);
+                    }}
+                    startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+                  >
+                    ลบ
+                  </Button>
+                </Box>
               </Card>
             );
           })}
@@ -502,130 +488,74 @@ export function TeacherAssignmentListView() {
           <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
             {search
               ? 'ลองเปลี่ยนคำค้นหา หรือล้างคำค้นหาเพื่อดูทั้งหมด'
-              : 'เมื่อได้รับมอบหมาย รายวิชาจะแสดงที่นี่'}
+              : isTeacher
+                ? 'เริ่มเพิ่มวิชา ห้องเรียน และภาคเรียนที่คุณรับผิดชอบ'
+                : 'เมื่อได้รับมอบหมาย รายวิชาจะแสดงที่นี่'}
           </Typography>
-          {search && (
+          {search ? (
             <Button sx={{ mt: 2.5 }} onClick={() => setSearch('')}>
               ล้างคำค้นหา
             </Button>
+          ) : (
+            isTeacher && (
+              <Button
+                variant="contained"
+                sx={{ mt: 2.5 }}
+                onClick={openCreateDialog}
+                startIcon={<Iconify icon="mingcute:add-line" />}
+              >
+                เพิ่มรายวิชาที่สอน
+              </Button>
+            )
           )}
         </Card>
       )}
 
-      {!isTeacher && (
-        <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
-          <Form methods={methods} onSubmit={onSubmit}>
-            <DialogTitle sx={{ pb: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography component="h2" variant="h6">
-                    เพิ่มครูประจำวิชา
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                    มอบหมายครูให้กับรายวิชา ห้องเรียน และภาคเรียน
-                  </Typography>
-                </Box>
-                <IconButton
-                  onClick={closeDialog}
-                  disabled={createMutation.isPending}
-                  aria-label="ปิดหน้าต่าง"
-                >
-                  <Iconify icon="mingcute:close-line" />
-                </IconButton>
-              </Box>
-            </DialogTitle>
-            <DialogContent sx={{ pt: 2 }}>
-              {createMutation.error && (
-                <Alert severity="error" sx={{ mb: 2.5 }}>
-                  {createMutation.error.message}
-                </Alert>
-              )}
-              <Box
-                sx={{
-                  gap: 2.5,
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-                }}
-              >
-                <Field.Select
-                  name="teacherId"
-                  label="ครูผู้สอน *"
-                  disabled={teachersLoading}
-                  helperText="ครูที่รับผิดชอบรายวิชานี้"
-                >
-                  {teachers.map((teacher) => (
-                    <MenuItem key={teacher.id} value={teacher.id}>
-                      {`${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim() ||
-                        teacher.username}
-                    </MenuItem>
-                  ))}
-                </Field.Select>
-                <Field.Select
-                  name="subjectId"
-                  label="รายวิชา *"
-                  disabled={!semesterId || subjectsLoading}
-                  helperText={
-                    semesterId
-                      ? 'แสดงเฉพาะวิชาที่เปิดในภาคเรียนนี้'
-                      : 'เลือกปีการศึกษาและภาคเรียนก่อน'
-                  }
-                >
-                  {availableSubjects.map((subject) => (
-                    <MenuItem key={subject.id} value={subject.id}>
-                      {subject.code ? `${subject.code} · ${subject.name}` : subject.name}
-                    </MenuItem>
-                  ))}
-                </Field.Select>
-                <Field.Select
-                  name="classroomId"
-                  label="ห้องเรียน *"
-                  disabled={classroomsLoading}
-                  helperText="ห้องเรียนที่รับผิดชอบ"
-                >
-                  {classrooms.map((classroom) => (
-                    <MenuItem key={classroom.id} value={classroom.id}>
-                      {classroom.name}
-                    </MenuItem>
-                  ))}
-                </Field.Select>
-                <Field.Select
-                  name="academicYearId"
-                  label="ปีการศึกษา *"
-                  disabled={yearsLoading}
-                  helperText="เลือกก่อนเพื่อโหลดภาคเรียน"
-                >
-                  {academicYears.map((year) => (
-                    <MenuItem key={year.id} value={year.id}>
-                      {year.year}
-                    </MenuItem>
-                  ))}
-                </Field.Select>
-                <Field.Select
-                  name="semesterId"
-                  label="ภาคเรียน *"
-                  disabled={!academicYearId || semestersLoading}
-                  helperText={academicYearId ? 'ภาคเรียนที่ต้องการมอบหมาย' : 'เลือกปีการศึกษาก่อน'}
-                  sx={{ gridColumn: { sm: '1 / -1' } }}
-                >
-                  {semesters.map((semester) => (
-                    <MenuItem key={semester.id} value={semester.id}>
-                      {semester.name}
-                    </MenuItem>
-                  ))}
-                </Field.Select>
-              </Box>
-            </DialogContent>
-            <DialogActions>
-              <Button color="inherit" onClick={closeDialog} disabled={createMutation.isPending}>
-                ยกเลิก
-              </Button>
-              <Button type="submit" variant="contained" loading={createMutation.isPending}>
-                เพิ่มครูประจำวิชา
-              </Button>
-            </DialogActions>
-          </Form>
-        </Dialog>
-      )}
+      <TeacherAssignmentFormDialog
+        open={dialogOpen}
+        editingRow={editingRow}
+        onClose={closeDialog}
+      />
+
+      <Dialog
+        open={!!deletingRow}
+        onClose={() => !deleteMutation.isPending && setDeletingRow(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>ยืนยันการลบรายวิชาที่รับผิดชอบ</DialogTitle>
+        <DialogContent>
+          {deleteMutation.error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {deleteMutation.error.message}
+            </Alert>
+          )}
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            งาน คะแนน และตารางสอนที่อยู่ภายใต้รายการนี้จะถูกลบไปด้วย
+          </Alert>
+          <Typography variant="body2">
+            ต้องการลบวิชา <strong>{deletingRow?.subject.name}</strong> ห้อง{' '}
+            <strong>{deletingRow?.classroom.name}</strong> หรือไม่?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="inherit"
+            disabled={deleteMutation.isPending}
+            onClick={() => setDeletingRow(null)}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            loading={deleteMutation.isPending}
+            onClick={() => deletingRow && deleteMutation.mutate(deletingRow.id)}
+          >
+            ยืนยันการลบ
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

@@ -20,13 +20,30 @@ export type ScoreEntry = {
 };
 
 export type GradebookRow = {
-  student: { id: string; username: string; first_name: string | null; last_name: string | null };
+  student: {
+    id: string;
+    username: string;
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+  };
   studentNumber: string | null;
   score: ScoreEntry;
 };
 
 export type Gradebook = {
-  assignment: { id: string; title: string; full_score: number };
+  assignment: {
+    id: string;
+    teacher_assignment_id: string;
+    title: string;
+    description: string | null;
+    full_score: number;
+    created_at: string;
+    subject_name: string | null;
+    subject_code: string | null;
+    classroom_name: string | null;
+    semester_name: string | null;
+  };
   rows: GradebookRow[];
 };
 

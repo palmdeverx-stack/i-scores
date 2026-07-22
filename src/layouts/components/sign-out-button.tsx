@@ -71,7 +71,7 @@ export function SignOutButton({ onClose, sx, ...other }: Props) {
       sx={sx}
       {...other}
     >
-      Logout
+      ลงชื่อออก
     </Button>
   );
 }

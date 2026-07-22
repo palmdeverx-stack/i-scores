@@ -6,8 +6,8 @@ import { useBoolean } from 'minimal-shared/hooks';
 import { useMutation } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
+import { Box, Card } from '@mui/material';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -68,7 +68,7 @@ export function JwtChangePasswordView() {
     : null;
 
   return (
-    <>
+    <Card sx={{ p: 3 }}>
       <FormHead
         title="ตั้งรหัสผ่านใหม่"
         description="เพื่อความปลอดภัย กรุณาตั้งรหัสผ่านใหม่ก่อนเข้าใช้งานระบบ"
@@ -124,6 +124,6 @@ export function JwtChangePasswordView() {
           </Button>
         </Box>
       </Form>
-    </>
+    </Card>
   );
 }

@@ -3,11 +3,13 @@
 import type { SubmissionStatus } from 'src/sections/gradebook/gradebook-actions';
 
 import { useState } from 'react';
+import { varAlpha } from 'minimal-shared/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
 import Tab from '@mui/material/Tab';
+import Link from '@mui/material/Link';
+import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
@@ -32,6 +34,8 @@ import TableContainer from '@mui/material/TableContainer';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
+import { fDateTime } from 'src/utils/format-time';
+
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 
@@ -39,6 +43,7 @@ import { listAssignments } from 'src/sections/assignment/assignment-actions';
 
 import { useAuthContext } from 'src/auth/hooks';
 
+import { TeacherSubjectImageDialog } from '../components/teacher-subject-image-dialog';
 import {
   getRoster,
   getSchedules,
@@ -81,6 +86,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
   const isTeacher = user?.role === 'teacher';
   const [tab, setTab] = useState<'overview' | 'students' | 'assignments' | 'schedule'>('overview');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
 
   const backPath = isTeacher ? paths.teacher.assignments : paths.admin.teacherAssignment.root;
 
@@ -120,7 +126,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
     : '-';
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Button
         component={RouterLink}
         href={backPath}
@@ -138,7 +144,8 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
-          background: 'linear-gradient(135deg, #123D2B 0%, #176B4D 100%)',
+          background: (theme) =>
+            `linear-gradient(135deg, ${theme.vars.palette.primary.darker} 0%, ${theme.vars.palette.primary.main} 100%)`,
           '&::after': {
             width: 240,
             height: 240,
@@ -147,7 +154,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
             position: 'absolute',
             right: -90,
             bottom: -170,
-            bgcolor: 'rgba(255,255,255,0.08)',
+            bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.08),
           },
         }}
       >
@@ -162,8 +169,9 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
           }}
         >
           <Avatar
+            src={roster?.subjectImageUrl ?? undefined}
             variant="rounded"
-            sx={{ width: 68, height: 68, color: 'primary.darker', bgcolor: 'common.white' }}
+            sx={{ width: 120, height: 120, color: 'primary.darker', bgcolor: 'common.white' }}
           >
             <Iconify icon="solar:notes-bold-duotone" width={36} />
           </Avatar>
@@ -184,7 +192,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                 mt: 1.25,
                 display: 'flex',
                 flexWrap: 'wrap',
-                color: 'rgba(255,255,255,0.78)',
+                color: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.78),
               }}
             >
               <Typography variant="body2">ห้อง {roster?.classroomName ?? '-'}</Typography>
@@ -194,16 +202,34 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
               <Typography variant="body2">ปีการศึกษา {roster?.academicYear ?? '-'}</Typography>
             </Box>
           </Box>
-          <Button
-            component={RouterLink}
-            href={assignmentNewPath}
-            variant="contained"
-            color="inherit"
-            startIcon={<Iconify icon="mingcute:add-line" />}
-            sx={{ flexShrink: 0, color: 'primary.darker' }}
-          >
-            สร้างงาน
-          </Button>
+          <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+            <Button
+              variant="outlined"
+              disabled={!roster?.subjectId}
+              onClick={() => setImageDialogOpen(true)}
+              sx={(theme) => ({
+                flexShrink: 0,
+                color: 'common.white',
+                borderColor: varAlpha(theme.vars.palette.common.whiteChannel, 0.4),
+                '&:hover': {
+                  borderColor: 'common.white',
+                  bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.08),
+                },
+              })}
+            >
+              จัดการรูปวิชา
+            </Button>
+            <Button
+              component={RouterLink}
+              href={assignmentNewPath}
+              variant="contained"
+              color="secondary"
+              startIcon={<Iconify icon="mingcute:add-line" />}
+              sx={{ flexShrink: 0, color: 'primary.darker' }}
+            >
+              สร้างงาน
+            </Button>
+          </Box>
         </Box>
       </Card>
 
@@ -212,6 +238,14 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
           โหลดข้อมูลบางส่วนไม่สำเร็จ กรุณาลองรีเฟรชหน้าอีกครั้ง
         </Alert>
       )}
+
+      <TeacherSubjectImageDialog
+        open={imageDialogOpen}
+        subjectId={roster?.subjectId ?? ''}
+        subjectName={roster?.subjectName ?? 'รายวิชา'}
+        imageUrl={roster?.subjectImageUrl ?? null}
+        onClose={() => setImageDialogOpen(false)}
+      />
 
       <Card variant="outlined" sx={{ mb: 3 }}>
         <Tabs
@@ -264,21 +298,24 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                 value={rosterLoading ? null : (roster?.roster.length ?? 0)}
                 suffix="คน"
                 icon="solar:users-group-rounded-bold"
-                color="#3D5AFE"
+                color="primary.main"
+                bgcolor="primary.lighter"
               />
               <OverviewCard
                 label="งานทั้งหมด"
                 value={assignmentsLoading ? null : (assignments?.length ?? 0)}
                 suffix="งาน"
                 icon="solar:list-bold"
-                color="#8E4EC6"
+                color="secondary.dark"
+                bgcolor="secondary.lighter"
               />
               <OverviewCard
                 label="คาบเรียนต่อสัปดาห์"
                 value={schedulesLoading ? null : (schedules?.length ?? 0)}
                 suffix="คาบ"
                 icon="solar:calendar-date-bold"
-                color="#E77817"
+                color="warning.main"
+                bgcolor="warning.lighter"
               />
             </Box>
 
@@ -487,6 +524,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                   <TableRow>
                     <TableCell>ชื่องาน</TableCell>
                     <TableCell>รายละเอียด</TableCell>
+                    <TableCell>กำหนดส่ง</TableCell>
                     <TableCell align="center">คะแนนเต็ม</TableCell>
                     <TableCell align="right">การจัดการ</TableCell>
                   </TableRow>
@@ -494,13 +532,13 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                 <TableBody>
                   {assignmentsLoading && (
                     <TableRow>
-                      <TableCell colSpan={4}>กำลังโหลด...</TableCell>
+                      <TableCell colSpan={5}>กำลังโหลด...</TableCell>
                     </TableRow>
                   )}
                   {!assignmentsLoading && !assignments?.length && (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         sx={{ py: 6, textAlign: 'center', color: 'text.secondary' }}
                       >
                         ยังไม่มีงาน กด “สร้างงาน” เพื่อเริ่มต้น
@@ -519,6 +557,29 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                           sx={{ maxWidth: 360, color: 'text.secondary' }}
                         >
                           {assignment.description || 'ไม่มีรายละเอียด'}
+                        </Typography>
+                        {!!assignment.attachments.length && (
+                          <Box sx={{ gap: 0.75, mt: 1, display: 'flex', flexWrap: 'wrap' }}>
+                            {assignment.attachments.map((file) => (
+                              <Link
+                                key={file.id}
+                                href={file.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                underline="hover"
+                                variant="caption"
+                              >
+                                {file.file_name}
+                              </Link>
+                            ))}
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                          {assignment.due_at
+                            ? fDateTime(assignment.due_at, 'DD/MM/YYYY HH:mm')
+                            : 'ไม่กำหนด'}
                         </Typography>
                       </TableCell>
                       <TableCell align="center">{assignment.full_score}</TableCell>
@@ -562,9 +623,10 @@ type OverviewCardProps = {
   suffix: string;
   icon: 'solar:users-group-rounded-bold' | 'solar:list-bold' | 'solar:calendar-date-bold';
   color: string;
+  bgcolor: string;
 };
 
-function OverviewCard({ label, value, suffix, icon, color }: OverviewCardProps) {
+function OverviewCard({ label, value, suffix, icon, color, bgcolor }: OverviewCardProps) {
   return (
     <Card variant="outlined" sx={{ p: 2.5 }}>
       <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
@@ -577,7 +639,7 @@ function OverviewCard({ label, value, suffix, icon, color }: OverviewCardProps) 
             borderRadius: 1.75,
             placeItems: 'center',
             color,
-            bgcolor: `${color}14`,
+            bgcolor,
           }}
         >
           <Iconify icon={icon} width={25} />

@@ -12,6 +12,7 @@ export type UserRow = {
   email: string | null;
   first_name: string | null;
   last_name: string | null;
+  avatar_url: string | null;
   role: UserRole;
   school_id: string | null;
   school: { name: string } | null;
@@ -67,4 +68,27 @@ export async function createUser(params: CreateUserParams) {
   }
 
   return json.user;
+}
+
+export async function uploadStudentAvatar(studentId: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`/api/admin/students/${studentId}/avatar`, {
+    method: 'POST',
+    headers: authHeader(),
+    body: formData,
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถอัปโหลดรูปนักเรียนได้');
+  return json.avatarUrl;
+}
+
+export async function deleteStudentAvatar(studentId: string): Promise<void> {
+  const response = await fetch(`/api/admin/students/${studentId}/avatar`, {
+    method: 'DELETE',
+    headers: authHeader(),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถลบรูปนักเรียนได้');
 }

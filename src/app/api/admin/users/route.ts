@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   let query = supabaseAdmin
     .from('app_users')
     .select(
-      'id, username, email, first_name, last_name, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, password_ciphertext'
+      'id, username, email, first_name, last_name, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, password_ciphertext'
     )
     .order('created_at', { ascending: false });
 
@@ -125,7 +125,9 @@ export async function POST(request: Request) {
       role,
       school_id: targetSchoolId,
     })
-    .select('id, username, email, first_name, last_name, role, school_id, created_at, must_change_password')
+    .select(
+      'id, username, email, first_name, last_name, role, school_id, created_at, must_change_password'
+    )
     .single();
 
   if (error || !user) {

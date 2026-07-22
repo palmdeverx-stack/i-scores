@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-
 import setupLocatorUI from '@locator/runtime';
 
 let locatorStarted = false;

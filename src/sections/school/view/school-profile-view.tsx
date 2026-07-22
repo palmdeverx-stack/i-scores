@@ -2,6 +2,7 @@
 
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
+import { varAlpha } from 'minimal-shared/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -127,7 +128,8 @@ export function SchoolProfileView() {
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
-          background: 'linear-gradient(135deg, #123D2B 0%, #176B4D 100%)',
+          background: (theme) =>
+            `linear-gradient(135deg, ${theme.vars.palette.primary.darker} 0%, ${theme.vars.palette.primary.main} 100%)`,
           '&::after': {
             width: 260,
             height: 260,
@@ -136,7 +138,7 @@ export function SchoolProfileView() {
             position: 'absolute',
             right: { xs: -180, sm: -80 },
             bottom: -180,
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            backgroundColor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.08),
           },
         }}
       >
@@ -159,7 +161,8 @@ export function SchoolProfileView() {
               borderRadius: 2.5,
               placeItems: 'center',
               bgcolor: 'common.white',
-              border: '3px solid rgba(255, 255, 255, 0.3)',
+              border: (theme) =>
+                `3px solid ${varAlpha(theme.vars.palette.common.whiteChannel, 0.3)}`,
             }}
           >
             {school.logo_url ? (
@@ -189,7 +192,10 @@ export function SchoolProfileView() {
               <Chip
                 size="small"
                 label={`รหัส ${school.code}`}
-                sx={{ color: 'common.white', bgcolor: 'rgba(255, 255, 255, 0.14)' }}
+                sx={(theme) => ({
+                  color: 'common.white',
+                  bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.14),
+                })}
               />
               <Chip
                 size="small"
@@ -203,7 +209,13 @@ export function SchoolProfileView() {
                 label={school.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
                 sx={{
                   color: 'common.white',
-                  bgcolor: school.is_active ? 'rgba(34, 197, 94, 0.28)' : 'rgba(255, 86, 48, 0.3)',
+                  bgcolor: (theme) =>
+                    varAlpha(
+                      school.is_active
+                        ? theme.vars.palette.success.mainChannel
+                        : theme.vars.palette.error.mainChannel,
+                      school.is_active ? 0.28 : 0.3
+                    ),
                   '& .MuiChip-icon': { color: 'inherit' },
                 }}
               />

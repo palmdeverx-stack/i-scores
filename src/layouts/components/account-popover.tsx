@@ -14,6 +14,7 @@ import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
+import { Iconify } from 'src/components/iconify';
 import { CustomPopover } from 'src/components/custom-popover';
 
 import { useAuthContext } from 'src/auth/hooks';
@@ -39,6 +40,19 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
 
   const { user } = useAuthContext();
 
+  const menuData: NonNullable<AccountPopoverProps['data']> = [
+    ...(user?.role === 'student' && !data.some((option) => option.href === paths.student.profile)
+      ? [
+          {
+            label: 'โปรไฟล์ของฉัน',
+            href: paths.student.profile,
+            icon: <Iconify icon="solar:user-rounded-bold" />,
+          },
+        ]
+      : []),
+    ...data,
+  ];
+
   const renderMenuActions = () => (
     <CustomPopover
       open={open}
@@ -59,7 +73,7 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
       <Divider sx={{ borderStyle: 'dashed' }} />
 
       <MenuList sx={{ p: 1, my: 1, '& li': { p: 0 } }}>
-        {data.map((option) => {
+        {menuData.map((option) => {
           const rootLabel = pathname.includes('/admin') ? 'Home' : 'Dashboard';
           const rootHref = pathname.includes('/admin') ? '/' : paths.admin.root;
 

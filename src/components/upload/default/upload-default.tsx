@@ -28,6 +28,7 @@ export function Upload({
   onUpload,
   onRemove,
   className,
+  placeholder,
   helperText,
   onRemoveAll,
   slotProps,
@@ -48,19 +49,20 @@ export function Upload({
   const hasError = isDragReject || !!error;
   const showFilesRejected = !hideFilesRejected && fileRejections.length > 0;
 
-  const renderPlaceholder = () => (
-    <PlaceholderContainer className={uploadClasses.placeholder.root}>
-      <UploadIllustration hideBackground sx={{ width: 200 }} />
-      <div className={uploadClasses.placeholder.content}>
-        <div className={uploadClasses.placeholder.title}>
-          {multiple ? 'Drop or select files' : 'Drop or select a file'}
+  const renderPlaceholder = () =>
+    placeholder ?? (
+      <PlaceholderContainer className={uploadClasses.placeholder.root}>
+        <UploadIllustration hideBackground sx={{ width: 200 }} />
+        <div className={uploadClasses.placeholder.content}>
+          <div className={uploadClasses.placeholder.title}>
+            {multiple ? 'Drop or select files' : 'Drop or select a file'}
+          </div>
+          <div className={uploadClasses.placeholder.description}>
+            {multiple ? 'Drag files here' : 'Drag a file here'}, or <span>browse</span> your device.
+          </div>
         </div>
-        <div className={uploadClasses.placeholder.description}>
-          {multiple ? 'Drag files here' : 'Drag a file here'}, or <span>browse</span> your device.
-        </div>
-      </div>
-    </PlaceholderContainer>
-  );
+      </PlaceholderContainer>
+    );
 
   const renderSingleFileLoading = () =>
     loading &&

@@ -17,6 +17,7 @@ export type StudentPerson = {
   username: string;
   first_name: string | null;
   last_name: string | null;
+  avatar_url: string | null;
 };
 
 export type StudentClassroom = {
@@ -56,11 +57,20 @@ export type StudentSubject = {
     title: string;
     description: string | null;
     full_score: number;
+    due_at: string | null;
     created_at: string;
     score: number | null;
     feedback: string | null;
     status: SubmissionStatus;
     updated_at: string | null;
+    attachments: Array<{
+      id: string;
+      file_name: string;
+      file_url: string;
+      mime_type: string;
+      file_size: number;
+      created_at: string;
+    }>;
   }>;
 };
 
@@ -75,6 +85,7 @@ export type StudentRankingRow = {
 };
 
 export type StudentDashboard = {
+  generated_at: string;
   student: StudentPerson;
   enrollments: Array<{
     id: string;
@@ -104,8 +115,11 @@ export type StudentDashboard = {
     title: string;
     content: string;
     priority: 'normal' | 'important' | 'urgent';
+    announcement_type: 'general' | 'holiday' | 'exam';
     published_at: string;
     expires_at: string | null;
+    event_start: string | null;
+    event_end: string | null;
   }>;
 };
 
@@ -116,6 +130,7 @@ export async function getStudentDashboard(
 ): Promise<StudentDashboard> {
   const response = await fetch(`/api/student/dashboard?section=${section}`, {
     headers: { Authorization: `Bearer ${getStoredToken()}` },
+    cache: 'no-store',
   });
   const json = await response.json();
 

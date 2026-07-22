@@ -12,6 +12,7 @@ type Person = {
   username: string;
   first_name: string | null;
   last_name: string | null;
+  avatar_url: string | null;
 };
 
 type AcademicYear = {
@@ -29,6 +30,7 @@ type Classroom = {
 };
 
 export async function GET(request: Request) {
+  const generatedAt = new Date().toISOString();
   const caller = requireRole(request, ['student']);
   const requestedSection = new URL(request.url).searchParams.get('section');
   const section = ['home', 'subjects', 'assignments'].includes(requestedSection ?? '')
@@ -43,7 +45,7 @@ export async function GET(request: Request) {
     await Promise.all([
       supabaseAdmin
         .from('app_users')
-        .select('id, username, first_name, last_name')
+        .select('id, username, first_name, last_name, avatar_url')
         .eq('id', caller.sub)
         .maybeSingle(),
       supabaseAdmin
@@ -88,7 +90,10 @@ export async function GET(request: Request) {
     section === 'home' && caller.schoolId
       ? await supabaseAdmin
           .from('school_announcements')
-          .select('id, title, content, priority, published_at, expires_at')
+          .select(
+            `id, title, content, priority, announcement_type, published_at, expires_at,
+             event_start, event_end, targets:announcement_classrooms(classroom_id)`
+          )
           .eq('school_id', caller.schoolId)
           .eq('is_published', true)
           .lte('published_at', new Date().toISOString())
@@ -101,15 +106,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: announcementError.message }, { status: 500 });
   }
 
+  const currentClassroomId = currentEnrollment?.classroom?.id;
+  const visibleAnnouncements = announcementRows.filter((announcement) => {
+    const targets = announcement.targets as unknown as Array<{ classroom_id: string }>;
+    return !targets.length || targets.some((target) => target.classroom_id === currentClassroomId);
+  });
+
   if (!classroomIds.length) {
     return NextResponse.json({
+      generated_at: generatedAt,
       student,
       enrollments,
       subjects: [],
       schedules: [],
       ranking: [],
       subject_rankings: [],
-      announcements: announcementRows,
+      announcements: visibleAnnouncements,
     });
   }
 
@@ -117,7 +129,7 @@ export async function GET(request: Request) {
     .from('teacher_assignments')
     .select(
       `id, classroom_id,
-       teacher:app_users!teacher_assignments_teacher_id_fkey(id, username, first_name, last_name),
+       teacher:app_users!teacher_assignments_teacher_id_fkey(id, username, first_name, last_name, avatar_url),
        subject:subjects(id, code, name, credits, description, image_url),
        semester:semesters(id, name, start_date, end_date, is_active),
        classroom:classrooms(id, name, grade_level, academic_year:academic_years(id, year, is_active))`
@@ -137,7 +149,10 @@ export async function GET(request: Request) {
     ? await Promise.all([
         supabaseAdmin
           .from('assignments')
-          .select('id, teacher_assignment_id, title, description, full_score, created_at')
+          .select(
+            `id, teacher_assignment_id, title, description, full_score, due_at, created_at,
+             attachments:assignment_attachments(id, file_name, file_url, mime_type, file_size, created_at)`
+          )
           .in('teacher_assignment_id', teachingIds)
           .order('created_at', { ascending: false }),
         section === 'subjects'
@@ -192,7 +207,9 @@ export async function GET(request: Request) {
           title: assignment.title,
           description: assignment.description,
           full_score: Number(assignment.full_score),
+          due_at: assignment.due_at,
           created_at: assignment.created_at,
+          attachments: assignment.attachments,
           score: score?.score === null || score?.score === undefined ? null : Number(score.score),
           feedback: score?.feedback ?? null,
           status: score?.status ?? 'not_submitted',
@@ -231,7 +248,7 @@ export async function GET(request: Request) {
             .from('enrollments')
             .select(
               `student_number,
-             student:app_users!enrollments_student_id_fkey(id, username, first_name, last_name)`
+             student:app_users!enrollments_student_id_fkey(id, username, first_name, last_name, avatar_url)`
             )
             .eq('classroom_id', currentEnrollment.classroom.id)
             .order('student_number'),
@@ -316,18 +333,20 @@ export async function GET(request: Request) {
 
   if (section === 'home') {
     return NextResponse.json({
+      generated_at: generatedAt,
       student,
       enrollments,
       subjects: [],
       schedules: [],
       ranking,
       subject_rankings: subjectRankings,
-      announcements: announcementRows,
+      announcements: visibleAnnouncements,
     });
   }
 
   if (section === 'subjects') {
     return NextResponse.json({
+      generated_at: generatedAt,
       student,
       enrollments,
       subjects,
@@ -339,6 +358,7 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
+    generated_at: generatedAt,
     student,
     enrollments,
     subjects,

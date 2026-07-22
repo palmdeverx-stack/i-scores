@@ -24,7 +24,7 @@ import {
  *
  * 1. URL-based routing (Next.js default)
  *    - Languages are part of the URL path
- *    - Example: /en/about, /fr/about
+ *    - Example: /en/about, /th/about
  *    - @see {@link https://nextjs.org/docs/pages/building-your-application/routing/internationalization}
  *
  * 2. Cookie-based routing

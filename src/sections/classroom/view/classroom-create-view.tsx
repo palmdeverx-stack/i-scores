@@ -127,7 +127,7 @@ export function ClassroomCreateView() {
   const referenceDataError = academicYearsError || subjectsError || semestersError;
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,
@@ -224,7 +224,8 @@ export function ClassroomCreateView() {
                       )}
                       {academicYears?.map((year) => (
                         <MenuItem key={year.id} value={year.id}>
-                          {year.year} {fIsBetween(today(), year.start_date, year.end_date) ? '(ปัจจุบัน)' : ''}
+                          {year.year}{' '}
+                          {fIsBetween(today(), year.start_date, year.end_date) ? '(ปัจจุบัน)' : ''}
                         </MenuItem>
                       ))}
                     </Field.Select>

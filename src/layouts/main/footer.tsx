@@ -1,48 +1,35 @@
 import type { Breakpoint } from '@mui/material/styles';
 
+import { varAlpha } from 'minimal-shared/utils';
+
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
-import Grid from '@mui/material/Grid';
 import Divider from '@mui/material/Divider';
+import { styled } from '@mui/material/styles';
 import Container from '@mui/material/Container';
-import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import { styled, useTheme } from '@mui/material/styles';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { _socials } from 'src/_mock';
+import { CONFIG } from 'src/global-config';
 
 import { Logo } from 'src/components/logo';
 import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
 
-const LINKS = [
-  {
-    headline: 'Minimal',
-    children: [
-      { name: 'About us', href: paths.about },
-      { name: 'Contact us', href: paths.contact },
-      { name: 'FAQs', href: paths.faqs },
-    ],
-  },
-  {
-    headline: 'Legal',
-    children: [
-      { name: 'Terms and condition', href: '#' },
-      { name: 'Privacy policy', href: '#' },
-    ],
-  },
-  { headline: 'Contact', children: [{ name: 'support@minimals.cc', href: '#' }] },
-];
-
-// ----------------------------------------------------------------------
+const QUICK_LINKS = [
+  { label: 'หน้าหลัก', href: paths.student.root, icon: 'solar:home-angle-bold-duotone' },
+  { label: 'วิชาเรียน', href: paths.student.subjects, icon: 'solar:notebook-bold-duotone' },
+  { label: 'งานที่ต้องส่ง', href: paths.student.assignments, icon: 'solar:notes-bold-duotone' },
+  { label: 'ข้อมูลส่วนตัว', href: paths.student.profile, icon: 'solar:user-rounded-bold' },
+] as const;
 
 const FooterRoot = styled('footer')(({ theme }) => ({
+  overflow: 'hidden',
   position: 'relative',
-  backgroundColor: theme.vars.palette.primary.main,
+  backgroundColor: theme.vars.palette.background.default,
 }));
 
 export type FooterProps = React.ComponentProps<typeof FooterRoot>;
@@ -54,106 +41,27 @@ export function Footer({
 }: FooterProps & { layoutQuery?: Breakpoint }) {
   return (
     <FooterRoot sx={sx} {...other}>
-      <Divider />
-
-      <Container
-        sx={(theme) => ({
-          pb: 5,
-          pt: 10,
-          textAlign: 'center',
-          [theme.breakpoints.up(layoutQuery)]: { textAlign: 'unset' },
-        })}
-      >
-        <Logo />
-
-        <Grid
-          container
-          sx={[
-            (theme) => ({
-              mt: 3,
-              justifyContent: 'center',
-              [theme.breakpoints.up(layoutQuery)]: { justifyContent: 'space-between' },
-            }),
-          ]}
+      <Container sx={{ position: 'relative', py: { xs: 4, md: 5 } }}>
+        <Box
+          sx={(theme) => ({
+            gap: 3,
+            display: 'flex',
+            textAlign: 'center',
+            alignItems: 'center',
+            flexDirection: 'column',
+            [theme.breakpoints.up(layoutQuery)]: {
+              textAlign: 'left',
+              alignItems: 'flex-start',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+            },
+          })}
         >
-          <Grid size={{ xs: 12, [layoutQuery]: 3 }}>
-            <Typography
-              variant="body2"
-              sx={(theme) => ({
-                mx: 'auto',
-                maxWidth: 280,
-                [theme.breakpoints.up(layoutQuery)]: { mx: 'unset' },
-              })}
-            >
-              The starting point for your next project with Minimal UI Kit, built on the newest
-              version of Material-UI ©, ready to be customized to your style.
-            </Typography>
+          <BrandSummary />
+          <QuickLinks layoutQuery={layoutQuery} />
+        </Box>
 
-            <Box
-              sx={(theme) => ({
-                mt: 3,
-                mb: 5,
-                display: 'flex',
-                justifyContent: 'center',
-                [theme.breakpoints.up(layoutQuery)]: { mb: 0, justifyContent: 'flex-start' },
-              })}
-            >
-              {_socials.map((social) => (
-                <IconButton key={social.label}>
-                  {social.value === 'twitter' && <Iconify icon="socials:twitter" />}
-                  {social.value === 'facebook' && <Iconify icon="socials:facebook" />}
-                  {social.value === 'instagram' && <Iconify icon="socials:instagram" />}
-                  {social.value === 'linkedin' && <Iconify icon="socials:linkedin" />}
-                </IconButton>
-              ))}
-            </Box>
-          </Grid>
-
-          <Grid size={{ xs: 12, [layoutQuery]: 6 }}>
-            <Box
-              sx={(theme) => ({
-                gap: 5,
-                display: 'flex',
-                flexDirection: 'column',
-                [theme.breakpoints.up(layoutQuery)]: { flexDirection: 'row' },
-              })}
-            >
-              {LINKS.map((list) => (
-                <Box
-                  key={list.headline}
-                  sx={(theme) => ({
-                    gap: 2,
-                    width: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    flexDirection: 'column',
-                    [theme.breakpoints.up(layoutQuery)]: { alignItems: 'flex-start' },
-                  })}
-                >
-                  <Typography component="div" variant="overline">
-                    {list.headline}
-                  </Typography>
-
-                  {list.children.map((link) => (
-                    <Link
-                      key={link.name}
-                      component={RouterLink}
-                      href={link.href}
-                      color="inherit"
-                      variant="body2"
-                    >
-                      {link.name}
-                    </Link>
-                  ))}
-                </Box>
-              ))}
-            </Box>
-          </Grid>
-        </Grid>
-
-        <Typography variant="body2" sx={{ mt: 10 }}>
-          © All rights reserved.
-        </Typography>
+        <FooterBottom />
       </Container>
     </FooterRoot>
   );
@@ -162,24 +70,145 @@ export function Footer({
 // ----------------------------------------------------------------------
 
 export function HomeFooter({ sx, ...other }: FooterProps) {
-  const theme = useTheme();
   return (
-    <FooterRoot
-      sx={[
-        {
-          py: 5,
-          textAlign: 'center',
-        },
-        ...(Array.isArray(sx) ? sx : [sx]),
-      ]}
-      {...other}
-    >
-      <Container>
-        <Logo />
-        <Box sx={{ mt: 1, typography: 'caption', color: theme.palette.secondary.main }}>
-          © AKHAHAS SRI
+    <FooterRoot sx={sx} {...other}>
+      <Container sx={{ position: 'relative', py: { xs: 3.5, md: 4.5 } }}>
+        <Box
+          sx={{
+            gap: 3,
+            display: 'flex',
+            textAlign: { xs: 'center', md: 'left' },
+            alignItems: { xs: 'center', md: 'flex-start' },
+            flexDirection: { xs: 'column', md: 'row' },
+            justifyContent: 'space-between',
+          }}
+        >
+          <BrandSummary />
+          <QuickLinks layoutQuery="md" />
         </Box>
+
+        <FooterBottom />
       </Container>
     </FooterRoot>
+  );
+}
+
+function BrandSummary() {
+  return (
+    <Box sx={{ maxWidth: 390 }}>
+      <Box
+        sx={{
+          gap: 1.25,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: { xs: 'center', md: 'flex-start' },
+        }}
+      >
+        <Logo />
+        <Box>
+          <Typography variant="subtitle1" sx={{ lineHeight: 1.2 }}>
+            Class Go
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
+            เรียนรู้ เติบโต ไปด้วยกัน
+          </Typography>
+        </Box>
+      </Box>
+      <Typography variant="body2" sx={{ mt: 1.75, color: 'text.secondary', lineHeight: 1.75 }}>
+        พื้นที่กลางสำหรับติดตามวิชาเรียน งาน คะแนน ตารางเรียน และข่าวสารสำคัญจากโรงเรียน
+      </Typography>
+    </Box>
+  );
+}
+
+function QuickLinks({ layoutQuery }: { layoutQuery: Breakpoint }) {
+  return (
+    <Box component="nav" aria-label="ทางลัดส่วนท้ายเว็บไซต์">
+      <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: 0.8 }}>
+        ทางลัด
+      </Typography>
+      <Box
+        sx={(theme) => ({
+          gap: 1,
+          mt: 1,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          [theme.breakpoints.up(layoutQuery)]: { minWidth: 340 },
+        })}
+      >
+        {QUICK_LINKS.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            component={RouterLink}
+            underline="none"
+            sx={(theme) => ({
+              gap: 0.75,
+              px: 1.5,
+              py: 1,
+              display: 'flex',
+              borderRadius: 1.5,
+              color: 'text.secondary',
+              alignItems: 'center',
+              typography: 'body2',
+              border: `1px solid ${theme.vars.palette.divider}`,
+              bgcolor: varAlpha(theme.vars.palette.background.paperChannel, 0.72),
+              transition: theme.transitions.create(['color', 'border-color', 'background-color']),
+              '&:hover': {
+                color: 'primary.darker',
+                borderColor: 'primary.main',
+                bgcolor: 'primary.lighter',
+              },
+            })}
+          >
+            <Iconify icon={item.icon} width={18} />
+            {item.label}
+          </Link>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
+function FooterBottom() {
+  const year = new Date().getFullYear();
+
+  return (
+    <>
+      <Divider sx={{ my: 3 }} />
+      <Box
+        sx={{
+          gap: 1,
+          display: 'flex',
+          alignItems: 'center',
+          color: 'text.secondary',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+        }}
+      >
+        <Typography variant="caption">© {year} Class Go สงวนลิขสิทธิ์</Typography>
+        <Typography variant="caption">
+          เวอร์ชัน {CONFIG.appVersion} · รองรับภาษาไทยและ English
+        </Typography>
+      </Box>
+    </>
+  );
+}
+
+function FooterDecoration() {
+  return (
+    <Box
+      aria-hidden="true"
+      sx={(theme) => ({
+        top: -90,
+        right: -60,
+        width: 220,
+        height: 220,
+        borderRadius: '50%',
+        position: 'absolute',
+        pointerEvents: 'none',
+        bgcolor: varAlpha(theme.vars.palette.primary.mainChannel, 0.08),
+      })}
+    />
   );
 }

@@ -12,11 +12,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const { searchParams } = new URL(request.url);
+  const academicYearId = searchParams.get('academicYearId');
+
+  let query = supabaseAdmin
     .from('classrooms')
     .select('id, name, grade_level, academic_year_id, academic_years(year), created_at')
     .eq('school_id', caller.schoolId)
     .order('name');
+
+  if (academicYearId) query = query.eq('academic_year_id', academicYearId);
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });

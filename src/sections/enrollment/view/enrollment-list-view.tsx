@@ -73,7 +73,7 @@ export function EnrollmentListView() {
   });
   const { data: classrooms = [], isLoading: classroomsLoading } = useQuery({
     queryKey: ['classrooms'],
-    queryFn: listClassrooms,
+    queryFn: () => listClassrooms(),
   });
 
   const methods = useForm({
@@ -144,7 +144,7 @@ export function EnrollmentListView() {
   );
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,
@@ -202,19 +202,22 @@ export function EnrollmentListView() {
           icon="solar:user-plus-bold"
           label="การลงทะเบียนทั้งหมด"
           value={summary.enrollments}
-          color="#0B7A57"
+          color="success.main"
+          bgcolor="success.lighter"
         />
         <SummaryCard
           icon="solar:user-rounded-bold"
           label="นักเรียน"
           value={summary.students}
-          color="#3D5AFE"
+          color="primary.main"
+          bgcolor="primary.lighter"
         />
         <SummaryCard
           icon="solar:users-group-rounded-bold"
           label="ห้องเรียน"
           value={summary.classrooms}
-          color="#E77817"
+          color="warning.main"
+          bgcolor="warning.lighter"
         />
       </Box>
 
@@ -613,19 +616,22 @@ function StudentProgressDialog({ enrollmentId, onClose }: StudentProgressDialogP
                 label="รายวิชาที่เรียน"
                 value={`${data.subjects.length} วิชา`}
                 icon="solar:gallery-wide-bold"
-                color="#8E4EC6"
+                color="secondary.dark"
+                bgcolor="secondary.lighter"
               />
               <ProgressSummary
                 label="การส่งงาน"
                 value={`${submittedCount}/${assignments.length} งาน`}
                 icon="solar:check-circle-bold"
-                color="#0B7A57"
+                color="success.main"
+                bgcolor="success.lighter"
               />
               <ProgressSummary
                 label="คะแนนรวม"
                 value={`${earnedScore.toLocaleString('th-TH')}/${fullScore.toLocaleString('th-TH')}`}
                 icon="solar:list-bold"
-                color="#3D5AFE"
+                color="primary.main"
+                bgcolor="primary.lighter"
               />
             </Box>
 
@@ -766,9 +772,10 @@ type ProgressSummaryProps = {
   value: string;
   icon: 'solar:gallery-wide-bold' | 'solar:check-circle-bold' | 'solar:list-bold';
   color: string;
+  bgcolor: string;
 };
 
-function ProgressSummary({ label, value, icon, color }: ProgressSummaryProps) {
+function ProgressSummary({ label, value, icon, color, bgcolor }: ProgressSummaryProps) {
   return (
     <Card variant="outlined" sx={{ p: 2 }}>
       <Box sx={{ gap: 1.25, display: 'flex', alignItems: 'center' }}>
@@ -781,7 +788,7 @@ function ProgressSummary({ label, value, icon, color }: ProgressSummaryProps) {
             borderRadius: 1.5,
             placeItems: 'center',
             color,
-            bgcolor: `${color}14`,
+            bgcolor,
           }}
         >
           <Iconify icon={icon} width={22} />
@@ -804,9 +811,10 @@ type SummaryCardProps = {
   label: string;
   value: number;
   color: string;
+  bgcolor: string;
 };
 
-function SummaryCard({ icon, label, value, color }: SummaryCardProps) {
+function SummaryCard({ icon, label, value, color, bgcolor }: SummaryCardProps) {
   return (
     <Card variant="outlined" sx={{ p: 2.5 }}>
       <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
@@ -819,7 +827,7 @@ function SummaryCard({ icon, label, value, color }: SummaryCardProps) {
             borderRadius: 1.5,
             color,
             placeItems: 'center',
-            bgcolor: `${color}14`,
+            bgcolor,
           }}
         >
           <Iconify icon={icon} width={25} />

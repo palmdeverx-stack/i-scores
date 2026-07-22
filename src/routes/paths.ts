@@ -95,12 +95,15 @@ export const paths = {
   // STUDENT
   student: {
     root: ROOTS.STUDENT,
+    profile: `${ROOTS.STUDENT}/profile`,
     subjects: `${ROOTS.STUDENT}/subjects`,
     assignments: `${ROOTS.STUDENT}/assignments`,
   },
   // TEACHER
   teacher: {
     root: ROOTS.TEACHER,
+    profile: `${ROOTS.TEACHER}/profile`,
+    announcements: `${ROOTS.TEACHER}/announcements`,
     assignments: `${ROOTS.TEACHER}/assignments`,
     assignmentDetail: (id: string) => `${ROOTS.TEACHER}/assignments/${id}`,
     assignmentNew: (id: string) => `${ROOTS.TEACHER}/assignments/${id}/new`,

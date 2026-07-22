@@ -8,6 +8,7 @@ import type {
   StudentDashboardSection,
 } from '../student-dashboard-actions';
 
+import { varAlpha } from 'minimal-shared/utils';
 import { useQuery } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
@@ -51,6 +52,8 @@ export function useStudentDashboard(section: StudentDashboardSection) {
   return useQuery({
     queryKey: ['student-dashboard', section],
     queryFn: () => getStudentDashboard(section),
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 
@@ -104,7 +107,7 @@ export function StudentPageScaffold({
     <Container
       component="main"
       maxWidth="lg"
-      sx={{ minHeight: 'calc(100vh - 100px)', py: { xs: 2, sm: 3, md: 12 } }}
+      sx={{ minHeight: 'calc(100vh - 100px)', pb: { xs: 2, sm: 3 } }}
     >
       <Box
         component="section"
@@ -121,8 +124,9 @@ export function StudentPageScaffold({
           justifyContent: 'space-between',
           borderRadius: { xs: 2.5, md: 4 },
           color: 'common.white',
-          background: 'linear-gradient(135deg, #174D45 0%, #267A6B 62%, #3A9684 100%)',
-          boxShadow: '0 18px 45px rgba(23, 77, 69, 0.18)',
+          background: (theme) =>
+            `linear-gradient(135deg, ${theme.vars.palette.primary.darker} 0%, ${theme.vars.palette.primary.main} 62%, ${theme.vars.palette.primary.light} 100%)`,
+          boxShadow: (theme) => theme.customShadows.primary,
           '&::before': {
             content: '""',
             top: -90,
@@ -131,7 +135,7 @@ export function StudentPageScaffold({
             height: 240,
             position: 'absolute',
             borderRadius: '50%',
-            bgcolor: 'rgba(255,255,255,0.07)',
+            bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.07),
           },
           '&::after': {
             content: '""',
@@ -141,7 +145,8 @@ export function StudentPageScaffold({
             height: 180,
             position: 'absolute',
             borderRadius: '50%',
-            border: '28px solid rgba(255,255,255,0.05)',
+            border: (theme) =>
+              `28px solid ${varAlpha(theme.vars.palette.common.whiteChannel, 0.05)}`,
           },
           '& > *': { zIndex: 1 },
         }}
@@ -152,8 +157,8 @@ export function StudentPageScaffold({
             sx={{
               width: { xs: 54, md: 68 },
               height: { xs: 54, md: 68 },
-              color: '#174D45',
-              bgcolor: 'rgba(255,255,255,0.9)',
+              color: 'primary.darker',
+              bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.9),
               fontSize: { xs: 22, md: 28 },
               fontWeight: 800,
             }}
@@ -163,7 +168,10 @@ export function StudentPageScaffold({
           <Box>
             <Typography
               variant="overline"
-              sx={{ color: 'rgba(255,255,255,0.76)', letterSpacing: 1.1 }}
+              sx={(theme) => ({
+                color: varAlpha(theme.vars.palette.common.whiteChannel, 0.76),
+                letterSpacing: 1.1,
+              })}
             >
               {sectionLabel}
             </Typography>
@@ -176,7 +184,12 @@ export function StudentPageScaffold({
               {displayName(data.student)}
             </Typography>
             {currentEnrollment && (
-              <Typography sx={{ mt: 0.5, color: 'rgba(255,255,255,0.8)' }}>
+              <Typography
+                sx={(theme) => ({
+                  mt: 0.5,
+                  color: varAlpha(theme.vars.palette.common.whiteChannel, 0.8),
+                })}
+              >
                 ห้อง {currentEnrollment.classroom.name}
                 {currentEnrollment.student_number &&
                   ` · เลขที่ ${currentEnrollment.student_number}`}
@@ -235,8 +248,8 @@ export function HeroStat({
         minWidth: 0,
         borderRadius: 2,
         backdropFilter: 'blur(6px)',
-        bgcolor: 'rgba(255,255,255,0.13)',
-        border: '1px solid rgba(255,255,255,0.22)',
+        bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.13),
+        border: (theme) => `1px solid ${varAlpha(theme.vars.palette.common.whiteChannel, 0.22)}`,
       }}
     >
       <Stack
@@ -254,7 +267,7 @@ export function HeroStat({
             noWrap
             sx={{
               display: 'block',
-              color: 'rgba(255,255,255,0.78)',
+              color: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.78),
               fontSize: { xs: '0.65rem', sm: '0.75rem' },
             }}
           >

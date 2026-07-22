@@ -34,8 +34,11 @@ function authHeader() {
   return { Authorization: `Bearer ${getStoredToken()}` };
 }
 
-export async function listClassrooms(): Promise<Classroom[]> {
-  const response = await fetch('/api/classrooms', { headers: authHeader() });
+export async function listClassrooms(filters?: { academicYearId?: string }): Promise<Classroom[]> {
+  const params = new URLSearchParams();
+  if (filters?.academicYearId) params.set('academicYearId', filters.academicYearId);
+  const query = params.size ? `?${params.toString()}` : '';
+  const response = await fetch(`/api/classrooms${query}`, { headers: authHeader() });
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load classrooms');

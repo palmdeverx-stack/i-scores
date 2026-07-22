@@ -50,6 +50,27 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
+  const menuData: NonNullable<AccountDrawerProps['data']> =
+    user?.role === 'teacher'
+      ? [
+          {
+            label: 'หน้าหลักครู',
+            href: paths.teacher.root,
+            icon: <Iconify icon="solar:home-angle-bold-duotone" />,
+          },
+          {
+            label: 'โปรไฟล์ของฉัน',
+            href: paths.teacher.profile,
+            icon: <Iconify icon="solar:user-rounded-bold" />,
+          },
+          {
+            label: 'เปลี่ยนรหัสผ่าน',
+            href: paths.auth.jwt.changePassword,
+            icon: <Iconify icon="solar:shield-keyhole-bold-duotone" />,
+          },
+        ]
+      : data;
+
   const renderAvatar = () => (
     <AnimateBorder
       sx={{ mb: 2, p: '6px', width: 96, height: 96, borderRadius: '50%' }}
@@ -76,9 +97,14 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
         }),
       ]}
     >
-      {data.map((option) => {
+      {menuData.map((option) => {
         const rootLabel = pathname.includes('/admin') ? 'Home' : 'Dashboard';
-        const rootHref = pathname.includes('/admin') ? '/' : paths.admin.root;
+        const rootHref =
+          user?.role === 'teacher'
+            ? paths.teacher.root
+            : pathname.includes('/admin')
+              ? '/'
+              : paths.admin.root;
 
         return (
           <MenuItem key={option.label}>
@@ -168,47 +194,51 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
             </Typography>
           </Box>
 
-          <Box
-            sx={{
-              p: 3,
-              gap: 1,
-              flexWrap: 'wrap',
-              display: 'flex',
-              justifyContent: 'center',
-            }}
-          >
-            {Array.from({ length: 3 }, (_, index) => (
-              <Tooltip
-                key={_mock.fullName(index + 1)}
-                title={`Switch to: ${_mock.fullName(index + 1)}`}
-              >
-                <Avatar
-                  alt={_mock.fullName(index + 1)}
-                  src={_mock.image.avatar(index + 1)}
-                  onClick={() => {}}
-                />
-              </Tooltip>
-            ))}
+          {user?.role !== 'teacher' && (
+            <Box
+              sx={{
+                p: 3,
+                gap: 1,
+                flexWrap: 'wrap',
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <Tooltip
+                  key={_mock.fullName(index + 1)}
+                  title={`Switch to: ${_mock.fullName(index + 1)}`}
+                >
+                  <Avatar
+                    alt={_mock.fullName(index + 1)}
+                    src={_mock.image.avatar(index + 1)}
+                    onClick={() => {}}
+                  />
+                </Tooltip>
+              ))}
 
-            <Tooltip title="Add account">
-              <IconButton
-                sx={[
-                  (theme) => ({
-                    bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
-                    border: `dashed 1px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.32)}`,
-                  }),
-                ]}
-              >
-                <Iconify icon="mingcute:add-line" />
-              </IconButton>
-            </Tooltip>
-          </Box>
+              <Tooltip title="Add account">
+                <IconButton
+                  sx={[
+                    (theme) => ({
+                      bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
+                      border: `dashed 1px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.32)}`,
+                    }),
+                  ]}
+                >
+                  <Iconify icon="mingcute:add-line" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
 
           {renderList()}
 
-          <Box sx={{ px: 2.5, py: 3 }}>
-            <UpgradeBlock />
-          </Box>
+          {user?.role !== 'teacher' && (
+            <Box sx={{ px: 2.5, py: 3 }}>
+              <UpgradeBlock />
+            </Box>
+          )}
         </Scrollbar>
 
         <Box sx={{ p: 2.5 }}>

@@ -45,7 +45,7 @@ export function TeacherAssignmentCreateView() {
     queryFn: () => listUsers('teacher'),
   });
   const { data: subjects } = useQuery({ queryKey: ['subjects'], queryFn: () => listSubjects() });
-  const { data: classrooms } = useQuery({ queryKey: ['classrooms'], queryFn: listClassrooms });
+  const { data: classrooms } = useQuery({ queryKey: ['classrooms'], queryFn: () => listClassrooms() });
   const { data: academicYears } = useQuery({
     queryKey: ['academic-years'],
     queryFn: listAcademicYears,

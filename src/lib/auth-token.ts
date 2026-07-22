@@ -53,6 +53,7 @@ type AppUserRow = {
   last_name: string | null;
   role: AppRole;
   school_id: string | null;
+  avatar_url?: string | null;
   created_at: string;
   must_change_password?: boolean;
 };
@@ -66,6 +67,8 @@ export function toPublicUser(user: AppUserRow) {
     last_name: user.last_name,
     role: user.role,
     school_id: user.school_id,
+    avatar_url: user.avatar_url ?? null,
+    photoURL: user.avatar_url ?? null,
     created_at: user.created_at,
     must_change_password: user.must_change_password ?? false,
   };

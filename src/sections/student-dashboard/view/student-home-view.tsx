@@ -105,8 +105,9 @@ function RankingSection({
           p: { xs: 2, md: 2.75 },
           overflow: 'hidden',
           borderRadius: 3,
-          borderTop: '4px solid #D6A72E',
-          boxShadow: '0 10px 30px rgba(31, 52, 48, 0.08)',
+          borderTop: '4px solid',
+          borderTopColor: 'warning.main',
+          boxShadow: (theme) => theme.shadows[4],
         }}
       >
         <SectionHeading
@@ -130,8 +131,9 @@ function RankingSection({
           p: { xs: 2, md: 2.75 },
           overflow: 'hidden',
           borderRadius: 3,
-          borderTop: '4px solid #438E7E',
-          boxShadow: '0 10px 30px rgba(31, 52, 48, 0.08)',
+          borderTop: '4px solid',
+          borderTopColor: 'primary.main',
+          boxShadow: (theme) => theme.shadows[4],
         }}
       >
         <SectionHeading
@@ -207,7 +209,7 @@ function RankingList({
   const visibleRanking = ranking.slice(0, 5);
   const currentStudent = ranking.find((row) => row.is_current_student);
   const hasScoreItems = ranking.some((row) => row.full_score > 0);
-  const medalColors = ['#E2AE32', '#8A9AA9', '#B9784A'];
+  const medalColors = ['warning.main', 'grey.500', 'secondary.dark'];
 
   if (!ranking.length || !hasScoreItems) return <EmptyCard text={emptyText} compact />;
 
@@ -225,9 +227,9 @@ function RankingList({
               display: 'flex',
               alignItems: 'center',
               borderRadius: 2,
-              bgcolor: row.is_current_student ? '#E8F5F2' : 'background.neutral',
+              bgcolor: row.is_current_student ? 'primary.lighter' : 'background.neutral',
               border: '1px solid',
-              borderColor: row.is_current_student ? '#9CD4C8' : 'transparent',
+              borderColor: row.is_current_student ? 'primary.light' : 'transparent',
             }}
           >
             <Box
@@ -250,8 +252,8 @@ function RankingList({
                 width: 38,
                 height: 38,
                 fontSize: 15,
-                color: row.is_current_student ? '#174D45' : 'text.secondary',
-                bgcolor: row.is_current_student ? '#CDE9E3' : 'background.paper',
+                color: row.is_current_student ? 'primary.darker' : 'text.secondary',
+                bgcolor: row.is_current_student ? 'primary.lighter' : 'background.paper',
               }}
             >
               {(row.student.first_name ?? row.student.username).slice(0, 1).toUpperCase()}
@@ -294,9 +296,14 @@ function AnnouncementsSection({
   announcements: StudentDashboard['announcements'];
 }) {
   const priorityConfig = {
-    normal: { label: 'ทั่วไป', color: 'info' as const, border: '#54A6D8' },
-    important: { label: 'สำคัญ', color: 'warning' as const, border: '#E7A531' },
-    urgent: { label: 'เร่งด่วน', color: 'error' as const, border: '#D95D5D' },
+    normal: { label: 'ทั่วไป', color: 'info' as const, border: 'info.main' },
+    important: { label: 'สำคัญ', color: 'warning' as const, border: 'warning.main' },
+    urgent: { label: 'เร่งด่วน', color: 'error' as const, border: 'error.main' },
+  };
+  const typeConfig = {
+    general: { label: 'ประกาศทั่วไป', icon: 'solar:bell-bing-bold' as const },
+    holiday: { label: 'วันหยุด', icon: 'solar:calendar-date-bold' as const },
+    exam: { label: 'วันสอบ', icon: 'solar:file-check-bold-duotone' as const },
   };
 
   return (
@@ -307,8 +314,9 @@ function AnnouncementsSection({
       sx={{
         p: { xs: 2, md: 2.75 },
         borderRadius: 3,
-        borderTop: '4px solid #54A6D8',
-        boxShadow: '0 10px 30px rgba(31, 52, 48, 0.08)',
+        borderTop: '4px solid',
+        borderTopColor: 'info.main',
+        boxShadow: (theme) => theme.shadows[4],
       }}
     >
       <SectionHeading
@@ -322,6 +330,7 @@ function AnnouncementsSection({
         <Stack spacing={1.25}>
           {announcements.map((announcement) => {
             const priority = priorityConfig[announcement.priority];
+            const type = typeConfig[announcement.announcement_type];
             return (
               <Box
                 component="article"
@@ -349,6 +358,13 @@ function AnnouncementsSection({
                     <Label variant="soft" color={priority.color}>
                       {priority.label}
                     </Label>
+                    <Label
+                      variant="outlined"
+                      color="default"
+                      startIcon={<Iconify icon={type.icon} />}
+                    >
+                      {type.label}
+                    </Label>
                   </Stack>
                   <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
                     {new Intl.DateTimeFormat('th-TH', {
@@ -364,6 +380,27 @@ function AnnouncementsSection({
                 >
                   {announcement.content}
                 </Typography>
+                {(announcement.event_start || announcement.event_end) && (
+                  <Typography
+                    variant="caption"
+                    sx={{ mt: 1, display: 'block', color: 'text.secondary' }}
+                  >
+                    กำหนดการ:{' '}
+                    {announcement.event_start
+                      ? new Intl.DateTimeFormat('th-TH', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        }).format(new Date(announcement.event_start))
+                      : 'ไม่ระบุ'}{' '}
+                    –{' '}
+                    {announcement.event_end
+                      ? new Intl.DateTimeFormat('th-TH', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        }).format(new Date(announcement.event_end))
+                      : 'ไม่ระบุ'}
+                  </Typography>
+                )}
               </Box>
             );
           })}

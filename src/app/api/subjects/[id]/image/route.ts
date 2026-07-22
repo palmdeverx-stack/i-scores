@@ -33,12 +33,27 @@ async function removeStoredImages(folder: string) {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['school_admin']);
-  if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (!caller?.schoolId) {
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  }
 
   const { id } = await params;
   const { data: subject } = await getOwnedSubject(id, caller.schoolId);
   if (!subject) return NextResponse.json({ message: 'ไม่พบรายวิชานี้' }, { status: 404 });
+
+  if (caller.role === 'teacher') {
+    const { data: assignment } = await supabaseAdmin
+      .from('teacher_assignments')
+      .select('id')
+      .eq('teacher_id', caller.sub)
+      .eq('subject_id', id)
+      .limit(1)
+      .maybeSingle();
+    if (!assignment) {
+      return NextResponse.json({ message: 'แก้ไขได้เฉพาะรูปของวิชาที่คุณสอน' }, { status: 403 });
+    }
+  }
 
   const formData = await request.formData();
   const file = formData.get('file');
@@ -82,12 +97,27 @@ export async function POST(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['school_admin']);
-  if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (!caller?.schoolId) {
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  }
 
   const { id } = await params;
   const { data: subject } = await getOwnedSubject(id, caller.schoolId);
   if (!subject) return NextResponse.json({ message: 'ไม่พบรายวิชานี้' }, { status: 404 });
+
+  if (caller.role === 'teacher') {
+    const { data: assignment } = await supabaseAdmin
+      .from('teacher_assignments')
+      .select('id')
+      .eq('teacher_id', caller.sub)
+      .eq('subject_id', id)
+      .limit(1)
+      .maybeSingle();
+    if (!assignment) {
+      return NextResponse.json({ message: 'แก้ไขได้เฉพาะรูปของวิชาที่คุณสอน' }, { status: 403 });
+    }
+  }
 
   const removeError = await removeStoredImages(`${caller.schoolId}/${id}`);
   if (removeError) return NextResponse.json({ message: removeError.message }, { status: 500 });

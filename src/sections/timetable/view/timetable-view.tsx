@@ -3,6 +3,7 @@
 import type { TimetableSlot } from '../timetable-actions';
 
 import { useMemo } from 'react';
+import { varAlpha } from 'minimal-shared/utils';
 import { useQuery } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
@@ -36,14 +37,7 @@ const DAYS = [
 
 const ROW_HEIGHT = 92;
 
-const SLOT_COLORS = [
-  { background: '#E8F5F2', border: '#65B8A8', text: '#174D45' },
-  { background: '#FFF7DC', border: '#E9C85F', text: '#654F0B' },
-  { background: '#FCEDEB', border: '#E7A29A', text: '#713B35' },
-  { background: '#EAF4FC', border: '#81BCE5', text: '#245779' },
-  { background: '#F2EDFC', border: '#AD91DE', text: '#52367E' },
-  { background: '#F0F5E8', border: '#9DBD70', text: '#405D20' },
-];
+const SLOT_COLORS = ['primary', 'secondary', 'error', 'info', 'success', 'warning'] as const;
 
 function timeToMinutes(value: string) {
   const [hour, minute] = value.split(':').map(Number);
@@ -121,7 +115,7 @@ export function TimetableView() {
   const today = new Date().getDay() || 7;
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Box
         sx={{
           p: { xs: 2.5, md: 4 },
@@ -133,7 +127,8 @@ export function TimetableView() {
           justifyContent: 'space-between',
           borderRadius: 3,
           color: 'common.white',
-          background: 'linear-gradient(135deg, #174D45 0%, #267A6B 62%, #3A9684 100%)',
+          background: (theme) =>
+            `linear-gradient(135deg, ${theme.vars.palette.primary.darker} 0%, ${theme.vars.palette.primary.main} 62%, ${theme.vars.palette.primary.light} 100%)`,
         }}
       >
         <Box>
@@ -143,7 +138,11 @@ export function TimetableView() {
               ตารางสอนของฉัน
             </Typography>
           </Stack>
-          <Typography sx={{ color: 'rgba(255,255,255,0.78)' }}>
+          <Typography
+            sx={(theme) => ({
+              color: varAlpha(theme.vars.palette.common.whiteChannel, 0.78),
+            })}
+          >
             ดูคาบสอนรายสัปดาห์และกดที่รายวิชาเพื่อดูรายละเอียด
           </Typography>
           {!!timetable.terms.length && (
@@ -153,7 +152,10 @@ export function TimetableView() {
                   key={term}
                   label={term}
                   size="small"
-                  sx={{ color: 'common.white', bgcolor: 'rgba(255,255,255,0.16)' }}
+                  sx={(theme) => ({
+                    color: 'common.white',
+                    bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.16),
+                  })}
                 />
               ))}
             </Stack>
@@ -336,7 +338,7 @@ export function TimetableView() {
                         display: 'flex',
                         position: 'sticky',
                         alignItems: 'center',
-                        bgcolor: isToday ? '#E8F5F2' : 'background.paper',
+                        bgcolor: isToday ? 'primary.lighter' : 'background.paper',
                         borderRight: '1px solid',
                         borderColor: 'divider',
                       }}
@@ -344,7 +346,7 @@ export function TimetableView() {
                       <Box>
                         <Typography
                           variant="subtitle2"
-                          sx={{ color: isToday ? '#174D45' : 'text.primary' }}
+                          sx={{ color: isToday ? 'primary.darker' : 'text.primary' }}
                         >
                           <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
                             {day.shortLabel}
@@ -354,7 +356,10 @@ export function TimetableView() {
                           </Box>
                         </Typography>
                         {isToday && (
-                          <Typography variant="caption" sx={{ color: '#267A6B', fontWeight: 700 }}>
+                          <Typography
+                            variant="caption"
+                            sx={{ color: 'primary.main', fontWeight: 700 }}
+                          >
                             วันนี้
                           </Typography>
                         )}
@@ -415,22 +420,24 @@ export function TimetableView() {
                               overflow: 'hidden',
                               position: 'absolute',
                               borderRadius: 1.5,
-                              color: color.text,
+                              color: `${color}.darker`,
                               textDecoration: 'none',
                               flexDirection: 'column',
                               justifyContent: 'center',
-                              bgcolor: color.background,
-                              border: `1px solid ${color.border}`,
-                              boxShadow: '0 2px 6px rgba(20, 40, 35, 0.08)',
+                              bgcolor: `${color}.lighter`,
+                              border: '1px solid',
+                              borderColor: `${color}.light`,
+                              boxShadow: (theme) => theme.shadows[2],
                               transition: (theme) =>
                                 theme.transitions.create(['transform', 'box-shadow']),
                               '&:hover': {
                                 zIndex: 1,
                                 transform: 'translateY(-2px)',
-                                boxShadow: '0 8px 16px rgba(20, 40, 35, 0.16)',
+                                boxShadow: (theme) => theme.shadows[8],
                               },
                               '&:focus-visible': {
-                                outline: `3px solid ${color.border}`,
+                                outline: '3px solid',
+                                outlineColor: `${color}.light`,
                                 outlineOffset: 2,
                               },
                             }}
@@ -495,12 +502,15 @@ function SummaryStat({ label, value }: { label: string; value: string | number }
         minWidth: { xs: 84, sm: 104 },
         textAlign: 'center',
         borderRadius: 2,
-        bgcolor: 'rgba(255,255,255,0.14)',
-        border: '1px solid rgba(255,255,255,0.18)',
+        bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.14),
+        border: (theme) => `1px solid ${varAlpha(theme.vars.palette.common.whiteChannel, 0.18)}`,
       }}
     >
       <Typography variant="h5">{value}</Typography>
-      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.72)' }}>
+      <Typography
+        variant="caption"
+        sx={(theme) => ({ color: varAlpha(theme.vars.palette.common.whiteChannel, 0.72) })}
+      >
         {label}
       </Typography>
     </Box>

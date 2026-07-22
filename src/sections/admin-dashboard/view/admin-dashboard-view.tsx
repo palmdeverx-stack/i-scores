@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { varAlpha } from 'minimal-shared/utils';
 import { useQuery } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
@@ -32,28 +33,32 @@ const statConfigs = [
     key: 'students',
     label: 'นักเรียน',
     icon: 'solar:user-rounded-bold',
-    color: '#3D5AFE',
+    color: 'primary.main',
+    bgcolor: 'primary.lighter',
     path: paths.admin.student.root,
   },
   {
     key: 'teachers',
     label: 'ครูผู้สอน',
     icon: 'solar:users-group-rounded-bold',
-    color: '#0B7A57',
+    color: 'success.main',
+    bgcolor: 'success.lighter',
     path: paths.admin.user.root,
   },
   {
     key: 'classrooms',
     label: 'ห้องเรียน',
     icon: 'solar:add-folder-bold',
-    color: '#E77817',
+    color: 'warning.main',
+    bgcolor: 'warning.lighter',
     path: paths.admin.classroom.root,
   },
   {
     key: 'subjects',
     label: 'รายวิชา',
     icon: 'solar:gallery-wide-bold',
-    color: '#8E4EC6',
+    color: 'secondary.dark',
+    bgcolor: 'secondary.lighter',
     path: paths.admin.subject.root,
   },
 ] as const;
@@ -113,7 +118,8 @@ export function AdminDashboardView() {
         id: `assignment-${item.id}`,
         date: item.created_at,
         icon: 'solar:users-group-rounded-bold' as const,
-        color: '#0B7A57',
+        color: 'success.main',
+        bgcolor: 'success.lighter',
         title: `มอบหมาย ${displayName(item.teacher)}`,
         detail: `${item.subject.code ? `${item.subject.code} · ` : ''}${item.subject.name} · ${item.classroom.name}`,
       })),
@@ -121,7 +127,8 @@ export function AdminDashboardView() {
         id: `enrollment-${item.id}`,
         date: item.created_at,
         icon: 'solar:user-plus-bold' as const,
-        color: '#3D5AFE',
+        color: 'primary.main',
+        bgcolor: 'primary.lighter',
         title: `ลงทะเบียน ${displayName(item.student)}`,
         detail: `${item.classroom.name}${item.student_number ? ` · เลขที่ ${item.student_number}` : ''}`,
       })),
@@ -163,7 +170,7 @@ export function AdminDashboardView() {
   const completedSteps = checklist.filter((item) => item.complete).length;
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Card
         sx={{
           mb: 3,
@@ -171,7 +178,8 @@ export function AdminDashboardView() {
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
-          background: 'linear-gradient(135deg, #123D2B 0%, #176B4D 65%, #218C65 100%)',
+          background: (theme) =>
+            `linear-gradient(135deg, ${theme.vars.palette.primary.darker} 0%, ${theme.vars.palette.primary.main} 65%, ${theme.vars.palette.primary.light} 100%)`,
           '&::after': {
             width: 300,
             height: 300,
@@ -180,7 +188,7 @@ export function AdminDashboardView() {
             position: 'absolute',
             right: { xs: -210, md: -70 },
             bottom: -220,
-            bgcolor: 'rgba(255,255,255,0.08)',
+            bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.08),
           },
         }}
       >
@@ -220,20 +228,29 @@ export function AdminDashboardView() {
                 <Chip
                   size="small"
                   label={`รหัส ${data.school.code}`}
-                  sx={{ color: 'inherit', bgcolor: 'rgba(255,255,255,0.14)' }}
+                  sx={(theme) => ({
+                    color: 'inherit',
+                    bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.14),
+                  })}
                 />
                 {data.academicYear && (
                   <Chip
                     size="small"
                     label={`ปีการศึกษา ${data.academicYear.year}`}
-                    sx={{ color: 'inherit', bgcolor: 'rgba(255,255,255,0.14)' }}
+                    sx={(theme) => ({
+                      color: 'inherit',
+                      bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.14),
+                    })}
                   />
                 )}
                 {activeSemester && (
                   <Chip
                     size="small"
                     label={activeSemester.name}
-                    sx={{ color: 'inherit', bgcolor: 'rgba(255,255,255,0.14)' }}
+                    sx={(theme) => ({
+                      color: 'inherit',
+                      bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.14),
+                    })}
                   />
                 )}
               </Box>
@@ -287,7 +304,7 @@ export function AdminDashboardView() {
                   borderRadius: 2,
                   placeItems: 'center',
                   color: stat.color,
-                  bgcolor: `${stat.color}14`,
+                  bgcolor: stat.bgcolor,
                 }}
               >
                 <Iconify icon={stat.icon} width={27} />
@@ -349,7 +366,7 @@ export function AdminDashboardView() {
                         borderRadius: '50%',
                         placeItems: 'center',
                         color: activity.color,
-                        bgcolor: `${activity.color}14`,
+                        bgcolor: activity.bgcolor,
                       }}
                     >
                       <Iconify icon={activity.icon} width={21} />
@@ -454,7 +471,7 @@ export function AdminDashboardView() {
                 height: 8,
                 overflow: 'hidden',
                 borderRadius: 8,
-                bgcolor: 'rgba(255,255,255,0.18)',
+                bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.18),
               }}
             >
               <Box

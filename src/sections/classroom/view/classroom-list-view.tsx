@@ -67,7 +67,7 @@ export function ClassroomListView() {
     refetch,
   } = useQuery({
     queryKey: ['classrooms'],
-    queryFn: listClassrooms,
+    queryFn: () => listClassrooms(),
   });
   const {
     data: academicYears = [],
@@ -158,7 +158,7 @@ export function ClassroomListView() {
   const onSubmit = handleSubmit((data) => saveMutation.mutate(data));
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,
@@ -348,7 +348,8 @@ export function ClassroomListView() {
                 )}
                 {academicYears.map((year) => (
                   <MenuItem key={year.id} value={year.id}>
-                    {year.year} {fIsBetween(today(), year.start_date, year.end_date) ? '(ปัจจุบัน)' : ''}
+                    {year.year}{' '}
+                    {fIsBetween(today(), year.start_date, year.end_date) ? '(ปัจจุบัน)' : ''}
                   </MenuItem>
                 ))}
               </Field.Select>

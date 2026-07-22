@@ -2,6 +2,7 @@
 
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
+import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 import { useMutation } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +16,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 
 import { useRouter } from 'src/routes/hooks';
 
+import { Logo } from 'src/components/logo';
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
@@ -123,24 +125,24 @@ export function JwtSignInView() {
 
       <Button
         fullWidth
-        color="inherit"
+        color="primary"
         size="large"
         type="submit"
         variant="contained"
         loading={signInMutation.isPending}
         loadingIndicator="กำลังเข้าสู่ระบบ..."
-        sx={{
+        sx={(theme) => ({
           mt: 1,
           py: 1.4,
           fontSize: 16,
           color: 'common.white',
-          background: 'linear-gradient(135deg, #087F5B 0%, #0A5C45 100%)',
-          boxShadow: '0 12px 24px rgba(8, 127, 91, 0.24)',
+          background: `linear-gradient(135deg, ${theme.vars.palette.primary.main} 0%, ${theme.vars.palette.primary.dark} 100%)`,
+          boxShadow: theme.customShadows.primary,
           '&:hover': {
-            background: 'linear-gradient(135deg, #096F52 0%, #074D3A 100%)',
-            boxShadow: '0 14px 28px rgba(8, 127, 91, 0.32)',
+            background: `linear-gradient(135deg, ${theme.vars.palette.primary.dark} 0%, ${theme.vars.palette.primary.darker} 100%)`,
+            boxShadow: theme.customShadows.z16,
           },
-        }}
+        })}
       >
         เข้าสู่ระบบ
       </Button>
@@ -155,35 +157,24 @@ export function JwtSignInView() {
         borderRadius: 3.5,
         color: 'text.primary',
         border: '1px solid',
-        borderColor: 'rgba(255, 255, 255, 0.48)',
-        backgroundColor: 'rgba(255, 255, 255, 0.92)',
+        borderColor: varAlpha(theme.vars.palette.common.whiteChannel, 0.48),
+        backgroundColor: varAlpha(theme.vars.palette.background.paperChannel, 0.92),
         backdropFilter: 'blur(18px)',
         WebkitBackdropFilter: 'blur(18px)',
-        boxShadow: '0 28px 70px rgba(2, 28, 20, 0.28)',
+        boxShadow: theme.customShadows.dialog,
         ...theme.applyStyles('dark', {
-          borderColor: 'rgba(255, 255, 255, 0.12)',
-          backgroundColor: 'rgba(25, 34, 31, 0.92)',
+          borderColor: varAlpha(theme.vars.palette.common.whiteChannel, 0.12),
+          backgroundColor: varAlpha(theme.vars.palette.background.paperChannel, 0.92),
         }),
       })}
     >
-      <Box
-        sx={{
-          mb: 2.5,
-          width: 52,
-          height: 52,
-          display: 'grid',
-          borderRadius: 2,
-          placeItems: 'center',
-          color: 'common.white',
-          background: 'linear-gradient(135deg, #0A8F66 0%, #064C39 100%)',
-          boxShadow: '0 10px 22px rgba(8, 127, 91, 0.22)',
-        }}
-      >
-        <Iconify icon="solar:notebook-bold-duotone" width={30} />
-      </Box>
+      <Logo />
 
-      <Typography variant="overline" sx={{ color: '#087F5B', fontWeight: 800, letterSpacing: 1.2 }}>
-        I-SCORES
+      <Typography
+        variant="overline"
+        sx={{ color: 'primary.main', fontWeight: 800, letterSpacing: 1.2 }}
+      >
+        CLASS GO
       </Typography>
 
       <FormHead

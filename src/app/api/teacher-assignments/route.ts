@@ -17,9 +17,9 @@ export async function GET(request: Request) {
     .select(
       `id, created_at,
        teacher:app_users!teacher_assignments_teacher_id_fkey(id, username, first_name, last_name),
-       subject:subjects(id, name),
-       classroom:classrooms(id, name),
-       semester:semesters(id, name)`
+       subject:subjects(id, code, name, image_url, academic_year_id, semester_id),
+       classroom:classrooms(id, name, academic_year_id),
+       semester:semesters(id, name, academic_year_id)`
     )
     .order('created_at', { ascending: false });
 
@@ -37,15 +37,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const caller = requireRole(request, ['school_admin']);
+  const caller = requireRole(request, ['school_admin', 'teacher']);
 
-  if (!caller) {
+  if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
   const { teacherId, subjectId, classroomId, semesterId } = await request.json();
+  const resolvedTeacherId = caller.role === 'teacher' ? caller.sub : teacherId;
 
-  if (!teacherId || !subjectId || !classroomId || !semesterId) {
+  if (!resolvedTeacherId || !subjectId || !classroomId || !semesterId) {
     return NextResponse.json({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, { status: 400 });
   }
 
@@ -54,26 +55,26 @@ export async function POST(request: Request) {
       supabaseAdmin
         .from('app_users')
         .select('id')
-        .eq('id', teacherId)
+        .eq('id', resolvedTeacherId)
         .eq('role', 'teacher')
         .eq('school_id', caller.schoolId)
         .maybeSingle(),
       supabaseAdmin
         .from('subjects')
-        .select('id')
+        .select('id, academic_year_id')
         .eq('id', subjectId)
         .eq('semester_id', semesterId)
         .eq('school_id', caller.schoolId)
         .maybeSingle(),
       supabaseAdmin
         .from('classrooms')
-        .select('id')
+        .select('id, academic_year_id')
         .eq('id', classroomId)
         .eq('school_id', caller.schoolId)
         .maybeSingle(),
       supabaseAdmin
         .from('semesters')
-        .select('id, academic_years!inner(school_id)')
+        .select('id, academic_year_id, academic_years!inner(school_id)')
         .eq('id', semesterId)
         .eq('academic_years.school_id', caller.schoolId)
         .maybeSingle(),
@@ -83,6 +84,16 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { message: 'ไม่พบครู วิชา ห้องเรียน หรือภาคเรียนนี้ในโรงเรียนของคุณ' },
       { status: 404 }
+    );
+  }
+
+  if (
+    subject.academic_year_id !== classroom.academic_year_id ||
+    subject.academic_year_id !== semester.academic_year_id
+  ) {
+    return NextResponse.json(
+      { message: 'รายวิชา ห้องเรียน และภาคเรียนต้องอยู่ในปีการศึกษาเดียวกัน' },
+      { status: 400 }
     );
   }
 
@@ -117,7 +128,7 @@ export async function POST(request: Request) {
   const { data: assignment, error } = await supabaseAdmin
     .from('teacher_assignments')
     .insert({
-      teacher_id: teacherId,
+      teacher_id: resolvedTeacherId,
       subject_id: subjectId,
       classroom_id: classroomId,
       semester_id: semesterId,

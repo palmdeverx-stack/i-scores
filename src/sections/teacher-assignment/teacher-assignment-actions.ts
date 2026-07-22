@@ -10,9 +10,16 @@ export type TeacherAssignment = {
   id: string;
   created_at: string;
   teacher: { id: string; username: string; first_name: string | null; last_name: string | null };
-  subject: { id: string; name: string };
-  classroom: { id: string; name: string };
-  semester: { id: string; name: string };
+  subject: {
+    id: string;
+    code: string | null;
+    name: string;
+    image_url: string | null;
+    academic_year_id: string;
+    semester_id: string;
+  };
+  classroom: { id: string; name: string; academic_year_id: string };
+  semester: { id: string; name: string; academic_year_id: string };
 };
 
 export type CreateTeacherAssignmentParams = {
@@ -30,10 +37,12 @@ export type RosterRow = {
 
 export type Roster = {
   roster: RosterRow[];
+  subjectId: string;
   classroomName: string | null;
   subjectName: string | null;
   subjectCode: string | null;
   credits: number;
+  subjectImageUrl: string | null;
   academicYear: string | null;
   semesterName: string | null;
   teacher: { username: string; first_name: string | null; last_name: string | null } | null;
@@ -149,4 +158,27 @@ export async function createTeacherAssignment(params: CreateTeacherAssignmentPar
   if (!response.ok) throw new Error(json.message ?? 'Failed to create teacher assignment');
 
   return json.teacherAssignment;
+}
+
+export async function updateTeacherAssignment(id: string, params: CreateTeacherAssignmentParams) {
+  const response = await fetch(`/api/teacher-assignments/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(params),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to update teacher assignment');
+
+  return json.teacherAssignment;
+}
+
+export async function deleteTeacherAssignment(id: string): Promise<void> {
+  const response = await fetch(`/api/teacher-assignments/${id}`, {
+    method: 'DELETE',
+    headers: authHeader(),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to delete teacher assignment');
 }

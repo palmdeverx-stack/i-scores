@@ -18,6 +18,7 @@ const ICONS = {
   folder: icon('ic-folder'),
   dashboard: icon('ic-dashboard'),
   calendar: icon('ic-calendar'),
+  mail: icon('ic-mail'),
 };
 
 // ----------------------------------------------------------------------
@@ -39,6 +40,11 @@ export const navData: NavSectionProps['data'] = [
         title: 'ตารางสอน',
         path: paths.teacher.timetable,
         icon: ICONS.calendar,
+      },
+      {
+        title: 'ประกาศ',
+        path: paths.teacher.announcements,
+        icon: ICONS.mail,
       },
       {
         title: 'เพิ่มห้องเรียน',

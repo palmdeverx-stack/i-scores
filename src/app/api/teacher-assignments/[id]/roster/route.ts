@@ -37,10 +37,12 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   return NextResponse.json({
     roster: data,
+    subjectId: teacherAssignment!.subject_id,
     classroomName: (teacherAssignment as any)?.classrooms?.name ?? null,
     subjectName: (teacherAssignment as any)?.subjects?.name ?? null,
     subjectCode: (teacherAssignment as any)?.subjects?.code ?? null,
     credits: Number((teacherAssignment as any)?.subjects?.credits ?? 0),
+    subjectImageUrl: (teacherAssignment as any)?.subjects?.image_url ?? null,
     academicYear: (teacherAssignment as any)?.classrooms?.academic_years?.year ?? null,
     semesterName: (teacherAssignment as any)?.semesters?.name ?? null,
     teacher: (teacherAssignment as any)?.teacher ?? null,

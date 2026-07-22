@@ -44,19 +44,28 @@ import {
 
 // ----------------------------------------------------------------------
 
-const CreateSchema = z.object({
-  year: z
-    .string()
-    .trim()
-    .min(1, { error: 'กรุณากรอกปีการศึกษา!' })
-    .regex(/^\d{4}$/, { error: 'กรุณากรอกปีการศึกษาเป็นตัวเลข 4 หลัก!' }),
-  startDate: z.string().min(1, { error: 'กรุณาเลือกวันที่เริ่มต้น!' }),
-  endDate: z.string().min(1, { error: 'กรุณาเลือกวันที่สิ้นสุด!' }),
-  isActive: z.boolean(),
-}).refine((data) => !data.startDate || !data.endDate || dayjs(data.endDate).isAfter(data.startDate) || dayjs(data.endDate).isSame(data.startDate, 'day'), {
-  path: ['endDate'],
-  error: 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น!',
-});
+const CreateSchema = z
+  .object({
+    year: z
+      .string()
+      .trim()
+      .min(1, { error: 'กรุณากรอกปีการศึกษา!' })
+      .regex(/^\d{4}$/, { error: 'กรุณากรอกปีการศึกษาเป็นตัวเลข 4 หลัก!' }),
+    startDate: z.string().min(1, { error: 'กรุณาเลือกวันที่เริ่มต้น!' }),
+    endDate: z.string().min(1, { error: 'กรุณาเลือกวันที่สิ้นสุด!' }),
+    isActive: z.boolean(),
+  })
+  .refine(
+    (data) =>
+      !data.startDate ||
+      !data.endDate ||
+      dayjs(data.endDate).isAfter(data.startDate) ||
+      dayjs(data.endDate).isSame(data.startDate, 'day'),
+    {
+      path: ['endDate'],
+      error: 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น!',
+    }
+  );
 
 export function AcademicYearListView() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -137,12 +146,10 @@ export function AcademicYearListView() {
     saveMutation.reset();
   };
 
-  const onSubmit = handleSubmit((data) =>
-    saveMutation.mutate({ ...data, year: data.year.trim() })
-  );
+  const onSubmit = handleSubmit((data) => saveMutation.mutate({ ...data, year: data.year.trim() }));
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,
@@ -243,7 +250,10 @@ export function AcademicYearListView() {
 
               {!isLoading && !academicYears.length && (
                 <TableRow>
-                  <TableCell colSpan={4} sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={4}
+                    sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
+                  >
                     ยังไม่มีปีการศึกษา กด “เพิ่มปีการศึกษา” เพื่อเริ่มต้น
                   </TableCell>
                 </TableRow>
@@ -286,7 +296,11 @@ export function AcademicYearListView() {
                         ภาคเรียน
                       </Button>
                       <Tooltip title="แก้ไข">
-                        <IconButton size="small" onClick={() => openEditDialog(year)} aria-label={`แก้ไขปีการศึกษา ${year.year}`}>
+                        <IconButton
+                          size="small"
+                          onClick={() => openEditDialog(year)}
+                          aria-label={`แก้ไขปีการศึกษา ${year.year}`}
+                        >
                           <Iconify icon="solar:pen-bold" width={18} />
                         </IconButton>
                       </Tooltip>
@@ -315,16 +329,24 @@ export function AcademicYearListView() {
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="xs">
         <Form methods={methods} onSubmit={onSubmit}>
           <DialogTitle sx={{ pb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <Box
+              sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}
+            >
               <Box>
                 <Typography component="h2" variant="h6">
                   {editingYear ? 'แก้ไขปีการศึกษา' : 'เพิ่มปีการศึกษา'}
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                  {editingYear ? 'ปรับปีและสถานะการใช้งาน' : 'สร้างปีการศึกษาใหม่สำหรับจัดกลุ่มภาคเรียน'}
+                  {editingYear
+                    ? 'ปรับปีและสถานะการใช้งาน'
+                    : 'สร้างปีการศึกษาใหม่สำหรับจัดกลุ่มภาคเรียน'}
                 </Typography>
               </Box>
-              <IconButton onClick={closeDialog} disabled={saveMutation.isPending} aria-label="ปิดหน้าต่าง">
+              <IconButton
+                onClick={closeDialog}
+                disabled={saveMutation.isPending}
+                aria-label="ปิดหน้าต่าง"
+              >
                 <Iconify icon="mingcute:close-line" />
               </IconButton>
             </Box>
@@ -403,11 +425,16 @@ export function AcademicYearListView() {
             ต้องการลบปีการศึกษา <strong>{deletingYear?.year}</strong> ใช่หรือไม่?
           </Typography>
           <Alert severity="warning" sx={{ mt: 2 }}>
-            ภาคเรียน ห้องเรียน รายชื่อนักเรียน งาน และคะแนนที่เชื่อมโยงอาจถูกลบตามไปด้วย การดำเนินการนี้ย้อนกลับไม่ได้
+            ภาคเรียน ห้องเรียน รายชื่อนักเรียน งาน และคะแนนที่เชื่อมโยงอาจถูกลบตามไปด้วย
+            การดำเนินการนี้ย้อนกลับไม่ได้
           </Alert>
         </DialogContent>
         <DialogActions>
-          <Button color="inherit" onClick={() => setDeletingYear(null)} disabled={deleteMutation.isPending}>
+          <Button
+            color="inherit"
+            onClick={() => setDeletingYear(null)}
+            disabled={deleteMutation.isPending}
+          >
             ยกเลิก
           </Button>
           <Button

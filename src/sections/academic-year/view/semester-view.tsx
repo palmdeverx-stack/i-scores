@@ -199,7 +199,7 @@ export function SemesterView({ academicYearId }: Props) {
           p: { xs: 2.5, sm: 3 },
           color: 'primary.darker',
           bgcolor: 'primary.lighter',
-          borderColor: 'rgba(18, 61, 43, 0.16)',
+          borderColor: 'primary.light',
         }}
       >
         <Box sx={{ gap: 2, display: 'flex', alignItems: 'center' }}>
@@ -253,7 +253,11 @@ export function SemesterView({ academicYearId }: Props) {
           gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
         }}
       >
-        <SummaryCard icon="solar:calendar-date-bold" label="ภาคเรียนทั้งหมด" value={semesters.length} />
+        <SummaryCard
+          icon="solar:calendar-date-bold"
+          label="ภาคเรียนทั้งหมด"
+          value={semesters.length}
+        />
         <SummaryCard
           icon="solar:check-circle-bold"
           label="กำลังใช้งาน"
@@ -294,7 +298,10 @@ export function SemesterView({ academicYearId }: Props) {
               )}
               {!isLoading && !semesters.length && (
                 <TableRow>
-                  <TableCell colSpan={4} sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={4}
+                    sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
+                  >
                     ยังไม่มีภาคเรียน กด “เพิ่มภาคเรียน” เพื่อเริ่มต้น
                   </TableCell>
                 </TableRow>
@@ -307,7 +314,9 @@ export function SemesterView({ academicYearId }: Props) {
                   <TableCell>
                     {semester.start_date && semester.end_date ? (
                       <Box>
-                        <Typography variant="body2">{formatThaiDate(semester.start_date)}</Typography>
+                        <Typography variant="body2">
+                          {formatThaiDate(semester.start_date)}
+                        </Typography>
                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                           ถึง {formatThaiDate(semester.end_date)}
                         </Typography>
@@ -360,7 +369,9 @@ export function SemesterView({ academicYearId }: Props) {
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
         <Form methods={methods} onSubmit={onSubmit}>
           <DialogTitle sx={{ pb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <Box
+              sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}
+            >
               <Box>
                 <Typography component="h2" variant="h6">
                   {editingSemester ? 'แก้ไขภาคเรียน' : 'เพิ่มภาคเรียน'}
@@ -369,7 +380,11 @@ export function SemesterView({ academicYearId }: Props) {
                   กำหนดชื่อ ช่วงเวลา และสถานะของภาคเรียน
                 </Typography>
               </Box>
-              <IconButton onClick={closeDialog} disabled={saveMutation.isPending} aria-label="ปิดหน้าต่าง">
+              <IconButton
+                onClick={closeDialog}
+                disabled={saveMutation.isPending}
+                aria-label="ปิดหน้าต่าง"
+              >
                 <Iconify icon="mingcute:close-line" />
               </IconButton>
             </Box>
@@ -454,7 +469,8 @@ export function SemesterView({ academicYearId }: Props) {
             ต้องการลบ <strong>{deletingSemester?.name}</strong> ใช่หรือไม่?
           </Typography>
           <Alert severity="warning" sx={{ mt: 2 }}>
-            การมอบหมายครู งาน และคะแนนที่เชื่อมโยงกับภาคเรียนนี้อาจถูกลบตามไปด้วย และไม่สามารถย้อนกลับได้
+            การมอบหมายครู งาน และคะแนนที่เชื่อมโยงกับภาคเรียนนี้อาจถูกลบตามไปด้วย
+            และไม่สามารถย้อนกลับได้
           </Alert>
         </DialogContent>
         <DialogActions>

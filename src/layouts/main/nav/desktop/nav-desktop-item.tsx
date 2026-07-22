@@ -84,8 +84,16 @@ const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({
   };
 
   const rootItemStyles: CSSObject = {
+    color: theme.vars.palette.primary.main,
+    '&:hover': {
+      color: theme.vars.palette.primary.dark,
+      backgroundColor: varAlpha(theme.vars.palette.primary.mainChannel, 0.08),
+    },
     ...(open && { '&::before': { ...dotTransitions.out } }),
-    ...(active && { color: theme.vars.palette.primary.main }),
+    ...(active && {
+      color: theme.vars.palette.primary.main,
+      backgroundColor: varAlpha(theme.vars.palette.primary.mainChannel, 0.12),
+    }),
   };
 
   const subItemStyles: CSSObject = {
@@ -114,7 +122,7 @@ const ItemTitle = styled('span', { shouldForwardProp })<StyledState>(({ theme })
   ...navItemStyles.title(theme),
   ...theme.typography.body2,
   fontWeight: theme.typography.fontWeightMedium,
-  color: theme.palette.secondary.main,
+  color: 'inherit',
   variants: [
     { props: { variant: 'subItem' }, style: { fontSize: theme.typography.pxToRem(13) } },
     { props: { active: true }, style: { fontWeight: theme.typography.fontWeightSemiBold } },

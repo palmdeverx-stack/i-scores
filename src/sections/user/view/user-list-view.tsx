@@ -1,5 +1,7 @@
 'use client';
 
+import type { UserRow } from '../user-actions';
+
 import * as z from 'zod';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -10,6 +12,7 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Tooltip from '@mui/material/Tooltip';
@@ -32,6 +35,7 @@ import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
 import { listUsers, createUser } from '../user-actions';
+import { StudentAvatarDialog } from '../components/student-avatar-dialog';
 
 // ----------------------------------------------------------------------
 
@@ -83,6 +87,7 @@ export function UserListView({ mode = 'staff' }: Props) {
   const [search, setSearch] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+  const [avatarStudent, setAvatarStudent] = useState<UserRow | null>(null);
   const queryClient = useQueryClient();
 
   const {
@@ -165,7 +170,7 @@ export function UserListView({ mode = 'staff' }: Props) {
   );
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,
@@ -266,6 +271,7 @@ export function UserListView({ mode = 'staff' }: Props) {
           <Table>
             <TableHead>
               <TableRow>
+                {isStudentMode && <TableCell width={88}>รูป</TableCell>}
                 <TableCell>ชื่อผู้ใช้งาน</TableCell>
                 <TableCell>ชื่อ-นามสกุล</TableCell>
                 <TableCell>อีเมล</TableCell>
@@ -276,18 +282,45 @@ export function UserListView({ mode = 'staff' }: Props) {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={5}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={isStudentMode ? 6 : 5}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!isLoading && !filteredUsers.length && (
                 <TableRow>
-                  <TableCell colSpan={5} sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={isStudentMode ? 6 : 5}
+                    sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
+                  >
                     ไม่พบ{isStudentMode ? 'นักเรียน' : 'ผู้ใช้งาน'}
                   </TableCell>
                 </TableRow>
               )}
               {filteredUsers.map((row) => (
                 <TableRow key={row.id} hover>
+                  {isStudentMode && (
+                    <TableCell>
+                      <Tooltip title="เปลี่ยนรูปโปรไฟล์">
+                        <IconButton
+                          onClick={() => setAvatarStudent(row)}
+                          aria-label={`จัดการรูปโปรไฟล์ของ ${row.first_name ?? row.username}`}
+                          sx={{ p: 0.5 }}
+                        >
+                          <Avatar
+                            src={row.avatar_url ?? undefined}
+                            alt={`${row.first_name ?? ''} ${row.last_name ?? ''}`.trim()}
+                            sx={{
+                              width: 42,
+                              height: 42,
+                              bgcolor: 'primary.lighter',
+                              color: 'primary.darker',
+                            }}
+                          >
+                            {(row.first_name ?? row.username).charAt(0).toUpperCase()}
+                          </Avatar>
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Typography variant="subtitle2">{row.username}</Typography>
                   </TableCell>
@@ -471,6 +504,10 @@ export function UserListView({ mode = 'staff' }: Props) {
           </DialogActions>
         </Form>
       </Dialog>
+
+      {isStudentMode && (
+        <StudentAvatarDialog student={avatarStudent} onClose={() => setAvatarStudent(null)} />
+      )}
     </Container>
   );
 }
