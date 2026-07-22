@@ -6,6 +6,8 @@ import { getStoredToken } from 'src/auth/context/jwt/utils';
 
 export type UserRole = 'master_admin' | 'school_admin' | 'teacher' | 'student';
 
+export type StudentStatus = 'studying' | 'graduated' | 'transferred' | 'withdrawn' | 'dismissed';
+
 export type UserRow = {
   id: string;
   username: string;
@@ -19,6 +21,7 @@ export type UserRow = {
   created_at: string;
   must_change_password?: boolean;
   login_password?: string | null;
+  student_status?: StudentStatus | null;
 };
 
 export type CreateUserParams = {
@@ -91,4 +94,18 @@ export async function deleteStudentAvatar(studentId: string): Promise<void> {
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถลบรูปนักเรียนได้');
+}
+
+export async function updateStudentStatus(
+  studentId: string,
+  status: StudentStatus
+): Promise<StudentStatus> {
+  const response = await fetch(`/api/admin/students/${studentId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ status }),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถเปลี่ยนสถานะนักเรียนได้');
+  return json.student.student_status;
 }

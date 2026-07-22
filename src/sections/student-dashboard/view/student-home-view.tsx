@@ -51,7 +51,7 @@ export function StudentHomeView() {
           <HeroStat
             icon="solar:users-group-rounded-bold"
             label="เพื่อนในห้อง"
-            value={data.ranking.length}
+            value={data.class_members.filter((member) => !member.is_current_student).length}
           />
           <HeroStat
             icon="solar:bell-bing-bold"

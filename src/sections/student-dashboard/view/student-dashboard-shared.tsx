@@ -99,6 +99,7 @@ export function StudentPageScaffold({
   const currentEnrollment = getCurrentEnrollment(data);
   const sectionLabel = {
     home: 'หน้าหลักนักเรียน',
+    classroom: 'ห้องเรียนของฉัน',
     subjects: 'วิชาเรียนของฉัน',
     assignments: 'งานที่ต้องส่ง',
   }[section];

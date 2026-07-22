@@ -1,6 +1,6 @@
 'use client';
 
-import type { UserRow } from '../user-actions';
+import type { UserRow, StudentStatus } from '../user-actions';
 
 import * as z from 'zod';
 import { useMemo, useState } from 'react';
@@ -16,6 +16,7 @@ import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Tooltip from '@mui/material/Tooltip';
+import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -34,8 +35,10 @@ import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
-import { listUsers, createUser } from '../user-actions';
+import { StudentGuardiansDialog } from 'src/sections/student-guardian/components/student-guardians-dialog';
+
 import { StudentAvatarDialog } from '../components/student-avatar-dialog';
+import { listUsers, createUser, updateStudentStatus } from '../user-actions';
 
 // ----------------------------------------------------------------------
 
@@ -77,6 +80,22 @@ const ROLE_LABEL = {
   student: 'นักเรียน',
 } as const;
 
+const STUDENT_STATUS_LABEL: Record<StudentStatus, string> = {
+  studying: 'กำลังศึกษา',
+  graduated: 'สำเร็จการศึกษา',
+  transferred: 'ย้ายโรงเรียน',
+  withdrawn: 'ลาออก',
+  dismissed: 'พ้นสภาพ',
+};
+
+const STUDENT_STATUS_COLOR: Record<StudentStatus, 'success' | 'info' | 'warning' | 'error'> = {
+  studying: 'success',
+  graduated: 'info',
+  transferred: 'warning',
+  withdrawn: 'warning',
+  dismissed: 'error',
+};
+
 type Props = {
   mode?: 'staff' | 'student';
 };
@@ -88,6 +107,7 @@ export function UserListView({ mode = 'staff' }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
   const [avatarStudent, setAvatarStudent] = useState<UserRow | null>(null);
+  const [guardianStudent, setGuardianStudent] = useState<UserRow | null>(null);
   const queryClient = useQueryClient();
 
   const {
@@ -124,6 +144,14 @@ export function UserListView({ mode = 'staff' }: Props) {
       await queryClient.invalidateQueries({ queryKey: ['users'] });
       setDialogOpen(false);
       reset();
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ studentId, status }: { studentId: string; status: StudentStatus }) =>
+      updateStudentStatus(studentId, status),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
     },
   });
 
@@ -277,18 +305,20 @@ export function UserListView({ mode = 'staff' }: Props) {
                 <TableCell>อีเมล</TableCell>
                 <TableCell>รหัสผ่าน</TableCell>
                 <TableCell>บทบาท</TableCell>
+                {isStudentMode && <TableCell width={180}>สถานะ</TableCell>}
+                {isStudentMode && <TableCell align="right">การจัดการ</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={isStudentMode ? 6 : 5}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={isStudentMode ? 8 : 5}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!isLoading && !filteredUsers.length && (
                 <TableRow>
                   <TableCell
-                    colSpan={isStudentMode ? 6 : 5}
+                    colSpan={isStudentMode ? 8 : 5}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
                     ไม่พบ{isStudentMode ? 'นักเรียน' : 'ผู้ใช้งาน'}
@@ -376,6 +406,56 @@ export function UserListView({ mode = 'staff' }: Props) {
                       {ROLE_LABEL[row.role]}
                     </Label>
                   </TableCell>
+                  {isStudentMode && (
+                    <TableCell>
+                      <TextField
+                        select
+                        size="small"
+                        fullWidth
+                        value={row.student_status ?? 'studying'}
+                        onChange={(event) =>
+                          statusMutation.mutate({
+                            studentId: row.id,
+                            status: event.target.value as StudentStatus,
+                          })
+                        }
+                        slotProps={{
+                          select: {
+                            renderValue: (value) => (
+                              <Label
+                                variant="soft"
+                                color={STUDENT_STATUS_COLOR[value as StudentStatus]}
+                              >
+                                {STUDENT_STATUS_LABEL[value as StudentStatus]}
+                              </Label>
+                            ),
+                          },
+                        }}
+                      >
+                        {(
+                          Object.keys(STUDENT_STATUS_LABEL) as Array<
+                            keyof typeof STUDENT_STATUS_LABEL
+                          >
+                        ).map((status) => (
+                          <MenuItem key={status} value={status}>
+                            {STUDENT_STATUS_LABEL[status]}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </TableCell>
+                  )}
+                  {isStudentMode && (
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Iconify icon="solar:users-group-rounded-bold" />}
+                        onClick={() => setGuardianStudent(row)}
+                      >
+                        ผู้ปกครอง
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -395,13 +475,15 @@ export function UserListView({ mode = 'staff' }: Props) {
                   {isStudentMode ? 'สร้างบัญชีนักเรียนใหม่' : 'สร้างบัญชีใหม่สำหรับบุคลากรหรือครู'}
                 </Typography>
               </Box>
-              <IconButton
-                onClick={closeDialog}
-                disabled={createMutation.isPending}
-                aria-label="ปิดหน้าต่าง"
-              >
-                <Iconify icon="mingcute:close-line" />
-              </IconButton>
+              <Box>
+                <IconButton
+                  onClick={closeDialog}
+                  disabled={createMutation.isPending}
+                  aria-label="ปิดหน้าต่าง"
+                >
+                  <Iconify icon="mingcute:close-line" />
+                </IconButton>
+              </Box>
             </Box>
           </DialogTitle>
           <DialogContent sx={{ pt: 2 }}>
@@ -506,7 +588,14 @@ export function UserListView({ mode = 'staff' }: Props) {
       </Dialog>
 
       {isStudentMode && (
-        <StudentAvatarDialog student={avatarStudent} onClose={() => setAvatarStudent(null)} />
+        <>
+          <StudentAvatarDialog student={avatarStudent} onClose={() => setAvatarStudent(null)} />
+          <StudentGuardiansDialog
+            open={!!guardianStudent}
+            student={guardianStudent}
+            onClose={() => setGuardianStudent(null)}
+          />
+        </>
       )}
     </Container>
   );

@@ -40,18 +40,27 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
 
   const { user } = useAuthContext();
 
-  const menuData: NonNullable<AccountPopoverProps['data']> = [
-    ...(user?.role === 'student' && !data.some((option) => option.href === paths.student.profile)
-      ? [
-          {
-            label: 'โปรไฟล์ของฉัน',
-            href: paths.student.profile,
-            icon: <Iconify icon="solar:user-rounded-bold" />,
-          },
-        ]
-      : []),
-    ...data,
+  const studentMenu = [
+    {
+      label: 'โปรไฟล์ของฉัน',
+      href: paths.student.profile,
+      icon: <Iconify icon="solar:user-rounded-bold" />,
+    },
+    {
+      label: 'ห้องเรียนของฉัน',
+      href: paths.student.classroom,
+      icon: <Iconify icon="solar:users-group-rounded-bold" />,
+    },
   ];
+  const menuData: NonNullable<AccountPopoverProps['data']> =
+    user?.role === 'student'
+      ? [
+          ...studentMenu,
+          ...data.filter(
+            (option) => !studentMenu.some((studentOption) => studentOption.href === option.href)
+          ),
+        ]
+      : data;
 
   const renderMenuActions = () => (
     <CustomPopover

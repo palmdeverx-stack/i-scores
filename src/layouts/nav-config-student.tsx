@@ -23,4 +23,9 @@ export const studentNavData: NavMainProps['data'] = [
     path: paths.student.assignments,
     icon: <Iconify width={22} icon="solar:list-bold" />,
   },
+  {
+    title: 'การเข้าเรียน',
+    path: paths.student.attendance,
+    icon: <Iconify width={22} icon="solar:check-circle-bold" />,
+  },
 ];

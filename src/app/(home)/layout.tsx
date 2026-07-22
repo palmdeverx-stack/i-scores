@@ -17,7 +17,9 @@ export default function Layout({ children }: Props) {
     <AuthGuard>
       <RoleRedirectGuard currentRole={user?.role} allowedRoles={['student']}>
         <MustChangePasswordGuard mustChangePassword={user?.must_change_password}>
-          <MainLayout slotProps={{ nav: { data: studentNavData } }}>{children}</MainLayout>
+          <MainLayout slotProps={{ nav: { data: studentNavData, mobileBottom: true } }}>
+            {children}
+          </MainLayout>
         </MustChangePasswordGuard>
       </RoleRedirectGuard>
     </AuthGuard>

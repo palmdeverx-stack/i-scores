@@ -74,6 +74,10 @@ export type StudentSubject = {
   }>;
 };
 
+export type StudentAssignmentItem = StudentSubject['assignments'][number] & {
+  subject: StudentSubject['subject'];
+};
+
 export type StudentRankingRow = {
   rank: number;
   student: StudentPerson;
@@ -103,6 +107,12 @@ export type StudentDashboard = {
     classroom: StudentClassroom;
     teacher: StudentPerson;
   }>;
+  class_members: Array<{
+    student: StudentPerson;
+    student_number: string | null;
+    is_current_student: boolean;
+  }>;
+  homeroom_teachers: StudentPerson[];
   ranking: StudentRankingRow[];
   subject_rankings: Array<{
     id: string;
@@ -123,7 +133,7 @@ export type StudentDashboard = {
   }>;
 };
 
-export type StudentDashboardSection = 'home' | 'subjects' | 'assignments';
+export type StudentDashboardSection = 'home' | 'classroom' | 'subjects' | 'assignments';
 
 export async function getStudentDashboard(
   section: StudentDashboardSection = 'home'

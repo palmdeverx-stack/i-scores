@@ -44,7 +44,7 @@ export function StudentSubjectsView() {
     >
       <StudentWeeklyTimetable schedules={data.schedules} />
 
-      <Box sx={{ mt: 5 }}>
+      <Box sx={{ mt: { xs: 3, md: 5 } }}>
         <SectionHeading
           icon="solar:notebook-bold-duotone"
           title="วิชาที่ต้องเรียน"
@@ -54,9 +54,13 @@ export function StudentSubjectsView() {
         {data.subjects.length ? (
           <Box
             sx={{
-              gap: 2.5,
+              gap: { xs: 1.5, sm: 2, lg: 2.5 },
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+              gridTemplateColumns: {
+                xs: 'minmax(0, 1fr)',
+                md: 'repeat(2, minmax(0, 1fr))',
+                xl: 'repeat(3, minmax(0, 1fr))',
+              },
             }}
           >
             {data.subjects.map((item) => (

@@ -29,10 +29,18 @@ export type CreateTeacherAssignmentParams = {
   semesterId: string;
 };
 
+export type RosterStudent = {
+  id: string;
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+};
+
 export type RosterRow = {
   id: string;
   student_number: string | null;
-  student: { id: string; username: string; first_name: string | null; last_name: string | null };
+  student: RosterStudent;
 };
 
 export type Roster = {

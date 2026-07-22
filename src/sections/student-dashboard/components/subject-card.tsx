@@ -26,10 +26,13 @@ export function SubjectCard({ item }: Props) {
   const submitted = item.assignments.filter((assignment) => isSubmitted(assignment.status)).length;
 
   return (
-    <Card variant="outlined" sx={{ overflow: 'hidden', borderRadius: 3, position: 'relative' }}>
+    <Card
+      variant="outlined"
+      sx={{ height: 1, overflow: 'hidden', borderRadius: { xs: 2.5, sm: 3 }, position: 'relative' }}
+    >
       <Box
         sx={{
-          height: 120,
+          height: { xs: 104, sm: 120 },
           position: 'relative',
           bgcolor: 'primary.lighter',
           background: item.subject.image_url
@@ -64,38 +67,51 @@ export function SubjectCard({ item }: Props) {
         src={item.teacher.avatar_url ?? undefined}
         alt={teacherName}
         sx={{
-          width: 80,
-          height: 80,
+          width: { xs: 64, sm: 76 },
+          height: { xs: 64, sm: 76 },
           color: 'primary.darker',
           bgcolor: 'primary.lighter',
           border: '2px solid',
           borderColor: 'background.paper',
           position: 'absolute',
-          right: 20,
-          top: 80,
+          right: { xs: 14, sm: 20 },
+          top: { xs: 72, sm: 84 },
           boxShadow: (theme) => theme.vars.customShadows.z4,
         }}
       >
         {teacherName.charAt(0)}
       </Avatar>
 
-      <Box sx={{ p: 2.25 }}>
-        <Typography variant="h6" sx={{ mb: 0.5 }}>
+      <Box sx={{ p: { xs: 2, sm: 2.25 } }}>
+        <Typography
+          variant="h6"
+          sx={{
+            mb: 0.5,
+            minHeight: { sm: 56 },
+            pr: { xs: 8.5, sm: 9.5 },
+            fontSize: { xs: '1rem', sm: '1.125rem' },
+            lineHeight: 1.4,
+            overflowWrap: 'anywhere',
+          }}
+        >
           {item.subject.name}
         </Typography>
 
-        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ my: 1.5 }}>
+        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mt: 1.25, mb: 1 }}>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
               ครูผู้สอน
             </Typography>
-            <Typography variant="subtitle2" noWrap>
+            <Typography variant="subtitle2" sx={{ overflowWrap: 'anywhere' }}>
               {teacherName}
             </Typography>
           </Box>
         </Stack>
 
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+        <Typography
+          variant="caption"
+          sx={{ display: 'block', color: 'text.secondary', overflowWrap: 'anywhere' }}
+        >
           {item.semester.name} · ห้อง {item.classroom.name} · {item.subject.credits ?? 0} หน่วยกิต
         </Typography>
 

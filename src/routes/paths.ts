@@ -96,8 +96,10 @@ export const paths = {
   student: {
     root: ROOTS.STUDENT,
     profile: `${ROOTS.STUDENT}/profile`,
+    classroom: `${ROOTS.STUDENT}/classroom`,
     subjects: `${ROOTS.STUDENT}/subjects`,
     assignments: `${ROOTS.STUDENT}/assignments`,
+    attendance: `${ROOTS.STUDENT}/attendance`,
   },
   // TEACHER
   teacher: {

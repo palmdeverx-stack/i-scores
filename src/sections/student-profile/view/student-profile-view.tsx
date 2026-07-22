@@ -1,10 +1,7 @@
 'use client';
 
-import * as z from 'zod';
-import { useForm } from 'react-hook-form';
 import { varAlpha } from 'minimal-shared/utils';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -21,31 +18,26 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
-import { Form, Field } from 'src/components/hook-form';
 
-import { useAuthContext } from 'src/auth/hooks';
-
-import {
-  getStudentProfile,
-  updateStudentProfile,
-  type UpdateStudentProfileParams,
-} from '../student-profile-actions';
+import { getStudentProfile, type StudentProfile } from '../student-profile-actions';
 
 // ----------------------------------------------------------------------
 
-const ProfileSchema = z.object({
-  firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อ' }),
-  lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุล' }),
-  email: z.union([z.literal(''), z.email({ error: 'รูปแบบอีเมลไม่ถูกต้อง' })]),
-  username: z.string(),
-});
+type StudentStatus = NonNullable<StudentProfile['student_status']>;
+type StudentGuardian = StudentProfile['guardians'][number];
 
-type ProfileSchemaType = z.infer<typeof ProfileSchema>;
+const STUDENT_STATUS_CONFIG: Record<
+  StudentStatus,
+  { label: string; color: 'success' | 'info' | 'warning' | 'error' }
+> = {
+  studying: { label: 'กำลังศึกษา', color: 'success' },
+  graduated: { label: 'สำเร็จการศึกษา', color: 'info' },
+  transferred: { label: 'ย้ายโรงเรียน', color: 'warning' },
+  withdrawn: { label: 'ลาออก', color: 'warning' },
+  dismissed: { label: 'พ้นสภาพ', color: 'error' },
+};
 
 export function StudentProfileView() {
-  const queryClient = useQueryClient();
-  const { checkUserSession } = useAuthContext();
-
   const {
     data: profile,
     isLoading,
@@ -55,42 +47,6 @@ export function StudentProfileView() {
     queryKey: ['student-profile'],
     queryFn: getStudentProfile,
   });
-
-  const methods = useForm<ProfileSchemaType>({
-    resolver: zodResolver(ProfileSchema),
-    defaultValues: { firstName: '', lastName: '', email: '', username: '' },
-    values: profile
-      ? {
-          firstName: profile.first_name ?? '',
-          lastName: profile.last_name ?? '',
-          email: profile.email ?? '',
-          username: profile.username,
-        }
-      : undefined,
-  });
-
-  const mutation = useMutation({
-    mutationFn: (params: UpdateStudentProfileParams) => updateStudentProfile(params),
-    onSuccess: async (updatedProfile) => {
-      queryClient.setQueryData(['student-profile'], updatedProfile);
-      await queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
-      await checkUserSession?.();
-      methods.reset({
-        firstName: updatedProfile.first_name ?? '',
-        lastName: updatedProfile.last_name ?? '',
-        email: updatedProfile.email ?? '',
-        username: updatedProfile.username,
-      });
-    },
-  });
-
-  const onSubmit = methods.handleSubmit((values) =>
-    mutation.mutate({
-      firstName: values.firstName.trim(),
-      lastName: values.lastName.trim(),
-      email: values.email.trim(),
-    })
-  );
 
   if (isLoading) return <ProfileSkeleton />;
 
@@ -119,54 +75,71 @@ export function StudentProfileView() {
       .map((name) => name?.charAt(0))
       .join('') || profile.username.charAt(0).toUpperCase();
   const classroom = profile.enrollment?.classroom;
+  const studentStatus = STUDENT_STATUS_CONFIG[profile.student_status ?? 'studying'];
   const memberSince = new Intl.DateTimeFormat('th-TH', {
     month: 'long',
     year: 'numeric',
   }).format(new Date(profile.created_at));
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 3 }, pb: { xs: 5, md: 7 } }}>
       <Card
         sx={{
           mb: 3,
-          p: { xs: 2.5, sm: 4 },
+          p: { xs: 2.5, sm: 3.5, md: 4 },
+          minHeight: { md: 220 },
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
+          borderRadius: 4,
+          boxShadow: (theme) =>
+            `0 24px 48px ${varAlpha(theme.vars.palette.primary.darkerChannel, 0.2)}`,
           background: (theme) =>
             `linear-gradient(135deg, ${theme.vars.palette.primary.darker} 0%, ${theme.vars.palette.primary.main} 55%, ${theme.vars.palette.primary.light} 100%)`,
           '&::before': {
-            top: -90,
-            right: -40,
+            top: -110,
+            right: -60,
+            width: 280,
+            height: 280,
+            content: '""',
+            borderRadius: '50%',
+            position: 'absolute',
+            bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.1),
+          },
+          '&::after': {
+            right: 180,
+            bottom: -120,
             width: 220,
             height: 220,
             content: '""',
-            opacity: 0.14,
             borderRadius: '50%',
             position: 'absolute',
-            bgcolor: 'common.white',
+            bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.07),
           },
         }}
       >
         <Box
           sx={{
-            gap: { xs: 2, sm: 3 },
+            gap: { xs: 2.5, sm: 3 },
             zIndex: 1,
             display: 'flex',
             position: 'relative',
-            alignItems: 'center',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            flexDirection: { xs: 'column', sm: 'row' },
           }}
         >
           <Avatar
             src={profile.avatar_url ?? undefined}
             aria-label={`รูปโปรไฟล์ของ ${displayName}`}
             sx={{
-              width: { xs: 72, sm: 92 },
-              height: { xs: 72, sm: 92 },
-              fontSize: { xs: 26, sm: 34 },
+              width: { xs: 84, sm: 108 },
+              height: { xs: 84, sm: 108 },
+              fontSize: { xs: 30, sm: 38 },
               fontWeight: 800,
               color: 'primary.darker',
               bgcolor: 'common.white',
+              boxShadow: (theme) =>
+                `0 12px 28px ${varAlpha(theme.vars.palette.common.blackChannel, 0.18)}`,
               border: (theme) =>
                 `4px solid ${varAlpha(theme.vars.palette.common.whiteChannel, 0.3)}`,
             }}
@@ -174,14 +147,32 @@ export function StudentProfileView() {
             {initials}
           </Avatar>
 
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="overline" sx={{ opacity: 0.8, letterSpacing: 1 }}>
-              โปรไฟล์นักเรียน
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography variant="overline" sx={{ opacity: 0.82, letterSpacing: 1.2 }}>
+              ข้อมูลส่วนตัวของฉัน
             </Typography>
-            <Typography component="h1" variant="h3" sx={{ overflowWrap: 'anywhere' }}>
+            <Typography
+              component="h1"
+              variant="h3"
+              sx={{ mt: 0.25, fontSize: { xs: 28, sm: 36 }, overflowWrap: 'anywhere' }}
+            >
               {displayName}
             </Typography>
-            <Box sx={{ gap: 1, mt: 1.25, display: 'flex', flexWrap: 'wrap' }}>
+            <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.82 }}>
+              ตรวจสอบข้อมูลส่วนตัว การเรียน และผู้ปกครองของคุณ
+            </Typography>
+            <Box sx={{ gap: 1, mt: 1.75, display: 'flex', flexWrap: 'wrap' }}>
+              <Chip
+                size="small"
+                label={studentStatus.label}
+                icon={<Iconify icon="solar:verified-check-bold" />}
+                sx={{
+                  fontWeight: 700,
+                  color: `${studentStatus.color}.darker`,
+                  bgcolor: `${studentStatus.color}.lighter`,
+                  '& .MuiChip-icon': { color: `${studentStatus.color}.main` },
+                }}
+              />
               <Chip
                 size="small"
                 label={classroom ? `ห้อง ${classroom.name}` : 'ยังไม่มีห้องเรียน'}
@@ -202,116 +193,93 @@ export function StudentProfileView() {
               )}
             </Box>
           </Box>
+
+          <Box
+            sx={(theme) => ({
+              p: 2,
+              gap: 0.5,
+              width: { xs: 1, sm: 230 },
+              flexShrink: 0,
+              display: 'flex',
+              borderRadius: 2.5,
+              flexDirection: 'column',
+              border: `1px solid ${varAlpha(theme.vars.palette.common.whiteChannel, 0.18)}`,
+              bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.1),
+              backdropFilter: 'blur(8px)',
+            })}
+          >
+            <Typography variant="caption" sx={{ opacity: 0.72 }}>
+              โรงเรียน
+            </Typography>
+            <Typography variant="subtitle2">
+              {profile.school?.name ?? 'ยังไม่มีข้อมูลโรงเรียน'}
+            </Typography>
+            <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.16)' }} />
+            <Typography variant="caption" sx={{ opacity: 0.72 }}>
+              ภาคเรียน / ปีการศึกษา
+            </Typography>
+            <Typography variant="subtitle2">
+              {profile.semester?.name ?? 'ยังไม่มีข้อมูล'} /{' '}
+              {classroom?.academic_year?.year ?? 'ยังไม่มีข้อมูล'}
+            </Typography>
+          </Box>
         </Box>
       </Card>
-
-      {mutation.error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {mutation.error.message}
-        </Alert>
-      )}
-      {mutation.isSuccess && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว
-        </Alert>
-      )}
 
       <Box
         sx={{
           gap: 3,
           display: 'grid',
           alignItems: 'start',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 320px' },
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 340px' },
         }}
       >
-        <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 4 } }}>
-          <Typography component="h2" variant="h6">
-            ข้อมูลส่วนตัว
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 0.5, mb: 3, color: 'text.secondary' }}>
-            แก้ไขข้อมูลที่ใช้แสดงภายในระบบ สามารถเว้นอีเมลว่างได้
-          </Typography>
-
-          <Form methods={methods} onSubmit={onSubmit}>
-            <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
-              <Box
-                sx={{
-                  gap: 2.5,
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-                }}
-              >
-                <Field.Text name="firstName" label="ชื่อ *" autoComplete="given-name" />
-                <Field.Text name="lastName" label="นามสกุล *" autoComplete="family-name" />
-              </Box>
-              <Field.Text
-                name="email"
-                type="email"
-                label="อีเมล"
-                placeholder="student@example.com"
-                autoComplete="email"
-              />
-              <Field.Text
-                name="username"
-                label="ชื่อผู้ใช้"
-                value={profile.username}
-                disabled
-                helperText="ชื่อผู้ใช้เปลี่ยนเองไม่ได้ หากต้องการแก้ไขกรุณาติดต่อผู้ดูแลโรงเรียน"
-              />
-
-              <Divider />
-
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                  type="submit"
-                  size="large"
-                  variant="contained"
-                  loading={mutation.isPending}
-                  disabled={!methods.formState.isDirty}
-                  loadingIndicator="กำลังบันทึก..."
-                  startIcon={<Iconify icon="solar:check-circle-bold" />}
-                  sx={{ width: { xs: 1, sm: 'auto' }, minWidth: 210 }}
-                >
-                  บันทึกการเปลี่ยนแปลง
-                </Button>
-              </Box>
-            </Box>
-          </Form>
-        </Card>
-
-        <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
-          <Card variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
-            <Typography component="h2" variant="h6">
-              รูปโปรไฟล์
-            </Typography>
-            <Avatar
-              src={profile.avatar_url ?? undefined}
-              alt={displayName}
+        <Box sx={{ gap: 3, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
+            <ProfileSectionHeader
+              icon="solar:user-id-bold"
+              title="ข้อมูลส่วนตัว"
+              description="ข้อมูลนักเรียนที่บันทึกไว้ในระบบ"
+            />
+            <Box
               sx={{
-                mx: 'auto',
-                mt: 2.5,
-                width: 112,
-                height: 112,
-                fontSize: 36,
-                fontWeight: 800,
-                color: 'primary.darker',
-                bgcolor: 'primary.lighter',
-                border: '4px solid',
-                borderColor: 'primary.lighter',
+                gap: 1,
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
               }}
             >
-              {initials}
-            </Avatar>
-            <Alert severity="info" sx={{ mt: 2.5, textAlign: 'left' }}>
-              รูปโปรไฟล์จัดการโดยผู้ดูแลโรงเรียน หากต้องการเปลี่ยนรูปกรุณาติดต่อผู้ดูแล
-            </Alert>
+              <ProfileFact
+                icon="solar:user-rounded-bold"
+                label="ชื่อ"
+                value={profile.first_name ?? 'ยังไม่มีข้อมูล'}
+              />
+              <ProfileFact
+                icon="solar:user-rounded-bold"
+                label="นามสกุล"
+                value={profile.last_name ?? 'ยังไม่มีข้อมูล'}
+              />
+              <ProfileFact
+                icon="solar:letter-bold"
+                label="อีเมล"
+                value={profile.email ?? 'ยังไม่มีข้อมูล'}
+              />
+              <ProfileFact icon="solar:user-id-bold" label="ชื่อผู้ใช้" value={profile.username} />
+            </Box>
           </Card>
 
-          <Card variant="outlined" sx={{ p: 3 }}>
-            <Typography component="h2" variant="h6" sx={{ mb: 2.5 }}>
-              ข้อมูลการเรียน
-            </Typography>
-            <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
+          <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
+            <ProfileSectionHeader
+              icon="solar:notebook-bold-duotone"
+              title="ข้อมูลการเรียน"
+              description="ข้อมูลห้องเรียนและสถานะปัจจุบันของนักเรียน"
+            />
+            <Box
+              sx={{
+                gap: 0.5,
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+              }}
+            >
               <ProfileFact
                 icon="solar:users-group-rounded-bold"
                 label="โรงเรียน"
@@ -328,14 +296,115 @@ export function StudentProfileView() {
                 value={classroom?.academic_year?.year ?? 'ยังไม่มีข้อมูล'}
               />
               <ProfileFact
+                icon="solar:flag-bold"
+                label="ภาคเรียน"
+                value={profile.semester?.name ?? 'ยังไม่มีข้อมูล'}
+              />
+              <ProfileFact
                 icon="solar:user-rounded-bold"
                 label="เลขประจำตัวในห้อง"
                 value={profile.enrollment?.student_number ?? 'ยังไม่มีข้อมูล'}
               />
+              <ProfileFact
+                icon="solar:verified-check-bold"
+                label="สถานะนักเรียน"
+                value={studentStatus.label}
+                valueColor={`${studentStatus.color}.main`}
+              />
             </Box>
           </Card>
 
-          <Card variant="outlined" sx={{ p: 3 }}>
+          <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
+            <ProfileSectionHeader
+              icon="solar:users-group-rounded-bold-duotone"
+              title="ข้อมูลผู้ปกครอง"
+              description="ข้อมูลสำหรับติดต่อผู้ปกครองที่บันทึกไว้ในระบบ"
+            />
+            {profile.guardians.length ? (
+              <Box sx={{ gap: 1.5, display: 'grid' }}>
+                {profile.guardians.map((guardian) => (
+                  <GuardianCard key={guardian.id} guardian={guardian} />
+                ))}
+              </Box>
+            ) : (
+              <Box
+                sx={{
+                  py: 5,
+                  px: 2,
+                  textAlign: 'center',
+                  borderRadius: 2,
+                  bgcolor: 'background.neutral',
+                  border: '1px dashed',
+                  borderColor: 'divider',
+                }}
+              >
+                <Iconify
+                  icon="solar:users-group-rounded-bold"
+                  width={42}
+                  sx={{ color: 'text.disabled' }}
+                />
+                <Typography variant="subtitle2" sx={{ mt: 1 }}>
+                  ยังไม่มีข้อมูลผู้ปกครอง
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  กรุณาติดต่อผู้ดูแลโรงเรียนเพื่อเพิ่มข้อมูล
+                </Typography>
+              </Box>
+            )}
+          </Card>
+        </Box>
+
+        <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
+          <Card variant="outlined" sx={{ p: 3, textAlign: 'center', borderRadius: 3 }}>
+            <Typography variant="overline" sx={{ color: 'text.secondary' }}>
+              บัตรนักเรียน
+            </Typography>
+            <Avatar
+              src={profile.avatar_url ?? undefined}
+              alt={displayName}
+              sx={{
+                mx: 'auto',
+                mt: 1.5,
+                width: 120,
+                height: 120,
+                fontSize: 38,
+                fontWeight: 800,
+                color: 'primary.darker',
+                bgcolor: 'primary.lighter',
+                border: '4px solid',
+                borderColor: 'primary.lighter',
+                boxShadow: (theme) =>
+                  `0 12px 32px ${varAlpha(theme.vars.palette.primary.mainChannel, 0.18)}`,
+              }}
+            >
+              {initials}
+            </Avatar>
+            <Typography variant="h6" sx={{ mt: 2 }}>
+              {displayName}
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              @{profile.username}
+            </Typography>
+            <Chip
+              size="small"
+              color={studentStatus.color}
+              label={studentStatus.label}
+              sx={{ mt: 1.5, fontWeight: 700 }}
+            />
+            <Divider sx={{ my: 2.5 }} />
+            <Box sx={{ gap: 1, display: 'flex', alignItems: 'flex-start', textAlign: 'left' }}>
+              <Iconify
+                icon="solar:info-circle-bold"
+                width={18}
+                sx={{ mt: 0.25, color: 'info.main' }}
+              />
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                รูปโปรไฟล์จัดการโดยผู้ดูแลโรงเรียน หากต้องการเปลี่ยนรูป กรุณาติดต่อผู้ดูแล
+              </Typography>
+            </Box>
+          </Card>
+
+          <Card variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
             <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'flex-start' }}>
               <Box
                 sx={{
@@ -356,7 +425,7 @@ export function StudentProfileView() {
                   ความปลอดภัยของบัญชี
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  เป็นสมาชิกตั้งแต่ {memberSince}
+                  จัดการรหัสผ่านสำหรับเข้าสู่ระบบ
                 </Typography>
               </Box>
             </Box>
@@ -370,6 +439,12 @@ export function StudentProfileView() {
             >
               เปลี่ยนรหัสผ่าน
             </Button>
+            <Typography
+              variant="caption"
+              sx={{ mt: 1.5, display: 'block', textAlign: 'center', color: 'text.secondary' }}
+            >
+              เป็นสมาชิกตั้งแต่ {memberSince}
+            </Typography>
           </Card>
         </Box>
       </Box>
@@ -379,38 +454,173 @@ export function StudentProfileView() {
 
 // ----------------------------------------------------------------------
 
+type ProfileSectionHeaderProps = {
+  icon:
+    | 'solar:user-id-bold'
+    | 'solar:notebook-bold-duotone'
+    | 'solar:users-group-rounded-bold-duotone';
+  title: string;
+  description: string;
+};
+
+function ProfileSectionHeader({ icon, title, description }: ProfileSectionHeaderProps) {
+  return (
+    <Box sx={{ gap: 1.5, mb: 3, display: 'flex', alignItems: 'center' }}>
+      <Box
+        sx={{
+          width: 46,
+          height: 46,
+          flexShrink: 0,
+          display: 'grid',
+          borderRadius: 1.75,
+          color: 'primary.main',
+          placeItems: 'center',
+          bgcolor: 'primary.lighter',
+        }}
+      >
+        <Iconify icon={icon} width={24} />
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography component="h2" variant="h6">
+          {title}
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          {description}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+function GuardianCard({ guardian }: { guardian: StudentGuardian }) {
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        p: { xs: 2, sm: 2.5 },
+        borderRadius: 2.5,
+        bgcolor: 'background.neutral',
+      }}
+    >
+      <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'flex-start' }}>
+        <Avatar sx={{ color: 'primary.main', bgcolor: 'primary.lighter' }}>
+          <Iconify icon="solar:user-rounded-bold" />
+        </Avatar>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Typography variant="subtitle1">{guardian.full_name}</Typography>
+            <Chip size="small" variant="outlined" label={guardian.relationship} />
+            {guardian.is_primary && (
+              <Chip size="small" color="primary" label="ผู้ติดต่อหลัก" sx={{ fontWeight: 700 }} />
+            )}
+          </Box>
+          {guardian.occupation && (
+            <Typography variant="body2" sx={{ mt: 0.25, color: 'text.secondary' }}>
+              อาชีพ {guardian.occupation}
+            </Typography>
+          )}
+        </Box>
+      </Box>
+
+      <Box
+        sx={{
+          gap: 1,
+          mt: 2,
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: guardian.email ? '1fr 1fr' : '1fr' },
+        }}
+      >
+        <Button
+          component="a"
+          href={`tel:${guardian.phone}`}
+          color="inherit"
+          variant="outlined"
+          startIcon={<Iconify icon="solar:phone-bold" />}
+          sx={{ justifyContent: 'flex-start' }}
+        >
+          {guardian.phone}
+        </Button>
+        {guardian.email && (
+          <Button
+            component="a"
+            href={`mailto:${guardian.email}`}
+            color="inherit"
+            variant="outlined"
+            startIcon={<Iconify icon="solar:letter-bold" />}
+            sx={{ minWidth: 0, justifyContent: 'flex-start', overflowWrap: 'anywhere' }}
+          >
+            {guardian.email}
+          </Button>
+        )}
+      </Box>
+
+      {(guardian.address || guardian.notes) && <Divider sx={{ my: 2 }} />}
+      {guardian.address && (
+        <Box sx={{ gap: 1, display: 'flex', alignItems: 'flex-start' }}>
+          <Iconify
+            icon="solar:home-2-outline"
+            width={18}
+            sx={{ mt: 0.25, color: 'text.secondary' }}
+          />
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {guardian.address}
+          </Typography>
+        </Box>
+      )}
+      {guardian.notes && (
+        <Box
+          sx={{ gap: 1, mt: guardian.address ? 1 : 0, display: 'flex', alignItems: 'flex-start' }}
+        >
+          <Iconify
+            icon="solar:file-text-bold"
+            width={18}
+            sx={{ mt: 0.25, color: 'text.secondary' }}
+          />
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            หมายเหตุ: {guardian.notes}
+          </Typography>
+        </Box>
+      )}
+    </Card>
+  );
+}
+
+// ----------------------------------------------------------------------
+
 type ProfileFactProps = {
   icon:
+    | 'solar:user-id-bold'
     | 'solar:users-group-rounded-bold'
     | 'solar:notebook-bold-duotone'
     | 'solar:calendar-date-bold'
-    | 'solar:user-rounded-bold';
+    | 'solar:flag-bold'
+    | 'solar:letter-bold'
+    | 'solar:user-rounded-bold'
+    | 'solar:verified-check-bold';
   label: string;
   value: string;
+  valueColor?: string;
 };
 
-function ProfileFact({ icon, label, value }: ProfileFactProps) {
+function ProfileFact({ icon, label, value, valueColor }: ProfileFactProps) {
   return (
-    <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
-      <Box
-        sx={{
-          width: 38,
-          height: 38,
-          flexShrink: 0,
-          display: 'grid',
-          borderRadius: 1.25,
-          color: 'primary.main',
-          placeItems: 'center',
-          bgcolor: 'background.neutral',
-        }}
-      >
-        <Iconify icon={icon} width={20} />
-      </Box>
+    <Box
+      sx={{
+        p: 1,
+        gap: 0,
+        minWidth: 0,
+        display: 'flex',
+        borderRadius: 2,
+        alignItems: 'center',
+      }}
+    >
       <Box sx={{ minWidth: 0 }}>
-        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+        <Typography variant="body2" sx={{ display: 'block', color: 'text.secondary' }}>
           {label}
         </Typography>
-        <Typography variant="subtitle2" sx={{ overflowWrap: 'anywhere' }}>
+        <Typography variant="subtitle1" sx={{ color: valueColor, overflowWrap: 'anywhere' }}>
           {value}
         </Typography>
       </Box>

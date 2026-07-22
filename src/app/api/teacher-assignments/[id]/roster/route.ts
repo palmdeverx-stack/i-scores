@@ -27,7 +27,9 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   const { data, error } = await supabaseAdmin
     .from('enrollments')
-    .select('id, student_number, student:app_users(id, username, first_name, last_name)')
+    .select(
+      'id, student_number, student:app_users(id, username, first_name, last_name, avatar_url)'
+    )
     .eq('classroom_id', teacherAssignment!.classroom_id)
     .order('student_number');
 

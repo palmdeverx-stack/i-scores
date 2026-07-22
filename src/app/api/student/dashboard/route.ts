@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   const generatedAt = new Date().toISOString();
   const caller = requireRole(request, ['student']);
   const requestedSection = new URL(request.url).searchParams.get('section');
-  const section = ['home', 'subjects', 'assignments'].includes(requestedSection ?? '')
+  const section = ['home', 'classroom', 'subjects', 'assignments'].includes(requestedSection ?? '')
     ? requestedSection
     : 'home';
 
@@ -119,9 +119,57 @@ export async function GET(request: Request) {
       enrollments,
       subjects: [],
       schedules: [],
+      class_members: [],
+      homeroom_teachers: [],
       ranking: [],
       subject_rankings: [],
       announcements: visibleAnnouncements,
+    });
+  }
+
+  if (section === 'classroom') {
+    const [
+      { data: classmateRows, error: classmateError },
+      { data: homeroomRows, error: homeroomError },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('enrollments')
+        .select(
+          `student_number,
+             student:app_users!enrollments_student_id_fkey(id, username, first_name, last_name, avatar_url)`
+        )
+        .eq('classroom_id', currentEnrollment!.classroom.id)
+        .order('student_number'),
+      supabaseAdmin
+        .from('classroom_homeroom_teachers')
+        .select(
+          'teacher:app_users!classroom_homeroom_teachers_teacher_id_fkey(id, username, first_name, last_name, avatar_url)'
+        )
+        .eq('classroom_id', currentEnrollment!.classroom.id),
+    ]);
+
+    if (classmateError || homeroomError) {
+      return NextResponse.json(
+        { message: classmateError?.message ?? homeroomError?.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      generated_at: generatedAt,
+      student,
+      enrollments,
+      subjects: [],
+      schedules: [],
+      class_members: classmateRows.map((row) => ({
+        student: row.student as unknown as Person,
+        student_number: row.student_number,
+        is_current_student: (row.student as unknown as Person).id === caller.sub,
+      })),
+      homeroom_teachers: homeroomRows.map((row) => row.teacher as unknown as Person),
+      ranking: [],
+      subject_rankings: [],
+      announcements: [],
     });
   }
 
@@ -241,7 +289,7 @@ export async function GET(request: Request) {
   );
   const currentAssignmentIds = currentAssignments.map((assignment) => assignment.id);
 
-  const [classmateResult, rankingScoreResult] =
+  const [classmateResult, rankingScoreResult, homeroomResult] =
     section === 'home' && currentEnrollment
       ? await Promise.all([
           supabaseAdmin
@@ -258,18 +306,37 @@ export async function GET(request: Request) {
                 .select('student_id, assignment_id, score')
                 .in('assignment_id', currentAssignmentIds)
             : Promise.resolve({ data: [], error: null }),
+          supabaseAdmin
+            .from('classroom_homeroom_teachers')
+            .select(
+              'teacher:app_users!classroom_homeroom_teachers_teacher_id_fkey(id, username, first_name, last_name, avatar_url)'
+            )
+            .eq('classroom_id', currentEnrollment.classroom.id),
         ])
       : [
           { data: [], error: null },
           { data: [], error: null },
+          { data: [], error: null },
         ];
 
-  if (classmateResult.error || rankingScoreResult.error) {
+  if (classmateResult.error || rankingScoreResult.error || homeroomResult.error) {
     return NextResponse.json(
-      { message: classmateResult.error?.message ?? rankingScoreResult.error?.message },
+      {
+        message:
+          classmateResult.error?.message ??
+          rankingScoreResult.error?.message ??
+          homeroomResult.error?.message,
+      },
       { status: 500 }
     );
   }
+
+  const classMembers = classmateResult.data.map((row) => ({
+    student: row.student as unknown as Person,
+    student_number: row.student_number,
+    is_current_student: (row.student as unknown as Person).id === caller.sub,
+  }));
+  const homeroomTeachers = homeroomResult.data.map((row) => row.teacher as unknown as Person);
 
   const buildRanking = (rankAssignments: typeof currentAssignments) => {
     const assignmentIdSet = new Set(rankAssignments.map((assignment) => assignment.id));
@@ -338,6 +405,8 @@ export async function GET(request: Request) {
       enrollments,
       subjects: [],
       schedules: [],
+      class_members: classMembers,
+      homeroom_teachers: homeroomTeachers,
       ranking,
       subject_rankings: subjectRankings,
       announcements: visibleAnnouncements,
@@ -351,6 +420,8 @@ export async function GET(request: Request) {
       enrollments,
       subjects,
       schedules,
+      class_members: [],
+      homeroom_teachers: [],
       ranking: [],
       subject_rankings: [],
       announcements: [],
@@ -363,6 +434,8 @@ export async function GET(request: Request) {
     enrollments,
     subjects,
     schedules: [],
+    class_members: [],
+    homeroom_teachers: [],
     ranking: [],
     subject_rankings: [],
     announcements: [],

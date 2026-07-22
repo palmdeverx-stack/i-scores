@@ -21,6 +21,7 @@ import { MenuButton } from '../components/menu-button';
 import { navData as mainNavData } from '../nav-config-main';
 import { SignInButton } from '../components/sign-in-button';
 import { AccountPopover } from '../components/account-popover';
+import { StudentBottomNav } from './nav/mobile/student-bottom-nav';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
 
 // ----------------------------------------------------------------------
@@ -33,6 +34,7 @@ export type MainLayoutProps = LayoutBaseProps & {
     header?: HeaderSectionProps;
     nav?: {
       data?: NavMainProps['data'];
+      mobileBottom?: boolean;
     };
     main?: MainSectionProps;
     footer?: FooterProps;
@@ -53,6 +55,7 @@ export function MainLayout({
   const isHomePage = pathname === '/';
 
   const navData = slotProps?.nav?.data ?? mainNavData;
+  const mobileBottom = slotProps?.nav?.mobileBottom ?? false;
 
   const renderHeader = () => {
     const headerSlots: HeaderSectionProps['slots'] = {
@@ -63,16 +66,20 @@ export function MainLayout({
       ),
       leftArea: (
         <>
-          {/** @slot Nav mobile */}
-          <MenuButton
-            onClick={onOpen}
-            sx={(theme) => ({
-              mr: 1,
-              ml: -1,
-              [theme.breakpoints.up(layoutQuery)]: { display: 'none' },
-            })}
-          />
-          <NavMobile data={navData} open={open} onClose={onClose} />
+          {!mobileBottom && (
+            <>
+              {/** @slot Nav mobile */}
+              <MenuButton
+                onClick={onOpen}
+                sx={(theme) => ({
+                  mr: 1,
+                  ml: -1,
+                  [theme.breakpoints.up(layoutQuery)]: { display: 'none' },
+                })}
+              />
+              <NavMobile data={navData} open={open} onClose={onClose} />
+            </>
+          )}
 
           {/** @slot Logo */}
           <Logo />
@@ -126,14 +133,27 @@ export function MainLayout({
     );
   };
 
-  const renderFooter = () =>
-    isHomePage ? (
-      <HomeFooter sx={slotProps?.footer?.sx} />
-    ) : (
-      <Footer sx={slotProps?.footer?.sx} layoutQuery={layoutQuery} />
-    );
+  const footerSx = [
+    ...(Array.isArray(slotProps?.footer?.sx) ? slotProps.footer.sx : [slotProps?.footer?.sx]),
+    mobileBottom && { display: { xs: 'none', md: 'block' } },
+  ];
 
-  const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
+  const renderFooter = () =>
+    isHomePage ? <HomeFooter sx={footerSx} /> : <Footer sx={footerSx} layoutQuery={layoutQuery} />;
+
+  const renderMain = () => (
+    <MainSection
+      {...slotProps?.main}
+      sx={[
+        ...(Array.isArray(slotProps?.main?.sx) ? slotProps.main.sx : [slotProps?.main?.sx]),
+        mobileBottom && {
+          pb: { xs: 'calc(66px + env(safe-area-inset-bottom))', md: 0 },
+        },
+      ]}
+    >
+      {children}
+    </MainSection>
+  );
 
   return (
     <LayoutSection
@@ -152,6 +172,7 @@ export function MainLayout({
       sx={sx}
     >
       {renderMain()}
+      {mobileBottom && <StudentBottomNav data={navData} />}
     </LayoutSection>
   );
 }

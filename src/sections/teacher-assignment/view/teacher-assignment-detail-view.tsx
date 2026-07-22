@@ -1,5 +1,6 @@
 'use client';
 
+import type { RosterStudent } from '../teacher-assignment-actions';
 import type { SubmissionStatus } from 'src/sections/gradebook/gradebook-actions';
 
 import { useState } from 'react';
@@ -40,9 +41,11 @@ import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 
 import { listAssignments } from 'src/sections/assignment/assignment-actions';
+import { StudentGuardiansDialog } from 'src/sections/student-guardian/components/student-guardians-dialog';
 
 import { useAuthContext } from 'src/auth/hooks';
 
+import { AttendanceSection } from '../components/attendance-section';
 import { TeacherSubjectImageDialog } from '../components/teacher-subject-image-dialog';
 import {
   getRoster,
@@ -84,8 +87,11 @@ type Props = {
 export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
-  const [tab, setTab] = useState<'overview' | 'students' | 'assignments' | 'schedule'>('overview');
+  const [tab, setTab] = useState<
+    'overview' | 'students' | 'attendance' | 'assignments' | 'schedule'
+  >('overview');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [guardianStudent, setGuardianStudent] = useState<RosterStudent | null>(null);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
 
   const backPath = isTeacher ? paths.teacher.assignments : paths.admin.teacherAssignment.root;
@@ -269,6 +275,12 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
             iconPosition="start"
           />
           <Tab
+            value="attendance"
+            label="เช็คชื่อ"
+            icon={<Iconify icon="solar:check-circle-bold" />}
+            iconPosition="start"
+          />
+          <Tab
             value="assignments"
             label={`งานและคะแนน (${assignments?.length ?? 0})`}
             icon={<Iconify icon="solar:list-bold" />}
@@ -424,19 +436,20 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                     <TableCell>เลขที่</TableCell>
                     <TableCell>ชื่อ-นามสกุล</TableCell>
                     <TableCell>ชื่อผู้ใช้งาน</TableCell>
+                    <TableCell>ผู้ปกครอง</TableCell>
                     <TableCell align="right">การจัดการ</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {rosterLoading && (
                     <TableRow>
-                      <TableCell colSpan={4}>กำลังโหลด...</TableCell>
+                      <TableCell colSpan={5}>กำลังโหลด...</TableCell>
                     </TableRow>
                   )}
                   {!rosterLoading && !roster?.roster.length && (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         sx={{ py: 6, textAlign: 'center', color: 'text.secondary' }}
                       >
                         ยังไม่มีนักเรียนในห้องนี้
@@ -453,6 +466,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                         <TableCell>
                           <Box sx={{ gap: 1.25, display: 'flex', alignItems: 'center' }}>
                             <Avatar
+                              src={row.student.avatar_url ?? undefined}
                               sx={{
                                 width: 34,
                                 height: 34,
@@ -471,6 +485,16 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                             @{row.student.username}
                           </Typography>
                         </TableCell>
+                        <TableCell>
+                          <Button
+                            size="small"
+                            color="inherit"
+                            startIcon={<Iconify icon="solar:users-group-rounded-bold" />}
+                            onClick={() => setGuardianStudent(row.student)}
+                          >
+                            ข้อมูลผู้ปกครอง
+                          </Button>
+                        </TableCell>
                         <TableCell align="right">
                           <Button
                             size="small"
@@ -488,6 +512,10 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
             </TableContainer>
           </Card>
         )}
+      </Box>
+
+      <Box role="tabpanel" hidden={tab !== 'attendance'}>
+        {tab === 'attendance' && <AttendanceSection teacherAssignmentId={teacherAssignmentId} />}
       </Box>
 
       <Box role="tabpanel" hidden={tab !== 'assignments'}>
@@ -610,6 +638,12 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
         teacherAssignmentId={teacherAssignmentId}
         studentId={selectedStudentId}
         onClose={() => setSelectedStudentId(null)}
+      />
+      <StudentGuardiansDialog
+        open={!!guardianStudent}
+        student={guardianStudent}
+        teacherAssignmentId={teacherAssignmentId}
+        onClose={() => setGuardianStudent(null)}
       />
     </Container>
   );
