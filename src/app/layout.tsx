@@ -35,7 +35,7 @@ const AuthProvider =
   JwtAuthProvider;
 
 const OG_IMAGE_URL =
-  'https://res.cloudinary.com/dkdbilwtj/image/upload/v1784658769/og-images-class-go_jiv3f7.jpg';
+  'https://res.cloudinary.com/dkdbilwtj/image/upload/v1784725452/og-images_mnmhy7.svg';
 
 export const viewport: Viewport = {
   width: 'device-width',
