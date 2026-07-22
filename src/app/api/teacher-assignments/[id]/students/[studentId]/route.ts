@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { loadTeacherAssignment, canAccessTeacherAssignment } from 'src/lib/teacher-assignment-access';
+import {
+  loadTeacherAssignment,
+  canAccessTeacherAssignment,
+} from 'src/lib/teacher-assignment-access';
 
 // ----------------------------------------------------------------------
 
@@ -25,13 +28,13 @@ export async function GET(request: Request, { params }: RouteParams) {
   const [{ data: enrollment }, { data: student }] = await Promise.all([
     supabaseAdmin
       .from('enrollments')
-      .select('id')
+      .select('id, student_number')
       .eq('classroom_id', teacherAssignment!.classroom_id)
       .eq('student_id', studentId)
       .maybeSingle(),
     supabaseAdmin
       .from('app_users')
-      .select('id, username, first_name, last_name')
+      .select('id, username, first_name, last_name, avatar_url')
       .eq('id', studentId)
       .single(),
   ]);
@@ -44,7 +47,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     await Promise.all([
       supabaseAdmin
         .from('assignments')
-        .select('id, title, full_score, created_at')
+        .select('id, title, full_score, category, created_at')
         .eq('teacher_assignment_id', id)
         .order('created_at', { ascending: false }),
       supabaseAdmin.from('scores').select('*').eq('student_id', studentId),
@@ -67,6 +70,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         id: assignment.id,
         title: assignment.title,
         full_score: assignment.full_score,
+        category: assignment.category,
       },
       score: existing
         ? { score: existing.score, feedback: existing.feedback, status: existing.status }
@@ -74,5 +78,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     };
   });
 
-  return NextResponse.json({ student, rows });
+  return NextResponse.json({
+    student: { ...student, student_number: enrollment.student_number },
+    rows,
+  });
 }

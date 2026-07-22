@@ -8,12 +8,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import { Box, Stack } from '@mui/material';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
@@ -313,97 +313,99 @@ export function ClassroomListView() {
           </DialogTitle>
 
           <DialogContent sx={{ pt: 2 }}>
-            {saveMutation.error && (
-              <Alert severity="error" sx={{ mb: 2.5 }}>
-                {saveMutation.error.message}
-              </Alert>
-            )}
-            {academicYearsError && (
-              <Alert severity="warning" sx={{ mb: 2.5 }}>
-                โหลดปีการศึกษาไม่สำเร็จ กรุณาปิดหน้าต่างแล้วลองใหม่
-              </Alert>
-            )}
-            {teachersError && (
-              <Alert severity="warning" sx={{ mb: 2.5 }}>
-                โหลดรายชื่อครูไม่สำเร็จ กรุณาปิดหน้าต่างแล้วลองใหม่
-              </Alert>
-            )}
+            <Stack sx={{ mt: 2 }}>
+              {saveMutation.error && (
+                <Alert severity="error" sx={{ mb: 2.5 }}>
+                  {saveMutation.error.message}
+                </Alert>
+              )}
+              {academicYearsError && (
+                <Alert severity="warning" sx={{ mb: 2.5 }}>
+                  โหลดปีการศึกษาไม่สำเร็จ กรุณาปิดหน้าต่างแล้วลองใหม่
+                </Alert>
+              )}
+              {teachersError && (
+                <Alert severity="warning" sx={{ mb: 2.5 }}>
+                  โหลดรายชื่อครูไม่สำเร็จ กรุณาปิดหน้าต่างแล้วลองใหม่
+                </Alert>
+              )}
 
-            <Box
-              sx={{
-                gap: 2.5,
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-              }}
-            >
-              <Field.Select
-                name="academicYearId"
-                label="ปีการศึกษา *"
-                disabled={academicYearsLoading || academicYearsError}
-                helperText="ปีการศึกษาที่ห้องนี้เปิดใช้งาน"
+              <Box
+                sx={{
+                  gap: 2.5,
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+                }}
               >
-                {academicYearsLoading && <MenuItem disabled>กำลังโหลด...</MenuItem>}
-                {!academicYearsLoading && !academicYears.length && (
-                  <MenuItem disabled>ยังไม่มีปีการศึกษา</MenuItem>
-                )}
-                {academicYears.map((year) => (
-                  <MenuItem key={year.id} value={year.id}>
-                    {year.year}{' '}
-                    {fIsBetween(today(), year.start_date, year.end_date) ? '(ปัจจุบัน)' : ''}
-                  </MenuItem>
-                ))}
-              </Field.Select>
+                <Field.Select
+                  name="academicYearId"
+                  label="ปีการศึกษา *"
+                  disabled={academicYearsLoading || academicYearsError}
+                  helperText="ปีการศึกษาที่ห้องนี้เปิดใช้งาน"
+                >
+                  {academicYearsLoading && <MenuItem disabled>กำลังโหลด...</MenuItem>}
+                  {!academicYearsLoading && !academicYears.length && (
+                    <MenuItem disabled>ยังไม่มีปีการศึกษา</MenuItem>
+                  )}
+                  {academicYears.map((year) => (
+                    <MenuItem key={year.id} value={year.id}>
+                      {year.year}{' '}
+                      {fIsBetween(today(), year.start_date, year.end_date) ? '(ปัจจุบัน)' : ''}
+                    </MenuItem>
+                  ))}
+                </Field.Select>
 
-              <Field.Text
-                name="name"
-                label="ชื่อห้องเรียน *"
-                placeholder="เช่น ม.1/1"
-                helperText="ชื่อที่ครูและนักเรียนจะเห็น"
-                autoFocus
-              />
+                <Field.Text
+                  name="name"
+                  label="ชื่อห้องเรียน *"
+                  placeholder="เช่น ม.1/1"
+                  helperText="ชื่อที่ครูและนักเรียนจะเห็น"
+                  autoFocus
+                />
 
-              <Field.Text
-                name="gradeLevel"
-                label="ระดับชั้น"
-                placeholder="เช่น มัธยมศึกษาปีที่ 1"
-                helperText="ไม่บังคับ"
-                sx={{ gridColumn: { sm: '1 / -1' } }}
-              />
+                <Field.Text
+                  name="gradeLevel"
+                  label="ระดับชั้น"
+                  placeholder="เช่น มัธยมศึกษาปีที่ 1"
+                  helperText="ไม่บังคับ"
+                  sx={{ gridColumn: { sm: '1 / -1' } }}
+                />
 
-              <Autocomplete
-                multiple
-                disableCloseOnSelect
-                filterSelectedOptions
-                options={teachers}
-                value={selectedTeachers}
-                loading={teachersLoading}
-                disabled={teachersLoading || teachersError}
-                getOptionLabel={(teacher) =>
-                  `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim() ||
-                  teacher.username
-                }
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                onChange={(_, value) =>
-                  setValue(
-                    'teacherIds',
-                    value.map((teacher) => teacher.id),
-                    { shouldDirty: true, shouldValidate: true }
-                  )
-                }
-                noOptionsText="ไม่พบรายชื่อครู"
-                loadingText="กำลังโหลดรายชื่อครู..."
-                sx={{ gridColumn: { sm: '1 / -1' } }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="ครูประจำชั้น *"
-                    placeholder={selectedTeachers.length ? '' : 'เลือกได้มากกว่า 1 คน'}
-                    error={!!errors.teacherIds}
-                    helperText={errors.teacherIds?.message ?? 'เลือกครูประจำชั้นอย่างน้อย 1 คน'}
-                  />
-                )}
-              />
-            </Box>
+                <Autocomplete
+                  multiple
+                  disableCloseOnSelect
+                  filterSelectedOptions
+                  options={teachers}
+                  value={selectedTeachers}
+                  loading={teachersLoading}
+                  disabled={teachersLoading || teachersError}
+                  getOptionLabel={(teacher) =>
+                    `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim() ||
+                    teacher.username
+                  }
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  onChange={(_, value) =>
+                    setValue(
+                      'teacherIds',
+                      value.map((teacher) => teacher.id),
+                      { shouldDirty: true, shouldValidate: true }
+                    )
+                  }
+                  noOptionsText="ไม่พบรายชื่อครู"
+                  loadingText="กำลังโหลดรายชื่อครู..."
+                  sx={{ gridColumn: { sm: '1 / -1' } }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="ครูประจำชั้น *"
+                      placeholder={selectedTeachers.length ? '' : 'เลือกได้มากกว่า 1 คน'}
+                      error={!!errors.teacherIds}
+                      helperText={errors.teacherIds?.message ?? 'เลือกครูประจำชั้นอย่างน้อย 1 คน'}
+                    />
+                  )}
+                />
+              </Box>
+            </Stack>
           </DialogContent>
 
           <DialogActions>

@@ -198,7 +198,7 @@ export async function GET(request: Request) {
         supabaseAdmin
           .from('assignments')
           .select(
-            `id, teacher_assignment_id, title, description, full_score, due_at, created_at,
+            `id, teacher_assignment_id, title, description, full_score, due_at, category, created_at,
              attachments:assignment_attachments(id, file_name, file_url, mime_type, file_size, created_at)`
           )
           .in('teacher_assignment_id', teachingIds)
@@ -256,6 +256,7 @@ export async function GET(request: Request) {
           description: assignment.description,
           full_score: Number(assignment.full_score),
           due_at: assignment.due_at,
+          category: assignment.category,
           created_at: assignment.created_at,
           attachments: assignment.attachments,
           score: score?.score === null || score?.score === undefined ? null : Number(score.score),

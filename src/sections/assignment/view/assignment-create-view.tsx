@@ -1,5 +1,7 @@
 'use client';
 
+import type { AssignmentCategory } from '../assignment-actions';
+
 import * as z from 'zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -30,7 +32,7 @@ import { getRoster } from 'src/sections/teacher-assignment/teacher-assignment-ac
 
 import { useAuthContext } from 'src/auth/hooks';
 
-import { createAssignment } from '../assignment-actions';
+import { createAssignment, ASSIGNMENT_CATEGORY_META } from '../assignment-actions';
 
 // ----------------------------------------------------------------------
 
@@ -70,9 +72,13 @@ const FILE_ACCEPT = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILES = 8;
 
-type Props = { teacherAssignmentId: string };
+type Props = {
+  teacherAssignmentId: string;
+  category?: AssignmentCategory;
+  returnTab?: string;
+};
 
-export function AssignmentCreateView({ teacherAssignmentId }: Props) {
+export function AssignmentCreateView({ teacherAssignmentId, category, returnTab }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuthContext();
@@ -80,9 +86,13 @@ export function AssignmentCreateView({ teacherAssignmentId }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState('');
 
+  const resolvedCategory = category ?? 'assignment';
+  const meta = ASSIGNMENT_CATEGORY_META[resolvedCategory];
+
   const detailPath = isTeacher
     ? paths.teacher.assignmentDetail(teacherAssignmentId)
     : paths.admin.teacherAssignment.detail(teacherAssignmentId);
+  const successPath = returnTab ? `${detailPath}?tab=${returnTab}` : detailPath;
 
   const { data: roster, isLoading: rosterLoading } = useQuery({
     queryKey: ['roster', teacherAssignmentId],
@@ -91,7 +101,7 @@ export function AssignmentCreateView({ teacherAssignmentId }: Props) {
 
   const methods = useForm({
     resolver: zodResolver(AssignmentCreateSchema),
-    defaultValues: { title: '', description: '', fullScore: '100', dueAt: null },
+    defaultValues: { title: meta.defaultTitle, description: '', fullScore: '100', dueAt: null },
   });
 
   const createMutation = useMutation({
@@ -106,12 +116,13 @@ export function AssignmentCreateView({ teacherAssignmentId }: Props) {
         description: data.description.trim() || undefined,
         fullScore: Number(data.fullScore),
         dueAt: data.dueAt,
+        category: resolvedCategory,
         files,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['assignments', teacherAssignmentId] });
       await queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
-      router.push(detailPath);
+      router.push(successPath);
     },
   });
 
@@ -138,7 +149,7 @@ export function AssignmentCreateView({ teacherAssignmentId }: Props) {
     <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Button
         component={RouterLink}
-        href={detailPath}
+        href={successPath}
         color="inherit"
         startIcon={<Iconify icon="solar:reply-bold" />}
         sx={{ mb: 2 }}
@@ -185,10 +196,10 @@ export function AssignmentCreateView({ teacherAssignmentId }: Props) {
           </Box>
           <Box>
             <Typography variant="overline" sx={{ opacity: 0.78 }}>
-              งานใหม่
+              {meta.sectionTitle}
             </Typography>
             <Typography component="h1" variant="h3">
-              สร้างงาน
+              {meta.createHeading}
             </Typography>
             <Typography sx={{ mt: 0.5, opacity: 0.78 }}>
               กำหนดรายละเอียด คะแนน และเอกสารที่นักเรียนต้องใช้
@@ -228,7 +239,7 @@ export function AssignmentCreateView({ teacherAssignmentId }: Props) {
             <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
               <Field.Text
                 name="title"
-                label="ชื่องาน *"
+                label="ชื่อรายการ *"
                 placeholder="เช่น แบบฝึกหัดบทที่ 1"
                 helperText="ใช้ชื่อสั้น กระชับ และบอกสิ่งที่นักเรียนต้องทำ"
                 autoFocus
@@ -324,7 +335,7 @@ export function AssignmentCreateView({ teacherAssignmentId }: Props) {
               >
                 <Button
                   component={RouterLink}
-                  href={detailPath}
+                  href={successPath}
                   color="inherit"
                   size="large"
                   disabled={createMutation.isPending}
@@ -339,7 +350,7 @@ export function AssignmentCreateView({ teacherAssignmentId }: Props) {
                   startIcon={<Iconify icon="solar:check-circle-bold" />}
                   sx={{ minWidth: 180 }}
                 >
-                  สร้างงาน
+                  {meta.createHeading}
                 </Button>
               </Box>
             </Box>

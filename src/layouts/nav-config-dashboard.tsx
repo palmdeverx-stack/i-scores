@@ -58,7 +58,7 @@ export const navData: NavSectionProps['data'] = [
     subheader: 'บุคลากร',
     items: [
       {
-        title: 'ผู้ใช้งาน',
+        title: 'ครู/บุคลากร',
         path: paths.admin.user.root,
         icon: ICONS.user,
       },
@@ -73,7 +73,7 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.user,
       },
       {
-        title: 'การลงทะเบียนนักเรียน',
+        title: 'ลงทะเบียนนักเรียน',
         path: paths.admin.enrollment.root,
         icon: ICONS.user,
       },

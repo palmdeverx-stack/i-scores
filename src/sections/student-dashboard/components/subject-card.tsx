@@ -23,7 +23,10 @@ type Props = { item: StudentSubject };
 
 export function SubjectCard({ item }: Props) {
   const teacherName = displayName(item.teacher);
-  const submitted = item.assignments.filter((assignment) => isSubmitted(assignment.status)).length;
+  const workAssignments = item.assignments.filter(
+    (assignment) => assignment.category === 'assignment'
+  );
+  const submitted = workAssignments.filter((assignment) => isSubmitted(assignment.status)).length;
 
   return (
     <Card
@@ -121,12 +124,12 @@ export function SubjectCard({ item }: Props) {
             การส่งงาน
           </Typography>
           <Typography variant="subtitle2">
-            {submitted}/{item.assignments.length} งาน
+            {submitted}/{workAssignments.length} งาน
           </Typography>
         </Stack>
         <LinearProgress
           variant="determinate"
-          value={item.assignments.length ? (submitted / item.assignments.length) * 100 : 0}
+          value={workAssignments.length ? (submitted / workAssignments.length) * 100 : 0}
           sx={{ mt: 1, height: 6, borderRadius: 4 }}
         />
       </Box>

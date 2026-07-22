@@ -23,6 +23,12 @@ export type CreateEnrollmentParams = {
   studentNumber?: string;
 };
 
+export type BulkPromoteEntry = {
+  studentId: string;
+  classroomId: string;
+  studentNumber?: string;
+};
+
 export type ProgressStatus =
   | 'submitted'
   | 'late'
@@ -93,6 +99,22 @@ export async function createEnrollment(params: CreateEnrollmentParams) {
   if (!response.ok) throw new Error(json.message ?? 'Failed to create enrollment');
 
   return json.enrollment;
+}
+
+export async function bulkPromoteEnrollments(params: {
+  sourceClassroomId: string;
+  entries: BulkPromoteEntry[];
+}) {
+  const response = await fetch('/api/enrollments/bulk-promote', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(params),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to promote students');
+
+  return json.enrollments as Enrollment[];
 }
 
 export async function getEnrollmentProgress(id: string): Promise<EnrollmentProgress> {

@@ -425,6 +425,13 @@ function GradeEntry({ row, assignmentId, fullScore, onSaved }: GradeEntryProps) 
   const studentName =
     `${row.student.first_name ?? ''} ${row.student.last_name ?? ''}`.trim() || row.student.username;
 
+  const updateScore = (value: string) => {
+    setScore(value);
+    if (value !== '' && ['not_submitted', 'pending_review'].includes(status)) {
+      setStatus('submitted');
+    }
+  };
+
   return (
     <Card variant="outlined" sx={{ p: { xs: 2, md: 2.25 }, borderRadius: 2.5 }}>
       <Box
@@ -481,16 +488,16 @@ function GradeEntry({ row, assignmentId, fullScore, onSaved }: GradeEntryProps) 
           value={score}
           error={scoreError}
           helperText={scoreError ? `0–${fullScore} เท่านั้น` : `เต็ม ${fullScore}`}
-          onChange={(event) => setScore(event.target.value)}
+          onChange={(event) => updateScore(event.target.value)}
           slotProps={{
-            htmlInput: { min: 0, max: fullScore, step: 0.5 },
+            htmlInput: { min: 0, max: fullScore, step: 0.5, inputMode: 'decimal' },
             input: {
               endAdornment: (
                 <InputAdornment position="end">
                   <Button
                     size="small"
                     color="inherit"
-                    onClick={() => setScore(String(fullScore))}
+                    onClick={() => updateScore(String(fullScore))}
                     sx={{ minWidth: 0, px: 0.75 }}
                   >
                     เต็ม

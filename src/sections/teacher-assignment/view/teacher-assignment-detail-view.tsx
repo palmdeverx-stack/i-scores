@@ -1,9 +1,9 @@
 'use client';
 
 import type { RosterStudent } from '../teacher-assignment-actions';
-import type { SubmissionStatus } from 'src/sections/gradebook/gradebook-actions';
+import type { Assignment, AssignmentCategory } from 'src/sections/assignment/assignment-actions';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -15,7 +15,6 @@ import Tabs from '@mui/material/Tabs';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
-import Dialog from '@mui/material/Dialog';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import MenuItem from '@mui/material/MenuItem';
@@ -28,8 +27,6 @@ import TableHead from '@mui/material/TableHead';
 import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
 
 import { paths } from 'src/routes/paths';
@@ -40,45 +37,42 @@ import { fDateTime } from 'src/utils/format-time';
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 
-import { listAssignments } from 'src/sections/assignment/assignment-actions';
 import { StudentGuardiansDialog } from 'src/sections/student-guardian/components/student-guardians-dialog';
+import {
+  listAssignments,
+  ASSIGNMENT_CATEGORY_META,
+} from 'src/sections/assignment/assignment-actions';
 
 import { useAuthContext } from 'src/auth/hooks';
 
+import { QuickScoreDialog } from '../components/quick-score-dialog';
 import { AttendanceSection } from '../components/attendance-section';
+import { StudentBreakdownDialog } from '../components/student-breakdown-dialog';
+import { ScoreItemActionsDialog } from '../components/score-item-actions-dialog';
 import { TeacherSubjectImageDialog } from '../components/teacher-subject-image-dialog';
 import {
   getRoster,
   getSchedules,
   createSchedule,
   deleteSchedule,
-  getStudentBreakdown,
 } from '../teacher-assignment-actions';
 
 // ----------------------------------------------------------------------
 
 const DAY_LABELS = ['', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
 
-const STATUS_LABEL: Record<SubmissionStatus, string> = {
-  submitted: 'ส่งแล้ว',
-  late: 'ส่งช้า',
-  not_submitted: 'ยังไม่ส่ง',
-  absent: 'ขาดสอบ',
-  sick_leave: 'ลาป่วย',
-  pending_review: 'รอตรวจ',
-};
-
-const STATUS_COLOR: Record<SubmissionStatus, 'success' | 'warning' | 'error' | 'info' | 'default'> =
-  {
-    submitted: 'success',
-    late: 'warning',
-    not_submitted: 'error',
-    absent: 'error',
-    sick_leave: 'info',
-    pending_review: 'default',
-  };
-
 // ----------------------------------------------------------------------
+
+type TabValue = 'overview' | 'students' | 'attendance' | 'assignments' | 'scores' | 'schedule';
+
+const TAB_VALUES: TabValue[] = [
+  'overview',
+  'students',
+  'attendance',
+  'assignments',
+  'scores',
+  'schedule',
+];
 
 type Props = {
   teacherAssignmentId: string;
@@ -87,18 +81,26 @@ type Props = {
 export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
-  const [tab, setTab] = useState<
-    'overview' | 'students' | 'attendance' | 'assignments' | 'schedule'
-  >('overview');
+  const [tab, setTab] = useState<TabValue>('overview');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [guardianStudent, setGuardianStudent] = useState<RosterStudent | null>(null);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const initialTab = new URLSearchParams(window.location.search).get('tab');
+    if (initialTab && TAB_VALUES.includes(initialTab as TabValue)) {
+      setTab(initialTab as TabValue);
+    }
+  }, []);
 
   const backPath = isTeacher ? paths.teacher.assignments : paths.admin.teacherAssignment.root;
 
   const assignmentNewPath = isTeacher
     ? paths.teacher.assignmentNew(teacherAssignmentId)
     : paths.admin.teacherAssignment.assignmentNew(teacherAssignmentId);
+
+  const scoreCategoryNewPath = (category: AssignmentCategory) =>
+    `${assignmentNewPath}?category=${category}&returnTab=scores`;
 
   const gradebookPath = (assignmentId: string) =>
     isTeacher ? paths.teacher.gradebook(assignmentId) : paths.admin.gradebook(assignmentId);
@@ -126,6 +128,8 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
     queryFn: () => getSchedules(teacherAssignmentId),
   });
 
+  const workAssignments = assignments?.filter((assignment) => assignment.category === 'assignment');
+
   const teacherName = roster?.teacher
     ? `${roster.teacher.first_name ?? ''} ${roster.teacher.last_name ?? ''}`.trim() ||
       roster.teacher.username
@@ -146,7 +150,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
       <Card
         sx={{
           mb: 3,
-          p: { xs: 3, sm: 4 },
+          p: 2,
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
@@ -170,7 +174,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
             gap: 2.5,
             display: 'flex',
             position: 'relative',
-            alignItems: { xs: 'flex-start', sm: 'center' },
+            alignItems: { xs: 'flex-start' },
             flexDirection: { xs: 'column', sm: 'row' },
           }}
         >
@@ -201,11 +205,11 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                 color: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.78),
               }}
             >
-              <Typography variant="body2">ห้อง {roster?.classroomName ?? '-'}</Typography>
-              <Typography variant="body2">•</Typography>
-              <Typography variant="body2">{roster?.semesterName ?? 'ไม่ระบุภาคเรียน'}</Typography>
-              <Typography variant="body2">•</Typography>
-              <Typography variant="body2">ปีการศึกษา {roster?.academicYear ?? '-'}</Typography>
+              <Typography variant="body1">ห้อง {roster?.classroomName ?? '-'}</Typography>
+              <Typography variant="body1">•</Typography>
+              <Typography variant="body2">
+                ปีการศึกษา {roster?.semesterName}/{roster?.academicYear ?? '-'}
+              </Typography>
             </Box>
           </Box>
           <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
@@ -282,8 +286,14 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
           />
           <Tab
             value="assignments"
-            label={`งานและคะแนน (${assignments?.length ?? 0})`}
+            label={`งาน (${workAssignments?.length ?? 0})`}
             icon={<Iconify icon="solar:list-bold" />}
+            iconPosition="start"
+          />
+          <Tab
+            value="scores"
+            label="จัดการคะแนน"
+            icon={<Iconify icon="solar:cup-star-bold" />}
             iconPosition="start"
           />
           <Tab
@@ -315,7 +325,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
               />
               <OverviewCard
                 label="งานทั้งหมด"
-                value={assignmentsLoading ? null : (assignments?.length ?? 0)}
+                value={assignmentsLoading ? null : (workAssignments?.length ?? 0)}
                 suffix="งาน"
                 icon="solar:list-bold"
                 color="secondary.dark"
@@ -531,7 +541,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
               }}
             >
               <Box>
-                <Typography variant="h6">งานและคะแนน</Typography>
+                <Typography variant="h6">งาน</Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   สร้างงานและเข้าสู่สมุดคะแนนของแต่ละงาน
                 </Typography>
@@ -563,7 +573,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                       <TableCell colSpan={5}>กำลังโหลด...</TableCell>
                     </TableRow>
                   )}
-                  {!assignmentsLoading && !assignments?.length && (
+                  {!assignmentsLoading && !workAssignments?.length && (
                     <TableRow>
                       <TableCell
                         colSpan={5}
@@ -573,7 +583,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
                       </TableCell>
                     </TableRow>
                   )}
-                  {assignments?.map((assignment) => (
+                  {workAssignments?.map((assignment) => (
                     <TableRow key={assignment.id} hover>
                       <TableCell>
                         <Typography variant="subtitle2">{assignment.title}</Typography>
@@ -627,6 +637,18 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
               </Table>
             </TableContainer>
           </Card>
+        )}
+      </Box>
+
+      <Box role="tabpanel" hidden={tab !== 'scores'}>
+        {tab === 'scores' && (
+          <ManageScoresSection
+            teacherAssignmentId={teacherAssignmentId}
+            assignments={assignments}
+            assignmentsLoading={assignmentsLoading}
+            gradebookPath={gradebookPath}
+            scoreCategoryNewPath={scoreCategoryNewPath}
+          />
         )}
       </Box>
 
@@ -841,81 +863,493 @@ function ScheduleSection({ teacherAssignmentId }: { teacherAssignmentId: string 
 
 // ----------------------------------------------------------------------
 
-type StudentBreakdownDialogProps = {
+const SCORE_CATEGORY_ORDER: AssignmentCategory[] = [
+  'assignment',
+  'quiz',
+  'midterm',
+  'final',
+  'other',
+];
+
+const SCORE_CATEGORY_ICON = {
+  assignment: 'solar:notes-bold-duotone',
+  quiz: 'solar:bill-list-bold-duotone',
+  midterm: 'solar:notebook-bold-duotone',
+  final: 'solar:cup-star-bold',
+  other: 'solar:palette-bold-duotone',
+} as const satisfies Record<AssignmentCategory, string>;
+
+type ManageScoresSectionProps = {
   teacherAssignmentId: string;
-  studentId: string | null;
-  onClose: () => void;
+  assignments: Assignment[] | undefined;
+  assignmentsLoading: boolean;
+  gradebookPath: (assignmentId: string) => string;
+  scoreCategoryNewPath: (category: AssignmentCategory) => string;
 };
 
-function StudentBreakdownDialog({
+function ManageScoresSection({
   teacherAssignmentId,
-  studentId,
-  onClose,
-}: StudentBreakdownDialogProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['student-breakdown', teacherAssignmentId, studentId],
-    queryFn: () => getStudentBreakdown(teacherAssignmentId, studentId!),
-    enabled: !!studentId,
-  });
+  assignments,
+  assignmentsLoading,
+  gradebookPath,
+  scoreCategoryNewPath,
+}: ManageScoresSectionProps) {
+  const [selectedCategory, setSelectedCategory] = useState<AssignmentCategory>('assignment');
+  const [scoreItemAction, setScoreItemAction] = useState<{
+    mode: 'edit' | 'delete';
+    assignment: Assignment;
+  } | null>(null);
+  const [quickCategory, setQuickCategory] = useState<Exclude<
+    AssignmentCategory,
+    'assignment'
+  > | null>(null);
 
-  const notSubmittedCount =
-    data?.rows.filter((row) => row.score.status === 'not_submitted').length ?? 0;
-
-  const totalScore = data?.rows.reduce((sum, row) => sum + (row.score.score ?? 0), 0) ?? 0;
-  const totalFullScore = data?.rows.reduce((sum, row) => sum + row.assignment.full_score, 0) ?? 0;
+  const categoryItems =
+    assignments?.filter((assignment) => assignment.category === selectedCategory) ?? [];
+  const totalFullScore = assignments?.reduce((total, item) => total + item.full_score, 0) ?? 0;
 
   return (
-    <Dialog open={!!studentId} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        {data
-          ? `${data.student.first_name ?? ''} ${data.student.last_name ?? ''}`.trim() ||
-            data.student.username
-          : 'รายละเอียดนักเรียน'}
-      </DialogTitle>
+    <>
+      <Card
+        sx={{
+          mb: 3,
+          overflow: 'hidden',
+          border: (theme) => `1px solid ${theme.vars.palette.divider}`,
+          boxShadow: (theme) =>
+            `0 12px 32px ${varAlpha(theme.vars.palette.primary.mainChannel, 0.08)}`,
+        }}
+      >
+        <Box
+          sx={{
+            p: { xs: 2.5, sm: 3 },
+            gap: 2,
+            display: 'flex',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between',
+            bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.06),
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            <Box
+              sx={{
+                width: 48,
+                height: 48,
+                display: 'grid',
+                flexShrink: 0,
+                borderRadius: 1.5,
+                color: 'primary.main',
+                placeItems: 'center',
+                bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.14),
+              }}
+            >
+              <Iconify icon="solar:chart-square-outline" width={28} />
+            </Box>
+            <Box>
+              <Typography variant="h5">จัดการคะแนน</Typography>
+              <Typography variant="body2" sx={{ mt: 0.25, color: 'text.secondary' }}>
+                เลือกประเภทคะแนน แล้วเพิ่มรายการหรือกรอกคะแนนนักเรียนได้ทันที
+              </Typography>
+            </Box>
+          </Box>
 
-      <DialogContent>
-        {isLoading && <Typography sx={{ py: 3 }}>กำลังโหลด...</Typography>}
+          <Box sx={{ gap: 1, display: 'flex', width: { xs: 1, sm: 'auto' } }}>
+            <Box
+              sx={{
+                px: 2,
+                py: 1,
+                flex: { xs: 1, sm: 'none' },
+                borderRadius: 1.5,
+                bgcolor: 'background.paper',
+                border: (theme) => `1px solid ${theme.vars.palette.divider}`,
+              }}
+            >
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                รายการทั้งหมด
+              </Typography>
+              <Typography variant="h6">{assignments?.length ?? 0} รายการ</Typography>
+            </Box>
+            <Box
+              sx={{
+                px: 2,
+                py: 1,
+                flex: { xs: 1, sm: 'none' },
+                borderRadius: 1.5,
+                bgcolor: 'background.paper',
+                border: (theme) => `1px solid ${theme.vars.palette.divider}`,
+              }}
+            >
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                คะแนนเต็มรวม
+              </Typography>
+              <Typography variant="h6">{totalFullScore} คะแนน</Typography>
+            </Box>
+          </Box>
+        </Box>
 
-        {!isLoading && data && (
-          <>
-            <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-              คะแนนรวม {totalScore} จาก {totalFullScore} — ยังไม่ส่งงาน {notSubmittedCount} รายการ
+        <Box
+          role="tablist"
+          aria-label="ประเภทคะแนน"
+          sx={{
+            p: 2,
+            gap: 1,
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(5, 1fr)' },
+          }}
+        >
+          {SCORE_CATEGORY_ORDER.map((category) => (
+            <Box
+              key={category}
+              component="button"
+              role="tab"
+              type="button"
+              aria-selected={selectedCategory === category}
+              onClick={() => setSelectedCategory(category)}
+              sx={{
+                p: 1.5,
+                gap: 1,
+                minWidth: 0,
+                borderRadius: 1.5,
+                cursor: 'pointer',
+                textAlign: 'left',
+                font: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                color: selectedCategory === category ? 'primary.contrastText' : 'text.primary',
+                border: (theme) =>
+                  `1px solid ${
+                    selectedCategory === category
+                      ? theme.vars.palette.primary.main
+                      : theme.vars.palette.divider
+                  }`,
+                bgcolor: selectedCategory === category ? 'primary.main' : 'background.paper',
+                transition: (theme) =>
+                  theme.transitions.create(['background-color', 'border-color']),
+                '&:hover': {
+                  bgcolor: selectedCategory === category ? 'primary.dark' : 'action.hover',
+                },
+                '&:focus-visible': {
+                  outline: (theme) =>
+                    `3px solid ${varAlpha(theme.vars.palette.primary.mainChannel, 0.3)}`,
+                  outlineOffset: 2,
+                },
+                '&:last-of-type': { gridColumn: { xs: '1 / -1', md: 'auto' } },
+              }}
+            >
+              <Iconify icon={SCORE_CATEGORY_ICON[category]} width={24} sx={{ flexShrink: 0 }} />
+              <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                <Typography variant="subtitle2" noWrap>
+                  {ASSIGNMENT_CATEGORY_META[category].label}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    opacity: selectedCategory === category ? 0.8 : 1,
+                    color: selectedCategory === category ? 'inherit' : 'text.secondary',
+                  }}
+                >
+                  {assignments?.filter((item) => item.category === category).length ?? 0} รายการ
+                </Typography>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </Card>
+
+      <ScoreCategorySection
+        category={selectedCategory}
+        items={categoryItems}
+        loading={assignmentsLoading}
+        gradebookPath={gradebookPath}
+        createPath={scoreCategoryNewPath(selectedCategory)}
+        onQuickCreate={(value) => setQuickCategory(value)}
+        onEdit={(assignment) => setScoreItemAction({ mode: 'edit', assignment })}
+        onDelete={(assignment) => setScoreItemAction({ mode: 'delete', assignment })}
+      />
+
+      {quickCategory && (
+        <QuickScoreDialog
+          key={quickCategory}
+          open
+          category={quickCategory}
+          teacherAssignmentId={teacherAssignmentId}
+          gradebookPath={gradebookPath}
+          onClose={() => setQuickCategory(null)}
+        />
+      )}
+
+      {scoreItemAction && (
+        <ScoreItemActionsDialog
+          key={`${scoreItemAction.mode}-${scoreItemAction.assignment.id}`}
+          open
+          mode={scoreItemAction.mode}
+          assignment={scoreItemAction.assignment}
+          teacherAssignmentId={teacherAssignmentId}
+          onClose={() => setScoreItemAction(null)}
+        />
+      )}
+    </>
+  );
+}
+
+type ScoreCategorySectionProps = {
+  category: AssignmentCategory;
+  items: Assignment[];
+  loading: boolean;
+  gradebookPath: (assignmentId: string) => string;
+  createPath: string;
+  onQuickCreate: (category: Exclude<AssignmentCategory, 'assignment'>) => void;
+  onEdit: (assignment: Assignment) => void;
+  onDelete: (assignment: Assignment) => void;
+};
+
+function ScoreCategorySection({
+  category,
+  items,
+  loading,
+  gradebookPath,
+  createPath,
+  onQuickCreate,
+  onEdit,
+  onDelete,
+}: ScoreCategorySectionProps) {
+  const meta = ASSIGNMENT_CATEGORY_META[category];
+  const canCreate = !meta.singleton || items.length === 0;
+  const hasDueDate = category === 'assignment';
+  const colSpan = hasDueDate ? 5 : 4;
+
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        overflow: 'hidden',
+        borderColor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.2),
+      }}
+    >
+      <Box
+        sx={{
+          p: { xs: 2, sm: 2.5 },
+          gap: 2,
+          display: 'flex',
+          alignItems: { xs: 'stretch', sm: 'center' },
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+        }}
+      >
+        <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+          <Box
+            sx={{
+              width: 44,
+              height: 44,
+              display: 'grid',
+              flexShrink: 0,
+              borderRadius: 1.5,
+              color: 'primary.main',
+              placeItems: 'center',
+              bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.1),
+            }}
+          >
+            <Iconify icon={SCORE_CATEGORY_ICON[category]} width={26} />
+          </Box>
+          <Box>
+            <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+              <Typography variant="h6">{meta.sectionTitle}</Typography>
+              <Label color="primary">{items.length} รายการ</Label>
+            </Box>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {meta.description}
             </Typography>
-
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>ชื่องาน</TableCell>
-                  <TableCell>สถานะ</TableCell>
-                  <TableCell align="right">คะแนน</TableCell>
-                </TableRow>
-              </TableHead>
-
-              <TableBody>
-                {!data.rows.length && (
-                  <TableRow>
-                    <TableCell colSpan={3}>ยังไม่มีงานในวิชานี้</TableCell>
-                  </TableRow>
-                )}
-
-                {data.rows.map((row) => (
-                  <TableRow key={row.assignment.id}>
-                    <TableCell>{row.assignment.title}</TableCell>
-                    <TableCell>
-                      <Label variant="soft" color={STATUS_COLOR[row.score.status]}>
-                        {STATUS_LABEL[row.score.status]}
-                      </Label>
-                    </TableCell>
-                    <TableCell align="right">
-                      {row.score.score ?? '-'} / {row.assignment.full_score}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </>
+          </Box>
+        </Box>
+        {canCreate && category === 'assignment' && (
+          <Button
+            component={RouterLink}
+            href={createPath}
+            variant="contained"
+            size="small"
+            startIcon={<Iconify icon="mingcute:add-line" />}
+            sx={{ flexShrink: 0, width: { xs: 1, sm: 'auto' } }}
+          >
+            {meta.singleton ? 'เพิ่มคะแนน' : `เพิ่ม${meta.label}`}
+          </Button>
         )}
-      </DialogContent>
-    </Dialog>
+        {canCreate && category !== 'assignment' && (
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<Iconify icon="solar:pen-bold" />}
+            onClick={() => onQuickCreate(category)}
+            sx={{ flexShrink: 0, width: { xs: 1, sm: 'auto' } }}
+          >
+            {meta.singleton ? 'กรอกคะแนน' : 'เพิ่มรายการคะแนน'}
+          </Button>
+        )}
+      </Box>
+      <Divider />
+      <TableContainer sx={{ display: { xs: 'none', sm: 'block' } }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>ชื่อรายการ</TableCell>
+              <TableCell>รายละเอียด</TableCell>
+              {hasDueDate && <TableCell>กำหนดส่ง</TableCell>}
+              <TableCell align="center">คะแนนเต็ม</TableCell>
+              <TableCell align="right">การจัดการ</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={colSpan}>กำลังโหลด...</TableCell>
+              </TableRow>
+            )}
+            {!loading && !items.length && (
+              <TableRow>
+                <TableCell
+                  colSpan={colSpan}
+                  sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}
+                >
+                  ยังไม่มี{meta.sectionTitle}
+                </TableCell>
+              </TableRow>
+            )}
+            {items.map((item) => (
+              <TableRow key={item.id} hover>
+                <TableCell>
+                  <Typography variant="subtitle2">{item.title}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    sx={{ maxWidth: 320, color: 'text.secondary' }}
+                  >
+                    {item.description || 'ไม่มีรายละเอียด'}
+                  </Typography>
+                </TableCell>
+                {hasDueDate && (
+                  <TableCell>
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                      {item.due_at ? fDateTime(item.due_at, 'DD/MM/YYYY HH:mm') : 'ไม่กำหนด'}
+                    </Typography>
+                  </TableCell>
+                )}
+                <TableCell align="center">{item.full_score}</TableCell>
+                <TableCell align="right">
+                  <Box sx={{ gap: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                      component={RouterLink}
+                      href={gradebookPath(item.id)}
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Iconify icon="solar:pen-bold" />}
+                    >
+                      กรอกคะแนน
+                    </Button>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      aria-label={`แก้ไข ${item.title}`}
+                      title="แก้ไขรายการ"
+                      onClick={() => onEdit(item)}
+                    >
+                      <Iconify icon="solar:settings-bold" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      aria-label={`ลบ ${item.title}`}
+                      title="ลบรายการ"
+                      onClick={() => onDelete(item)}
+                    >
+                      <Iconify icon="solar:trash-bin-trash-bold" />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+        {loading && (
+          <Box sx={{ p: 2 }}>
+            <Skeleton variant="rounded" height={112} />
+          </Box>
+        )}
+        {!loading && !items.length && (
+          <Box sx={{ px: 3, py: 5, textAlign: 'center' }}>
+            <Iconify
+              icon={SCORE_CATEGORY_ICON[category]}
+              width={44}
+              sx={{ mb: 1, color: 'text.disabled' }}
+            />
+            <Typography variant="subtitle2">ยังไม่มี{meta.sectionTitle}</Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+              เพิ่มรายการแรกเพื่อเริ่มกรอกคะแนนนักเรียน
+            </Typography>
+          </Box>
+        )}
+        {items.map((item) => (
+          <Box
+            key={item.id}
+            sx={{
+              p: 2,
+              gap: 1.5,
+              display: 'flex',
+              flexDirection: 'column',
+              borderTop: (theme) => `1px solid ${theme.vars.palette.divider}`,
+            }}
+          >
+            <Box sx={{ gap: 1, display: 'flex', alignItems: 'flex-start' }}>
+              <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                <Typography variant="subtitle2">{item.title}</Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  {item.description || 'ไม่มีรายละเอียด'}
+                </Typography>
+              </Box>
+              <Label color="primary">เต็ม {item.full_score}</Label>
+            </Box>
+            {hasDueDate && (
+              <Box
+                sx={{ gap: 0.75, display: 'flex', alignItems: 'center', color: 'text.secondary' }}
+              >
+                <Iconify icon="solar:calendar-date-bold" width={18} />
+                <Typography variant="caption">
+                  กำหนดส่ง {item.due_at ? fDateTime(item.due_at, 'DD/MM/YYYY HH:mm') : 'ไม่กำหนด'}
+                </Typography>
+              </Box>
+            )}
+            <Box sx={{ gap: 1, display: 'grid', gridTemplateColumns: '1fr auto auto' }}>
+              <Button
+                component={RouterLink}
+                href={gradebookPath(item.id)}
+                variant="outlined"
+                startIcon={<Iconify icon="solar:pen-bold" />}
+              >
+                กรอกคะแนน
+              </Button>
+              <IconButton
+                color="primary"
+                aria-label={`แก้ไข ${item.title}`}
+                onClick={() => onEdit(item)}
+                sx={{ border: (theme) => `1px solid ${theme.vars.palette.divider}` }}
+              >
+                <Iconify icon="solar:settings-bold" />
+              </IconButton>
+              <IconButton
+                color="error"
+                aria-label={`ลบ ${item.title}`}
+                onClick={() => onDelete(item)}
+                sx={{ border: (theme) => `1px solid ${theme.vars.palette.divider}` }}
+              >
+                <Iconify icon="solar:trash-bin-trash-bold" />
+              </IconButton>
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    </Card>
   );
 }

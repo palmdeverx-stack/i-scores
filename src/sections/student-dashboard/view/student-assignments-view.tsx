@@ -22,7 +22,9 @@ export function StudentAssignmentsView() {
   const overview = useMemo(() => {
     const assignments =
       data?.subjects.flatMap((item) =>
-        item.assignments.map((assignment) => ({ ...assignment, subject: item.subject }))
+        item.assignments
+          .filter((assignment) => assignment.category === 'assignment')
+          .map((assignment) => ({ ...assignment, subject: item.subject }))
       ) ?? [];
     const submitted = assignments.filter((assignment) => isSubmitted(assignment.status)).length;
     const totalScore = assignments.reduce(

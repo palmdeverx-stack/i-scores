@@ -57,12 +57,24 @@ export type Roster = {
 };
 
 export type StudentBreakdownRow = {
-  assignment: { id: string; title: string; full_score: number };
+  assignment: {
+    id: string;
+    title: string;
+    full_score: number;
+    category: 'assignment' | 'quiz' | 'midterm' | 'final' | 'other';
+  };
   score: { score: number | null; feedback: string | null; status: SubmissionStatus };
 };
 
 export type StudentBreakdown = {
-  student: { id: string; username: string; first_name: string | null; last_name: string | null };
+  student: {
+    id: string;
+    username: string;
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+    student_number: string | null;
+  };
   rows: StudentBreakdownRow[];
 };
 

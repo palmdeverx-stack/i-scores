@@ -40,6 +40,12 @@ const FILE_EXTENSIONS: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
   'application/zip': 'zip',
 };
+const VALID_CATEGORIES = ['assignment', 'quiz', 'midterm', 'final', 'other'];
+const SINGLETON_CATEGORIES = ['midterm', 'final'];
+const SINGLETON_CATEGORY_LABELS: Record<string, string> = {
+  midterm: 'คะแนนสอบกลางภาค',
+  final: 'คะแนนสอบปลายภาค',
+};
 
 export async function GET(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['teacher', 'school_admin']);
@@ -58,7 +64,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   const { data, error } = await supabaseAdmin
     .from('assignments')
     .select(
-      `id, title, description, full_score, due_at, created_at,
+      `id, title, description, full_score, due_at, category, created_at,
        attachments:assignment_attachments(id, file_name, file_url, mime_type, file_size, created_at)`
     )
     .eq('teacher_assignment_id', id)
@@ -91,6 +97,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const description = isMultipart ? body.get('description') : body.description;
   const fullScore = isMultipart ? body.get('fullScore') : body.fullScore;
   const dueAt = isMultipart ? body.get('dueAt') : body.dueAt;
+  const category = isMultipart ? body.get('category') : body.category;
   const files = isMultipart
     ? body
         .getAll('files')
@@ -105,6 +112,27 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
   if (normalizedDescription.length > 5000) {
     return NextResponse.json({ message: 'รายละเอียดต้องไม่เกิน 5,000 ตัวอักษร' }, { status: 400 });
+  }
+
+  const normalizedCategory = typeof category === 'string' && category ? category : 'assignment';
+  if (!VALID_CATEGORIES.includes(normalizedCategory)) {
+    return NextResponse.json({ message: 'หมวดหมู่คะแนนไม่ถูกต้อง' }, { status: 400 });
+  }
+
+  if (SINGLETON_CATEGORIES.includes(normalizedCategory)) {
+    const { data: existing } = await supabaseAdmin
+      .from('assignments')
+      .select('id')
+      .eq('teacher_assignment_id', id)
+      .eq('category', normalizedCategory)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json(
+        { message: `มี${SINGLETON_CATEGORY_LABELS[normalizedCategory]}อยู่แล้ว กรุณาแก้ไขรายการเดิมแทน` },
+        { status: 409 }
+      );
+    }
   }
 
   const parsedFullScore = fullScore !== undefined ? Number(fullScore) : 100;
@@ -145,11 +173,20 @@ export async function POST(request: Request, { params }: RouteParams) {
       description: normalizedDescription || null,
       full_score: parsedFullScore,
       due_at: parsedDueAt?.toISOString() ?? null,
+      category: normalizedCategory,
     })
-    .select('id, title, description, full_score, due_at, created_at')
+    .select('id, title, description, full_score, due_at, category, created_at')
     .single();
 
   if (error || !assignment) {
+    if (error?.code === '23505') {
+      return NextResponse.json(
+        {
+          message: `มี${SINGLETON_CATEGORY_LABELS[normalizedCategory] ?? 'รายการนี้'}อยู่แล้ว กรุณาแก้ไขรายการเดิมแทน`,
+        },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       { message: error?.message ?? 'ไม่สามารถสร้างงานได้' },
       { status: 500 }
@@ -206,7 +243,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { data: createdAssignment } = await supabaseAdmin
     .from('assignments')
     .select(
-      `id, title, description, full_score, due_at, created_at,
+      `id, title, description, full_score, due_at, category, created_at,
        attachments:assignment_attachments(id, file_name, file_url, mime_type, file_size, created_at)`
     )
     .eq('id', assignment.id)

@@ -4,12 +4,68 @@ import { getStoredToken } from 'src/auth/context/jwt/utils';
 
 // ----------------------------------------------------------------------
 
+export type AssignmentCategory = 'assignment' | 'quiz' | 'midterm' | 'final' | 'other';
+
+export const ASSIGNMENT_CATEGORY_META: Record<
+  AssignmentCategory,
+  {
+    label: string;
+    sectionTitle: string;
+    description: string;
+    singleton: boolean;
+    createHeading: string;
+    defaultTitle: string;
+  }
+> = {
+  assignment: {
+    label: 'งาน',
+    sectionTitle: 'คะแนนจากงาน',
+    description: 'คะแนนจากงานและแบบฝึกหัดที่มอบหมายให้นักเรียน',
+    singleton: false,
+    createHeading: 'สร้างงาน',
+    defaultTitle: '',
+  },
+  quiz: {
+    label: 'แบบทดสอบ',
+    sectionTitle: 'คะแนนจากแบบทดสอบ',
+    description: 'คะแนนจากแบบทดสอบย่อยระหว่างเรียน',
+    singleton: false,
+    createHeading: 'สร้างแบบทดสอบ',
+    defaultTitle: '',
+  },
+  midterm: {
+    label: 'สอบกลางภาค',
+    sectionTitle: 'คะแนนสอบกลางภาค',
+    description: 'คะแนนสอบกลางภาค กรอกคะแนนเดียวต่อนักเรียนหนึ่งคน',
+    singleton: true,
+    createHeading: 'เพิ่มคะแนนสอบกลางภาค',
+    defaultTitle: 'สอบกลางภาค',
+  },
+  final: {
+    label: 'สอบปลายภาค',
+    sectionTitle: 'คะแนนสอบปลายภาค',
+    description: 'คะแนนสอบปลายภาค กรอกคะแนนเดียวต่อนักเรียนหนึ่งคน',
+    singleton: true,
+    createHeading: 'เพิ่มคะแนนสอบปลายภาค',
+    defaultTitle: 'สอบปลายภาค',
+  },
+  other: {
+    label: 'อื่นๆ',
+    sectionTitle: 'คะแนนอื่นๆ',
+    description: 'คะแนนกิจกรรม จิตพิสัย หรือการช่วยงาน',
+    singleton: false,
+    createHeading: 'เพิ่มคะแนนอื่นๆ',
+    defaultTitle: '',
+  },
+};
+
 export type Assignment = {
   id: string;
   title: string;
   description: string | null;
   full_score: number;
   due_at: string | null;
+  category: AssignmentCategory;
   created_at: string;
   attachments: Array<{
     id: string;
@@ -26,7 +82,14 @@ export type CreateAssignmentParams = {
   description?: string;
   fullScore?: number;
   dueAt?: string | null;
+  category?: AssignmentCategory;
   files?: File[];
+};
+
+export type UpdateAssignmentParams = {
+  title: string;
+  description?: string;
+  fullScore: number;
 };
 
 function authHeader() {
@@ -53,6 +116,7 @@ export async function createAssignment(
   formData.append('description', params.description ?? '');
   formData.append('fullScore', String(params.fullScore ?? 100));
   formData.append('dueAt', params.dueAt ?? '');
+  formData.append('category', params.category ?? 'assignment');
   params.files?.forEach((file) => formData.append('files', file));
 
   const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/assignments`, {
@@ -65,4 +129,30 @@ export async function createAssignment(
   if (!response.ok) throw new Error(json.message ?? 'Failed to create assignment');
 
   return json.assignment;
+}
+
+export async function updateAssignment(
+  assignmentId: string,
+  params: UpdateAssignmentParams
+): Promise<Assignment> {
+  const response = await fetch(`/api/assignments/${assignmentId}`, {
+    method: 'PATCH',
+    headers: { ...authHeader(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to update assignment');
+
+  return json.assignment;
+}
+
+export async function deleteAssignment(assignmentId: string): Promise<void> {
+  const response = await fetch(`/api/assignments/${assignmentId}`, {
+    method: 'DELETE',
+    headers: authHeader(),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to delete assignment');
 }

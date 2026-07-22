@@ -1,22 +1,16 @@
 'use client';
 
-import type { UserRow, StudentStatus } from '../user-actions';
+import type { UserRow } from '../user-actions';
 
-import * as z from 'zod';
 import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
-import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
 import Tooltip from '@mui/material/Tooltip';
-import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -25,42 +19,17 @@ import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
 import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
-import { Form, Field } from 'src/components/hook-form';
+import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
-import { StudentGuardiansDialog } from 'src/sections/student-guardian/components/student-guardians-dialog';
-
-import { StudentAvatarDialog } from '../components/student-avatar-dialog';
-import { listUsers, createUser, updateStudentStatus } from '../user-actions';
+import { listUsers } from '../user-actions';
+import { CreateUserDialog } from '../components/create-user-dialog';
 
 // ----------------------------------------------------------------------
-
-const CreateSchema = z.object({
-  firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อ!' }),
-  lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุล!' }),
-  username: z.string().trim().min(1, { error: 'กรุณากรอกชื่อผู้ใช้งาน!' }),
-  email: z.union([z.literal(''), z.email({ error: 'อีเมลไม่ถูกต้อง!' })]),
-  password: z.union([
-    z.literal(''),
-    z.string().min(6, { error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร!' }),
-  ]),
-  role: z.enum(['teacher', 'student']),
-});
-
-function generatePassword(length = 12) {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  const values = new Uint32Array(length);
-  window.crypto.getRandomValues(values);
-
-  return Array.from(values, (value) => alphabet[value % alphabet.length]).join('');
-}
 
 function maskPassword(password: string) {
   return `${'•'.repeat(Math.max(password.length - 2, 4))}${password.slice(-2)}`;
@@ -80,35 +49,11 @@ const ROLE_LABEL = {
   student: 'นักเรียน',
 } as const;
 
-const STUDENT_STATUS_LABEL: Record<StudentStatus, string> = {
-  studying: 'กำลังศึกษา',
-  graduated: 'สำเร็จการศึกษา',
-  transferred: 'ย้ายโรงเรียน',
-  withdrawn: 'ลาออก',
-  dismissed: 'พ้นสภาพ',
-};
-
-const STUDENT_STATUS_COLOR: Record<StudentStatus, 'success' | 'info' | 'warning' | 'error'> = {
-  studying: 'success',
-  graduated: 'info',
-  transferred: 'warning',
-  withdrawn: 'warning',
-  dismissed: 'error',
-};
-
-type Props = {
-  mode?: 'staff' | 'student';
-};
-
-export function UserListView({ mode = 'staff' }: Props) {
-  const isStudentMode = mode === 'student';
+export function UserListView() {
+  const table = useTable({ defaultRowsPerPage: 10 });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
-  const [avatarStudent, setAvatarStudent] = useState<UserRow | null>(null);
-  const [guardianStudent, setGuardianStudent] = useState<UserRow | null>(null);
-  const queryClient = useQueryClient();
 
   const {
     data: users = [],
@@ -116,65 +61,29 @@ export function UserListView({ mode = 'staff' }: Props) {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['users', mode],
-    queryFn: () => (isStudentMode ? listUsers('student') : listUsers()),
+    queryKey: ['users', 'staff'],
+    queryFn: () => listUsers(),
   });
 
-  const scopedUsers = useMemo(
-    () => (isStudentMode ? users : users.filter((user) => user.role !== 'student')),
-    [isStudentMode, users]
-  );
-
-  const methods = useForm({
-    resolver: zodResolver(CreateSchema),
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      username: '',
-      email: '',
-      password: '',
-      role: (isStudentMode ? 'student' : 'teacher') as 'student' | 'teacher',
-    },
-  });
-  const { handleSubmit, reset, setValue } = methods;
-
-  const createMutation = useMutation({
-    mutationFn: createUser,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['users'] });
-      setDialogOpen(false);
-      reset();
-    },
-  });
-
-  const statusMutation = useMutation({
-    mutationFn: ({ studentId, status }: { studentId: string; status: StudentStatus }) =>
-      updateStudentStatus(studentId, status),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
-  });
+  const staffUsers = useMemo(() => users.filter((user) => user.role !== 'student'), [users]);
 
   const filteredUsers = useMemo(() => {
     const keyword = search.trim().toLocaleLowerCase('th');
-    if (!keyword) return scopedUsers;
+    if (!keyword) return staffUsers;
 
-    return scopedUsers.filter((user) =>
+    return staffUsers.filter((user) =>
       [user.username, user.email, user.first_name, user.last_name, ROLE_LABEL[user.role]]
         .filter(Boolean)
         .join(' ')
         .toLocaleLowerCase('th')
         .includes(keyword)
     );
-  }, [scopedUsers, search]);
+  }, [search, staffUsers]);
 
-  const closeDialog = () => {
-    if (createMutation.isPending) return;
-    setDialogOpen(false);
-    setShowPassword(false);
-    reset();
-    createMutation.reset();
-  };
+  const visibleUsers = useMemo(
+    () => rowInPage(filteredUsers, table.page, table.rowsPerPage),
+    [filteredUsers, table.page, table.rowsPerPage]
+  );
 
   const copyPassword = async (userId: string, password: string) => {
     await navigator.clipboard.writeText(password);
@@ -184,18 +93,6 @@ export function UserListView({ mode = 'staff' }: Props) {
       2000
     );
   };
-
-  const onSubmit = handleSubmit((data) =>
-    createMutation.mutate({
-      ...data,
-      firstName: data.firstName.trim(),
-      lastName: data.lastName.trim(),
-      username: data.username.trim(),
-      email: data.email || undefined,
-      password: data.password || generatePassword(),
-      role: isStudentMode ? 'student' : 'teacher',
-    })
-  );
 
   return (
     <Container maxWidth="lg" sx={{ pb: 5 }}>
@@ -211,32 +108,18 @@ export function UserListView({ mode = 'staff' }: Props) {
       >
         <Box>
           <Typography component="h1" variant="h3">
-            {isStudentMode ? 'นักเรียน' : 'ผู้ใช้งาน'}
+            ครู/บุคลากร
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-            {isStudentMode
-              ? 'จัดการบัญชีนักเรียนภายในโรงเรียน'
-              : 'จัดการบัญชีบุคลากรและครูภายในโรงเรียน'}
+            จัดการบัญชีบุคลากรและครูภายในโรงเรียน
           </Typography>
         </Box>
         <Button
           variant="contained"
-          onClick={() => {
-            reset({
-              firstName: '',
-              lastName: '',
-              username: '',
-              email: '',
-              password: generatePassword(),
-              role: isStudentMode ? 'student' : 'teacher',
-            });
-            setShowPassword(true);
-            createMutation.reset();
-            setDialogOpen(true);
-          }}
+          onClick={() => setDialogOpen(true)}
           startIcon={<Iconify icon="solar:user-plus-bold" />}
         >
-          {isStudentMode ? 'เพิ่มนักเรียน' : 'เพิ่มผู้ใช้งาน'}
+          เพิ่มครู/บุคลากร
         </Button>
       </Box>
 
@@ -250,7 +133,7 @@ export function UserListView({ mode = 'staff' }: Props) {
           }
           sx={{ mb: 3 }}
         >
-          ไม่สามารถโหลดรายการ{isStudentMode ? 'นักเรียน' : 'ผู้ใช้งาน'}ได้
+          ไม่สามารถโหลดรายการผู้ใช้งานได้
         </Alert>
       )}
 
@@ -270,7 +153,7 @@ export function UserListView({ mode = 'staff' }: Props) {
         >
           <Box>
             <Typography component="h2" variant="h6">
-              รายการ{isStudentMode ? 'นักเรียน' : 'ผู้ใช้งาน'}
+              รายการครู/บุคลากร
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {isLoading ? 'กำลังโหลด...' : `${filteredUsers.length} บัญชี`}
@@ -279,9 +162,12 @@ export function UserListView({ mode = 'staff' }: Props) {
           <TextField
             size="small"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              table.onResetPage();
+            }}
             placeholder="ค้นหาชื่อ ผู้ใช้ หรืออีเมล"
-            aria-label={`ค้นหา${isStudentMode ? 'นักเรียน' : 'ผู้ใช้งาน'}`}
+            aria-label="ค้นหาผู้ใช้งาน"
             sx={{ width: { xs: 1, sm: 320 } }}
             slotProps={{
               input: {
@@ -299,85 +185,58 @@ export function UserListView({ mode = 'staff' }: Props) {
           <Table>
             <TableHead>
               <TableRow>
-                {isStudentMode && <TableCell width={88}>รูป</TableCell>}
                 <TableCell>ชื่อผู้ใช้งาน</TableCell>
                 <TableCell>ชื่อ-นามสกุล</TableCell>
                 <TableCell>อีเมล</TableCell>
                 <TableCell>รหัสผ่าน</TableCell>
                 <TableCell>บทบาท</TableCell>
-                {isStudentMode && <TableCell width={180}>สถานะ</TableCell>}
-                {isStudentMode && <TableCell align="right">การจัดการ</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={isStudentMode ? 8 : 5}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={5}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!isLoading && !filteredUsers.length && (
                 <TableRow>
                   <TableCell
-                    colSpan={isStudentMode ? 8 : 5}
+                    colSpan={5}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
-                    ไม่พบ{isStudentMode ? 'นักเรียน' : 'ผู้ใช้งาน'}
+                    ไม่พบผู้ใช้งาน
                   </TableCell>
                 </TableRow>
               )}
-              {filteredUsers.map((row) => (
-                <TableRow key={row.id} hover>
-                  {isStudentMode && (
-                    <TableCell>
-                      <Tooltip title="เปลี่ยนรูปโปรไฟล์">
-                        <IconButton
-                          onClick={() => setAvatarStudent(row)}
-                          aria-label={`จัดการรูปโปรไฟล์ของ ${row.first_name ?? row.username}`}
-                          sx={{ p: 0.5 }}
-                        >
-                          <Avatar
-                            src={row.avatar_url ?? undefined}
-                            alt={`${row.first_name ?? ''} ${row.last_name ?? ''}`.trim()}
-                            sx={{
-                              width: 42,
-                              height: 42,
-                              bgcolor: 'primary.lighter',
-                              color: 'primary.darker',
-                            }}
-                          >
-                            {(row.first_name ?? row.username).charAt(0).toUpperCase()}
-                          </Avatar>
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  )}
+              {visibleUsers.map((user: UserRow) => (
+                <TableRow key={user.id} hover>
                   <TableCell>
-                    <Typography variant="subtitle2">{row.username}</Typography>
+                    <Typography variant="subtitle2">{user.username}</Typography>
                   </TableCell>
                   <TableCell>
-                    {`${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || '-'}
+                    {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '-'}
                   </TableCell>
-                  <TableCell>{row.email ?? '-'}</TableCell>
+                  <TableCell>{user.email ?? '-'}</TableCell>
                   <TableCell>
-                    {row.login_password ? (
+                    {user.login_password ? (
                       <Box sx={{ gap: 0.5, display: 'flex', alignItems: 'center' }}>
                         <Typography
                           component="code"
                           variant="body2"
                           sx={{ fontFamily: 'monospace', letterSpacing: 0.5 }}
                         >
-                          {maskPassword(row.login_password)}
+                          {maskPassword(user.login_password)}
                         </Typography>
-                        <Tooltip title={copiedUserId === row.id ? 'คัดลอกแล้ว' : 'คัดลอกรหัสผ่าน'}>
+                        <Tooltip title={copiedUserId === user.id ? 'คัดลอกแล้ว' : 'คัดลอกรหัสผ่าน'}>
                           <IconButton
                             size="small"
-                            color={copiedUserId === row.id ? 'success' : 'default'}
-                            onClick={() => copyPassword(row.id, row.login_password!)}
-                            aria-label={`คัดลอกรหัสผ่านของ ${row.username}`}
+                            color={copiedUserId === user.id ? 'success' : 'default'}
+                            onClick={() => copyPassword(user.id, user.login_password!)}
+                            aria-label={`คัดลอกรหัสผ่านของ ${user.username}`}
                           >
                             <Iconify
                               icon={
-                                copiedUserId === row.id
+                                copiedUserId === user.id
                                   ? 'solar:check-circle-bold'
                                   : 'solar:copy-bold'
                               }
@@ -385,7 +244,7 @@ export function UserListView({ mode = 'staff' }: Props) {
                             />
                           </IconButton>
                         </Tooltip>
-                        {row.must_change_password && (
+                        {user.must_change_password && (
                           <Tooltip title="ยังไม่ได้เปลี่ยนรหัสผ่านนี้">
                             <Label variant="soft" color="warning" sx={{ ml: 0.5 }}>
                               ยังไม่เปลี่ยน
@@ -394,209 +253,46 @@ export function UserListView({ mode = 'staff' }: Props) {
                         )}
                       </Box>
                     ) : (
-                      <Tooltip title="บัญชีนี้ไม่มีรหัสผ่านที่สามารถเรียกดูได้">
-                        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                          ไม่มีข้อมูล
-                        </Typography>
-                      </Tooltip>
+                      <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                        ไม่มีข้อมูล
+                      </Typography>
                     )}
                   </TableCell>
                   <TableCell>
-                    <Label variant="soft" color={ROLE_COLOR[row.role]}>
-                      {ROLE_LABEL[row.role]}
+                    <Label variant="soft" color={ROLE_COLOR[user.role]}>
+                      {ROLE_LABEL[user.role]}
                     </Label>
                   </TableCell>
-                  {isStudentMode && (
-                    <TableCell>
-                      <TextField
-                        select
-                        size="small"
-                        fullWidth
-                        value={row.student_status ?? 'studying'}
-                        onChange={(event) =>
-                          statusMutation.mutate({
-                            studentId: row.id,
-                            status: event.target.value as StudentStatus,
-                          })
-                        }
-                        slotProps={{
-                          select: {
-                            renderValue: (value) => (
-                              <Label
-                                variant="soft"
-                                color={STUDENT_STATUS_COLOR[value as StudentStatus]}
-                              >
-                                {STUDENT_STATUS_LABEL[value as StudentStatus]}
-                              </Label>
-                            ),
-                          },
-                        }}
-                      >
-                        {(
-                          Object.keys(STUDENT_STATUS_LABEL) as Array<
-                            keyof typeof STUDENT_STATUS_LABEL
-                          >
-                        ).map((status) => (
-                          <MenuItem key={status} value={status}>
-                            {STUDENT_STATUS_LABEL[status]}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </TableCell>
-                  )}
-                  {isStudentMode && (
-                    <TableCell align="right">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<Iconify icon="solar:users-group-rounded-bold" />}
-                        onClick={() => setGuardianStudent(row)}
-                      >
-                        ผู้ปกครอง
-                      </Button>
-                    </TableCell>
-                  )}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
+
+        <TablePaginationCustom
+          page={table.page}
+          count={filteredUsers.length}
+          rowsPerPage={table.rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={table.onChangePage}
+          onRowsPerPageChange={table.onChangeRowsPerPage}
+          labelRowsPerPage="แสดงต่อหน้า"
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} จาก ${count}`}
+          getItemAriaLabel={(type) => {
+            if (type === 'first') return 'หน้าแรก';
+            if (type === 'last') return 'หน้าสุดท้าย';
+            if (type === 'next') return 'หน้าถัดไป';
+            return 'หน้าก่อนหน้า';
+          }}
+          sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+        />
       </Card>
 
-      <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
-        <Form methods={methods} onSubmit={onSubmit}>
-          <DialogTitle sx={{ pb: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography component="h2" variant="h6">
-                  {isStudentMode ? 'เพิ่มนักเรียน' : 'เพิ่มผู้ใช้งาน'}
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                  {isStudentMode ? 'สร้างบัญชีนักเรียนใหม่' : 'สร้างบัญชีใหม่สำหรับบุคลากรหรือครู'}
-                </Typography>
-              </Box>
-              <Box>
-                <IconButton
-                  onClick={closeDialog}
-                  disabled={createMutation.isPending}
-                  aria-label="ปิดหน้าต่าง"
-                >
-                  <Iconify icon="mingcute:close-line" />
-                </IconButton>
-              </Box>
-            </Box>
-          </DialogTitle>
-          <DialogContent sx={{ pt: 2 }}>
-            {createMutation.error && (
-              <Alert severity="error" sx={{ mb: 2.5 }}>
-                {createMutation.error.message}
-              </Alert>
-            )}
-            <Box
-              sx={{
-                gap: 2.5,
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-              }}
-            >
-              <Field.Text name="firstName" label="ชื่อ *" autoFocus />
-              <Field.Text name="lastName" label="นามสกุล *" />
-              <Field.Text
-                name="username"
-                label="ชื่อผู้ใช้งาน *"
-                helperText="ใช้สำหรับเข้าสู่ระบบ"
-              />
-              <Field.Text name="email" label="อีเมล" helperText="ไม่บังคับ" />
-              <Box>
-                <Field.Text
-                  name="password"
-                  label="รหัสผ่าน (ระบบสร้างให้)"
-                  type={showPassword ? 'text' : 'password'}
-                  helperText="ไม่บังคับ หากเว้นว่างระบบจะสร้างรหัสผ่านให้อัตโนมัติ — ผู้ใช้งานต้องเปลี่ยนรหัสผ่านนี้ตอนเข้าสู่ระบบครั้งแรก"
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            edge="end"
-                            onClick={() => setShowPassword((value) => !value)}
-                            aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
-                          >
-                            <Iconify
-                              icon={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
-                            />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-                <Button
-                  size="small"
-                  color="inherit"
-                  startIcon={<Iconify icon="solar:restart-bold" />}
-                  onClick={() => {
-                    setValue('password', generatePassword(), {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    });
-                    setShowPassword(true);
-                  }}
-                  sx={{ mt: 0.75 }}
-                >
-                  สร้างรหัสผ่านใหม่
-                </Button>
-              </Box>
-              <Box
-                sx={{
-                  gap: 1.5,
-                  p: 2,
-                  display: 'flex',
-                  borderRadius: 2,
-                  alignItems: 'center',
-                  bgcolor: 'background.neutral',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                <Iconify
-                  icon={
-                    isStudentMode ? 'solar:user-rounded-bold' : 'solar:users-group-rounded-bold'
-                  }
-                  width={26}
-                />
-                <Box>
-                  <Typography variant="subtitle2">
-                    ประเภทบัญชี: {isStudentMode ? 'นักเรียน' : 'ครู'}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    กำหนดให้อัตโนมัติตามหน้าที่กำลังจัดการ
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button color="inherit" onClick={closeDialog} disabled={createMutation.isPending}>
-              ยกเลิก
-            </Button>
-            <Button type="submit" variant="contained" loading={createMutation.isPending}>
-              {isStudentMode ? 'เพิ่มนักเรียน' : 'เพิ่มผู้ใช้งาน'}
-            </Button>
-          </DialogActions>
-        </Form>
-      </Dialog>
-
-      {isStudentMode && (
-        <>
-          <StudentAvatarDialog student={avatarStudent} onClose={() => setAvatarStudent(null)} />
-          <StudentGuardiansDialog
-            open={!!guardianStudent}
-            student={guardianStudent}
-            onClose={() => setGuardianStudent(null)}
-          />
-        </>
-      )}
+      <CreateUserDialog
+        open={dialogOpen}
+        isStudentMode={false}
+        onClose={() => setDialogOpen(false)}
+      />
     </Container>
   );
 }

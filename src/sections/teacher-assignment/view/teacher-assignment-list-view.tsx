@@ -8,12 +8,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
-import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Skeleton from '@mui/material/Skeleton';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
@@ -21,16 +20,15 @@ import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
-import CardActionArea from '@mui/material/CardActionArea';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { paths } from 'src/routes/paths';
-import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
 
 import { useAuthContext } from 'src/auth/hooks';
 
+import { TeacherAssignmentCard } from '../components/teacher-assignment-card';
 import { TeacherAssignmentFormDialog } from '../components/teacher-assignment-form-dialog';
 import { listTeacherAssignments, deleteTeacherAssignment } from '../teacher-assignment-actions';
 
@@ -71,6 +69,7 @@ export function TeacherAssignmentListView() {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
   const [search, setSearch] = useState('');
+  const [classroomFilter, setClassroomFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<TeacherAssignment | null>(null);
   const [deletingRow, setDeletingRow] = useState<TeacherAssignment | null>(null);
@@ -113,16 +112,26 @@ export function TeacherAssignmentListView() {
     setEditingRow(null);
   };
 
+  const classroomOptions = useMemo(
+    () =>
+      Array.from(new Map(rows.map((row) => [row.classroom.id, row.classroom])).values()).sort(
+        (a, b) => a.name.localeCompare(b.name, 'th')
+      ),
+    [rows]
+  );
+
   const filteredRows = useMemo(() => {
     const keyword = search.trim().toLocaleLowerCase('th');
 
-    if (!keyword) return rows;
-
     return rows.filter((row) => {
+      if (classroomFilter && row.classroom.id !== classroomFilter) return false;
+      if (!keyword) return true;
+
       const teacherName = `${row.teacher.first_name ?? ''} ${row.teacher.last_name ?? ''}`;
       const searchableText = [
         teacherName,
         row.teacher.username,
+        row.subject.code,
         row.subject.name,
         row.classroom.name,
         row.semester.name,
@@ -132,7 +141,14 @@ export function TeacherAssignmentListView() {
 
       return searchableText.includes(keyword);
     });
-  }, [rows, search]);
+  }, [classroomFilter, rows, search]);
+
+  const hasFilters = Boolean(search || classroomFilter);
+
+  const clearFilters = () => {
+    setSearch('');
+    setClassroomFilter('');
+  };
 
   const summary = useMemo(
     () => ({
@@ -274,29 +290,63 @@ export function TeacherAssignmentListView() {
           </Typography>
         </Box>
 
-        <TextField
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="ค้นหารายวิชา ห้องเรียน หรือภาคเรียน"
-          aria-label="ค้นหาชั้นเรียน"
-          sx={{ width: { xs: 1, sm: 360 } }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Iconify icon="eva:search-fill" width={21} />
-                </InputAdornment>
-              ),
-              endAdornment: search ? (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setSearch('')} aria-label="ล้างคำค้นหา">
-                    <Iconify icon="mingcute:close-line" width={19} />
-                  </IconButton>
-                </InputAdornment>
-              ) : null,
-            },
+        <Box
+          sx={{
+            gap: 1.5,
+            width: { xs: 1, sm: 'auto' },
+            display: 'flex',
+            alignItems: 'center',
+            flexDirection: { xs: 'column', sm: 'row' },
           }}
-        />
+        >
+          <TextField
+            select
+            label="ห้องเรียน"
+            value={classroomFilter}
+            onChange={(event) => setClassroomFilter(event.target.value)}
+            sx={{ width: { xs: 1, sm: 190 } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Iconify icon="solar:users-group-rounded-bold" width={20} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          >
+            <MenuItem value="">ทุกห้องเรียน</MenuItem>
+            {classroomOptions.map((classroom) => (
+              <MenuItem key={classroom.id} value={classroom.id}>
+                ห้อง {classroom.name}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="ค้นหารายวิชา ห้องเรียน หรือภาคเรียน"
+            aria-label="ค้นหาชั้นเรียน"
+            sx={{ width: { xs: 1, sm: 360 } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Iconify icon="eva:search-fill" width={21} />
+                  </InputAdornment>
+                ),
+                endAdornment: search ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearch('')} aria-label="ล้างคำค้นหา">
+                      <Iconify icon="mingcute:close-line" width={19} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              },
+            }}
+          />
+        </Box>
       </Box>
 
       {isError && (
@@ -334,134 +384,19 @@ export function TeacherAssignmentListView() {
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
           }}
         >
-          {filteredRows.map((row) => {
-            const teacherName =
-              `${row.teacher.first_name ?? ''} ${row.teacher.last_name ?? ''}`.trim() ||
-              row.teacher.username;
-
-            return (
-              <Card
-                key={row.id}
-                variant="outlined"
-                sx={{
-                  height: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition:
-                    'transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    borderColor: 'primary.main',
-                    boxShadow: (theme) => theme.customShadows.card,
-                  },
-                  '&:focus-within': { outline: '3px solid', outlineColor: 'primary.lighter' },
-                }}
-              >
-                <CardActionArea
-                  component={RouterLink}
-                  href={detailPath(row.id)}
-                  aria-label={`เปิดรายวิชา ${row.subject.name} ห้อง ${row.classroom.name}`}
-                  sx={{ width: 1, flex: 1, p: 3, display: 'flex', alignItems: 'stretch' }}
-                >
-                  <Box sx={{ width: 1, display: 'flex', flexDirection: 'column' }}>
-                    <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'flex-start' }}>
-                      <Avatar
-                        src={row.subject.image_url ?? undefined}
-                        variant="rounded"
-                        sx={{
-                          width: 48,
-                          height: 48,
-                          mr: 2,
-                          flexShrink: 0,
-                          borderRadius: 1.75,
-                          color: 'primary.main',
-                          bgcolor: 'primary.lighter',
-                        }}
-                      >
-                        <Iconify icon="solar:notebook-bold-duotone" width={28} />
-                      </Avatar>
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="h6" sx={{ lineHeight: 1.35 }}>
-                          {row.subject.name}
-                        </Typography>
-                        {!isTeacher && (
-                          <Typography
-                            variant="body2"
-                            noWrap
-                            sx={{ mt: 0.5, color: 'text.secondary' }}
-                          >
-                            {teacherName}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-
-                    <Box sx={{ gap: 1, mb: 3, display: 'flex', flexWrap: 'wrap' }}>
-                      <Chip
-                        size="small"
-                        icon={<Iconify icon="solar:users-group-rounded-bold" />}
-                        label={`ห้อง ${row.classroom.name}`}
-                      />
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        icon={<Iconify icon="mingcute:calendar-month-line" />}
-                        label={row.semester.name}
-                      />
-                    </Box>
-
-                    <Box
-                      sx={{
-                        pt: 2,
-                        mt: 'auto',
-                        display: 'flex',
-                        color: 'primary.main',
-                        alignItems: 'center',
-                        borderTop: '1px dashed',
-                        borderColor: 'divider',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <Typography variant="subtitle2">จัดการงานและคะแนน</Typography>
-                      <Iconify icon="eva:arrow-ios-forward-fill" width={22} />
-                    </Box>
-                  </Box>
-                </CardActionArea>
-                <Box
-                  sx={{
-                    gap: 1,
-                    px: 2,
-                    py: 1.25,
-                    width: 1,
-                    display: 'flex',
-                    borderTop: '1px solid',
-                    borderColor: 'divider',
-                    justifyContent: 'flex-end',
-                  }}
-                >
-                  <Button
-                    size="small"
-                    color="inherit"
-                    onClick={() => openEditDialog(row)}
-                    startIcon={<Iconify icon="solar:pen-bold" />}
-                  >
-                    แก้ไข
-                  </Button>
-                  <Button
-                    size="small"
-                    color="error"
-                    onClick={() => {
-                      deleteMutation.reset();
-                      setDeletingRow(row);
-                    }}
-                    startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                  >
-                    ลบ
-                  </Button>
-                </Box>
-              </Card>
-            );
-          })}
+          {filteredRows.map((row) => (
+            <TeacherAssignmentCard
+              key={row.id}
+              row={row}
+              detailPath={detailPath(row.id)}
+              showTeacherName={!isTeacher}
+              onEdit={openEditDialog}
+              onDelete={(target) => {
+                deleteMutation.reset();
+                setDeletingRow(target);
+              }}
+            />
+          ))}
         </Box>
       )}
 
@@ -480,21 +415,24 @@ export function TeacherAssignmentListView() {
               bgcolor: 'background.neutral',
             }}
           >
-            <Iconify icon={search ? 'eva:search-fill' : 'solar:notebook-bold-duotone'} width={36} />
+            <Iconify
+              icon={hasFilters ? 'eva:search-fill' : 'solar:notebook-bold-duotone'}
+              width={36}
+            />
           </Box>
           <Typography variant="h6">
-            {search ? 'ไม่พบชั้นเรียนที่ค้นหา' : 'ยังไม่มีชั้นเรียนที่ได้รับมอบหมาย'}
+            {hasFilters ? 'ไม่พบชั้นเรียนที่ค้นหา' : 'ยังไม่มีชั้นเรียนที่ได้รับมอบหมาย'}
           </Typography>
           <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-            {search
-              ? 'ลองเปลี่ยนคำค้นหา หรือล้างคำค้นหาเพื่อดูทั้งหมด'
+            {hasFilters
+              ? 'ลองเปลี่ยนคำค้นหาหรือตัวกรองห้องเรียน เพื่อดูผลลัพธ์อื่น'
               : isTeacher
                 ? 'เริ่มเพิ่มวิชา ห้องเรียน และภาคเรียนที่คุณรับผิดชอบ'
                 : 'เมื่อได้รับมอบหมาย รายวิชาจะแสดงที่นี่'}
           </Typography>
-          {search ? (
-            <Button sx={{ mt: 2.5 }} onClick={() => setSearch('')}>
-              ล้างคำค้นหา
+          {hasFilters ? (
+            <Button sx={{ mt: 2.5 }} onClick={clearFilters}>
+              ล้างตัวกรอง
             </Button>
           ) : (
             isTeacher && (

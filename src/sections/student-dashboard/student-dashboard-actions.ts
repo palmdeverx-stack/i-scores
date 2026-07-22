@@ -58,6 +58,7 @@ export type StudentSubject = {
     description: string | null;
     full_score: number;
     due_at: string | null;
+    category: 'assignment' | 'quiz' | 'midterm' | 'final' | 'other';
     created_at: string;
     score: number | null;
     feedback: string | null;

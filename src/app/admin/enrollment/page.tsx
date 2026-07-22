@@ -6,7 +6,7 @@ import { EnrollmentListView } from 'src/sections/enrollment/view/enrollment-list
 
 // ----------------------------------------------------------------------
 
-export const metadata: Metadata = { title: `การลงทะเบียนนักเรียน - ${CONFIG.appName}` };
+export const metadata: Metadata = { title: `ลงทะเบียนนักเรียน - ${CONFIG.appName}` };
 
 export default function Page() {
   return <EnrollmentListView />;
