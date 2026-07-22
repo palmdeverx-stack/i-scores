@@ -10,7 +10,10 @@ const MOCK_TITLE = _postTitles[2];
 const ROOTS = {
   AUTH: '/auth',
   AUTH_DEMO: '/auth-demo',
-  DASHBOARD: '/dashboard',
+  MASTER: '/master',
+  ADMIN: '/admin',
+  TEACHER: '/teacher',
+  STUDENT: '/student',
 };
 
 // ----------------------------------------------------------------------
@@ -56,6 +59,7 @@ export const paths = {
     jwt: {
       signIn: `${ROOTS.AUTH}/jwt/sign-in`,
       signUp: `${ROOTS.AUTH}/jwt/sign-up`,
+      changePassword: `${ROOTS.AUTH}/jwt/change-password`,
     },
     firebase: {
       signIn: `${ROOTS.AUTH}/firebase/sign-in`,
@@ -88,89 +92,68 @@ export const paths = {
       verify: `${ROOTS.AUTH_DEMO}/centered/verify`,
     },
   },
-  // DASHBOARD
-  dashboard: {
-    root: ROOTS.DASHBOARD,
-    mail: `${ROOTS.DASHBOARD}/mail`,
-    chat: `${ROOTS.DASHBOARD}/chat`,
-    blank: `${ROOTS.DASHBOARD}/blank`,
-    kanban: `${ROOTS.DASHBOARD}/kanban`,
-    calendar: `${ROOTS.DASHBOARD}/calendar`,
-    fileManager: `${ROOTS.DASHBOARD}/file-manager`,
-    permission: `${ROOTS.DASHBOARD}/permission`,
-    general: {
-      app: `${ROOTS.DASHBOARD}/app`,
-      ecommerce: `${ROOTS.DASHBOARD}/ecommerce`,
-      analytics: `${ROOTS.DASHBOARD}/analytics`,
-      banking: `${ROOTS.DASHBOARD}/banking`,
-      booking: `${ROOTS.DASHBOARD}/booking`,
-      file: `${ROOTS.DASHBOARD}/file`,
-      course: `${ROOTS.DASHBOARD}/course`,
+  // STUDENT
+  student: {
+    root: ROOTS.STUDENT,
+    subjects: `${ROOTS.STUDENT}/subjects`,
+    assignments: `${ROOTS.STUDENT}/assignments`,
+  },
+  // TEACHER
+  teacher: {
+    root: ROOTS.TEACHER,
+    assignments: `${ROOTS.TEACHER}/assignments`,
+    assignmentDetail: (id: string) => `${ROOTS.TEACHER}/assignments/${id}`,
+    assignmentNew: (id: string) => `${ROOTS.TEACHER}/assignments/${id}/new`,
+    gradebook: (assignmentId: string) => `${ROOTS.TEACHER}/gradebook/${assignmentId}`,
+    classroomNew: `${ROOTS.TEACHER}/classroom/new`,
+    enrollmentNew: `${ROOTS.TEACHER}/enrollment/new`,
+    timetable: `${ROOTS.TEACHER}/timetable`,
+  },
+  // MASTER ADMIN
+  master: {
+    root: ROOTS.MASTER,
+    school: {
+      root: `${ROOTS.MASTER}/school`,
+      new: `${ROOTS.MASTER}/school/new`,
     },
+    schoolAdmin: {
+      root: `${ROOTS.MASTER}/school-admin`,
+      new: `${ROOTS.MASTER}/school-admin/new`,
+    },
+  },
+  // SCHOOL ADMIN
+  admin: {
+    root: ROOTS.ADMIN,
+    school: `${ROOTS.ADMIN}/school`,
     user: {
-      root: `${ROOTS.DASHBOARD}/user`,
-      new: `${ROOTS.DASHBOARD}/user/new`,
-      list: `${ROOTS.DASHBOARD}/user/list`,
-      cards: `${ROOTS.DASHBOARD}/user/cards`,
-      profile: `${ROOTS.DASHBOARD}/user/profile`,
-      account: `${ROOTS.DASHBOARD}/user/account`,
-      edit: (id: string) => `${ROOTS.DASHBOARD}/user/${id}/edit`,
-      demo: { edit: `${ROOTS.DASHBOARD}/user/${MOCK_ID}/edit` },
+      root: `${ROOTS.ADMIN}/user`,
+      new: `${ROOTS.ADMIN}/user/new`,
     },
-    product: {
-      root: `${ROOTS.DASHBOARD}/product`,
-      new: `${ROOTS.DASHBOARD}/product/new`,
-      details: (id: string) => `${ROOTS.DASHBOARD}/product/${id}`,
-      edit: (id: string) => `${ROOTS.DASHBOARD}/product/${id}/edit`,
-      demo: {
-        details: `${ROOTS.DASHBOARD}/product/${MOCK_ID}`,
-        edit: `${ROOTS.DASHBOARD}/product/${MOCK_ID}/edit`,
-      },
+    student: {
+      root: `${ROOTS.ADMIN}/student`,
     },
-    invoice: {
-      root: `${ROOTS.DASHBOARD}/invoice`,
-      new: `${ROOTS.DASHBOARD}/invoice/new`,
-      details: (id: string) => `${ROOTS.DASHBOARD}/invoice/${id}`,
-      edit: (id: string) => `${ROOTS.DASHBOARD}/invoice/${id}/edit`,
-      demo: {
-        details: `${ROOTS.DASHBOARD}/invoice/${MOCK_ID}`,
-        edit: `${ROOTS.DASHBOARD}/invoice/${MOCK_ID}/edit`,
-      },
+    academicYear: {
+      root: `${ROOTS.ADMIN}/academic-year`,
+      new: `${ROOTS.ADMIN}/academic-year/new`,
     },
-    post: {
-      root: `${ROOTS.DASHBOARD}/post`,
-      new: `${ROOTS.DASHBOARD}/post/new`,
-      details: (title: string) => `${ROOTS.DASHBOARD}/post/${kebabCase(title)}`,
-      edit: (title: string) => `${ROOTS.DASHBOARD}/post/${kebabCase(title)}/edit`,
-      demo: {
-        details: `${ROOTS.DASHBOARD}/post/${kebabCase(MOCK_TITLE)}`,
-        edit: `${ROOTS.DASHBOARD}/post/${kebabCase(MOCK_TITLE)}/edit`,
-      },
+    classroom: {
+      root: `${ROOTS.ADMIN}/classroom`,
+      new: `${ROOTS.ADMIN}/classroom/new`,
     },
-    order: {
-      root: `${ROOTS.DASHBOARD}/order`,
-      details: (id: string) => `${ROOTS.DASHBOARD}/order/${id}`,
-      demo: { details: `${ROOTS.DASHBOARD}/order/${MOCK_ID}` },
+    subject: {
+      root: `${ROOTS.ADMIN}/subject`,
+      new: `${ROOTS.ADMIN}/subject/new`,
     },
-    job: {
-      root: `${ROOTS.DASHBOARD}/job`,
-      new: `${ROOTS.DASHBOARD}/job/new`,
-      details: (id: string) => `${ROOTS.DASHBOARD}/job/${id}`,
-      edit: (id: string) => `${ROOTS.DASHBOARD}/job/${id}/edit`,
-      demo: {
-        details: `${ROOTS.DASHBOARD}/job/${MOCK_ID}`,
-        edit: `${ROOTS.DASHBOARD}/job/${MOCK_ID}/edit`,
-      },
+    teacherAssignment: {
+      root: `${ROOTS.ADMIN}/teacher-assignment`,
+      new: `${ROOTS.ADMIN}/teacher-assignment/new`,
+      detail: (id: string) => `${ROOTS.ADMIN}/teacher-assignment/${id}`,
+      assignmentNew: (id: string) => `${ROOTS.ADMIN}/teacher-assignment/${id}/new`,
     },
-    tour: {
-      root: `${ROOTS.DASHBOARD}/tour`,
-      new: `${ROOTS.DASHBOARD}/tour/new`,
-      details: (id: string) => `${ROOTS.DASHBOARD}/tour/${id}`,
-      edit: (id: string) => `${ROOTS.DASHBOARD}/tour/${id}/edit`,
-      demo: {
-        details: `${ROOTS.DASHBOARD}/tour/${MOCK_ID}`,
-        edit: `${ROOTS.DASHBOARD}/tour/${MOCK_ID}/edit`,
-      },
+    gradebook: (assignmentId: string) => `${ROOTS.ADMIN}/gradebook/${assignmentId}`,
+    enrollment: {
+      root: `${ROOTS.ADMIN}/enrollment`,
+      new: `${ROOTS.ADMIN}/enrollment/new`,
     },
   },
 };

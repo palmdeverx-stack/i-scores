@@ -5,17 +5,10 @@ import type { AuthState } from '../../types';
 import { useSetState } from 'minimal-shared/hooks';
 import { useMemo, useEffect, useCallback } from 'react';
 
-import { JWT_STORAGE_KEY } from './constant';
 import { AuthContext } from '../auth-context';
-import { jwtDecode, setSession, isValidToken } from './utils';
+import { setSession, isValidToken, getStoredToken } from './utils';
 
 // ----------------------------------------------------------------------
-
-/**
- * NOTE:
- * We only build demo at basic level.
- * Customer will need to do some extra handling yourself if you want to extend the logic and other features...
- */
 
 type Props = {
   children: React.ReactNode;
@@ -24,20 +17,31 @@ type Props = {
 export function AuthProvider({ children }: Props) {
   const { state, setState } = useSetState<AuthState>({ user: null, loading: true });
 
-  const checkUserSession = useCallback(async () => {
+  const checkUserSession = useCallback(async (): Promise<void> => {
     try {
-      const accessToken = sessionStorage.getItem(JWT_STORAGE_KEY);
+      const accessToken = getStoredToken();
 
-      if (accessToken && isValidToken(accessToken)) {
-        setSession(accessToken);
-
-        // Mock data: user profile is read from the token payload, no backend call yet.
-        const { sub, email, displayName, role } = jwtDecode(accessToken);
-
-        setState({ user: { id: sub, email, displayName, role, accessToken }, loading: false });
-      } else {
+      if (!accessToken || !isValidToken(accessToken)) {
+        setSession(null);
         setState({ user: null, loading: false });
+        return;
       }
+
+      setSession(accessToken);
+
+      const response = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) {
+        setSession(null);
+        setState({ user: null, loading: false });
+        return;
+      }
+
+      const { user } = await response.json();
+
+      setState({ user: { ...user, accessToken }, loading: false });
     } catch (error) {
       console.error(error);
       setState({ user: null, loading: false });
@@ -57,7 +61,16 @@ export function AuthProvider({ children }: Props) {
 
   const memoizedValue = useMemo(
     () => ({
-      user: state.user ? { ...state.user, role: state.user?.role ?? 'admin' } : null,
+      user: state.user
+        ? {
+            ...state.user,
+            id: state.user?.id,
+            displayName:
+              `${state.user?.first_name ?? ''} ${state.user?.last_name ?? ''}`.trim() ||
+              state.user?.username,
+            role: state.user?.role ?? 'student',
+          }
+        : null,
       checkUserSession,
       loading: status === 'loading',
       authenticated: status === 'authenticated',

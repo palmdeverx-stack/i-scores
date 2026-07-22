@@ -1,9 +1,9 @@
 'use client';
 
 import * as z from 'zod';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useBoolean } from 'minimal-shared/hooks';
+import { useMutation } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import Box from '@mui/material/Box';
@@ -18,7 +18,7 @@ import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
-import { Form, Field, schemaUtils } from 'src/components/hook-form';
+import { Form, Field } from 'src/components/hook-form';
 
 import { signUp } from '../../context/jwt';
 import { useAuthContext } from '../../hooks';
@@ -31,13 +31,14 @@ import { SignUpTerms } from '../../components/sign-up-terms';
 export type SignUpSchemaType = z.infer<typeof SignUpSchema>;
 
 export const SignUpSchema = z.object({
-  firstName: z.string().min(1, { error: 'First name is required!' }),
-  lastName: z.string().min(1, { error: 'Last name is required!' }),
-  email: schemaUtils.email(),
+  firstName: z.string().min(1, { error: 'กรุณากรอกชื่อ!' }),
+  lastName: z.string().min(1, { error: 'กรุณากรอกนามสกุล!' }),
+  username: z.string().min(1, { error: 'กรุณากรอกชื่อผู้ใช้งาน!' }),
+  email: z.union([z.literal(''), z.email({ error: 'อีเมลไม่ถูกต้อง!' })]),
   password: z
     .string()
-    .min(1, { error: 'Password is required!' })
-    .min(6, { error: 'Password must be at least 6 characters!' }),
+    .min(1, { error: 'กรุณากรอกรหัสผ่าน!' })
+    .min(6, { error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร!' }),
 });
 
 // ----------------------------------------------------------------------
@@ -49,13 +50,12 @@ export function JwtSignUpView() {
 
   const { checkUserSession } = useAuthContext();
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   const defaultValues: SignUpSchemaType = {
-    firstName: 'Hello',
-    lastName: 'Friend',
-    email: 'hello@gmail.com',
-    password: '@2Minimal',
+    firstName: '',
+    lastName: '',
+    username: '',
+    email: '',
+    password: '',
   };
 
   const methods = useForm({
@@ -63,28 +63,27 @@ export function JwtSignUpView() {
     defaultValues,
   });
 
-  const {
-    handleSubmit,
-    formState: { isSubmitting },
-  } = methods;
+  const { handleSubmit } = methods;
+
+  const signUpMutation = useMutation({
+    mutationFn: signUp,
+    onSuccess: async () => {
+      await checkUserSession?.();
+      router.replace(paths.student.root);
+    },
+  });
 
   const onSubmit = handleSubmit(async (data) => {
-    try {
-      await signUp({
-        email: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
-      });
-      await checkUserSession?.();
-
-      router.refresh();
-    } catch (error) {
-      console.error(error);
-      const feedbackMessage = getErrorMessage(error);
-      setErrorMessage(feedbackMessage);
-    }
+    signUpMutation.mutate({
+      username: data.username,
+      password: data.password,
+      email: data.email || undefined,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    });
   });
+
+  const errorMessage = signUpMutation.error ? getErrorMessage(signUpMutation.error) : null;
 
   const renderForm = () => (
     <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
@@ -93,22 +92,28 @@ export function JwtSignUpView() {
       >
         <Field.Text
           name="firstName"
-          label="First name"
+          label="ชื่อ"
           slotProps={{ inputLabel: { shrink: true } }}
         />
         <Field.Text
           name="lastName"
-          label="Last name"
+          label="นามสกุล"
           slotProps={{ inputLabel: { shrink: true } }}
         />
       </Box>
 
-      <Field.Text name="email" label="Email address" slotProps={{ inputLabel: { shrink: true } }} />
+      <Field.Text name="username" label="ชื่อผู้ใช้งาน" slotProps={{ inputLabel: { shrink: true } }} />
+
+      <Field.Text
+        name="email"
+        label="อีเมล (ไม่บังคับ)"
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
 
       <Field.Text
         name="password"
-        label="Password"
-        placeholder="6+ characters"
+        label="รหัสผ่าน"
+        placeholder="6 ตัวอักษรขึ้นไป"
         type={showPassword.value ? 'text' : 'password'}
         slotProps={{
           inputLabel: { shrink: true },
@@ -130,10 +135,10 @@ export function JwtSignUpView() {
         size="large"
         type="submit"
         variant="contained"
-        loading={isSubmitting}
-        loadingIndicator="Create account..."
+        loading={signUpMutation.isPending}
+        loadingIndicator="กำลังสร้างบัญชี..."
       >
-        Create account
+        สร้างบัญชี
       </Button>
     </Box>
   );
@@ -141,12 +146,12 @@ export function JwtSignUpView() {
   return (
     <>
       <FormHead
-        title="Get started absolutely free"
+        title="เริ่มต้นใช้งานฟรี"
         description={
           <>
-            {`Already have an account? `}
+            {`มีบัญชีอยู่แล้ว? `}
             <Link component={RouterLink} href={paths.auth.jwt.signIn} variant="subtitle2">
-              Get started
+              เข้าสู่ระบบ
             </Link>
           </>
         }

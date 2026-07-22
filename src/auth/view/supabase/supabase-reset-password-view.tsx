@@ -2,6 +2,7 @@
 
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
+import { useMutation } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import Box from '@mui/material/Box';
@@ -40,19 +41,20 @@ export function SupabaseResetPasswordView() {
     defaultValues,
   });
 
-  const {
-    handleSubmit,
-    formState: { isSubmitting },
-  } = methods;
+  const { handleSubmit } = methods;
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: resetPassword,
+    onSuccess: () => {
+      router.push(paths.auth.supabase.verify);
+    },
+    onError: (error) => {
+      console.error(error);
+    },
+  });
 
   const onSubmit = handleSubmit(async (data) => {
-    try {
-      await resetPassword({ email: data.email });
-
-      router.push(paths.auth.supabase.verify);
-    } catch (error) {
-      console.error(error);
-    }
+    resetPasswordMutation.mutate({ email: data.email });
   });
 
   const renderForm = () => (
@@ -70,7 +72,7 @@ export function SupabaseResetPasswordView() {
         size="large"
         type="submit"
         variant="contained"
-        loading={isSubmitting}
+        loading={resetPasswordMutation.isPending}
         loadingIndicator="Send request..."
       >
         Send request

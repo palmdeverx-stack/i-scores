@@ -16,7 +16,7 @@ import { RouterLink } from 'src/routes/components';
 import { Label } from 'src/components/label';
 import { CustomPopover } from 'src/components/custom-popover';
 
-import { useMockedUser } from 'src/auth/hooks';
+import { useAuthContext } from 'src/auth/hooks';
 
 import { AccountButton } from './account-button';
 import { SignOutButton } from './sign-out-button';
@@ -37,7 +37,7 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
 
   const { open, anchorEl, onClose, onOpen } = usePopover();
 
-  const { user } = useMockedUser();
+  const { user } = useAuthContext();
 
   const renderMenuActions = () => (
     <CustomPopover
@@ -60,8 +60,8 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
 
       <MenuList sx={{ p: 1, my: 1, '& li': { p: 0 } }}>
         {data.map((option) => {
-          const rootLabel = pathname.includes('/dashboard') ? 'Home' : 'Dashboard';
-          const rootHref = pathname.includes('/dashboard') ? '/' : paths.dashboard.root;
+          const rootLabel = pathname.includes('/admin') ? 'Home' : 'Dashboard';
+          const rootHref = pathname.includes('/admin') ? '/' : paths.admin.root;
 
           return (
             <MenuItem key={option.label}>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { safeReturnUrl } from 'minimal-shared/utils';
 
+import { paths } from 'src/routes/paths';
 import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { CONFIG } from 'src/global-config';
@@ -20,12 +21,13 @@ type GuestGuardProps = {
 export function GuestGuard({ children }: GuestGuardProps) {
   const router = useRouter();
 
-  const { loading, authenticated } = useAuthContext();
+  const { user, loading, authenticated } = useAuthContext();
 
   const [isChecking, setIsChecking] = useState(true);
 
   const searchParams = useSearchParams();
-  const redirectUrl = safeReturnUrl(searchParams.get('returnTo'), CONFIG.auth.redirectPath);
+  const defaultRedirect = user?.role === 'student' ? paths.student.root : CONFIG.auth.redirectPath;
+  const redirectUrl = safeReturnUrl(searchParams.get('returnTo'), defaultRedirect);
 
   const checkPermissions = async (): Promise<void> => {
     if (loading) {

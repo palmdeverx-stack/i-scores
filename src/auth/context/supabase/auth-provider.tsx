@@ -41,7 +41,13 @@ export function AuthProvider({ children }: Props) {
       if (session) {
         const accessToken = session?.access_token;
 
-        setState({ user: { ...session, ...session?.user }, loading: false });
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        setState({ user: { ...session, ...session?.user, ...profile }, loading: false });
         axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
       } else {
         setState({ user: null, loading: false });
@@ -71,8 +77,9 @@ export function AuthProvider({ children }: Props) {
             ...state.user,
             id: state.user?.id,
             accessToken: state.user?.access_token,
-            displayName: state.user?.user_metadata.display_name,
-            role: state.user?.role ?? 'admin',
+            displayName: state.user?.display_name ?? state.user?.user_metadata?.display_name,
+            photoURL: state.user?.avatar_url,
+            role: state.user?.role ?? 'student',
           }
         : null,
       checkUserSession,

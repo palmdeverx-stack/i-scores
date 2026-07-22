@@ -16,12 +16,13 @@ import { supabase } from 'src/lib/supabase';
 // ----------------------------------------------------------------------
 
 export type SignInParams = {
-  email: string;
+  username: string;
   password: string;
   options?: SignInWithPasswordCredentials['options'];
 };
 
 export type SignUpParams = {
+  username: string;
   email: string;
   password: string;
   firstName: string;
@@ -48,9 +49,17 @@ export type UpdatePasswordParams = {
  * Sign in
  *************************************** */
 export const signInWithPassword = async ({
-  email,
+  username,
   password,
 }: SignInParams): Promise<AuthTokenResponsePassword> => {
+  const { data: email, error: lookupError } = await supabase.rpc('email_for_username', {
+    lookup_username: username,
+  });
+
+  if (lookupError || !email) {
+    throw new Error('Invalid username or password');
+  }
+
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
@@ -65,6 +74,7 @@ export const signInWithPassword = async ({
  * Sign up
  *************************************** */
 export const signUp = async ({
+  username,
   email,
   password,
   firstName,
@@ -74,8 +84,13 @@ export const signUp = async ({
     email,
     password,
     options: {
-      emailRedirectTo: `${window.location.origin}${paths.dashboard.root}`,
-      data: { display_name: `${firstName} ${lastName}` },
+      emailRedirectTo: `${window.location.origin}${paths.admin.root}`,
+      data: {
+        username,
+        display_name: `${firstName} ${lastName}`,
+        first_name: firstName,
+        last_name: lastName,
+      },
     },
   });
 

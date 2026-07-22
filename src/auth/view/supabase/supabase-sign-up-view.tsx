@@ -1,9 +1,9 @@
 'use client';
 
 import * as z from 'zod';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useBoolean } from 'minimal-shared/hooks';
+import { useMutation } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import Box from '@mui/material/Box';
@@ -32,6 +32,7 @@ export type SignUpSchemaType = z.infer<typeof SignUpSchema>;
 export const SignUpSchema = z.object({
   firstName: z.string().min(1, { error: 'First name is required!' }),
   lastName: z.string().min(1, { error: 'Last name is required!' }),
+  username: z.string().min(1, { error: 'Username is required!' }),
   email: schemaUtils.email(),
   password: z
     .string()
@@ -46,11 +47,10 @@ export function SupabaseSignUpView() {
 
   const showPassword = useBoolean();
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   const defaultValues: SignUpSchemaType = {
     firstName: '',
     lastName: '',
+    username: '',
     email: '',
     password: '',
   };
@@ -60,27 +60,26 @@ export function SupabaseSignUpView() {
     defaultValues,
   });
 
-  const {
-    handleSubmit,
-    formState: { isSubmitting },
-  } = methods;
+  const { handleSubmit } = methods;
+
+  const signUpMutation = useMutation({
+    mutationFn: signUp,
+    onSuccess: () => {
+      router.push(paths.auth.supabase.verify);
+    },
+  });
 
   const onSubmit = handleSubmit(async (data) => {
-    try {
-      await signUp({
-        email: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
-      });
-
-      router.push(paths.auth.supabase.verify);
-    } catch (error) {
-      console.error(error);
-      const feedbackMessage = getErrorMessage(error);
-      setErrorMessage(feedbackMessage);
-    }
+    signUpMutation.mutate({
+      username: data.username,
+      email: data.email,
+      password: data.password,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    });
   });
+
+  const errorMessage = signUpMutation.error ? getErrorMessage(signUpMutation.error) : null;
 
   const renderForm = () => (
     <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
@@ -98,6 +97,8 @@ export function SupabaseSignUpView() {
           slotProps={{ inputLabel: { shrink: true } }}
         />
       </Box>
+
+      <Field.Text name="username" label="Username" slotProps={{ inputLabel: { shrink: true } }} />
 
       <Field.Text name="email" label="Email address" slotProps={{ inputLabel: { shrink: true } }} />
 
@@ -126,7 +127,7 @@ export function SupabaseSignUpView() {
         size="large"
         type="submit"
         variant="contained"
-        loading={isSubmitting}
+        loading={signUpMutation.isPending}
         loadingIndicator="Create account..."
       >
         Create account

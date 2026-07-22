@@ -47,6 +47,8 @@ const nextConfig: NextConfig = {
   },
   // With --turbopack (next dev --turbopack)
   turbopack: {
+    // Keep Next.js scoped to this project even when a parent directory has a lockfile.
+    root: process.cwd(),
     rules: {
       '**/*.{tsx,jsx}': {
         loaders: [

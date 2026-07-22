@@ -1,9 +1,9 @@
 'use client';
 
 import * as z from 'zod';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useBoolean } from 'minimal-shared/hooks';
+import { useMutation } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import Box from '@mui/material/Box';
@@ -48,8 +48,6 @@ export function SupabaseUpdatePasswordView() {
 
   const showPassword = useBoolean();
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   const defaultValues: UpdatePasswordSchemaType = {
     password: '',
     confirmPassword: '',
@@ -60,22 +58,22 @@ export function SupabaseUpdatePasswordView() {
     defaultValues,
   });
 
-  const {
-    handleSubmit,
-    formState: { isSubmitting },
-  } = methods;
+  const { handleSubmit } = methods;
+
+  const updatePasswordMutation = useMutation({
+    mutationFn: updatePassword,
+    onSuccess: () => {
+      router.push(paths.admin.root);
+    },
+  });
 
   const onSubmit = handleSubmit(async (data) => {
-    try {
-      await updatePassword({ password: data.password });
-
-      router.push(paths.dashboard.root);
-    } catch (error) {
-      console.error(error);
-      const feedbackMessage = getErrorMessage(error);
-      setErrorMessage(feedbackMessage);
-    }
+    updatePasswordMutation.mutate({ password: data.password });
   });
+
+  const errorMessage = updatePasswordMutation.error
+    ? getErrorMessage(updatePasswordMutation.error)
+    : null;
 
   const renderForm = () => (
     <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
@@ -121,7 +119,7 @@ export function SupabaseUpdatePasswordView() {
         type="submit"
         size="large"
         variant="contained"
-        loading={isSubmitting}
+        loading={updatePasswordMutation.isPending}
         loadingIndicator="Update password..."
       >
         Update password

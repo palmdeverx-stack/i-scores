@@ -8,6 +8,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import { CONFIG } from 'src/global-config';
 import { LocalizationProvider } from 'src/locales';
 import { detectLanguage } from 'src/locales/server';
+import { ReactQueryProvider } from 'src/lib/react-query';
 import { I18nProvider } from 'src/locales/i18n-provider';
 import { themeConfig, ThemeProvider, primary as primaryColor } from 'src/theme';
 
@@ -97,29 +98,31 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         />
 
         <I18nProvider lang={appConfig.i18nLang}>
-          <AuthProvider>
-            <SettingsProvider
-              defaultSettings={defaultSettings}
-              cookieSettings={appConfig.cookieSettings}
-            >
-              <LocalizationProvider>
-                <AppRouterCacheProvider options={{ key: 'css' }}>
-                  <ThemeProvider
-                    modeStorageKey={themeConfig.modeStorageKey}
-                    defaultMode={themeConfig.defaultMode}
-                  >
-                    <MotionLazy>
-                      <LocatorJS />
-                      <Snackbar />
-                      <ProgressBar />
-                      <SettingsDrawer defaultSettings={defaultSettings} />
-                      {children}
-                    </MotionLazy>
-                  </ThemeProvider>
-                </AppRouterCacheProvider>
-              </LocalizationProvider>
-            </SettingsProvider>
-          </AuthProvider>
+          <ReactQueryProvider>
+            <AuthProvider>
+              <SettingsProvider
+                defaultSettings={defaultSettings}
+                cookieSettings={appConfig.cookieSettings}
+              >
+                <LocalizationProvider>
+                  <AppRouterCacheProvider options={{ key: 'css' }}>
+                    <ThemeProvider
+                      modeStorageKey={themeConfig.modeStorageKey}
+                      defaultMode={themeConfig.defaultMode}
+                    >
+                      <MotionLazy>
+                        <LocatorJS />
+                        <Snackbar />
+                        <ProgressBar />
+                        <SettingsDrawer defaultSettings={defaultSettings} />
+                        {children}
+                      </MotionLazy>
+                    </ThemeProvider>
+                  </AppRouterCacheProvider>
+                </LocalizationProvider>
+              </SettingsProvider>
+            </AuthProvider>
+          </ReactQueryProvider>
         </I18nProvider>
       </body>
     </html>

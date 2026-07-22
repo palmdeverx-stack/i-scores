@@ -21,7 +21,7 @@ export function MainSection({ children, className, sx, ...other }: MainSectionPr
 // ----------------------------------------------------------------------
 
 const MainRoot = styled('main')({
-  marginTop: -80,
+  marginTop: 5,
   display: 'flex',
   flex: '1 1 auto',
   flexDirection: 'column',

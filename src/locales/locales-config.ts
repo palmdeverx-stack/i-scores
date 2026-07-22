@@ -3,13 +3,6 @@ import type { Theme, Components } from '@mui/material/styles';
 
 import resourcesToBackend from 'i18next-resources-to-backend';
 
-// MUI Core Locales
-import {
-  frFR as frFRCore,
-  viVN as viVNCore,
-  zhCN as zhCNCore,
-  arSA as arSACore,
-} from '@mui/material/locale';
 // MUI Date Pickers Locales
 import {
   enUS as enUSDate,
@@ -17,6 +10,14 @@ import {
   viVN as viVNDate,
   zhCN as zhCNDate,
 } from '@mui/x-date-pickers/locales';
+// MUI Core Locales
+import {
+  thTH as thTHCore,
+  frFR as frFRCore,
+  viVN as viVNCore,
+  zhCN as zhCNCore,
+  arSA as arSACore,
+} from '@mui/material/locale';
 // MUI Data Grid Locales
 import {
   enUS as enUSDataGrid,
@@ -29,11 +30,11 @@ import {
 // ----------------------------------------------------------------------
 
 // Supported languages
-export const supportedLngs = ['en', 'fr', 'vi', 'cn', 'ar'] as const;
+export const supportedLngs = ['th', 'en', 'fr', 'vi', 'cn', 'ar'] as const;
 export type LangCode = (typeof supportedLngs)[number];
 
 // Fallback and default namespace
-export const fallbackLng: LangCode = 'en';
+export const fallbackLng: LangCode = 'th';
 export const defaultNS = 'common';
 
 // Storage config
@@ -60,6 +61,16 @@ export type LangOption = {
 };
 
 export const allLangs: LangOption[] = [
+  {
+    value: 'th',
+    label: 'ไทย',
+    countryCode: 'TH',
+    adapterLocale: 'th',
+    numberFormat: { code: 'th-TH', currency: 'THB' },
+    systemValue: {
+      components: { ...thTHCore.components },
+    },
+  },
   {
     value: 'en',
     label: 'English',

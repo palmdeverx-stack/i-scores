@@ -1,0 +1,409 @@
+'use client';
+
+import * as z from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
+import Skeleton from '@mui/material/Skeleton';
+import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
+
+import { Iconify } from 'src/components/iconify';
+import { UploadAvatar } from 'src/components/upload';
+import { Form, Field } from 'src/components/hook-form';
+
+import { useAuthContext } from 'src/auth/hooks';
+
+import { getSchool, updateSchool, uploadSchoolLogo } from '../school-actions';
+
+// ----------------------------------------------------------------------
+
+export const SchoolProfileSchema = z.object({
+  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อโรงเรียน!' }),
+});
+
+type SchoolProfileSchemaType = z.infer<typeof SchoolProfileSchema>;
+
+const LOGO_ACCEPT = {
+  'image/png': ['.png'],
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/webp': ['.webp'],
+  'image/svg+xml': ['.svg'],
+};
+
+const MAX_LOGO_SIZE = 2 * 1024 * 1024;
+
+export function SchoolProfileView() {
+  const { user } = useAuthContext();
+  const schoolId = user?.school_id ?? '';
+  const queryClient = useQueryClient();
+
+  const {
+    data: school,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['school', schoolId],
+    queryFn: () => getSchool(schoolId),
+    enabled: !!schoolId,
+  });
+
+  const methods = useForm<SchoolProfileSchemaType>({
+    resolver: zodResolver(SchoolProfileSchema),
+    defaultValues: { name: '' },
+    values: school ? { name: school.name } : undefined,
+  });
+
+  const {
+    handleSubmit,
+    formState: { isDirty },
+  } = methods;
+
+  const updateMutation = useMutation({
+    mutationFn: (params: { name: string }) => updateSchool(schoolId, params),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['school', schoolId] }),
+  });
+
+  const logoMutation = useMutation({
+    mutationFn: (file: File) => uploadSchoolLogo(schoolId, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['school', schoolId] }),
+  });
+
+  const onSubmit = handleSubmit(async (data) => updateMutation.mutate({ name: data.name.trim() }));
+
+  const errorMessage = updateMutation.error?.message ?? logoMutation.error?.message;
+
+  if (!schoolId) {
+    return (
+      <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+        <Alert severity="warning">
+          บัญชีนี้ยังไม่ได้เชื่อมโยงกับโรงเรียน กรุณาติดต่อผู้ดูแลระบบ
+        </Alert>
+      </Container>
+    );
+  }
+
+  if (isLoading) {
+    return <SchoolProfileSkeleton />;
+  }
+
+  if (isError || !school) {
+    return (
+      <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={() => refetch()}>
+              ลองอีกครั้ง
+            </Button>
+          }
+        >
+          ไม่สามารถโหลดข้อมูลโรงเรียนได้ กรุณาลองใหม่อีกครั้ง
+        </Alert>
+      </Container>
+    );
+  }
+
+  const createdDate = new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(school.created_at));
+
+  return (
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
+      <Card
+        sx={{
+          mb: 4,
+          p: { xs: 3, sm: 4 },
+          color: 'common.white',
+          overflow: 'hidden',
+          position: 'relative',
+          background: 'linear-gradient(135deg, #123D2B 0%, #176B4D 100%)',
+          '&::after': {
+            width: 260,
+            height: 260,
+            content: '""',
+            borderRadius: '50%',
+            position: 'absolute',
+            right: { xs: -180, sm: -80 },
+            bottom: -180,
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+          },
+        }}
+      >
+        <Box
+          sx={{
+            gap: 2.5,
+            zIndex: 1,
+            display: 'flex',
+            position: 'relative',
+            alignItems: 'center',
+          }}
+        >
+          <Box
+            sx={{
+              width: { xs: 64, sm: 80 },
+              height: { xs: 64, sm: 80 },
+              flexShrink: 0,
+              display: 'grid',
+              overflow: 'hidden',
+              borderRadius: 2.5,
+              placeItems: 'center',
+              bgcolor: 'common.white',
+              border: '3px solid rgba(255, 255, 255, 0.3)',
+            }}
+          >
+            {school.logo_url ? (
+              <Box
+                component="img"
+                src={school.logo_url}
+                alt={`โลโก้ ${school.name}`}
+                sx={{ width: 1, height: 1, objectFit: 'cover' }}
+              />
+            ) : (
+              <Iconify
+                icon="solar:users-group-rounded-bold-duotone"
+                width={38}
+                sx={{ color: 'primary.main' }}
+              />
+            )}
+          </Box>
+
+          <Box sx={{ minWidth: 0 }}>
+            <Typography component="p" variant="overline" sx={{ opacity: 0.76 }}>
+              ข้อมูลโรงเรียน
+            </Typography>
+            <Typography component="h1" variant="h3" sx={{ mb: 1 }}>
+              {school.name}
+            </Typography>
+            <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+              <Chip
+                size="small"
+                label={`รหัส ${school.code}`}
+                sx={{ color: 'common.white', bgcolor: 'rgba(255, 255, 255, 0.14)' }}
+              />
+              <Chip
+                size="small"
+                icon={
+                  <Iconify
+                    icon={
+                      school.is_active ? 'solar:check-circle-bold' : 'solar:forbidden-circle-bold'
+                    }
+                  />
+                }
+                label={school.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                sx={{
+                  color: 'common.white',
+                  bgcolor: school.is_active ? 'rgba(34, 197, 94, 0.28)' : 'rgba(255, 86, 48, 0.3)',
+                  '& .MuiChip-icon': { color: 'inherit' },
+                }}
+              />
+            </Box>
+          </Box>
+        </Box>
+      </Card>
+
+      {(errorMessage || updateMutation.isSuccess || logoMutation.isSuccess) && (
+        <Alert severity={errorMessage ? 'error' : 'success'} sx={{ mb: 3 }}>
+          {errorMessage ??
+            (logoMutation.isSuccess
+              ? 'อัปเดตโลโก้โรงเรียนเรียบร้อยแล้ว'
+              : 'บันทึกข้อมูลโรงเรียนเรียบร้อยแล้ว')}
+        </Alert>
+      )}
+
+      <Box
+        sx={{
+          gap: 3,
+          display: 'grid',
+          alignItems: 'start',
+          gridTemplateColumns: { xs: '1fr', md: '320px minmax(0, 1fr)' },
+        }}
+      >
+        <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography component="h2" variant="h6">
+              โลโก้โรงเรียน
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+              ใช้แสดงในระบบและเอกสารของโรงเรียน
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <UploadAvatar
+              value={school.logo_url ?? undefined}
+              loading={logoMutation.isPending}
+              disabled={logoMutation.isPending}
+              accept={LOGO_ACCEPT}
+              maxSize={MAX_LOGO_SIZE}
+              onDrop={(files) => {
+                const file = files[0];
+                if (file) logoMutation.mutate(file);
+              }}
+              helperText={
+                <Box sx={{ mt: 2.5, textAlign: 'center' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    คลิกหรือลากรูปมาวางเพื่อเปลี่ยนโลโก้
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ mt: 0.5, display: 'block', color: 'text.secondary' }}
+                  >
+                    PNG, JPEG, WEBP หรือ SVG ขนาดไม่เกิน 2MB
+                  </Typography>
+                </Box>
+              }
+            />
+          </Box>
+
+          <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" />} sx={{ mt: 3 }}>
+            แนะนำรูปสี่เหลี่ยมจัตุรัส พื้นหลังโปร่งใส เพื่อให้แสดงผลได้สวยในทุกจุด
+          </Alert>
+        </Card>
+
+        <Card variant="outlined">
+          <Box sx={{ p: { xs: 2.5, sm: 4 } }}>
+            <Box sx={{ mb: 3 }}>
+              <Typography component="h2" variant="h6">
+                ข้อมูลทั่วไป
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+                ข้อมูลนี้จะแสดงแก่ครู นักเรียน และผู้ดูแลในระบบ
+              </Typography>
+            </Box>
+
+            <Form methods={methods} onSubmit={onSubmit}>
+              <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
+                <Field.Text
+                  name="name"
+                  label="ชื่อโรงเรียน *"
+                  placeholder="กรอกชื่อโรงเรียน"
+                  helperText="กรอกชื่อเต็มอย่างเป็นทางการของโรงเรียน"
+                />
+
+                <Divider />
+
+                <Box
+                  sx={{
+                    gap: 2,
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+                  }}
+                >
+                  <ReadOnlyInfo
+                    icon="solar:file-text-bold"
+                    label="รหัสโรงเรียน"
+                    value={school.code}
+                    description="รหัสนี้ไม่สามารถแก้ไขได้"
+                  />
+                  <ReadOnlyInfo
+                    icon="solar:calendar-date-bold"
+                    label="เริ่มใช้งานเมื่อ"
+                    value={createdDate}
+                    description="วันที่สร้างโรงเรียนในระบบ"
+                  />
+                </Box>
+
+                <Divider />
+
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    type="submit"
+                    size="large"
+                    variant="contained"
+                    disabled={!isDirty}
+                    loading={updateMutation.isPending}
+                    loadingIndicator="กำลังบันทึก..."
+                    startIcon={<Iconify icon="solar:check-circle-bold" />}
+                    sx={{ width: { xs: 1, sm: 'auto' }, minWidth: 210 }}
+                  >
+                    บันทึกการเปลี่ยนแปลง
+                  </Button>
+                </Box>
+              </Box>
+            </Form>
+          </Box>
+        </Card>
+      </Box>
+    </Container>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+type ReadOnlyInfoProps = {
+  icon: 'solar:file-text-bold' | 'solar:calendar-date-bold';
+  label: string;
+  value: string;
+  description: string;
+};
+
+function ReadOnlyInfo({ icon, label, value, description }: ReadOnlyInfoProps) {
+  return (
+    <Box
+      sx={{
+        gap: 1.5,
+        p: 2,
+        display: 'flex',
+        borderRadius: 2,
+        bgcolor: 'background.neutral',
+        border: '1px solid',
+        borderColor: 'divider',
+      }}
+    >
+      <Box
+        sx={{
+          width: 40,
+          height: 40,
+          flexShrink: 0,
+          display: 'grid',
+          borderRadius: 1.25,
+          color: 'primary.main',
+          placeItems: 'center',
+          bgcolor: 'primary.lighter',
+        }}
+      >
+        <Iconify icon={icon} width={22} />
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {label}
+        </Typography>
+        <Typography variant="subtitle2" sx={{ wordBreak: 'break-word' }}>
+          {value}
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+          {description}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
+
+function SchoolProfileSkeleton() {
+  return (
+    <Container maxWidth="lg" aria-label="กำลังโหลดข้อมูลโรงเรียน" sx={{ py: { xs: 4, md: 8 } }}>
+      <Skeleton variant="rounded" height={176} sx={{ mb: 4, borderRadius: 2 }} />
+      <Box
+        sx={{
+          gap: 3,
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '320px minmax(0, 1fr)' },
+        }}
+      >
+        <Skeleton variant="rounded" height={390} sx={{ borderRadius: 2 }} />
+        <Skeleton variant="rounded" height={390} sx={{ borderRadius: 2 }} />
+      </Box>
+    </Container>
+  );
+}

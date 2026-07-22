@@ -1,9 +1,9 @@
 'use client';
 
 import * as z from 'zod';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useBoolean } from 'minimal-shared/hooks';
+import { useMutation } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import Box from '@mui/material/Box';
@@ -17,8 +17,10 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import { supabase } from 'src/lib/supabase';
+
 import { Iconify } from 'src/components/iconify';
-import { Form, Field, schemaUtils } from 'src/components/hook-form';
+import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
@@ -30,7 +32,7 @@ import { signInWithPassword } from '../../context/supabase';
 export type SignInSchemaType = z.infer<typeof SignInSchema>;
 
 export const SignInSchema = z.object({
-  email: schemaUtils.email(),
+  username: z.string().min(1, { error: 'Username is required!' }),
   password: z
     .string()
     .min(1, { error: 'Password is required!' })
@@ -46,10 +48,8 @@ export function SupabaseSignInView() {
 
   const { checkUserSession } = useAuthContext();
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   const defaultValues: SignInSchemaType = {
-    email: '',
+    username: '',
     password: '',
   };
 
@@ -58,27 +58,31 @@ export function SupabaseSignInView() {
     defaultValues,
   });
 
-  const {
-    handleSubmit,
-    formState: { isSubmitting },
-  } = methods;
+  const { handleSubmit } = methods;
 
-  const onSubmit = handleSubmit(async (data) => {
-    try {
-      await signInWithPassword({ email: data.email, password: data.password });
+  const signInMutation = useMutation({
+    mutationFn: signInWithPassword,
+    onSuccess: async (result) => {
       await checkUserSession?.();
 
-      router.refresh();
-    } catch (error) {
-      console.error(error);
-      const feedbackMessage = getErrorMessage(error);
-      setErrorMessage(feedbackMessage);
-    }
+      const userId = result.data.user?.id;
+      const { data: profile } = userId
+        ? await supabase.from('profiles').select('role').eq('id', userId).single()
+        : { data: null };
+
+      router.replace(profile?.role === 'student' ? paths.student.root : paths.admin.root);
+    },
   });
+
+  const onSubmit = handleSubmit(async (data) => {
+    signInMutation.mutate({ username: data.username, password: data.password });
+  });
+
+  const errorMessage = signInMutation.error ? getErrorMessage(signInMutation.error) : null;
 
   const renderForm = () => (
     <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
-      <Field.Text name="email" label="Email address" slotProps={{ inputLabel: { shrink: true } }} />
+      <Field.Text name="username" label="Username" slotProps={{ inputLabel: { shrink: true } }} />
 
       <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
         <Link
@@ -119,7 +123,7 @@ export function SupabaseSignInView() {
         size="large"
         type="submit"
         variant="contained"
-        loading={isSubmitting}
+        loading={signInMutation.isPending}
         loadingIndicator="Sign in..."
       >
         Sign in

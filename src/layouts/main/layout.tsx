@@ -19,6 +19,8 @@ import { NavDesktop } from './nav/desktop';
 import { Footer, HomeFooter } from './footer';
 import { MenuButton } from '../components/menu-button';
 import { navData as mainNavData } from '../nav-config-main';
+import { SignInButton } from '../components/sign-in-button';
+import { AccountPopover } from '../components/account-popover';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
 
 // ----------------------------------------------------------------------
@@ -92,7 +94,8 @@ export function MainLayout({
             {/* <SettingsButton /> */}
 
             {/** @slot Sign in button */}
-            {/* <SignInButton /> */}
+            <SignInButton />
+            <AccountPopover />
 
             {/** @slot Purchase button */}
             {/* <Button

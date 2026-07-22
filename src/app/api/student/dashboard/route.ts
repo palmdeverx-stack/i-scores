@@ -1,0 +1,350 @@
+import { NextResponse } from 'next/server';
+
+import { today, fIsBetween } from 'src/utils/format-time';
+
+import { requireRole } from 'src/lib/auth-token';
+import { supabaseAdmin } from 'src/lib/supabase-admin';
+
+// ----------------------------------------------------------------------
+
+type Person = {
+  id: string;
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+};
+
+type AcademicYear = {
+  id: string;
+  year: string;
+  is_active: boolean;
+  start_date: string | null;
+  end_date: string | null;
+};
+type Classroom = {
+  id: string;
+  name: string;
+  grade_level: string | null;
+  academic_year: AcademicYear | null;
+};
+
+export async function GET(request: Request) {
+  const caller = requireRole(request, ['student']);
+  const requestedSection = new URL(request.url).searchParams.get('section');
+  const section = ['home', 'subjects', 'assignments'].includes(requestedSection ?? '')
+    ? requestedSection
+    : 'home';
+
+  if (!caller) {
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  }
+
+  const [{ data: student, error: studentError }, { data: enrollmentRows, error: enrollmentError }] =
+    await Promise.all([
+      supabaseAdmin
+        .from('app_users')
+        .select('id, username, first_name, last_name')
+        .eq('id', caller.sub)
+        .maybeSingle(),
+      supabaseAdmin
+        .from('enrollments')
+        .select(
+          `id, student_number, classroom_id,
+           classroom:classrooms(id, name, grade_level, academic_year:academic_years(id, year, is_active, start_date, end_date))`
+        )
+        .eq('student_id', caller.sub)
+        .order('created_at', { ascending: false }),
+    ]);
+
+  if (studentError || enrollmentError) {
+    return NextResponse.json(
+      { message: studentError?.message ?? enrollmentError?.message },
+      { status: 500 }
+    );
+  }
+
+  if (!student) {
+    return NextResponse.json({ message: 'ไม่พบข้อมูลนักเรียน' }, { status: 404 });
+  }
+
+  const enrollments = enrollmentRows.map((row) => ({
+    id: row.id,
+    student_number: row.student_number,
+    classroom: row.classroom as unknown as Classroom,
+  }));
+  const classroomIds = Array.from(
+    new Set(enrollments.map((row) => row.classroom?.id).filter(Boolean))
+  );
+  const currentEnrollment =
+    enrollments.find((row) =>
+      fIsBetween(
+        today(),
+        row.classroom?.academic_year?.start_date,
+        row.classroom?.academic_year?.end_date
+      )
+    ) ?? enrollments[0];
+
+  const { data: announcementRows, error: announcementError } =
+    section === 'home' && caller.schoolId
+      ? await supabaseAdmin
+          .from('school_announcements')
+          .select('id, title, content, priority, published_at, expires_at')
+          .eq('school_id', caller.schoolId)
+          .eq('is_published', true)
+          .lte('published_at', new Date().toISOString())
+          .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+          .order('published_at', { ascending: false })
+          .limit(10)
+      : { data: [], error: null };
+
+  if (announcementError) {
+    return NextResponse.json({ message: announcementError.message }, { status: 500 });
+  }
+
+  if (!classroomIds.length) {
+    return NextResponse.json({
+      student,
+      enrollments,
+      subjects: [],
+      schedules: [],
+      ranking: [],
+      subject_rankings: [],
+      announcements: announcementRows,
+    });
+  }
+
+  const { data: teachingRows, error: teachingError } = await supabaseAdmin
+    .from('teacher_assignments')
+    .select(
+      `id, classroom_id,
+       teacher:app_users!teacher_assignments_teacher_id_fkey(id, username, first_name, last_name),
+       subject:subjects(id, code, name, credits, description, image_url),
+       semester:semesters(id, name, start_date, end_date, is_active),
+       classroom:classrooms(id, name, grade_level, academic_year:academic_years(id, year, is_active))`
+    )
+    .in('classroom_id', classroomIds)
+    .order('created_at');
+
+  if (teachingError) {
+    return NextResponse.json({ message: teachingError.message }, { status: 500 });
+  }
+
+  const teachingIds = teachingRows.map((row) => row.id);
+  const [
+    { data: assignmentRows, error: assignmentError },
+    { data: scheduleRows, error: scheduleError },
+  ] = teachingIds.length
+    ? await Promise.all([
+        supabaseAdmin
+          .from('assignments')
+          .select('id, teacher_assignment_id, title, description, full_score, created_at')
+          .in('teacher_assignment_id', teachingIds)
+          .order('created_at', { ascending: false }),
+        section === 'subjects'
+          ? supabaseAdmin
+              .from('teaching_schedules')
+              .select('id, teacher_assignment_id, day_of_week, start_time, end_time')
+              .in('teacher_assignment_id', teachingIds)
+              .order('day_of_week')
+              .order('start_time')
+          : Promise.resolve({ data: [], error: null }),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+      ];
+
+  if (assignmentError || scheduleError) {
+    return NextResponse.json(
+      { message: assignmentError?.message ?? scheduleError?.message },
+      { status: 500 }
+    );
+  }
+
+  const assignmentIds = assignmentRows.map((assignment) => assignment.id);
+  const { data: scoreRows, error: scoreError } =
+    assignmentIds.length && section !== 'home'
+      ? await supabaseAdmin
+          .from('scores')
+          .select('assignment_id, score, feedback, status, updated_at')
+          .eq('student_id', caller.sub)
+          .in('assignment_id', assignmentIds)
+      : { data: [], error: null };
+
+  if (scoreError) {
+    return NextResponse.json({ message: scoreError.message }, { status: 500 });
+  }
+
+  const scoreByAssignmentId = new Map(scoreRows.map((score) => [score.assignment_id, score]));
+  const subjects = teachingRows.map((teaching) => ({
+    id: teaching.id,
+    teacher: teaching.teacher as unknown as Person,
+    subject: teaching.subject,
+    semester: teaching.semester,
+    classroom: teaching.classroom as unknown as Classroom,
+    assignments: assignmentRows
+      .filter((assignment) => assignment.teacher_assignment_id === teaching.id)
+      .map((assignment) => {
+        const score = scoreByAssignmentId.get(assignment.id);
+
+        return {
+          id: assignment.id,
+          title: assignment.title,
+          description: assignment.description,
+          full_score: Number(assignment.full_score),
+          created_at: assignment.created_at,
+          score: score?.score === null || score?.score === undefined ? null : Number(score.score),
+          feedback: score?.feedback ?? null,
+          status: score?.status ?? 'not_submitted',
+          updated_at: score?.updated_at ?? null,
+        };
+      }),
+  }));
+
+  const subjectByTeachingId = new Map(
+    subjects.map((subject) => [
+      subject.id,
+      {
+        subject: subject.subject,
+        classroom: subject.classroom,
+        teacher: subject.teacher,
+      },
+    ])
+  );
+  const schedules = scheduleRows.map((schedule) => ({
+    ...schedule,
+    ...subjectByTeachingId.get(schedule.teacher_assignment_id),
+  }));
+
+  const currentTeachingIds = teachingRows
+    .filter((teaching) => teaching.classroom_id === currentEnrollment?.classroom.id)
+    .map((teaching) => teaching.id);
+  const currentAssignments = assignmentRows.filter((assignment) =>
+    currentTeachingIds.includes(assignment.teacher_assignment_id)
+  );
+  const currentAssignmentIds = currentAssignments.map((assignment) => assignment.id);
+
+  const [classmateResult, rankingScoreResult] =
+    section === 'home' && currentEnrollment
+      ? await Promise.all([
+          supabaseAdmin
+            .from('enrollments')
+            .select(
+              `student_number,
+             student:app_users!enrollments_student_id_fkey(id, username, first_name, last_name)`
+            )
+            .eq('classroom_id', currentEnrollment.classroom.id)
+            .order('student_number'),
+          currentAssignmentIds.length
+            ? supabaseAdmin
+                .from('scores')
+                .select('student_id, assignment_id, score')
+                .in('assignment_id', currentAssignmentIds)
+            : Promise.resolve({ data: [], error: null }),
+        ])
+      : [
+          { data: [], error: null },
+          { data: [], error: null },
+        ];
+
+  if (classmateResult.error || rankingScoreResult.error) {
+    return NextResponse.json(
+      { message: classmateResult.error?.message ?? rankingScoreResult.error?.message },
+      { status: 500 }
+    );
+  }
+
+  const buildRanking = (rankAssignments: typeof currentAssignments) => {
+    const assignmentIdSet = new Set(rankAssignments.map((assignment) => assignment.id));
+    const totalFullScore = rankAssignments.reduce(
+      (total, assignment) => total + Number(assignment.full_score),
+      0
+    );
+    const scoreByStudentId = new Map<string, number>();
+
+    rankingScoreResult.data
+      .filter((score) => assignmentIdSet.has(score.assignment_id))
+      .forEach((score) => {
+        scoreByStudentId.set(
+          score.student_id,
+          (scoreByStudentId.get(score.student_id) ?? 0) + Number(score.score)
+        );
+      });
+
+    let previousScore: number | null = null;
+    let previousRank = 0;
+
+    return classmateResult.data
+      .map((row) => {
+        const classmate = row.student as unknown as Person;
+        const score = scoreByStudentId.get(classmate.id) ?? 0;
+
+        return {
+          student: classmate,
+          student_number: row.student_number,
+          score,
+          full_score: totalFullScore,
+          percentage: totalFullScore ? (score / totalFullScore) * 100 : 0,
+          is_current_student: classmate.id === caller.sub,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.percentage - a.percentage || a.student.username.localeCompare(b.student.username)
+      )
+      .map((row, index) => {
+        if (previousScore === null || row.percentage !== previousScore) {
+          previousRank = index + 1;
+          previousScore = row.percentage;
+        }
+
+        return { ...row, rank: previousRank };
+      });
+  };
+
+  const ranking = buildRanking(currentAssignments);
+  const subjectRankings = teachingRows
+    .filter((teaching) => currentTeachingIds.includes(teaching.id))
+    .map((teaching) => ({
+      id: teaching.id,
+      subject: teaching.subject,
+      semester: teaching.semester,
+      ranking: buildRanking(
+        currentAssignments.filter((assignment) => assignment.teacher_assignment_id === teaching.id)
+      ),
+    }));
+
+  if (section === 'home') {
+    return NextResponse.json({
+      student,
+      enrollments,
+      subjects: [],
+      schedules: [],
+      ranking,
+      subject_rankings: subjectRankings,
+      announcements: announcementRows,
+    });
+  }
+
+  if (section === 'subjects') {
+    return NextResponse.json({
+      student,
+      enrollments,
+      subjects,
+      schedules,
+      ranking: [],
+      subject_rankings: [],
+      announcements: [],
+    });
+  }
+
+  return NextResponse.json({
+    student,
+    enrollments,
+    subjects,
+    schedules: [],
+    ranking: [],
+    subject_rankings: [],
+    announcements: [],
+  });
+}

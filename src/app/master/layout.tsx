@@ -1,0 +1,27 @@
+'use client';
+
+import { DashboardLayout } from 'src/layouts/dashboard';
+import { navData as masterNavData } from 'src/layouts/nav-config-master';
+
+import { useAuthContext } from 'src/auth/hooks';
+import { AuthGuard, RoleRedirectGuard, MustChangePasswordGuard } from 'src/auth/guard';
+
+// ----------------------------------------------------------------------
+
+type Props = {
+  children: React.ReactNode;
+};
+
+export default function Layout({ children }: Props) {
+  const { user } = useAuthContext();
+
+  return (
+    <AuthGuard>
+      <RoleRedirectGuard currentRole={user?.role} allowedRoles={['master_admin']}>
+        <MustChangePasswordGuard mustChangePassword={user?.must_change_password}>
+          <DashboardLayout slotProps={{ nav: { data: masterNavData } }}>{children}</DashboardLayout>
+        </MustChangePasswordGuard>
+      </RoleRedirectGuard>
+    </AuthGuard>
+  );
+}
