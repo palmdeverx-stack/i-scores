@@ -143,6 +143,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
         open={open}
         onClose={onClose}
         anchor="right"
+        sx={(theme) => ({ zIndex: theme.zIndex.drawer + 2 })}
         slotProps={{
           backdrop: {
             sx: {

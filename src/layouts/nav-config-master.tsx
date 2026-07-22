@@ -26,28 +26,20 @@ const ICONS = {
 export const navData: NavSectionProps['data'] = [
   {
     subheader: 'ภาพรวม',
-    items: [{ title: 'หน้าหลัก', path: paths.master.root, icon: ICONS.dashboard }],
+    items: [{ title: 'ภาพรวมระบบ', path: paths.master.root, icon: ICONS.dashboard }],
   },
   {
-    subheader: 'ระบบ',
+    subheader: 'การจัดการระบบ',
     items: [
       {
-        title: 'โรงเรียน',
+        title: 'โรงเรียนทั้งหมด',
         path: paths.master.school.root,
         icon: ICONS.folder,
-        children: [
-          { title: 'รายการ', path: paths.master.school.root },
-          { title: 'เพิ่มโรงเรียน', path: paths.master.school.new },
-        ],
       },
       {
         title: 'ผู้ดูแลโรงเรียน',
         path: paths.master.schoolAdmin.root,
         icon: ICONS.user,
-        children: [
-          { title: 'รายการ', path: paths.master.schoolAdmin.root },
-          { title: 'เพิ่มผู้ดูแลโรงเรียน', path: paths.master.schoolAdmin.new },
-        ],
       },
     ],
   },

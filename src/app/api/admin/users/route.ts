@@ -118,7 +118,7 @@ export async function POST(request: Request) {
       username,
       password_hash: passwordHash,
       password_ciphertext: isAutoGenRole ? encryptCredential(password) : null,
-      must_change_password: isAutoGenRole,
+      must_change_password: true,
       email: email || null,
       first_name: firstName,
       last_name: lastName,

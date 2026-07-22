@@ -79,7 +79,10 @@ export async function getSchool(id: string): Promise<SchoolProfile> {
   return json.school;
 }
 
-export async function updateSchool(id: string, params: { name: string }): Promise<SchoolProfile> {
+export async function updateSchool(
+  id: string,
+  params: { name?: string; code?: string }
+): Promise<SchoolProfile> {
   const response = await fetch(`/api/schools/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
@@ -90,6 +93,16 @@ export async function updateSchool(id: string, params: { name: string }): Promis
   if (!response.ok) throw new Error(json.message ?? 'Failed to update school');
 
   return json.school;
+}
+
+export async function deleteSchool(id: string): Promise<void> {
+  const response = await fetch(`/api/schools/${id}`, {
+    method: 'DELETE',
+    headers: authHeader(),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to delete school');
 }
 
 export async function uploadSchoolLogo(id: string, file: File): Promise<SchoolProfile> {

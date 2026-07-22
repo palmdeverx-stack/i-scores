@@ -34,6 +34,15 @@ export type CreateUserParams = {
   schoolId?: string;
 };
 
+export type UpdateSchoolAdminParams = {
+  username: string;
+  email?: string;
+  password?: string;
+  firstName: string;
+  lastName: string;
+  schoolId: string;
+};
+
 function authHeader() {
   return { Authorization: `Bearer ${getStoredToken()}` };
 }
@@ -71,6 +80,28 @@ export async function createUser(params: CreateUserParams) {
   }
 
   return json.user;
+}
+
+export async function updateSchoolAdmin(id: string, params: UpdateSchoolAdminParams) {
+  const response = await fetch(`/api/admin/users/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(params),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to update school admin');
+  return json.user;
+}
+
+export async function deleteSchoolAdmin(id: string): Promise<void> {
+  const response = await fetch(`/api/admin/users/${id}`, {
+    method: 'DELETE',
+    headers: authHeader(),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to delete school admin');
 }
 
 export async function uploadStudentAvatar(studentId: string, file: File): Promise<string> {
