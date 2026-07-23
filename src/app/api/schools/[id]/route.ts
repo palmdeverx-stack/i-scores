@@ -15,7 +15,7 @@ function canAccessSchool(
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['master_admin', 'school_admin']);
+  const caller = requireRole(request, ['master_admin', 'school_admin', 'teacher', 'student']);
 
   if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });

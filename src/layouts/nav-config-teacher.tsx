@@ -37,6 +37,11 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.course,
       },
       {
+        title: 'นักเรียนของฉัน',
+        path: paths.teacher.students,
+        icon: ICONS.user,
+      },
+      {
         title: 'ตารางสอน',
         path: paths.teacher.timetable,
         icon: ICONS.calendar,

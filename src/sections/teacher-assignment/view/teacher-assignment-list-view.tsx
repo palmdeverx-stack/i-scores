@@ -84,8 +84,9 @@ export function TeacherAssignmentListView() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['teacher-assignments'],
+    queryKey: ['teacher-assignments', user?.school_id, user?.id],
     queryFn: listTeacherAssignments,
+    enabled: !!user?.school_id && !!user?.id,
   });
 
   const deleteMutation = useMutation({
@@ -165,7 +166,7 @@ export function TeacherAssignmentListView() {
       <Card
         sx={{
           mb: 4,
-          p: { xs: 3, sm: 4 },
+          p: { xs: 2, sm: 3 },
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
@@ -238,7 +239,7 @@ export function TeacherAssignmentListView() {
           mb: 4,
           gap: 2,
           display: 'grid',
-          gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+          gridTemplateColumns: { xs: 'repeat(4, 1fr)', md: 'repeat(4, 1fr)' },
         }}
       >
         {summaryItems.map((item) => (
@@ -381,7 +382,7 @@ export function TeacherAssignmentListView() {
           sx={{
             gap: 2.5,
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)', lg: 'repeat(3, 1fr)' },
           }}
         >
           {filteredRows.map((row) => (

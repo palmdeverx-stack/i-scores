@@ -2,6 +2,7 @@
 
 import type { AttendanceRow, AttendanceStatus } from 'src/sections/attendance/attendance-actions';
 
+import dayjs from 'dayjs';
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -17,6 +18,7 @@ import Typography from '@mui/material/Typography';
 import ToggleButton from '@mui/material/ToggleButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import TablePagination from '@mui/material/TablePagination';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import { today } from 'src/utils/format-time';
@@ -161,19 +163,19 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
               แตะสถานะเพียงครั้งเดียว ระบบจะเก็บการแก้ไขไว้จนกว่าจะกดบันทึก
             </Typography>
           </Box>
-          <TextField
-            type="date"
-            size="small"
+          <DatePicker
             label="วันที่เรียน"
-            value={sessionDate}
-            onChange={(event) => {
-              setSessionDate(event.target.value);
+            value={dayjs(sessionDate)}
+            onChange={(value) => {
+              if (!value?.isValid()) return;
+              setSessionDate(value.format('YYYY-MM-DD'));
               setSearch('');
               setPage(0);
             }}
+            format="DD/MM/YYYY"
+            disableFuture
             slotProps={{
-              inputLabel: { shrink: true },
-              htmlInput: { max: today('YYYY-MM-DD') },
+              textField: { size: 'small' },
             }}
             sx={{ minWidth: { sm: 190 } }}
           />

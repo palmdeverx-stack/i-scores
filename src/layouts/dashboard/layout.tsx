@@ -37,10 +37,13 @@ type LayoutBaseProps = Pick<LayoutSectionProps, 'sx' | 'children' | 'cssVars'>;
 
 export type DashboardLayoutProps = LayoutBaseProps & {
   layoutQuery?: Breakpoint;
+  tabletHorizontalNav?: boolean;
+  tabletQuery?: Breakpoint;
   slotProps?: {
     header?: HeaderSectionProps;
     nav?: {
       data?: NavSectionProps['data'];
+      headerIdentity?: React.ReactNode;
     };
     main?: MainSectionProps;
   };
@@ -52,6 +55,8 @@ export function DashboardLayout({
   children,
   slotProps,
   layoutQuery = 'lg',
+  tabletQuery = 'sm',
+  tabletHorizontalNav = false,
 }: DashboardLayoutProps) {
   const theme = useTheme();
 
@@ -64,10 +69,14 @@ export function DashboardLayout({
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
   const navData = slotProps?.nav?.data ?? dashboardNavData;
+  const headerIdentity = slotProps?.nav?.headerIdentity;
 
   const isNavMini = settings.state.navLayout === 'mini';
   const isNavHorizontal = settings.state.navLayout === 'horizontal';
   const isNavVertical = isNavMini || settings.state.navLayout === 'vertical';
+  const isTabletHorizontal = tabletHorizontalNav && !isNavHorizontal;
+  const horizontalNavQuery = tabletHorizontalNav ? tabletQuery : layoutQuery;
+  const mobileNavQuery = tabletHorizontalNav ? tabletQuery : layoutQuery;
 
   const canDisplayItemByRole = (allowedRoles: NavItemProps['allowedRoles']): boolean =>
     !allowedRoles?.includes(user?.role);
@@ -93,20 +102,26 @@ export function DashboardLayout({
           This is an info Alert.
         </Alert>
       ),
-      bottomArea: isNavHorizontal ? (
-        <NavHorizontal
-          data={navData}
-          layoutQuery={layoutQuery}
-          cssVars={navVars.section}
-          checkPermissions={canDisplayItemByRole}
-        />
-      ) : null,
+      bottomArea:
+        isNavHorizontal || tabletHorizontalNav ? (
+          <NavHorizontal
+            data={navData}
+            layoutQuery={horizontalNavQuery}
+            cssVars={navVars.section}
+            checkPermissions={canDisplayItemByRole}
+            sx={
+              isTabletHorizontal
+                ? { [theme.breakpoints.up(layoutQuery)]: { display: 'none' } }
+                : undefined
+            }
+          />
+        ) : null,
       leftArea: (
         <>
           {/** @slot Nav mobile */}
           <MenuButton
             onClick={onOpen}
-            sx={{ mr: 1, ml: -1, [theme.breakpoints.up(layoutQuery)]: { display: 'none' } }}
+            sx={{ mr: 1, ml: -1, [theme.breakpoints.up(mobileNavQuery)]: { display: 'none' } }}
           />
           <NavMobile
             data={navData}
@@ -117,18 +132,32 @@ export function DashboardLayout({
           />
 
           {/** @slot Logo */}
-          {isNavHorizontal && (
-            <Logo
+          {(isNavHorizontal || tabletHorizontalNav) && (
+            <Box
               sx={{
                 display: 'none',
-                [theme.breakpoints.up(layoutQuery)]: { display: 'inline-flex' },
+                minWidth: 0,
+                alignItems: 'center',
+                [theme.breakpoints.up(horizontalNavQuery)]: { display: 'inline-flex' },
+                ...(isTabletHorizontal && {
+                  [theme.breakpoints.up(layoutQuery)]: { display: 'none' },
+                }),
               }}
-            />
+            >
+              {headerIdentity ?? <Logo />}
+            </Box>
           )}
 
           {/** @slot Divider */}
-          {isNavHorizontal && (
-            <VerticalDivider sx={{ [theme.breakpoints.up(layoutQuery)]: { display: 'flex' } }} />
+          {(isNavHorizontal || tabletHorizontalNav) && (
+            <VerticalDivider
+              sx={{
+                [theme.breakpoints.up(horizontalNavQuery)]: { display: 'flex' },
+                ...(isTabletHorizontal && {
+                  [theme.breakpoints.up(layoutQuery)]: { display: 'none' },
+                }),
+              }}
+            />
           )}
 
           {/** @slot Workspace popover */}

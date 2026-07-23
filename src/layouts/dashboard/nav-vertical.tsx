@@ -1,20 +1,24 @@
 import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from 'src/components/nav-section';
 
+import { useQuery } from '@tanstack/react-query';
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
-import { Avatar, Typography } from 'node_modules/@mui/material/esm';
-import { useQuery } from 'node_modules/@tanstack/react-query/build/modern';
 
-import { Box, Stack } from '@mui/material';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Avatar from '@mui/material/Avatar';
+import Skeleton from '@mui/material/Skeleton';
 import { styled } from '@mui/material/styles';
-
-import { TruncatedTypography } from 'src/components';
+import Typography from '@mui/material/Typography';
 
 import { Logo } from 'src/components/logo';
 import { Scrollbar } from 'src/components/scrollbar';
+import { TruncatedTypography } from 'src/components/truncated-typography';
 import { NavSectionMini, NavSectionVertical } from 'src/components/nav-section';
 
-import { getAdminDashboard } from 'src/sections/admin-dashboard/admin-dashboard-actions';
+import { getSchool } from 'src/sections/school/school-actions';
+
+import { useAuthContext } from 'src/auth/hooks';
 
 import { layoutClasses } from '../core';
 import { NavUpgrade } from '../components/nav-upgrade';
@@ -45,24 +49,25 @@ export function NavVertical({
   layoutQuery = 'md',
   ...other
 }: NavVerticalProps) {
-  const {
-    data: school,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ['admin-dashboard'],
-    queryFn: getAdminDashboard,
+  const { user } = useAuthContext();
+  const isMasterAdmin = user?.role === 'master_admin';
+  const schoolId = typeof user?.school_id === 'string' ? user.school_id : '';
+  const { data: school, isLoading } = useQuery({
+    queryKey: ['nav-school', schoolId],
+    queryFn: () => getSchool(schoolId),
+    enabled: !!schoolId && !isMasterAdmin,
   });
 
   const renderNavVertical = () => (
     <>
       {slots?.topArea ??
-        (school && (
+        (isMasterAdmin ? (
+          <ProductIdentity />
+        ) : school ? (
           <Box display="flex" alignItems="center" sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
             <Avatar
-              src={school.school.logo_url ?? undefined}
-              alt={school.school.name}
+              src={school.logo_url ?? undefined}
+              alt={school.name}
               variant="rounded"
               sx={{
                 width: 50,
@@ -72,15 +77,21 @@ export function NavVertical({
                 color: 'primary.main',
               }}
             >
-              {school.school.name.charAt(0)}
+              {school.name.charAt(0)}
             </Avatar>
             <Stack ml={2} sx={{ width: '70%' }}>
-              <Typography variant="body2">{school && school.school.code}</Typography>
               <TruncatedTypography variant="subtitle1" line={1}>
-                {school && school.school.name}
+                {school.name}
               </TruncatedTypography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {school.code}
+              </Typography>
             </Stack>
           </Box>
+        ) : isLoading ? (
+          <SchoolIdentitySkeleton />
+        ) : (
+          <SchoolIdentityFallback />
         ))}
 
       <Scrollbar fillContent>
@@ -100,7 +111,18 @@ export function NavVertical({
     <>
       {slots?.topArea ?? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 2.5 }}>
-          <Logo />
+          {!isMasterAdmin && school ? (
+            <Avatar
+              src={school.logo_url ?? undefined}
+              alt={school.name}
+              variant="rounded"
+              sx={{ width: 40, height: 40, color: 'primary.main' }}
+            >
+              {school.name.charAt(0)}
+            </Avatar>
+          ) : (
+            <Logo />
+          )}
         </Box>
       )}
 
@@ -143,6 +165,52 @@ export function NavVertical({
       />
       {isNavMini ? renderNavMini() : renderNavVertical()}
     </NavRoot>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+function ProductIdentity() {
+  return (
+    <Box display="flex" alignItems="center" sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
+      <Logo />
+      <Stack ml={2} sx={{ minWidth: 0 }}>
+        <TruncatedTypography variant="subtitle1" line={1}>
+          Class GO
+        </TruncatedTypography>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          ระบบบันทึกคะแนน
+        </Typography>
+      </Stack>
+    </Box>
+  );
+}
+
+function SchoolIdentitySkeleton() {
+  return (
+    <Box display="flex" alignItems="center" sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
+      <Skeleton variant="rounded" width={50} height={50} />
+      <Stack ml={2} spacing={0.75} sx={{ flex: 1, pr: 3 }}>
+        <Skeleton width="85%" height={22} />
+        <Skeleton width="45%" height={18} />
+      </Stack>
+    </Box>
+  );
+}
+
+function SchoolIdentityFallback() {
+  return (
+    <Box display="flex" alignItems="center" sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
+      <Avatar variant="rounded" sx={{ width: 50, height: 50, color: 'primary.main' }}>
+        ร
+      </Avatar>
+      <Stack ml={2} sx={{ minWidth: 0 }}>
+        <Typography variant="subtitle1">ข้อมูลโรงเรียน</Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          ไม่สามารถโหลดข้อมูลได้
+        </Typography>
+      </Stack>
+    </Box>
   );
 }
 

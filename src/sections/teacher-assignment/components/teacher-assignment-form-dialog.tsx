@@ -60,6 +60,7 @@ const emptyValues: FormValues = {
 export function TeacherAssignmentFormDialog({ open, editingRow, onClose }: Props) {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
+  const schoolScope = user?.school_id ?? '';
   const queryClient = useQueryClient();
 
   const methods = useForm<FormValues>({
@@ -71,29 +72,29 @@ export function TeacherAssignmentFormDialog({ open, editingRow, onClose }: Props
   const semesterId = useWatch({ control, name: 'semesterId' });
 
   const { data: teachers = [], isLoading: teachersLoading } = useQuery({
-    queryKey: ['users', 'teacher'],
+    queryKey: ['users', 'teacher', schoolScope],
     queryFn: () => listUsers('teacher'),
-    enabled: open && !isTeacher,
+    enabled: open && !isTeacher && !!schoolScope,
   });
   const { data: subjects = [], isLoading: subjectsLoading } = useQuery({
-    queryKey: ['subjects', semesterId],
+    queryKey: ['subjects', schoolScope, semesterId],
     queryFn: () => listSubjects({ semesterId }),
-    enabled: open && !!semesterId,
+    enabled: open && !!schoolScope && !!semesterId,
   });
   const { data: classrooms = [], isLoading: classroomsLoading } = useQuery({
-    queryKey: ['classrooms', academicYearId],
+    queryKey: ['classrooms', schoolScope, academicYearId],
     queryFn: () => listClassrooms({ academicYearId }),
-    enabled: open && !!academicYearId,
+    enabled: open && !!schoolScope && !!academicYearId,
   });
   const { data: academicYears = [], isLoading: yearsLoading } = useQuery({
-    queryKey: ['academic-years'],
+    queryKey: ['academic-years', schoolScope],
     queryFn: listAcademicYears,
-    enabled: open,
+    enabled: open && !!schoolScope,
   });
   const { data: semesters = [], isLoading: semestersLoading } = useQuery({
-    queryKey: ['semesters', academicYearId],
+    queryKey: ['semesters', schoolScope, academicYearId],
     queryFn: () => listSemesters(academicYearId),
-    enabled: open && !!academicYearId,
+    enabled: open && !!schoolScope && !!academicYearId,
   });
 
   const createMutation = useMutation({

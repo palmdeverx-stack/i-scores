@@ -122,6 +122,10 @@ export function JwtChangePasswordView() {
           >
             บันทึกรหัสผ่านใหม่
           </Button>
+
+          <Button fullWidth color="inherit" size="large" variant="text" href="/">
+            กลับหน้าหลัก
+          </Button>
         </Box>
       </Form>
     </Card>

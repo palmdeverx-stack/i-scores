@@ -113,7 +113,7 @@ export function TeacherDashboardView() {
       <Card
         sx={{
           mb: 3,
-          p: { xs: 2.5, sm: 4 },
+          p: { xs: 2, sm: 3 },
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
@@ -235,8 +235,8 @@ export function TeacherDashboardView() {
           mb: 3,
           display: 'grid',
           gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(2, minmax(0, 1fr))',
+            xs: 'repeat(2, minmax(0, 1fr))',
+            sm: 'repeat(4, minmax(0, 1fr))',
             lg: 'repeat(4, minmax(0, 1fr))',
           },
         }}

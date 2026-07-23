@@ -16,11 +16,14 @@ export async function GET(request: Request) {
     .from('teacher_assignments')
     .select(
       `id, created_at,
-       teacher:app_users!teacher_assignments_teacher_id_fkey(id, username, first_name, last_name),
-       subject:subjects(id, code, name, image_url, academic_year_id, semester_id),
-       classroom:classrooms(id, name, academic_year_id),
-       semester:semesters(id, name, academic_year_id)`
+       teacher:app_users!teacher_assignments_teacher_id_fkey!inner(id, username, first_name, last_name),
+       subject:subjects!inner(id, code, name, image_url, academic_year_id, semester_id),
+       classroom:classrooms!inner(id, name, academic_year_id),
+       semester:semesters!inner(id, name, academic_year_id)`
     )
+    .eq('teacher.school_id', caller.schoolId)
+    .eq('subject.school_id', caller.schoolId)
+    .eq('classroom.school_id', caller.schoolId)
     .order('created_at', { ascending: false });
 
   if (caller.role === 'teacher') {
