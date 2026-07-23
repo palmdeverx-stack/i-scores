@@ -2,13 +2,19 @@ import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from 'src/components/nav-section';
 
 import { varAlpha, mergeClasses } from 'minimal-shared/utils';
+import { Avatar, Typography } from 'node_modules/@mui/material/esm';
+import { useQuery } from 'node_modules/@tanstack/react-query/build/modern';
 
-import Box from '@mui/material/Box';
+import { Box, Stack } from '@mui/material';
 import { styled } from '@mui/material/styles';
+
+import { TruncatedTypography } from 'src/components';
 
 import { Logo } from 'src/components/logo';
 import { Scrollbar } from 'src/components/scrollbar';
 import { NavSectionMini, NavSectionVertical } from 'src/components/nav-section';
+
+import { getAdminDashboard } from 'src/sections/admin-dashboard/admin-dashboard-actions';
 
 import { layoutClasses } from '../core';
 import { NavUpgrade } from '../components/nav-upgrade';
@@ -39,13 +45,43 @@ export function NavVertical({
   layoutQuery = 'md',
   ...other
 }: NavVerticalProps) {
+  const {
+    data: school,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['admin-dashboard'],
+    queryFn: getAdminDashboard,
+  });
+
   const renderNavVertical = () => (
     <>
-      {slots?.topArea ?? (
-        <Box sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
-          <Logo />
-        </Box>
-      )}
+      {slots?.topArea ??
+        (school && (
+          <Box display="flex" alignItems="center" sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
+            <Avatar
+              src={school.school.logo_url ?? undefined}
+              alt={school.school.name}
+              variant="rounded"
+              sx={{
+                width: 50,
+                height: 50,
+                flexShrink: 0,
+                fontSize: 28,
+                color: 'primary.main',
+              }}
+            >
+              {school.school.name.charAt(0)}
+            </Avatar>
+            <Stack ml={2} sx={{ width: '70%' }}>
+              <Typography variant="body2">{school && school.school.code}</Typography>
+              <TruncatedTypography variant="subtitle1" line={1}>
+                {school && school.school.name}
+              </TruncatedTypography>
+            </Stack>
+          </Box>
+        ))}
 
       <Scrollbar fillContent>
         <NavSectionVertical

@@ -159,6 +159,7 @@ export const paths = {
     enrollment: {
       root: `${ROOTS.ADMIN}/enrollment`,
       new: `${ROOTS.ADMIN}/enrollment/new`,
+      classroom: (id: string) => `${ROOTS.ADMIN}/enrollment/classroom/${id}`,
     },
   },
 };

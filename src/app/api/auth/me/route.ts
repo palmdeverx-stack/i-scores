@@ -19,7 +19,10 @@ export async function GET(request: Request) {
     .eq('id', payload.sub)
     .single();
 
-  if (!user) {
+  const studentCannotAccess =
+    user?.role === 'student' && (user.student_status ?? 'studying') !== 'studying';
+
+  if (!user || user.is_active === false || studentCannotAccess) {
     return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
   }
 

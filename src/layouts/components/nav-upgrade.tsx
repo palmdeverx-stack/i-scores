@@ -18,6 +18,7 @@ import { useAuthContext } from 'src/auth/hooks';
 
 export function NavUpgrade({ sx, ...other }: BoxProps) {
   const { user } = useAuthContext();
+  console.log('user', user);
 
   return (
     <Box

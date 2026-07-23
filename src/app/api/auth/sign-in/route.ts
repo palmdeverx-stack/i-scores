@@ -25,6 +25,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
   }
 
+  const studentCannotAccess =
+    user.role === 'student' && (user.student_status ?? 'studying') !== 'studying';
+
+  if (user.is_active === false || studentCannotAccess) {
+    return NextResponse.json(
+      {
+        message: studentCannotAccess
+          ? 'สถานะนักเรียนไม่สามารถเข้าใช้งานระบบได้ กรุณาติดต่อผู้ดูแลโรงเรียน'
+          : 'บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อผู้ดูแลโรงเรียน',
+      },
+      { status: 403 }
+    );
+  }
+
   const accessToken = signAppToken({
     sub: user.id,
     username: user.username,

@@ -66,7 +66,7 @@ export function StudentHomeView() {
           gap: 3,
           display: 'grid',
           alignItems: 'start',
-          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.1fr) minmax(360px, 0.9fr)' },
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 2fr) minmax(360px, 1.5fr)' },
         }}
       >
         <RankingSection

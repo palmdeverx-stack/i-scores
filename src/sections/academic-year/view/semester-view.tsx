@@ -153,7 +153,7 @@ export function SemesterView({ academicYearId }: Props) {
   const onSubmit = handleSubmit((data) => saveMutation.mutate(data));
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="lg" sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,

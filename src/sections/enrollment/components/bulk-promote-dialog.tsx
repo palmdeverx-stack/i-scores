@@ -1,5 +1,9 @@
 'use client';
 
+import type { Enrollment } from '../enrollment-actions';
+import type { Classroom } from 'src/sections/classroom/classroom-actions';
+import type { AcademicYear } from 'src/sections/academic-year/academic-year-actions';
+
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -34,6 +38,10 @@ import { listEnrollments, bulkPromoteEnrollments } from '../enrollment-actions';
 
 type RowOverride = { classroomId: string; excluded: boolean };
 
+const EMPTY_ROSTER: Enrollment[] = [];
+const EMPTY_CLASSROOMS: Classroom[] = [];
+const EMPTY_ACADEMIC_YEARS: AcademicYear[] = [];
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -58,22 +66,22 @@ export function BulkPromoteDialog({ open, onClose, initialClassroomId }: Props) 
     },
   });
 
-  const { data: classrooms = [] } = useQuery({
+  const { data: classrooms = EMPTY_CLASSROOMS } = useQuery({
     queryKey: ['classrooms'],
     queryFn: () => listClassrooms(),
     enabled: open,
   });
-  const { data: academicYears = [] } = useQuery({
+  const { data: academicYears = EMPTY_ACADEMIC_YEARS } = useQuery({
     queryKey: ['academic-years'],
     queryFn: () => listAcademicYears(),
     enabled: open,
   });
-  const { data: roster = [], isLoading: rosterLoading } = useQuery({
+  const { data: roster = EMPTY_ROSTER, isLoading: rosterLoading } = useQuery({
     queryKey: ['enrollments', { classroomId: sourceClassroomId }],
     queryFn: () => listEnrollments({ classroomId: sourceClassroomId }),
     enabled: open && !!sourceClassroomId,
   });
-  const { data: destinationClassrooms = [] } = useQuery({
+  const { data: destinationClassrooms = EMPTY_CLASSROOMS } = useQuery({
     queryKey: ['classrooms', { academicYearId: targetAcademicYearId }],
     queryFn: () => listClassrooms({ academicYearId: targetAcademicYearId }),
     enabled: open && !!targetAcademicYearId,
@@ -95,7 +103,7 @@ export function BulkPromoteDialog({ open, onClose, initialClassroomId }: Props) 
 
   useEffect(() => {
     if (!defaultClassroomId) {
-      setRowOverrides({});
+      setRowOverrides((current) => (Object.keys(current).length ? {} : current));
       return;
     }
 
@@ -103,7 +111,18 @@ export function BulkPromoteDialog({ open, onClose, initialClassroomId }: Props) 
     roster.forEach((row) => {
       next[row.student.id] = { classroomId: defaultClassroomId, excluded: false };
     });
-    setRowOverrides(next);
+    setRowOverrides((current) => {
+      const studentIds = Object.keys(next);
+      const isUnchanged =
+        studentIds.length === Object.keys(current).length &&
+        studentIds.every(
+          (studentId) =>
+            current[studentId]?.classroomId === next[studentId].classroomId &&
+            current[studentId]?.excluded === next[studentId].excluded
+        );
+
+      return isUnchanged ? current : next;
+    });
   }, [defaultClassroomId, roster]);
 
   const updateRow = (studentId: string, patch: Partial<RowOverride>) => {

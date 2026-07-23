@@ -19,25 +19,21 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import { Form } from 'src/components/hook-form';
 import { Iconify } from 'src/components/iconify';
-import { Form, Field } from 'src/components/hook-form';
 
 import { listUsers } from 'src/sections/user/user-actions';
 import { listClassrooms } from 'src/sections/classroom/classroom-actions';
 
 import { useAuthContext } from 'src/auth/hooks';
 
-import { listEnrollments, createEnrollment } from '../enrollment-actions';
+import { listEnrollments, createEnrollments } from '../enrollment-actions';
 
 // ----------------------------------------------------------------------
 
 export const EnrollmentCreateSchema = z.object({
-  studentId: z.string().min(1, { error: 'กรุณาเลือกนักเรียน!' }),
+  studentIds: z.array(z.string()).min(1, { error: 'กรุณาเลือกนักเรียนอย่างน้อย 1 คน!' }),
   classroomId: z.string().min(1, { error: 'กรุณาเลือกห้องเรียน!' }),
-  studentNumber: z
-    .string()
-    .trim()
-    .refine((value) => !value || /^\d+$/.test(value), { error: 'เลขที่ต้องเป็นตัวเลขเท่านั้น!' }),
 });
 
 type EnrollmentCreateSchemaType = z.infer<typeof EnrollmentCreateSchema>;
@@ -66,7 +62,7 @@ export function EnrollmentCreateView() {
 
   const methods = useForm<EnrollmentCreateSchemaType>({
     resolver: zodResolver(EnrollmentCreateSchema),
-    defaultValues: { studentId: '', classroomId: '', studentNumber: '' },
+    defaultValues: { studentIds: [], classroomId: '' },
   });
 
   const {
@@ -75,44 +71,37 @@ export function EnrollmentCreateView() {
     handleSubmit,
     formState: { errors },
   } = methods;
-  const studentId = useWatch({ control, name: 'studentId' });
+  const studentIds = useWatch({ control, name: 'studentIds' });
   const classroomId = useWatch({ control, name: 'classroomId' });
-  const studentNumber = useWatch({ control, name: 'studentNumber' });
 
-  const selectedStudent = students.find((student) => student.id === studentId) ?? null;
+  const enrollableStudents = students.filter(
+    (student) =>
+      student.is_active !== false && (student.student_status ?? 'studying') === 'studying'
+  );
+  const selectedStudents = students.filter((student) => studentIds.includes(student.id));
   const selectedClassroom = classrooms.find((classroom) => classroom.id === classroomId) ?? null;
 
-  const { data: studentEnrollments = [] } = useQuery({
-    queryKey: ['enrollments', 'student', studentId],
-    queryFn: () => listEnrollments({ studentId }),
-    enabled: !!studentId,
+  const { data: enrollments = [] } = useQuery({
+    queryKey: ['enrollments'],
+    queryFn: () => listEnrollments(),
   });
-
-  // A student can only belong to one classroom per academic year — surface the
-  // conflict here instead of only after a failed submit.
-  const conflictingEnrollment = selectedClassroom
-    ? studentEnrollments.find(
-        (enrollment) => enrollment.classroom.academic_year_id === selectedClassroom.academic_year_id
+  const availableStudents = selectedClassroom
+    ? enrollableStudents.filter(
+        (student) =>
+          !enrollments.some(
+            (enrollment) =>
+              enrollment.student.id === student.id &&
+              enrollment.classroom.academic_year_id === selectedClassroom.academic_year_id
+          )
       )
-    : null;
-  const isSameClassroom = conflictingEnrollment?.classroom.id === selectedClassroom?.id;
+    : [];
 
   const createMutation = useMutation({
-    mutationFn: createEnrollment,
+    mutationFn: createEnrollments,
     onSuccess: () => router.push(backPath),
   });
 
-  const onSubmit = handleSubmit(async (data) =>
-    createMutation.mutate({
-      ...data,
-      studentNumber: data.studentNumber.trim() || undefined,
-    })
-  );
-
-  const studentName = selectedStudent
-    ? `${selectedStudent.first_name ?? ''} ${selectedStudent.last_name ?? ''}`.trim() ||
-      selectedStudent.username
-    : '';
+  const onSubmit = handleSubmit((data) => createMutation.mutate(data));
 
   return (
     <Container maxWidth="lg" sx={{ pb: 5 }}>
@@ -141,7 +130,7 @@ export function EnrollmentCreateView() {
             เพิ่มนักเรียนเข้าห้อง
           </Typography>
           <Typography sx={{ color: 'text.secondary' }}>
-            ค้นหานักเรียน เลือกห้องเรียน และระบุเลขที่ให้เรียบร้อยก่อนยืนยัน
+            เลือกห้องเรียนก่อน แล้วเลือกนักเรียนหลายคนเพื่อเพิ่มเข้าห้องพร้อมกัน
           </Typography>
         </Box>
 
@@ -185,32 +174,88 @@ export function EnrollmentCreateView() {
 
             <Form methods={methods} onSubmit={onSubmit}>
               <Box sx={{ gap: 4, display: 'flex', flexDirection: 'column' }}>
-                <Box component="section" aria-labelledby="student-selection-title">
+                <Box component="section" aria-labelledby="classroom-selection-title">
                   <SectionTitle
-                    id="student-selection-title"
+                    id="classroom-selection-title"
                     number="1"
-                    title="เลือกนักเรียน"
-                    description="พิมพ์ชื่อหรือชื่อผู้ใช้งานเพื่อค้นหานักเรียน"
+                    title="เลือกห้องเรียน"
+                    description="เลือกห้องและปีการศึกษาที่ต้องการเพิ่มนักเรียน"
                   />
 
                   <Autocomplete
                     fullWidth
-                    options={students}
-                    value={selectedStudent}
+                    options={classrooms}
+                    value={selectedClassroom}
+                    loading={classroomsLoading}
+                    disabled={classroomsLoading || classroomsError}
+                    getOptionLabel={(option) =>
+                      option.academic_years?.year
+                        ? `${option.name} · ปีการศึกษา ${option.academic_years.year}`
+                        : option.name
+                    }
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    onChange={(_, value) => {
+                      setValue('classroomId', value?.id ?? '', {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      setValue('studentIds', [], {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }}
+                    noOptionsText="ไม่พบห้องเรียน"
+                    loadingText="กำลังโหลดห้องเรียน..."
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="ห้องเรียน *"
+                        placeholder="ค้นหาห้องเรียน"
+                        error={!!errors.classroomId}
+                        helperText={
+                          errors.classroomId?.message ?? 'ห้องที่ต้องการเพิ่มนักเรียนเข้าไป'
+                        }
+                      />
+                    )}
+                  />
+                </Box>
+
+                <Divider />
+
+                <Box component="section" aria-labelledby="student-selection-title">
+                  <SectionTitle
+                    id="student-selection-title"
+                    number="2"
+                    title="เลือกนักเรียน"
+                    description="ค้นหาและเลือกนักเรียนได้พร้อมกันหลายคน"
+                  />
+
+                  <Autocomplete
+                    multiple
+                    fullWidth
+                    disableCloseOnSelect
+                    limitTags={6}
+                    options={availableStudents}
+                    value={selectedStudents}
                     loading={studentsLoading}
-                    disabled={studentsLoading || studentsError}
+                    disabled={!selectedClassroom || studentsLoading || studentsError}
                     getOptionLabel={(option) =>
                       `${option.first_name ?? ''} ${option.last_name ?? ''}`.trim() ||
                       option.username
                     }
                     isOptionEqualToValue={(option, value) => option.id === value.id}
                     onChange={(_, value) =>
-                      setValue('studentId', value?.id ?? '', {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      })
+                      setValue(
+                        'studentIds',
+                        value.map((student) => student.id),
+                        { shouldDirty: true, shouldValidate: true }
+                      )
                     }
-                    noOptionsText="ไม่พบนักเรียน"
+                    noOptionsText={
+                      selectedClassroom
+                        ? 'ไม่พบนักเรียนที่สามารถเพิ่มในปีการศึกษานี้'
+                        : 'กรุณาเลือกห้องเรียนก่อน'
+                    }
                     loadingText="กำลังโหลดรายชื่อนักเรียน..."
                     renderOption={(props, option) => {
                       const name =
@@ -234,82 +279,15 @@ export function EnrollmentCreateView() {
                       <TextField
                         {...params}
                         label="นักเรียน *"
-                        placeholder="ค้นหาชื่อนักเรียน"
-                        error={!!errors.studentId}
+                        placeholder={selectedStudents.length ? '' : 'ค้นหาและเลือกนักเรียนหลายคน'}
+                        error={!!errors.studentIds}
                         helperText={
-                          errors.studentId?.message ?? 'เลือกนักเรียนที่ต้องการเพิ่มเข้าห้อง'
+                          errors.studentIds?.message ??
+                          `เลือกแล้ว ${selectedStudents.length} คน · กำหนดเลขที่รายบุคคลภายหลังได้`
                         }
                       />
                     )}
                   />
-                </Box>
-
-                <Divider />
-
-                <Box component="section" aria-labelledby="classroom-selection-title">
-                  <SectionTitle
-                    id="classroom-selection-title"
-                    number="2"
-                    title="เลือกห้องเรียน"
-                    description="เลือกห้องปลายทางและกำหนดเลขที่ของนักเรียน"
-                  />
-
-                  <Box
-                    sx={{
-                      gap: 2.5,
-                      display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) 180px' },
-                    }}
-                  >
-                    <Autocomplete
-                      fullWidth
-                      options={classrooms}
-                      value={selectedClassroom}
-                      loading={classroomsLoading}
-                      disabled={classroomsLoading || classroomsError}
-                      getOptionLabel={(option) =>
-                        option.academic_years?.year
-                          ? `${option.name} · ปีการศึกษา ${option.academic_years.year}`
-                          : option.name
-                      }
-                      isOptionEqualToValue={(option, value) => option.id === value.id}
-                      onChange={(_, value) =>
-                        setValue('classroomId', value?.id ?? '', {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        })
-                      }
-                      noOptionsText="ไม่พบห้องเรียน"
-                      loadingText="กำลังโหลดห้องเรียน..."
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="ห้องเรียน *"
-                          placeholder="ค้นหาห้องเรียน"
-                          error={!!errors.classroomId}
-                          helperText={
-                            errors.classroomId?.message ?? 'ห้องที่ต้องการเพิ่มนักเรียนเข้าไป'
-                          }
-                        />
-                      )}
-                    />
-
-                    <Field.Text
-                      name="studentNumber"
-                      label="เลขที่"
-                      placeholder="เช่น 12"
-                      helperText="ไม่บังคับ"
-                      slotProps={{ htmlInput: { inputMode: 'numeric', pattern: '[0-9]*' } }}
-                    />
-                  </Box>
-
-                  {conflictingEnrollment && (
-                    <Alert severity="warning" sx={{ mt: 2.5 }}>
-                      {isSameClassroom
-                        ? 'นักเรียนคนนี้อยู่ในห้องนี้อยู่แล้ว'
-                        : `นักเรียนคนนี้อยู่ห้อง "${conflictingEnrollment.classroom.name}" แล้วในปีการศึกษา ${conflictingEnrollment.classroom.academic_years?.year ?? '-'} — นักเรียน 1 คนอยู่ได้เพียง 1 ห้องเรียนต่อปีการศึกษา จึงไม่สามารถเพิ่มเข้าห้องนี้ได้`}
-                    </Alert>
-                  )}
                 </Box>
 
                 <Divider />
@@ -336,13 +314,12 @@ export function EnrollmentCreateView() {
                     type="submit"
                     size="large"
                     variant="contained"
-                    disabled={!!conflictingEnrollment}
                     loading={createMutation.isPending}
                     loadingIndicator="กำลังเพิ่ม..."
                     startIcon={<Iconify icon="solar:user-plus-bold" />}
                     sx={{ minWidth: 210, width: { xs: 1, sm: 'auto' } }}
                   >
-                    เพิ่มนักเรียนเข้าห้อง
+                    เพิ่มนักเรียน {selectedStudents.length || ''} คนเข้าห้อง
                   </Button>
                 </Box>
               </Box>
@@ -374,8 +351,8 @@ export function EnrollmentCreateView() {
           <SummaryRow
             icon="solar:user-rounded-bold"
             label="นักเรียน"
-            value={studentName || 'ยังไม่ได้เลือก'}
-            ready={!!selectedStudent}
+            value={selectedStudents.length ? `${selectedStudents.length} คน` : 'ยังไม่ได้เลือก'}
+            ready={selectedStudents.length > 0}
           />
           <SummaryRow
             icon="solar:users-group-rounded-bold"
@@ -383,15 +360,8 @@ export function EnrollmentCreateView() {
             value={selectedClassroom?.name ?? 'ยังไม่ได้เลือก'}
             ready={!!selectedClassroom}
           />
-          <SummaryRow
-            icon="solar:list-bold"
-            label="เลขที่"
-            value={studentNumber || 'ไม่ระบุ'}
-            ready={!!studentNumber}
-          />
-
           <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" />} sx={{ mt: 2.5 }}>
-            นักเรียน 1 คนอยู่ได้เพียง 1 ห้องเรียนต่อปีการศึกษา แต่เรียนได้หลายวิชาในห้องนั้น
+            ระบบจะแสดงเฉพาะนักเรียนที่ยังไม่มีห้องในปีการศึกษานี้ และสามารถกำหนดเลขที่ภายหลังได้
           </Alert>
         </Card>
       </Box>
@@ -439,7 +409,7 @@ function SectionTitle({ id, number, title, description }: SectionTitleProps) {
 }
 
 type SummaryRowProps = {
-  icon: 'solar:user-rounded-bold' | 'solar:users-group-rounded-bold' | 'solar:list-bold';
+  icon: 'solar:user-rounded-bold' | 'solar:users-group-rounded-bold';
   label: string;
   value: string;
   ready: boolean;

@@ -8,7 +8,14 @@ export type Enrollment = {
   id: string;
   student_number: string | null;
   created_at: string;
-  student: { id: string; username: string; first_name: string | null; last_name: string | null };
+  student: {
+    id: string;
+    username: string;
+    first_name: string | null;
+    last_name: string | null;
+    student_status: 'studying' | 'graduated' | 'transferred' | 'withdrawn' | 'dismissed' | null;
+    is_active: boolean;
+  };
   classroom: {
     id: string;
     name: string;
@@ -21,6 +28,11 @@ export type CreateEnrollmentParams = {
   studentId: string;
   classroomId: string;
   studentNumber?: string;
+};
+
+export type CreateEnrollmentsParams = {
+  studentIds: string[];
+  classroomId: string;
 };
 
 export type BulkPromoteEntry = {
@@ -75,10 +87,12 @@ function authHeader() {
 export async function listEnrollments(params?: {
   classroomId?: string;
   studentId?: string;
+  academicYearId?: string;
 }): Promise<Enrollment[]> {
   const query = new URLSearchParams();
   if (params?.classroomId) query.set('classroomId', params.classroomId);
   if (params?.studentId) query.set('studentId', params.studentId);
+  if (params?.academicYearId) query.set('academicYearId', params.academicYearId);
 
   const response = await fetch(`/api/enrollments?${query.toString()}`, { headers: authHeader() });
   const json = await response.json();
@@ -99,6 +113,43 @@ export async function createEnrollment(params: CreateEnrollmentParams) {
   if (!response.ok) throw new Error(json.message ?? 'Failed to create enrollment');
 
   return json.enrollment;
+}
+
+export async function createEnrollments(params: CreateEnrollmentsParams) {
+  const response = await fetch('/api/enrollments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(params),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถเพิ่มนักเรียนเข้าห้องได้');
+  return json.enrollments as Enrollment[];
+}
+
+export async function updateEnrollment(
+  id: string,
+  params: Pick<CreateEnrollmentParams, 'classroomId' | 'studentNumber'>
+) {
+  const response = await fetch(`/api/enrollments/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(params),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถแก้ไขการลงทะเบียนได้');
+  return json.enrollment;
+}
+
+export async function deleteEnrollment(id: string): Promise<void> {
+  const response = await fetch(`/api/enrollments/${id}`, {
+    method: 'DELETE',
+    headers: authHeader(),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถลบการลงทะเบียนได้');
 }
 
 export async function bulkPromoteEnrollments(params: {

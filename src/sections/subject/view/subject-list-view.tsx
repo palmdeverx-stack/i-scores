@@ -38,7 +38,7 @@ import { SubjectFormDialog } from '../components/subject-form-dialog';
 // ----------------------------------------------------------------------
 
 export function SubjectListView() {
-  const table = useTable({ defaultRowsPerPage: 10 });
+  const table = useTable({ defaultRowsPerPage: 5 });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null);
@@ -210,9 +210,11 @@ export function SubjectListView() {
               <TableRow>
                 <TableCell sx={{ width: { sm: 220 } }}>รหัสวิชา</TableCell>
                 <TableCell>รายละเอียดรายวิชา</TableCell>
-                <TableCell sx={{ width: 190 }}>ปี / ภาคเรียน</TableCell>
+                <TableCell sx={{ width: 190 }}> ภาคเรียน / ปี </TableCell>
                 <TableCell sx={{ width: 140 }}>หน่วยกิต</TableCell>
-                <TableCell align="right">การจัดการ</TableCell>
+                <TableCell sx={{ width: 140 }} align="right">
+                  การจัดการ
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -265,10 +267,8 @@ export function SubjectListView() {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
+                      {subject.semesters?.name ?? 'ยังไม่กำหนดภาคเรียน'} /{' '}
                       {subject.academic_years?.year ?? 'ยังไม่กำหนดปี'}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      {subject.semesters?.name ?? 'ยังไม่กำหนดภาคเรียน'}
                     </Typography>
                   </TableCell>
                   <TableCell>{Number(subject.credits).toLocaleString('th-TH')} หน่วยกิต</TableCell>
@@ -306,7 +306,7 @@ export function SubjectListView() {
           page={table.page}
           count={subjects.length}
           rowsPerPage={table.rowsPerPage}
-          rowsPerPageOptions={[10, 25, 50]}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           onPageChange={table.onChangePage}
           onRowsPerPageChange={table.onChangeRowsPerPage}
           labelRowsPerPage="แสดงต่อหน้า"

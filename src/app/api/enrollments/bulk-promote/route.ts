@@ -77,6 +77,24 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: eligibleStudents } = await supabaseAdmin
+    .from('app_users')
+    .select('id')
+    .in('id', studentIds)
+    .eq('school_id', caller.schoolId)
+    .eq('role', 'student')
+    .eq('is_active', true)
+    .eq('student_status', 'studying');
+
+  if (eligibleStudents?.length !== new Set(studentIds).size) {
+    return NextResponse.json(
+      {
+        message: 'ไม่สามารถเลื่อนชั้นได้ เนื่องจากมีนักเรียนสถานะพ้นสภาพ ลาออก ย้าย หรือปิดใช้งาน',
+      },
+      { status: 409 }
+    );
+  }
+
   const { data: saved, error } = await supabaseAdmin
     .from('enrollments')
     .upsert(

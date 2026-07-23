@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { Grid } from 'node_modules/@mui/material/esm';
 
 import { StudentAssignmentList } from '../components/student-assignment-list';
 import { StudentSubmissionOverview } from '../components/student-submission-overview';
@@ -60,20 +61,28 @@ export function StudentAssignmentsView() {
         </HeroStats>
       }
     >
-      <StudentSubmissionOverview
-        total={overview.assignments.length}
-        submitted={overview.submitted}
-        pending={overview.pending}
-        progress={overview.progress}
-        scorePercent={overview.scorePercent}
-      />
-
-      <SectionHeading
-        icon="solar:list-bold"
-        title="การส่งงาน"
-        subtitle="ค้นหา กรองสถานะ และติดตามคะแนนของแต่ละรายวิชา"
-      />
-      <StudentAssignmentList assignments={overview.assignments} generatedAt={data.generated_at} />
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <StudentSubmissionOverview
+            total={overview.assignments.length}
+            submitted={overview.submitted}
+            pending={overview.pending}
+            progress={overview.progress}
+            scorePercent={overview.scorePercent}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 9 }}>
+          <SectionHeading
+            icon="solar:list-bold"
+            title="การส่งงาน"
+            subtitle="ค้นหา กรองสถานะ และติดตามคะแนนของแต่ละรายวิชา"
+          />
+          <StudentAssignmentList
+            assignments={overview.assignments}
+            generatedAt={data.generated_at}
+          />
+        </Grid>
+      </Grid>
     </StudentPageScaffold>
   );
 }

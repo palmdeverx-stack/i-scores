@@ -1,5 +1,7 @@
 'use client';
 
+import type { UserRow } from '../user-actions';
+
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
 import { useState, useEffect } from 'react';
@@ -20,7 +22,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
-import { createUser } from '../user-actions';
+import { createUser, updateStaffUser } from '../user-actions';
 
 // ----------------------------------------------------------------------
 
@@ -47,10 +49,12 @@ export function generatePassword(length = 12) {
 type Props = {
   open: boolean;
   isStudentMode: boolean;
+  user?: UserRow | null;
   onClose: () => void;
 };
 
-export function CreateUserDialog({ open, isStudentMode, onClose }: Props) {
+export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: Props) {
+  const isEdit = !!user;
   const [showPassword, setShowPassword] = useState(false);
   const queryClient = useQueryClient();
 
@@ -68,7 +72,8 @@ export function CreateUserDialog({ open, isStudentMode, onClose }: Props) {
   const { handleSubmit, reset, setValue } = methods;
 
   const createMutation = useMutation({
-    mutationFn: createUser,
+    mutationFn: (params: Parameters<typeof createUser>[0]) =>
+      isEdit ? updateStaffUser(user.id, params) : createUser(params),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['users'] });
       onClose();
@@ -79,18 +84,29 @@ export function CreateUserDialog({ open, isStudentMode, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
 
-    reset({
-      firstName: '',
-      lastName: '',
-      username: '',
-      email: '',
-      password: generatePassword(),
-      role: isStudentMode ? 'student' : 'teacher',
-    });
-    setShowPassword(true);
+    reset(
+      user
+        ? {
+            firstName: user.first_name ?? '',
+            lastName: user.last_name ?? '',
+            username: user.username,
+            email: user.email ?? '',
+            password: '',
+            role: 'teacher',
+          }
+        : {
+            firstName: '',
+            lastName: '',
+            username: '',
+            email: '',
+            password: generatePassword(),
+            role: isStudentMode ? 'student' : 'teacher',
+          }
+    );
+    setShowPassword(!user);
     createMutation.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, isStudentMode, reset]);
+  }, [open, isStudentMode, reset, user]);
 
   const closeDialog = () => {
     if (createMutation.isPending) return;
@@ -107,7 +123,7 @@ export function CreateUserDialog({ open, isStudentMode, onClose }: Props) {
       lastName: data.lastName.trim(),
       username: data.username.trim(),
       email: data.email || undefined,
-      password: data.password || generatePassword(),
+      password: data.password || (isEdit ? undefined : generatePassword()),
       role: isStudentMode ? 'student' : 'teacher',
     })
   );
@@ -119,10 +135,14 @@ export function CreateUserDialog({ open, isStudentMode, onClose }: Props) {
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
             <Box>
               <Typography component="h2" variant="h6">
-                {isStudentMode ? 'เพิ่มนักเรียน' : 'เพิ่มครู/บุคลากร'}
+                {isEdit ? 'แก้ไขครู/บุคลากร' : isStudentMode ? 'เพิ่มนักเรียน' : 'เพิ่มครู/บุคลากร'}
               </Typography>
               <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                {isStudentMode ? 'สร้างบัญชีนักเรียนใหม่' : 'สร้างบัญชีใหม่สำหรับบุคลากรหรือครู'}
+                {isEdit
+                  ? 'แก้ไขข้อมูลบัญชีและกำหนดรหัสผ่านใหม่'
+                  : isStudentMode
+                    ? 'สร้างบัญชีนักเรียนใหม่'
+                    : 'สร้างบัญชีใหม่สำหรับบุคลากรหรือครู'}
               </Typography>
             </Box>
             <Box>
@@ -143,8 +163,36 @@ export function CreateUserDialog({ open, isStudentMode, onClose }: Props) {
                 {createMutation.error.message}
               </Alert>
             )}
+
             <Box
               sx={{
+                gap: 1.5,
+                p: 2,
+                display: 'flex',
+                borderRadius: 2,
+                alignItems: 'center',
+                bgcolor: 'background.neutral',
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Iconify
+                icon={isStudentMode ? 'solar:user-rounded-bold' : 'solar:users-group-rounded-bold'}
+                width={26}
+              />
+              <Box>
+                <Typography variant="subtitle2">
+                  ประเภทบัญชี: {isStudentMode ? 'นักเรียน' : 'ครู'}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  กำหนดให้อัตโนมัติตามหน้าที่กำลังจัดการ
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                mt: 2,
                 gap: 2.5,
                 display: 'grid',
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
@@ -161,9 +209,13 @@ export function CreateUserDialog({ open, isStudentMode, onClose }: Props) {
               <Box>
                 <Field.Text
                   name="password"
-                  label="รหัสผ่าน (ระบบสร้างให้)"
+                  label={isEdit ? 'รหัสผ่านใหม่ (ไม่บังคับ)' : 'รหัสผ่าน (ระบบสร้างให้)'}
                   type={showPassword ? 'text' : 'password'}
-                  helperText="ไม่บังคับ หากเว้นว่างระบบจะสร้างรหัสผ่านให้อัตโนมัติ — ผู้ใช้งานต้องเปลี่ยนรหัสผ่านนี้ตอนเข้าสู่ระบบครั้งแรก"
+                  helperText={
+                    isEdit
+                      ? 'เว้นว่างหากไม่ต้องการเปลี่ยนรหัสผ่าน'
+                      : 'ไม่บังคับ หากเว้นว่างระบบจะสร้างรหัสผ่านให้อัตโนมัติ — ผู้ใช้งานต้องเปลี่ยนรหัสผ่านนี้ตอนเข้าสู่ระบบครั้งแรก'
+                  }
                   slotProps={{
                     input: {
                       endAdornment: (
@@ -198,33 +250,6 @@ export function CreateUserDialog({ open, isStudentMode, onClose }: Props) {
                   สร้างรหัสผ่านใหม่
                 </Button>
               </Box>
-              <Box
-                sx={{
-                  gap: 1.5,
-                  p: 2,
-                  display: 'flex',
-                  borderRadius: 2,
-                  alignItems: 'center',
-                  bgcolor: 'background.neutral',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                <Iconify
-                  icon={
-                    isStudentMode ? 'solar:user-rounded-bold' : 'solar:users-group-rounded-bold'
-                  }
-                  width={26}
-                />
-                <Box>
-                  <Typography variant="subtitle2">
-                    ประเภทบัญชี: {isStudentMode ? 'นักเรียน' : 'ครู'}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    กำหนดให้อัตโนมัติตามหน้าที่กำลังจัดการ
-                  </Typography>
-                </Box>
-              </Box>
             </Box>
           </Stack>
         </DialogContent>
@@ -233,7 +258,7 @@ export function CreateUserDialog({ open, isStudentMode, onClose }: Props) {
             ยกเลิก
           </Button>
           <Button type="submit" variant="contained" loading={createMutation.isPending}>
-            {isStudentMode ? 'เพิ่มนักเรียน' : 'เพิ่มครู/บุคลากร'}
+            {isEdit ? 'บันทึกการแก้ไข' : isStudentMode ? 'เพิ่มนักเรียน' : 'เพิ่มครู/บุคลากร'}
           </Button>
         </DialogActions>
       </Form>

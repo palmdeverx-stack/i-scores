@@ -70,7 +70,10 @@ type Props = {
   classroomMode?: boolean;
 };
 
-export function EnrollmentListView({ initialClassroomId, classroomMode = false }: Props = {}) {
+export function EnrollmentManagementView({
+  initialClassroomId,
+  classroomMode = false,
+}: Props = {}) {
   const router = useRouter();
   const table = useTable({ defaultRowsPerPage: 10 });
   const [dialogOpen, setDialogOpen] = useState(false);

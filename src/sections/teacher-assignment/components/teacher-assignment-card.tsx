@@ -16,6 +16,7 @@ import CardActionArea from '@mui/material/CardActionArea';
 import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
+import { TruncatedTypography } from 'src/components/typography';
 
 // ----------------------------------------------------------------------
 
@@ -37,6 +38,7 @@ export function TeacherAssignmentCard({
   const teacherName =
     `${row.teacher.first_name ?? ''} ${row.teacher.last_name ?? ''}`.trim() || row.teacher.username;
   const teacherInitial = teacherName.charAt(0).toUpperCase();
+  console.log('row.teacher', row.teacher);
 
   return (
     <Card
@@ -112,7 +114,7 @@ export function TeacherAssignmentCard({
 
             <Chip
               size="small"
-              label={row.subject.code || 'ไม่ระบุรหัสวิชา'}
+              label={row.classroom.name}
               sx={{
                 top: 12,
                 left: 12,
@@ -125,15 +127,13 @@ export function TeacherAssignmentCard({
             />
           </Box>
 
-          <Box
-            sx={{ p: { xs: 2, sm: 2.5 }, flexGrow: 1, display: 'flex', flexDirection: 'column' }}
-          >
-            <Box sx={{ mb: 2.25, minWidth: 0 }}>
-              <Typography variant="h6" sx={{ lineHeight: 1.35, minHeight: { sm: 52 } }}>
-                {row.subject.name}
-              </Typography>
+          <Box sx={{ p: { xs: 2, sm: 2 }, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ mb: 1, minWidth: 0 }}>
+              <TruncatedTypography variant="h6">
+                {row.subject.code || '-'} | {row.subject.name}
+              </TruncatedTypography>
               {showTeacherName && (
-                <Box sx={{ gap: 1, mt: 1.25, display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ gap: 1, mt: 1, display: 'flex', alignItems: 'center' }}>
                   <Avatar
                     sx={{
                       width: 28,
@@ -160,27 +160,11 @@ export function TeacherAssignmentCard({
               )}
             </Box>
 
-            <Box
-              sx={{
-                gap: 1,
-                mb: 2.25,
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-              }}
-            >
-              <InfoBox
-                icon="solar:users-group-rounded-bold"
-                label="ห้องเรียน"
-                value={row.classroom.name}
-              />
-              <InfoBox icon="solar:calendar-date-bold" label="ภาคเรียน" value={row.semester.name} />
-            </Box>
-
             <Divider sx={{ mt: 'auto', borderStyle: 'dashed' }} />
             <Box
               sx={{
                 gap: 1,
-                pt: 1.75,
+                pt: 1,
                 display: 'flex',
                 color: 'primary.main',
                 alignItems: 'center',

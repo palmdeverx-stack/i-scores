@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   let query = supabaseAdmin
     .from('app_users')
     .select(
-      'id, username, email, first_name, last_name, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, password_ciphertext'
+      'id, username, email, first_name, last_name, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, student_code, national_id, name_prefix, first_name_en, last_name_en, nickname, gender, birth_date, nationality, ethnicity, religion, is_active, password_ciphertext'
     )
     .order('created_at', { ascending: false });
 
@@ -65,10 +65,55 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { username, email, password: providedPassword, firstName, lastName, role, schoolId } = body;
+  const {
+    username,
+    email,
+    password: providedPassword,
+    firstName,
+    lastName,
+    role,
+    schoolId,
+    studentCode,
+    nationalId,
+    namePrefix,
+    firstNameEn,
+    lastNameEn,
+    nickname,
+    gender,
+    birthDate,
+    nationality,
+    ethnicity,
+    religion,
+  } = body;
 
   if (!username || !firstName || !lastName || !role) {
     return NextResponse.json({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, { status: 400 });
+  }
+
+  if (role === 'student' && !studentCode?.trim()) {
+    return NextResponse.json({ message: 'กรุณากรอกรหัสนักเรียน' }, { status: 400 });
+  }
+  if (role === 'student' && nationalId?.trim() && !/^\d{13}$/.test(nationalId.trim())) {
+    return NextResponse.json(
+      { message: 'เลขประจำตัวประชาชนต้องเป็นตัวเลข 13 หลัก' },
+      { status: 400 }
+    );
+  }
+  if (
+    role === 'student' &&
+    gender &&
+    !['male', 'female', 'other', 'unspecified'].includes(gender)
+  ) {
+    return NextResponse.json({ message: 'ข้อมูลเพศไม่ถูกต้อง' }, { status: 400 });
+  }
+  if (role === 'student' && birthDate && Number.isNaN(Date.parse(birthDate))) {
+    return NextResponse.json({ message: 'วันเดือนปีเกิดไม่ถูกต้อง' }, { status: 400 });
+  }
+  if (role === 'student' && birthDate && new Date(birthDate).getTime() > Date.now()) {
+    return NextResponse.json(
+      { message: 'วันเดือนปีเกิดต้องไม่เป็นวันที่ในอนาคต' },
+      { status: 400 }
+    );
   }
 
   // Teacher/student passwords are auto-generated: the account holder must
@@ -109,6 +154,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ชื่อผู้ใช้งานนี้ถูกใช้แล้ว' }, { status: 409 });
   }
 
+  if (role === 'student') {
+    const [{ data: duplicateStudentCode }, { data: duplicateNationalId }] = await Promise.all([
+      supabaseAdmin
+        .from('app_users')
+        .select('id')
+        .eq('school_id', targetSchoolId)
+        .ilike('student_code', studentCode.trim())
+        .maybeSingle(),
+      nationalId?.trim()
+        ? supabaseAdmin
+            .from('app_users')
+            .select('id')
+            .eq('national_id', nationalId.trim())
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    if (duplicateStudentCode) {
+      return NextResponse.json({ message: 'รหัสนักเรียนนี้ถูกใช้แล้ว' }, { status: 409 });
+    }
+    if (duplicateNationalId) {
+      return NextResponse.json({ message: 'เลขประจำตัวประชาชนนี้ถูกใช้แล้ว' }, { status: 409 });
+    }
+  }
+
   const password = providedPassword || generatePassword();
   const passwordHash = await bcrypt.hash(password, 10);
 
@@ -125,9 +195,21 @@ export async function POST(request: Request) {
       role,
       school_id: targetSchoolId,
       student_status: role === 'student' ? 'studying' : null,
+      student_code: role === 'student' ? studentCode.trim() : null,
+      national_id: role === 'student' ? nationalId?.trim() || null : null,
+      name_prefix: role === 'student' ? namePrefix?.trim() || null : null,
+      first_name_en: role === 'student' ? firstNameEn?.trim() || null : null,
+      last_name_en: role === 'student' ? lastNameEn?.trim() || null : null,
+      nickname: role === 'student' ? nickname?.trim() || null : null,
+      gender: role === 'student' ? gender || null : null,
+      birth_date: role === 'student' ? birthDate || null : null,
+      nationality: role === 'student' ? nationality?.trim() || null : null,
+      ethnicity: role === 'student' ? ethnicity?.trim() || null : null,
+      religion: role === 'student' ? religion?.trim() || null : null,
+      is_active: true,
     })
     .select(
-      'id, username, email, first_name, last_name, role, school_id, created_at, must_change_password, student_status'
+      'id, username, email, first_name, last_name, avatar_url, role, school_id, created_at, must_change_password, student_status, student_code, national_id, name_prefix, first_name_en, last_name_en, nickname, gender, birth_date, nationality, ethnicity, religion, is_active'
     )
     .single();
 

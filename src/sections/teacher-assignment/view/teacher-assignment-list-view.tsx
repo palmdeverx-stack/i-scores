@@ -301,10 +301,10 @@ export function TeacherAssignmentListView() {
         >
           <TextField
             select
-            label="ห้องเรียน"
+            label="ระดับชั้น"
             value={classroomFilter}
             onChange={(event) => setClassroomFilter(event.target.value)}
-            sx={{ width: { xs: 1, sm: 190 } }}
+            sx={{ width: { xs: 1, sm: 280 } }}
             slotProps={{
               input: {
                 startAdornment: (
@@ -315,10 +315,10 @@ export function TeacherAssignmentListView() {
               },
             }}
           >
-            <MenuItem value="">ทุกห้องเรียน</MenuItem>
+            <MenuItem value="">ทุกระดับชั้น</MenuItem>
             {classroomOptions.map((classroom) => (
               <MenuItem key={classroom.id} value={classroom.id}>
-                ห้อง {classroom.name}
+                {classroom.name}
               </MenuItem>
             ))}
           </TextField>

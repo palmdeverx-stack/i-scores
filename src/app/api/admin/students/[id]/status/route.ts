@@ -39,11 +39,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const { data: updated, error } = await supabaseAdmin
     .from('app_users')
-    .update({ student_status: status })
+    .update({
+      student_status: status,
+      is_active: status === 'studying',
+    })
     .eq('id', id)
     .eq('school_id', caller.schoolId)
     .eq('role', 'student')
-    .select('id, student_status')
+    .select('id, student_status, is_active')
     .single();
 
   if (error) {

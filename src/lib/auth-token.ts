@@ -56,6 +56,7 @@ type AppUserRow = {
   avatar_url?: string | null;
   created_at: string;
   must_change_password?: boolean;
+  is_active?: boolean;
 };
 
 export function toPublicUser(user: AppUserRow) {
@@ -71,5 +72,6 @@ export function toPublicUser(user: AppUserRow) {
     photoURL: user.avatar_url ?? null,
     created_at: user.created_at,
     must_change_password: user.must_change_password ?? false,
+    is_active: user.is_active ?? true,
   };
 }

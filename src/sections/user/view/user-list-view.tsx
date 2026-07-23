@@ -3,13 +3,15 @@
 import type { UserRow } from '../user-actions';
 
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import Switch from '@mui/material/Switch';
 import Tooltip from '@mui/material/Tooltip';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
@@ -19,6 +21,9 @@ import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
 import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 
@@ -26,7 +31,7 @@ import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
-import { listUsers } from '../user-actions';
+import { listUsers, updateUserActive, deleteManagedUser } from '../user-actions';
 import { CreateUserDialog } from '../components/create-user-dialog';
 
 // ----------------------------------------------------------------------
@@ -54,6 +59,9 @@ export function UserListView() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserRow | null>(null);
+  const queryClient = useQueryClient();
 
   const {
     data: users = [],
@@ -63,6 +71,20 @@ export function UserListView() {
   } = useQuery({
     queryKey: ['users', 'staff'],
     queryFn: () => listUsers(),
+  });
+
+  const activeMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      updateUserActive(id, isActive),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteManagedUser,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      setDeletingUser(null);
+    },
   });
 
   const staffUsers = useMemo(() => users.filter((user) => user.role !== 'student'), [users]);
@@ -136,6 +158,11 @@ export function UserListView() {
           ไม่สามารถโหลดรายการผู้ใช้งานได้
         </Alert>
       )}
+      {activeMutation.error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {activeMutation.error.message}
+        </Alert>
+      )}
 
       <Card variant="outlined">
         <Box
@@ -182,7 +209,7 @@ export function UserListView() {
         </Box>
 
         <TableContainer>
-          <Table>
+          <Table sx={{ minWidth: 980 }}>
             <TableHead>
               <TableRow>
                 <TableCell>ชื่อผู้ใช้งาน</TableCell>
@@ -190,18 +217,20 @@ export function UserListView() {
                 <TableCell>อีเมล</TableCell>
                 <TableCell>รหัสผ่าน</TableCell>
                 <TableCell>บทบาท</TableCell>
+                <TableCell align="center">เข้าใช้งาน</TableCell>
+                <TableCell align="right">การจัดการ</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={5}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={7}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!isLoading && !filteredUsers.length && (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={7}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
                     ไม่พบผู้ใช้งาน
@@ -263,6 +292,49 @@ export function UserListView() {
                       {ROLE_LABEL[user.role]}
                     </Label>
                   </TableCell>
+                  <TableCell align="center">
+                    <Tooltip
+                      title={user.is_active === false ? 'เปิดใช้งานบัญชี' : 'ปิดใช้งานบัญชี'}
+                    >
+                      <Switch
+                        size="small"
+                        checked={user.is_active !== false}
+                        disabled={
+                          activeMutation.isPending && activeMutation.variables?.id === user.id
+                        }
+                        onChange={(event) =>
+                          activeMutation.mutate({ id: user.id, isActive: event.target.checked })
+                        }
+                        inputProps={{ 'aria-label': `สถานะบัญชี ${user.username}` }}
+                      />
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <Tooltip title="แก้ไขบัญชี">
+                        <IconButton
+                          size="small"
+                          onClick={() => setEditingUser(user)}
+                          aria-label={`แก้ไข ${user.username}`}
+                        >
+                          <Iconify icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="ลบบัญชี">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => {
+                            deleteMutation.reset();
+                            setDeletingUser(user);
+                          }}
+                          aria-label={`ลบ ${user.username}`}
+                        >
+                          <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -293,6 +365,50 @@ export function UserListView() {
         isStudentMode={false}
         onClose={() => setDialogOpen(false)}
       />
+      <CreateUserDialog
+        open={!!editingUser}
+        isStudentMode={false}
+        user={editingUser}
+        onClose={() => setEditingUser(null)}
+      />
+
+      <Dialog
+        open={!!deletingUser}
+        onClose={() => !deleteMutation.isPending && setDeletingUser(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>ยืนยันการลบบัญชี</DialogTitle>
+        <DialogContent>
+          {deleteMutation.error ? (
+            <Alert severity="error">{deleteMutation.error.message}</Alert>
+          ) : (
+            <>
+              <Typography>ต้องการลบบัญชี “{deletingUser?.username}” ใช่หรือไม่?</Typography>
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                ข้อมูลการสอนที่เชื่อมโยงอาจถูกลบตาม การดำเนินการนี้ย้อนกลับไม่ได้
+              </Alert>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="inherit"
+            onClick={() => setDeletingUser(null)}
+            disabled={deleteMutation.isPending}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            loading={deleteMutation.isPending}
+            onClick={() => deletingUser && deleteMutation.mutate(deletingUser.id)}
+          >
+            ลบบัญชี
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

@@ -15,19 +15,24 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const classroomId = searchParams.get('classroomId');
   const studentId = searchParams.get('studentId');
+  const academicYearId = searchParams.get('academicYearId');
 
   let query = supabaseAdmin
     .from('enrollments')
     .select(
-      `id, student_number, created_at,
-       student:app_users(id, username, first_name, last_name),
+      `id, student_id, classroom_id, student_number, created_at,
+       student:app_users(id, username, first_name, last_name, student_status, is_active),
        classroom:classrooms!inner(id, name, school_id, academic_year_id, academic_years(year))`
     )
     .eq('classroom.school_id', caller.schoolId)
-    .order('created_at', { ascending: false });
+    .order(classroomId ? 'student_number' : 'created_at', {
+      ascending: !!classroomId,
+      nullsFirst: false,
+    });
 
   if (classroomId) query = query.eq('classroom_id', classroomId);
   if (studentId) query = query.eq('student_id', studentId);
+  if (academicYearId) query = query.eq('classroom.academic_year_id', academicYearId);
 
   const { data, error } = await query;
 
@@ -35,7 +40,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ enrollments: data });
+  const enrollments = data ?? [];
+
+  return NextResponse.json({
+    enrollments,
+    summary: {
+      enrollments: enrollments.length,
+      students: new Set(enrollments.map((row) => row.student_id)).size,
+      classrooms: new Set(enrollments.map((row) => row.classroom_id)).size,
+    },
+    filters: {
+      classroomId,
+      studentId,
+      academicYearId,
+    },
+  });
 }
 
 export async function POST(request: Request) {
@@ -45,20 +64,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { studentId, classroomId, studentNumber } = await request.json();
+  const {
+    studentId,
+    studentIds: requestedStudentIds,
+    classroomId,
+    studentNumber,
+  } = await request.json();
+  const studentIds = Array.from(
+    new Set(
+      (Array.isArray(requestedStudentIds) ? requestedStudentIds : [studentId]).filter(
+        (id): id is string => typeof id === 'string' && !!id
+      )
+    )
+  );
 
-  if (!studentId || !classroomId) {
+  if (!studentIds.length || !classroomId) {
     return NextResponse.json({ message: 'กรุณาเลือกนักเรียนและห้องเรียน' }, { status: 400 });
   }
+  if (studentIds.length > 200) {
+    return NextResponse.json({ message: 'เพิ่มนักเรียนได้สูงสุดครั้งละ 200 คน' }, { status: 400 });
+  }
 
-  const [{ data: student }, { data: classroom }] = await Promise.all([
+  const [{ data: students }, { data: classroom }] = await Promise.all([
     supabaseAdmin
       .from('app_users')
-      .select('id')
-      .eq('id', studentId)
+      .select('id, is_active, student_status')
+      .in('id', studentIds)
       .eq('role', 'student')
       .eq('school_id', caller.schoolId)
-      .maybeSingle(),
+      .eq('is_active', true)
+      .eq('student_status', 'studying'),
     supabaseAdmin
       .from('classrooms')
       .select('id, academic_year_id')
@@ -67,61 +102,61 @@ export async function POST(request: Request) {
       .maybeSingle(),
   ]);
 
-  if (!student || !classroom) {
-    return NextResponse.json(
-      { message: 'ไม่พบนักเรียนหรือห้องเรียนนี้ในโรงเรียนของคุณ' },
-      { status: 404 }
-    );
-  }
-
-  const { data: existingEnrollment } = await supabaseAdmin
-    .from('enrollments')
-    .select('classroom_id, classroom:classrooms(name)')
-    .eq('student_id', studentId)
-    .eq('academic_year_id', classroom.academic_year_id)
-    .maybeSingle();
-
-  if (existingEnrollment) {
-    if (existingEnrollment.classroom_id === classroomId) {
-      return NextResponse.json(
-        { message: 'นักเรียนคนนี้อยู่ในห้องนี้อยู่แล้ว' },
-        { status: 409 }
-      );
-    }
-
-    const existingClassroomName = (existingEnrollment.classroom as any)?.name ?? 'ห้องอื่น';
-
+  if (students?.length !== studentIds.length || !classroom) {
     return NextResponse.json(
       {
-        message: `นักเรียนคนนี้อยู่ห้อง "${existingClassroomName}" แล้วในปีการศึกษานี้ นักเรียน 1 คนอยู่ได้เพียง 1 ห้องเรียนต่อปีการศึกษา`,
+        message: 'ไม่พบนักเรียนหรือห้องเรียน หรือมีนักเรียนที่สถานะไม่สามารถลงทะเบียนเรียนได้',
       },
       { status: 409 }
     );
   }
 
-  const { data: enrollment, error } = await supabaseAdmin
+  const { data: existingEnrollments } = await supabaseAdmin
     .from('enrollments')
-    .insert({
-      student_id: studentId,
-      classroom_id: classroomId,
-      student_number: studentNumber || null,
-    })
-    .select('id, student_id, classroom_id, student_number, created_at')
-    .single();
+    .select('student_id')
+    .in('student_id', studentIds)
+    .eq('academic_year_id', classroom.academic_year_id);
 
-  if (error || !enrollment) {
+  if (existingEnrollments?.length) {
+    return NextResponse.json(
+      {
+        message: `มีนักเรียน ${existingEnrollments.length} คนที่มีห้องเรียนในปีการศึกษานี้แล้ว กรุณาเลือกใหม่`,
+      },
+      { status: 409 }
+    );
+  }
+
+  const { data: enrollments, error } = await supabaseAdmin
+    .from('enrollments')
+    .insert(
+      studentIds.map((id) => ({
+        student_id: id,
+        classroom_id: classroomId,
+        student_number: studentIds.length === 1 ? studentNumber || null : null,
+      }))
+    )
+    .select('id, student_id, classroom_id, student_number, created_at');
+
+  if (error || !enrollments) {
     if (error?.code === '23505') {
       return NextResponse.json(
-        { message: 'นักเรียนคนนี้อยู่ในห้องเรียนอื่นแล้วในปีการศึกษานี้' },
+        { message: 'มีนักเรียนบางคนอยู่ในห้องเรียนอื่นแล้วในปีการศึกษานี้' },
         { status: 409 }
       );
     }
 
     return NextResponse.json(
-      { message: error?.message ?? 'Failed to create enrollment' },
+      { message: error?.message ?? 'Failed to create enrollments' },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ enrollment }, { status: 201 });
+  return NextResponse.json(
+    {
+      enrollment: enrollments[0],
+      enrollments,
+      createdCount: enrollments.length,
+    },
+    { status: 201 }
+  );
 }
