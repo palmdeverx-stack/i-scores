@@ -1,3 +1,5 @@
+'use client';
+
 import type { Breakpoint } from '@mui/material/styles';
 
 import { varAlpha } from 'minimal-shared/utils';
@@ -13,6 +15,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { CONFIG } from 'src/global-config';
+import { useTranslate } from 'src/locales';
 
 import { Logo } from 'src/components/logo';
 import {
@@ -99,6 +102,8 @@ export function HomeFooter({ sx, ...other }: FooterProps) {
 }
 
 function BrandSummary() {
+  const { t } = useTranslate();
+
   return (
     <Box sx={{ maxWidth: 390 }}>
       <Box
@@ -115,22 +120,25 @@ function BrandSummary() {
             Class Go
           </Typography>
           <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
-            เรียนรู้ เติบโต ไปด้วยกัน
+            {t('brand.tagline')}
           </Typography>
         </Box>
       </Box>
       <Typography variant="body2" sx={{ mt: 1.75, color: 'text.secondary', lineHeight: 1.75 }}>
-        พื้นที่กลางสำหรับติดตามวิชาเรียน งาน คะแนน ตารางเรียน และข่าวสารสำคัญจากโรงเรียน
+        {t('brand.description')}
       </Typography>
     </Box>
   );
 }
 
 function QuickLinks({ layoutQuery }: { layoutQuery: Breakpoint }) {
+  const { t } = useTranslate('navbar');
+  const { t: tCommon } = useTranslate();
+
   return (
-    <Box component="nav" aria-label="ทางลัดส่วนท้ายเว็บไซต์">
+    <Box component="nav" aria-label={tCommon('navigation.footerLinks')}>
       <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: 0.8 }}>
-        ทางลัด
+        {t('ทางลัด')}
       </Typography>
       <Box
         sx={(theme) => ({
@@ -167,7 +175,7 @@ function QuickLinks({ layoutQuery }: { layoutQuery: Breakpoint }) {
             })}
           >
             {item.icon}
-            {item.label}
+            {t(item.label, { defaultValue: item.label })}
           </Link>
         ))}
       </Box>
@@ -176,6 +184,7 @@ function QuickLinks({ layoutQuery }: { layoutQuery: Breakpoint }) {
 }
 
 function FooterBottom() {
+  const { t } = useTranslate();
   const year = new Date().getFullYear();
 
   return (
@@ -191,9 +200,11 @@ function FooterBottom() {
           justifyContent: 'space-between',
         }}
       >
-        <Typography variant="caption">© {year} Class Go สงวนลิขสิทธิ์</Typography>
         <Typography variant="caption">
-          เวอร์ชัน {CONFIG.appVersion} · รองรับภาษาไทยและ English
+          © {year} Class Go {t('brand.copyright')}
+        </Typography>
+        <Typography variant="caption">
+          {t('brand.version')} {CONFIG.appVersion} · {t('brand.languages')}
         </Typography>
       </Box>
     </>

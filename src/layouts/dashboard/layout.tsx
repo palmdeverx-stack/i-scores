@@ -12,7 +12,7 @@ import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
 import { iconButtonClasses } from '@mui/material/IconButton';
 
-import { allLangs } from 'src/locales';
+import { languageOptions, useTranslatedNavSections } from 'src/locales';
 
 import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
@@ -68,7 +68,8 @@ export function DashboardLayout({
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
-  const navData = slotProps?.nav?.data ?? dashboardNavData;
+  const rawNavData = slotProps?.nav?.data ?? dashboardNavData;
+  const navData = useTranslatedNavSections(rawNavData);
   const headerIdentity = slotProps?.nav?.headerIdentity;
 
   const isNavMini = settings.state.navLayout === 'mini';
@@ -173,7 +174,7 @@ export function DashboardLayout({
           {/* <Searchbar data={navData} /> */}
 
           {/** @slot Language popover */}
-          <LanguagePopover data={allLangs} />
+          <LanguagePopover data={languageOptions} />
 
           {/** @slot Notifications popover */}
           {/* <NotificationsDrawer data={_notifications} /> */}

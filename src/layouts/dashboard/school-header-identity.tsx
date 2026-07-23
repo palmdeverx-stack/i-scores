@@ -10,6 +10,8 @@ import Typography from '@mui/material/Typography';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
+import { useTranslate } from 'src/locales';
+
 import { getSchool } from 'src/sections/school/school-actions';
 
 import { useAuthContext } from 'src/auth/hooks';
@@ -17,6 +19,7 @@ import { useAuthContext } from 'src/auth/hooks';
 // ----------------------------------------------------------------------
 
 export function SchoolHeaderIdentity() {
+  const { t } = useTranslate();
   const { user } = useAuthContext();
   const schoolId = typeof user?.school_id === 'string' ? user.school_id : '';
   const { data: school, isLoading } = useQuery({
@@ -34,7 +37,7 @@ export function SchoolHeaderIdentity() {
     );
   }
 
-  const schoolName = school?.name ?? 'โรงเรียนของฉัน';
+  const schoolName = school?.name ?? t('school.mySchool');
 
   return (
     <Link

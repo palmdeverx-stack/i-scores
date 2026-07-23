@@ -7,11 +7,14 @@ import Button from '@mui/material/Button';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
+import { useTranslate } from 'src/locales';
+
 import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
 export function SignInButton({ sx, ...other }: ButtonProps) {
+  const { t } = useTranslate();
   const { authenticated, loading } = useAuthContext();
 
   if (loading || authenticated) {
@@ -26,7 +29,7 @@ export function SignInButton({ sx, ...other }: ButtonProps) {
       sx={sx}
       {...other}
     >
-      Sign in
+      {t('actions.signIn')}
     </Button>
   );
 }

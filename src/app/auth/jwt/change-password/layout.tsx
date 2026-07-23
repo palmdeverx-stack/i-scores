@@ -1,4 +1,6 @@
+import { languageOptions } from 'src/locales';
 import { AuthSplitLayout } from 'src/layouts/auth-split';
+import { LanguagePopover } from 'src/layouts/components/language-popover';
 
 import { AuthGuard } from 'src/auth/guard';
 
@@ -22,7 +24,19 @@ export default function Layout({ children }: Props) {
         }}
         slotProps={{
           header: {
-            slots: { rightArea: null },
+            slots: {
+              rightArea: (
+                <LanguagePopover
+                  showTranslateIcon
+                  data={languageOptions}
+                  sx={{
+                    color: 'common.white',
+                    bgcolor: 'rgba(255, 255, 255, 0.12)',
+                    '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.22)' },
+                  }}
+                />
+              ),
+            },
             sx: { color: 'common.white' },
           },
           content: {

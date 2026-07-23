@@ -9,9 +9,12 @@ import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import { useTranslate } from 'src/locales';
+
 // ----------------------------------------------------------------------
 
 export function StudentBottomNav({ data }: NavMainProps) {
+  const { t } = useTranslate();
   const pathname = usePathname();
   const currentPath = [...data]
     .sort((a, b) => b.path.length - a.path.length)
@@ -24,7 +27,7 @@ export function StudentBottomNav({ data }: NavMainProps) {
   return (
     <Paper
       component="nav"
-      aria-label="เมนูหลักนักเรียน"
+      aria-label={t('navigation.studentMenu')}
       elevation={12}
       sx={{
         left: 0,

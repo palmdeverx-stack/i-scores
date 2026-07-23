@@ -14,12 +14,14 @@ import IconButton from '@mui/material/IconButton';
 import { useTranslate } from 'src/locales';
 
 import { FlagIcon } from 'src/components/flag-icon';
+import { RiTranslate2 } from 'src/components/remix-icon';
 import { CustomPopover } from 'src/components/custom-popover';
 import { varTap, varHover, transitionTap } from 'src/components/animate';
 
 // ----------------------------------------------------------------------
 
 export type LanguagePopoverProps = IconButtonProps & {
+  showTranslateIcon?: boolean;
   data?: {
     value: string;
     label: string;
@@ -27,10 +29,15 @@ export type LanguagePopoverProps = IconButtonProps & {
   }[];
 };
 
-export function LanguagePopover({ data = [], sx, ...other }: LanguagePopoverProps) {
+export function LanguagePopover({
+  data = [],
+  sx,
+  showTranslateIcon = false,
+  ...other
+}: LanguagePopoverProps) {
   const { open, anchorEl, onClose, onOpen } = usePopover();
 
-  const { onChangeLang, currentLang } = useTranslate();
+  const { t, onChangeLang, currentLang } = useTranslate();
 
   const handleChangeLang = useCallback(
     (lang: LangCode) => {
@@ -64,7 +71,7 @@ export function LanguagePopover({ data = [], sx, ...other }: LanguagePopoverProp
         whileTap={varTap(0.96)}
         whileHover={varHover(1.04)}
         transition={transitionTap()}
-        aria-label="Languages button"
+        aria-label={t('language.select', { defaultValue: 'เลือกภาษา' })}
         onClick={onOpen}
         sx={[
           (theme) => ({
@@ -77,7 +84,11 @@ export function LanguagePopover({ data = [], sx, ...other }: LanguagePopoverProp
         ]}
         {...other}
       >
-        <FlagIcon code={currentLang.countryCode} />
+        {showTranslateIcon ? (
+          <RiTranslate2 aria-hidden="true" size={22} />
+        ) : (
+          <FlagIcon code={currentLang.countryCode} />
+        )}
       </IconButton>
 
       {renderMenuList()}

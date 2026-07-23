@@ -11,6 +11,8 @@ import Skeleton from '@mui/material/Skeleton';
 import { styled } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 
+import { useTranslate } from 'src/locales';
+
 import { Logo } from 'src/components/logo';
 import { Scrollbar } from 'src/components/scrollbar';
 import { TruncatedTypography } from 'src/components/truncated-typography';
@@ -171,6 +173,8 @@ export function NavVertical({
 // ----------------------------------------------------------------------
 
 function ProductIdentity() {
+  const { t } = useTranslate();
+
   return (
     <Box display="flex" alignItems="center" sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
       <Logo />
@@ -179,7 +183,7 @@ function ProductIdentity() {
           Class GO
         </TruncatedTypography>
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          ระบบบันทึกคะแนน
+          {t('brand.scoreSystem')}
         </Typography>
       </Stack>
     </Box>
@@ -199,15 +203,17 @@ function SchoolIdentitySkeleton() {
 }
 
 function SchoolIdentityFallback() {
+  const { t } = useTranslate();
+
   return (
     <Box display="flex" alignItems="center" sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
       <Avatar variant="rounded" sx={{ width: 50, height: 50, color: 'primary.main' }}>
         ร
       </Avatar>
       <Stack ml={2} sx={{ minWidth: 0 }}>
-        <Typography variant="subtitle1">ข้อมูลโรงเรียน</Typography>
+        <Typography variant="subtitle1">{t('school.information')}</Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          ไม่สามารถโหลดข้อมูลได้
+          {t('errors.loadData')}
         </Typography>
       </Stack>
     </Box>

@@ -3,12 +3,12 @@ import type { Theme, Components } from '@mui/material/styles';
 
 import resourcesToBackend from 'i18next-resources-to-backend';
 
-// MUI Core Locales
-import { thTH as thTHCore } from '@mui/material/locale';
 // MUI Date Pickers Locales
 import { enUS as enUSDate } from '@mui/x-date-pickers/locales';
 // MUI Data Grid Locales
 import { enUS as enUSDataGrid } from '@mui/x-data-grid/locales';
+// MUI Core Locales
+import { enUS as enUSCore, thTH as thTHCore } from '@mui/material/locale';
 
 // ----------------------------------------------------------------------
 
@@ -51,7 +51,9 @@ export const allLangs: LangOption[] = [
     adapterLocale: 'th',
     numberFormat: { code: 'th-TH', currency: 'THB' },
     systemValue: {
-      components: { ...thTHCore.components },
+      components: {
+        ...thTHCore.components,
+      },
     },
   },
   {
@@ -61,10 +63,20 @@ export const allLangs: LangOption[] = [
     adapterLocale: 'en',
     numberFormat: { code: 'en-US', currency: 'USD' },
     systemValue: {
-      components: { ...enUSDate.components, ...enUSDataGrid.components },
+      components: {
+        ...enUSCore.components,
+        ...enUSDate.components,
+        ...enUSDataGrid.components,
+      },
     },
   },
 ];
+
+export const languageOptions = allLangs.map(({ value, label, countryCode }) => ({
+  value,
+  label,
+  countryCode,
+}));
 
 // ----------------------------------------------------------------------
 

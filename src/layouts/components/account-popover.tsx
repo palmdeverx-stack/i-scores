@@ -13,6 +13,8 @@ import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import { useTranslate } from 'src/locales';
+
 import { Label } from 'src/components/label';
 import { CustomPopover } from 'src/components/custom-popover';
 import { RiTeamLine, RiUser3Line } from 'src/components/remix-icon';
@@ -35,6 +37,7 @@ export type AccountPopoverProps = IconButtonProps & {
 
 export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps) {
   const pathname = usePathname();
+  const { t } = useTranslate('navbar');
 
   const { open, anchorEl, onClose, onOpen } = usePopover();
 
@@ -83,7 +86,7 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
 
       <MenuList sx={{ p: 1, my: 1, '& li': { p: 0 } }}>
         {menuData.map((option) => {
-          const rootLabel = pathname.includes('/admin') ? 'Home' : 'Dashboard';
+          const rootLabel = pathname.includes('/admin') ? t('Home') : t('Dashboard');
           const rootHref = pathname.includes('/admin') ? '/' : paths.admin.root;
 
           return (
@@ -109,7 +112,9 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
                 {option.icon}
 
                 <Box component="span" sx={{ ml: 2 }}>
-                  {option.label === 'Home' ? rootLabel : option.label}
+                  {option.label === 'Home'
+                    ? rootLabel
+                    : t(option.label, { defaultValue: option.label })}
                 </Box>
 
                 {option.info && (

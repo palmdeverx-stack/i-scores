@@ -18,6 +18,8 @@ import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import { useTranslate } from 'src/locales';
+
 import { Label } from 'src/components/label';
 import { Scrollbar } from 'src/components/scrollbar';
 import {
@@ -59,13 +61,15 @@ const ROOT_PATHS = [paths.master.root, paths.admin.root, paths.teacher.root, pat
 
 export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
   const pathname = usePathname();
+  const { t } = useTranslate('navbar');
   const { user } = useAuthContext();
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
   const isAdmin = user?.role === 'school_admin' || user?.role === 'master_admin';
   const avatarUrl = user?.avatar_url ?? user?.photoURL;
   const displayName = user?.displayName || user?.username || 'ผู้ใช้งาน';
-  const roleLabel = ROLE_LABEL[user?.role] ?? 'ผู้ใช้งาน';
+  const rawRoleLabel = ROLE_LABEL[user?.role] ?? 'ผู้ใช้งาน';
+  const roleLabel = t(rawRoleLabel, { defaultValue: rawRoleLabel });
 
   const adminMenu: NonNullable<AccountDrawerProps['data']> =
     user?.role === 'master_admin'
@@ -185,7 +189,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
           >
             <IconButton
               onClick={onClose}
-              aria-label="ปิดเมนูบัญชี"
+              aria-label={t('ปิดเมนูบัญชี', { defaultValue: 'ปิดเมนูบัญชี' })}
               sx={{
                 top: 10,
                 right: 10,
@@ -266,7 +270,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
               >
                 <RiShieldCheckLine size={20} />
                 <Typography variant="caption" sx={{ opacity: 0.84 }}>
-                  คุณกำลังใช้งานพื้นที่จัดการระบบของโรงเรียน
+                  {t('คุณกำลังใช้งานพื้นที่จัดการระบบของโรงเรียน')}
                 </Typography>
               </Box>
             )}
@@ -277,7 +281,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
               variant="overline"
               sx={{ px: 1.5, mb: 1, display: 'block', color: 'text.disabled' }}
             >
-              {isAdmin ? 'เมนูผู้ดูแล' : 'เมนูบัญชี'}
+              {isAdmin ? t('เมนูผู้ดูแล') : t('เมนูบัญชี')}
             </Typography>
             <MenuList disablePadding sx={{ gap: 0.5, display: 'grid' }}>
               {menuData.map((option) => {
@@ -317,7 +321,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
                     >
                       {option.icon}
                       <Box component="span" sx={{ minWidth: 0, flexGrow: 1 }}>
-                        {option.label}
+                        {t(option.label, { defaultValue: option.label })}
                       </Box>
                       {option.info && <Label color="error">{option.info}</Label>}
                       <RiArrowRightSLine

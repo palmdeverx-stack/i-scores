@@ -12,6 +12,8 @@ import Alert from '@mui/material/Alert';
 
 import { usePathname } from 'src/routes/hooks';
 
+import { languageOptions, useTranslatedMainNav } from 'src/locales';
+
 import { Logo } from 'src/components/logo';
 
 import { NavMobile } from './nav/mobile';
@@ -21,6 +23,7 @@ import { MenuButton } from '../components/menu-button';
 import { navData as mainNavData } from '../nav-config-main';
 import { SignInButton } from '../components/sign-in-button';
 import { AccountPopover } from '../components/account-popover';
+import { LanguagePopover } from '../components/language-popover';
 import { StudentBottomNav } from './nav/mobile/student-bottom-nav';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
 
@@ -54,7 +57,8 @@ export function MainLayout({
 
   const isHomePage = pathname === '/';
 
-  const navData = slotProps?.nav?.data ?? mainNavData;
+  const rawNavData = slotProps?.nav?.data ?? mainNavData;
+  const navData = useTranslatedMainNav(rawNavData);
   const mobileBottom = slotProps?.nav?.mobileBottom ?? false;
 
   const renderHeader = () => {
@@ -97,6 +101,8 @@ export function MainLayout({
           />
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+            <LanguagePopover data={languageOptions} />
+
             {/** @slot Settings button */}
             {/* <SettingsButton /> */}
 

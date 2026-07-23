@@ -14,11 +14,13 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { CONFIG } from 'src/global-config';
+import { useTranslate, languageOptions } from 'src/locales';
 
 import { Logo } from 'src/components/logo';
 
 import { AuthCenteredContent } from './content';
 import { SettingsButton } from '../components/settings-button';
+import { LanguagePopover } from '../components/language-popover';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
 
 // ----------------------------------------------------------------------
@@ -41,6 +43,8 @@ export function AuthCenteredLayout({
   slotProps,
   layoutQuery = 'md',
 }: AuthCenteredLayoutProps) {
+  const { t } = useTranslate();
+
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = { container: { maxWidth: false } };
 
@@ -65,8 +69,10 @@ export function AuthCenteredLayout({
             color="inherit"
             sx={{ typography: 'subtitle2' }}
           >
-            Need help?
+            {t('actions.needHelp')}
           </Link>
+
+          <LanguagePopover showTranslateIcon data={languageOptions} />
 
           {/** @slot Settings button */}
           <SettingsButton />

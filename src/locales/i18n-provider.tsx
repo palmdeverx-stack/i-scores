@@ -28,8 +28,8 @@ if (CONFIG.isStaticExport) {
  * Initialize i18next
  */
 const initOptions: InitOptions = CONFIG.isStaticExport
-  ? { ...i18nOptions(i18nextLng), detection: { caches: ['localStorage'] } }
-  : { ...i18nOptions(), detection: { caches: ['cookie'] } };
+  ? { ...i18nOptions(i18nextLng), detection: { caches: ['localStorage', 'cookie'] } }
+  : { ...i18nOptions(), detection: { caches: ['localStorage', 'cookie'] } };
 
 i18next.use(LanguageDetector).use(initReactI18next).use(i18nResourceLoader).init(initOptions);
 
