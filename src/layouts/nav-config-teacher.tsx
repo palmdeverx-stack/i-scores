@@ -35,16 +35,19 @@ export const navData: NavSectionProps['data'] = [
         title: 'วิชาที่สอน',
         path: paths.teacher.assignments,
         icon: ICONS.course,
+        deepMatch: true,
       },
       {
         title: 'นักเรียนของฉัน',
         path: paths.teacher.students,
         icon: ICONS.user,
+        deepMatch: true,
       },
       {
         title: 'สแกนเช็คชื่อ',
         path: paths.teacher.attendanceScan,
         icon: ICONS.calendar,
+        deepMatch: true,
       },
       {
         title: 'ตารางสอน',

@@ -240,6 +240,7 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
             sx={{
               position: 'relative',
               bgcolor: 'grey.900',
+              overflow: 'hidden',
               aspectRatio: { xs: '4 / 5', sm: '16 / 10' },
             }}
           >
@@ -300,7 +301,7 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
             )}
           </Box>
 
-          <Box sx={{ p: 2.5 }}>
+          <Box sx={{ p: 2.5, bgcolor: '#fff' }}>
             {cameraError && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 {cameraError}

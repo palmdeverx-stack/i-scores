@@ -38,7 +38,6 @@ export function TeacherAssignmentCard({
   const teacherName =
     `${row.teacher.first_name ?? ''} ${row.teacher.last_name ?? ''}`.trim() || row.teacher.username;
   const teacherInitial = teacherName.charAt(0).toUpperCase();
-  console.log('row.teacher', row.teacher);
 
   return (
     <Card
