@@ -112,6 +112,8 @@ export const paths = {
     attendanceHistory: `${ROOTS.TEACHER}/students/attendance-history`,
     attendanceScan: `${ROOTS.TEACHER}/attendance-scan`,
     attendanceScanSession: (id: string) => `${ROOTS.TEACHER}/attendance-scan/session/${id}`,
+    assignmentAttendanceHistory: (id: string) =>
+      `${ROOTS.TEACHER}/assignments/${id}/attendance-history`,
     assignmentDetail: (id: string) => `${ROOTS.TEACHER}/assignments/${id}`,
     assignmentNew: (id: string) => `${ROOTS.TEACHER}/assignments/${id}/new`,
     gradebook: (assignmentId: string) => `${ROOTS.TEACHER}/gradebook/${assignmentId}`,

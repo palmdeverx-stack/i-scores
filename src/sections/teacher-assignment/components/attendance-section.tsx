@@ -21,11 +21,18 @@ import TablePagination from '@mui/material/TablePagination';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
+import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
+
 import { today } from 'src/utils/format-time';
 
 import { Iconify } from 'src/components/iconify';
 
 import { getAttendance, saveAttendance } from 'src/sections/attendance/attendance-actions';
+
+import { useAuthContext } from 'src/auth/hooks';
+
+import { AttendanceQrScanDialog } from './attendance-qr-scan-dialog';
 
 // ----------------------------------------------------------------------
 
@@ -49,12 +56,14 @@ type AttendanceEdit = { status: AttendanceStatus; note: string };
 type Props = { teacherAssignmentId: string };
 
 export function AttendanceSection({ teacherAssignmentId }: Props) {
+  const { user } = useAuthContext();
   const queryClient = useQueryClient();
   const [sessionDate, setSessionDate] = useState(() => today('YYYY-MM-DD'));
   const [edits, setEdits] = useState<Record<string, AttendanceEdit>>({});
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['attendance', teacherAssignmentId, sessionDate],
@@ -163,22 +172,43 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
               แตะสถานะเพียงครั้งเดียว ระบบจะเก็บการแก้ไขไว้จนกว่าจะกดบันทึก
             </Typography>
           </Box>
-          <DatePicker
-            label="วันที่เรียน"
-            value={dayjs(sessionDate)}
-            onChange={(value) => {
-              if (!value?.isValid()) return;
-              setSessionDate(value.format('YYYY-MM-DD'));
-              setSearch('');
-              setPage(0);
-            }}
-            format="DD/MM/YYYY"
-            disableFuture
-            slotProps={{
-              textField: { size: 'small' },
-            }}
-            sx={{ minWidth: { sm: 190 } }}
-          />
+          <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+            {user?.role === 'teacher' && (
+              <>
+                <Button
+                  variant="contained"
+                  onClick={() => setScanDialogOpen(true)}
+                  startIcon={<Iconify icon="solar:camera-add-bold" />}
+                >
+                  สแกน QR เข้าเรียน
+                </Button>
+                <Button
+                  component={RouterLink}
+                  href={paths.teacher.assignmentAttendanceHistory(teacherAssignmentId)}
+                  variant="outlined"
+                  startIcon={<Iconify icon="solar:calendar-date-bold" />}
+                >
+                  ประวัติการเข้าเรียน
+                </Button>
+              </>
+            )}
+            <DatePicker
+              label="วันที่เรียน"
+              value={dayjs(sessionDate)}
+              onChange={(value) => {
+                if (!value?.isValid()) return;
+                setSessionDate(value.format('YYYY-MM-DD'));
+                setSearch('');
+                setPage(0);
+              }}
+              format="DD/MM/YYYY"
+              disableFuture
+              slotProps={{
+                textField: { size: 'small' },
+              }}
+              sx={{ minWidth: { sm: 190 } }}
+            />
+          </Box>
         </Box>
 
         <Box
@@ -423,6 +453,13 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
           บันทึก {dirtyRows.length ? `(${dirtyRows.length})` : ''}
         </Button>
       </Box>
+
+      <AttendanceQrScanDialog
+        open={scanDialogOpen}
+        teacherAssignmentId={teacherAssignmentId}
+        sessionDate={sessionDate}
+        onClose={() => setScanDialogOpen(false)}
+      />
     </Card>
   );
 }
