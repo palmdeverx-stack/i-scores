@@ -1,6 +1,7 @@
 'use client';
 
 import type { IconifyName } from 'src/components/iconify/register-icons';
+import type { ClassroomTeacher } from 'src/sections/classroom/classroom-actions';
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -63,7 +64,16 @@ export function EnrollmentOverviewView() {
     const keyword = search.trim().toLocaleLowerCase('th');
     const visible = classrooms.filter((classroom) => {
       if (!keyword) return true;
-      return [classroom.name, classroom.grade_level, classroom.academic_years?.year]
+      return [
+        classroom.name,
+        classroom.grade_level,
+        classroom.academic_years?.year,
+        ...classroom.homeroom_teachers.flatMap((teacher) => [
+          teacher.username,
+          teacher.first_name,
+          teacher.last_name,
+        ]),
+      ]
         .filter(Boolean)
         .join(' ')
         .toLocaleLowerCase('th')
@@ -246,6 +256,7 @@ export function EnrollmentOverviewView() {
                   key={classroom.id}
                   name={classroom.name}
                   gradeLevel={classroom.grade_level}
+                  teachers={classroom.homeroom_teachers}
                   studentCount={classroomCounts.get(classroom.id) ?? 0}
                   onClick={() => router.push(paths.admin.enrollment.classroom(classroom.id))}
                 />
@@ -265,11 +276,17 @@ export function EnrollmentOverviewView() {
 type ClassroomCardProps = {
   name: string;
   gradeLevel: string | null;
+  teachers: ClassroomTeacher[];
   studentCount: number;
   onClick: () => void;
 };
 
-function ClassroomCard({ name, gradeLevel, studentCount, onClick }: ClassroomCardProps) {
+function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: ClassroomCardProps) {
+  const teacherNames = teachers.map(
+    (teacher) =>
+      `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim() || `@${teacher.username}`
+  );
+
   return (
     <Box
       component="button"
@@ -277,8 +294,7 @@ function ClassroomCard({ name, gradeLevel, studentCount, onClick }: ClassroomCar
       onClick={onClick}
       sx={{
         p: 2.5,
-        gap: 2,
-        display: 'flex',
+        display: 'block',
         cursor: 'pointer',
         textAlign: 'left',
         borderRadius: 2,
@@ -297,35 +313,77 @@ function ClassroomCard({ name, gradeLevel, studentCount, onClick }: ClassroomCar
         },
       }}
     >
+      <Box sx={{ gap: 2, display: 'flex', alignItems: 'center' }}>
+        <Box
+          sx={{
+            width: 48,
+            height: 48,
+            flexShrink: 0,
+            display: 'grid',
+            borderRadius: 1.75,
+            color: 'primary.main',
+            placeItems: 'center',
+            bgcolor: 'primary.lighter',
+          }}
+        >
+          <Iconify icon="solar:users-group-rounded-bold" width={27} />
+        </Box>
+        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+          <Typography variant="subtitle1" noWrap>
+            {name}
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {gradeLevel || 'ไม่ระบุระดับชั้น'}
+          </Typography>
+        </Box>
+        <Box sx={{ textAlign: 'right' }}>
+          <Typography variant="h6">{studentCount}</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            คน
+          </Typography>
+        </Box>
+        <Iconify icon="eva:arrow-ios-forward-fill" width={18} sx={{ color: 'text.disabled' }} />
+      </Box>
+
       <Box
         sx={{
-          width: 48,
-          height: 48,
-          flexShrink: 0,
-          display: 'grid',
-          borderRadius: 1.75,
-          color: 'primary.main',
-          placeItems: 'center',
-          bgcolor: 'primary.lighter',
+          gap: 1.25,
+          mt: 2,
+          pt: 1.5,
+          display: 'flex',
+          alignItems: 'flex-start',
+          borderTop: '1px solid',
+          borderColor: 'divider',
         }}
       >
-        <Iconify icon="solar:users-group-rounded-bold" width={27} />
+        <Iconify
+          icon="solar:user-id-bold"
+          width={21}
+          sx={{
+            mt: 0.25,
+            flexShrink: 0,
+            color: teachers.length ? 'primary.main' : 'text.disabled',
+          }}
+        />
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+            ครูประจำชั้น
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              color: teachers.length ? 'text.primary' : 'warning.dark',
+              overflow: 'hidden',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+            }}
+          >
+            {teacherNames.length ? teacherNames.join(', ') : 'ยังไม่ได้กำหนดครูประจำชั้น'}
+          </Typography>
+        </Box>
       </Box>
-      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-        <Typography variant="subtitle1" noWrap>
-          {name}
-        </Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {gradeLevel || 'ไม่ระบุระดับชั้น'}
-        </Typography>
-      </Box>
-      <Box sx={{ textAlign: 'right' }}>
-        <Typography variant="h6">{studentCount}</Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          คน
-        </Typography>
-      </Box>
-      <Iconify icon="eva:arrow-ios-forward-fill" width={18} sx={{ color: 'text.disabled' }} />
     </Box>
   );
 }

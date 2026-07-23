@@ -108,6 +108,7 @@ export const paths = {
     announcements: `${ROOTS.TEACHER}/announcements`,
     assignments: `${ROOTS.TEACHER}/assignments`,
     students: `${ROOTS.TEACHER}/students`,
+    attendanceHistory: `${ROOTS.TEACHER}/students/attendance-history`,
     assignmentDetail: (id: string) => `${ROOTS.TEACHER}/assignments/${id}`,
     assignmentNew: (id: string) => `${ROOTS.TEACHER}/assignments/${id}/new`,
     gradebook: (assignmentId: string) => `${ROOTS.TEACHER}/gradebook/${assignmentId}`,

@@ -29,6 +29,9 @@ import DialogContent from '@mui/material/DialogContent';
 import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 
+import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
+
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 
@@ -173,20 +176,30 @@ export function TeacherStudentsView() {
             รายชื่อนักเรียนในชั้นที่คุณเป็นครูประจำชั้น
           </Typography>
         </Box>
-        {section === 'students' && (
+        <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
           <Button
-            variant="contained"
-            disabled={!selectedClassroom}
-            onClick={() => {
-              addMutation.reset();
-              setSelectedStudents([]);
-              setAddDialogOpen(true);
-            }}
-            startIcon={<Iconify icon="solar:user-plus-bold" />}
+            component={RouterLink}
+            href={paths.teacher.attendanceHistory}
+            variant="outlined"
+            startIcon={<Iconify icon="solar:calendar-date-bold" />}
           >
-            เพิ่มนักเรียนเข้าชั้น
+            ประวัติการเข้าแถว
           </Button>
-        )}
+          {section === 'students' && (
+            <Button
+              variant="contained"
+              disabled={!selectedClassroom}
+              onClick={() => {
+                addMutation.reset();
+                setSelectedStudents([]);
+                setAddDialogOpen(true);
+              }}
+              startIcon={<Iconify icon="solar:user-plus-bold" />}
+            >
+              เพิ่มนักเรียนเข้าชั้น
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {isError && (

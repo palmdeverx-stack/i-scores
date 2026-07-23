@@ -19,6 +19,7 @@ import { Iconify } from 'src/components/iconify';
 import { useAuthContext } from 'src/auth/hooks';
 
 import { getRoster } from '../../teacher-assignment-actions';
+import { ScoreReportExportButton } from './score-report-export-button';
 import { TeacherSubjectImageDialog } from '../teacher-subject-image-dialog';
 
 type Props = {
@@ -119,6 +120,7 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
             </Box>
           </Box>
           <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+            <ScoreReportExportButton teacherAssignmentId={teacherAssignmentId} />
             <Button
               variant="outlined"
               disabled={!roster?.subjectId}
