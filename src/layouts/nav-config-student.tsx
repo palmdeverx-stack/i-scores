@@ -2,7 +2,13 @@ import type { NavMainProps } from './main/nav/types';
 
 import { paths } from 'src/routes/paths';
 
-import { Iconify } from 'src/components/iconify';
+import {
+  RiTaskLine,
+  RiHome5Line,
+  RiQrCodeLine,
+  RiBookOpenLine,
+  RiCheckboxCircleLine,
+} from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -11,30 +17,30 @@ export const studentNavData: NavMainProps['data'] = [
   {
     title: 'หน้าหลัก',
     path: '/',
-    icon: <Iconify width={22} icon="solar:home-angle-bold-duotone" />,
+    icon: <RiHome5Line size={22} />,
   },
   {
     title: 'วิชาเรียน',
     path: paths.student.subjects,
-    icon: <Iconify width={22} icon="solar:notebook-bold-duotone" />,
+    icon: <RiBookOpenLine size={22} />,
     featureKey: 'student.subjects',
   },
   {
     title: 'งานที่ต้องส่ง',
     path: paths.student.assignments,
-    icon: <Iconify width={22} icon="solar:list-bold" />,
+    icon: <RiTaskLine size={22} />,
     featureKey: 'student.assignments',
   },
   {
     title: 'การเข้าเรียน',
     path: paths.student.attendance,
-    icon: <Iconify width={22} icon="solar:check-circle-bold" />,
+    icon: <RiCheckboxCircleLine size={22} />,
     featureKey: 'student.attendance',
   },
   {
     title: 'QR ของฉัน',
     path: paths.student.qr,
-    icon: <Iconify width={22} icon="solar:user-id-bold" />,
+    icon: <RiQrCodeLine size={22} />,
     featureKey: 'student.qr',
   },
 ];

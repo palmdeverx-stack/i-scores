@@ -18,9 +18,14 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { varTap, varHover, transitionTap } from 'src/components/animate';
+import {
+  RiCloseLine,
+  RiSettings3Line,
+  RiCheckDoubleLine,
+  RiNotification3Line,
+} from 'src/components/remix-icon';
 
 import { NotificationItem } from './notification-item';
 
@@ -73,17 +78,17 @@ export function NotificationsDrawer({ data = [], sx, ...other }: NotificationsDr
       {!!totalUnRead && (
         <Tooltip title="Mark all as read">
           <IconButton color="primary" onClick={handleMarkAllAsRead}>
-            <Iconify icon="eva:done-all-fill" />
+            <RiCheckDoubleLine />
           </IconButton>
         </Tooltip>
       )}
 
       <IconButton onClick={onClose} sx={{ display: { xs: 'inline-flex', sm: 'none' } }}>
-        <Iconify icon="mingcute:close-line" />
+        <RiCloseLine />
       </IconButton>
 
       <IconButton>
-        <Iconify icon="solar:settings-bold-duotone" />
+        <RiSettings3Line />
       </IconButton>
     </Box>
   );
@@ -138,7 +143,7 @@ export function NotificationsDrawer({ data = [], sx, ...other }: NotificationsDr
         {...other}
       >
         <Badge badgeContent={totalUnRead} color="error">
-          <Iconify width={24} icon="solar:bell-bing-bold-duotone" />
+          <RiNotification3Line size={24} />
         </Badge>
       </IconButton>
 

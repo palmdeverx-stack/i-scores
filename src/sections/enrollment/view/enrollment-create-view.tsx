@@ -1,6 +1,7 @@
 'use client';
 
 import * as z from 'zod';
+import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -24,6 +25,7 @@ import { Iconify } from 'src/components/iconify';
 
 import { listUsers } from 'src/sections/user/user-actions';
 import { listClassrooms } from 'src/sections/classroom/classroom-actions';
+import { StudentFormDialog } from 'src/sections/user/components/student-form-dialog';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -45,6 +47,7 @@ export function EnrollmentCreateView() {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
   const backPath = isTeacher ? paths.teacher.assignments : paths.admin.enrollment.root;
+  const [studentDialogOpen, setStudentDialogOpen] = useState(false);
 
   const {
     data: students = [],
@@ -223,12 +226,31 @@ export function EnrollmentCreateView() {
                 <Divider />
 
                 <Box component="section" aria-labelledby="student-selection-title">
-                  <SectionTitle
-                    id="student-selection-title"
-                    number="2"
-                    title="เลือกนักเรียน"
-                    description="ค้นหาและเลือกนักเรียนได้พร้อมกันหลายคน"
-                  />
+                  <Box
+                    sx={{
+                      gap: 2,
+                      display: 'flex',
+                      alignItems: { xs: 'stretch', sm: 'flex-start' },
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <SectionTitle
+                      id="student-selection-title"
+                      number="2"
+                      title="เลือกนักเรียน"
+                      description="ค้นหาและเลือกนักเรียนได้พร้อมกันหลายคน"
+                    />
+                    <Button
+                      variant="outlined"
+                      disabled={!selectedClassroom}
+                      startIcon={<Iconify icon="solar:user-plus-bold" />}
+                      onClick={() => setStudentDialogOpen(true)}
+                      sx={{ flexShrink: 0 }}
+                    >
+                      สร้างบัญชีนักเรียนใหม่
+                    </Button>
+                  </Box>
 
                   <Autocomplete
                     multiple
@@ -365,6 +387,17 @@ export function EnrollmentCreateView() {
           </Alert>
         </Card>
       </Box>
+
+      <StudentFormDialog
+        open={studentDialogOpen}
+        onClose={() => setStudentDialogOpen(false)}
+        onSaved={(student) => {
+          setValue('studentIds', Array.from(new Set([...studentIds, student.id])), {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }}
+      />
     </Container>
   );
 }

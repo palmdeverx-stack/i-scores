@@ -6,7 +6,7 @@ import { styled } from '@mui/material/styles';
 import ListSubheader from '@mui/material/ListSubheader';
 
 import { navSectionClasses } from '../styles';
-import { Iconify, iconifyClasses } from '../../iconify';
+import { RiArrowDownSLine, RiArrowRightSLine } from '../../remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -19,10 +19,11 @@ export const NavSubheader = styled(({ open, children, className, ...other }: Nav
     {...other}
     className={mergeClasses([navSectionClasses.subheader, className])}
   >
-    <Iconify
-      width={16}
-      icon={open ? 'eva:arrow-ios-downward-fill' : 'eva:arrow-ios-forward-fill'}
-    />
+    {open ? (
+      <RiArrowDownSLine className="nav-subheader-icon" size={16} />
+    ) : (
+      <RiArrowRightSLine className="nav-subheader-icon" size={16} />
+    )}
     {children}
   </ListSubheader>
 ))(({ theme }) => ({
@@ -39,7 +40,7 @@ export const NavSubheader = styled(({ open, children, className, ...other }: Nav
   transition: theme.transitions.create(['color', 'padding-left'], {
     duration: theme.transitions.duration.standard,
   }),
-  [`& .${iconifyClasses.root}`]: {
+  '& .nav-subheader-icon': {
     left: -4,
     opacity: 0,
     position: 'absolute',
@@ -50,6 +51,6 @@ export const NavSubheader = styled(({ open, children, className, ...other }: Nav
   '&:hover': {
     paddingLeft: theme.spacing(2),
     color: 'var(--nav-subheader-hover-color)',
-    [`& .${iconifyClasses.root}`]: { opacity: 1 },
+    '& .nav-subheader-icon': { opacity: 1 },
   },
 }));

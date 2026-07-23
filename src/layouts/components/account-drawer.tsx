@@ -19,8 +19,18 @@ import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
+import {
+  RiTeamLine,
+  RiCloseLine,
+  RiHome5Line,
+  RiUser3Line,
+  RiSchoolLine,
+  RiArrowRightSLine,
+  RiShieldCheckLine,
+  RiShieldKeyholeLine,
+  RiGraduationCapLine,
+} from 'src/components/remix-icon';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -63,49 +73,49 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
           {
             label: 'ภาพรวมระบบ',
             href: paths.master.root,
-            icon: <Iconify icon="solar:home-angle-bold-duotone" />,
+            icon: <RiHome5Line />,
           },
           {
             label: 'จัดการโรงเรียน',
             href: paths.master.school.root,
-            icon: <Iconify icon="solar:notebook-bold-duotone" />,
+            icon: <RiSchoolLine />,
           },
           {
             label: 'ผู้ดูแลโรงเรียน',
             href: paths.master.schoolAdmin.root,
-            icon: <Iconify icon="solar:users-group-rounded-bold-duotone" />,
+            icon: <RiTeamLine />,
           },
           {
             label: 'เปลี่ยนรหัสผ่าน',
             href: paths.auth.jwt.changePassword,
-            icon: <Iconify icon="solar:shield-keyhole-bold-duotone" />,
+            icon: <RiShieldKeyholeLine />,
           },
         ]
       : [
           {
             label: 'ภาพรวมโรงเรียน',
             href: paths.admin.root,
-            icon: <Iconify icon="solar:home-angle-bold-duotone" />,
+            icon: <RiHome5Line />,
           },
           {
             label: 'ข้อมูลโรงเรียน',
             href: paths.admin.school,
-            icon: <Iconify icon="solar:notebook-bold-duotone" />,
+            icon: <RiSchoolLine />,
           },
           {
             label: 'บุคลากรและครู',
             href: paths.admin.user.root,
-            icon: <Iconify icon="solar:users-group-rounded-bold-duotone" />,
+            icon: <RiTeamLine />,
           },
           {
             label: 'นักเรียน',
             href: paths.admin.student.root,
-            icon: <Iconify icon="solar:user-rounded-bold" />,
+            icon: <RiGraduationCapLine />,
           },
           {
             label: 'เปลี่ยนรหัสผ่าน',
             href: paths.auth.jwt.changePassword,
-            icon: <Iconify icon="solar:shield-keyhole-bold-duotone" />,
+            icon: <RiShieldKeyholeLine />,
           },
         ];
 
@@ -113,17 +123,17 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
     {
       label: 'หน้าหลักครู',
       href: paths.teacher.root,
-      icon: <Iconify icon="solar:home-angle-bold-duotone" />,
+      icon: <RiHome5Line />,
     },
     {
       label: 'โปรไฟล์ของฉัน',
       href: paths.teacher.profile,
-      icon: <Iconify icon="solar:user-rounded-bold" />,
+      icon: <RiUser3Line />,
     },
     {
       label: 'เปลี่ยนรหัสผ่าน',
       href: paths.auth.jwt.changePassword,
-      icon: <Iconify icon="solar:shield-keyhole-bold-duotone" />,
+      icon: <RiShieldKeyholeLine />,
     },
   ];
 
@@ -191,7 +201,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
                 },
               }}
             >
-              <Iconify icon="mingcute:close-line" />
+              <RiCloseLine />
             </IconButton>
 
             <Box sx={{ gap: 2, display: 'flex', alignItems: 'center' }}>
@@ -254,7 +264,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
                   bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.08),
                 }}
               >
-                <Iconify icon="solar:shield-check-bold" width={20} />
+                <RiShieldCheckLine size={20} />
                 <Typography variant="caption" sx={{ opacity: 0.84 }}>
                   คุณกำลังใช้งานพื้นที่จัดการระบบของโรงเรียน
                 </Typography>
@@ -310,10 +320,9 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
                         {option.label}
                       </Box>
                       {option.info && <Label color="error">{option.info}</Label>}
-                      <Iconify
-                        icon="eva:arrow-ios-forward-fill"
-                        width={18}
-                        sx={{ color: 'text.disabled' }}
+                      <RiArrowRightSLine
+                        size={18}
+                        style={{ color: 'var(--palette-text-disabled)' }}
                       />
                     </Link>
                   </MenuItem>

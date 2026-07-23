@@ -15,15 +15,20 @@ import { RouterLink } from 'src/routes/components';
 import { CONFIG } from 'src/global-config';
 
 import { Logo } from 'src/components/logo';
-import { Iconify } from 'src/components/iconify';
+import {
+  RiHome5Line,
+  RiUser3Line,
+  RiBookOpenLine,
+  RiFileList3Line,
+} from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
 const QUICK_LINKS = [
-  { label: 'หน้าหลัก', href: paths.student.root, icon: 'solar:home-angle-bold-duotone' },
-  { label: 'วิชาเรียน', href: paths.student.subjects, icon: 'solar:notebook-bold-duotone' },
-  { label: 'งานที่ต้องส่ง', href: paths.student.assignments, icon: 'solar:notes-bold-duotone' },
-  { label: 'ข้อมูลส่วนตัว', href: paths.student.profile, icon: 'solar:user-rounded-bold' },
+  { label: 'หน้าหลัก', href: paths.student.root, icon: <RiHome5Line size={18} /> },
+  { label: 'วิชาเรียน', href: paths.student.subjects, icon: <RiBookOpenLine size={18} /> },
+  { label: 'งานที่ต้องส่ง', href: paths.student.assignments, icon: <RiFileList3Line size={18} /> },
+  { label: 'ข้อมูลส่วนตัว', href: paths.student.profile, icon: <RiUser3Line size={18} /> },
 ] as const;
 
 const FooterRoot = styled('footer')(({ theme }) => ({
@@ -161,7 +166,7 @@ function QuickLinks({ layoutQuery }: { layoutQuery: Breakpoint }) {
               },
             })}
           >
-            <Iconify icon={item.icon} width={18} />
+            {item.icon}
             {item.label}
           </Link>
         ))}

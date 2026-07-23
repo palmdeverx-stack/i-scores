@@ -4,7 +4,7 @@ import { varAlpha } from 'minimal-shared/utils';
 
 import IconButton from '@mui/material/IconButton';
 
-import { Iconify } from 'src/components/iconify';
+import { RiArrowLeftSLine, RiArrowRightSLine } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -40,13 +40,7 @@ export function NavToggleButton({ isNavMini, sx, ...other }: NavToggleButtonProp
       ]}
       {...other}
     >
-      <Iconify
-        width={16}
-        icon={isNavMini ? 'eva:arrow-ios-forward-fill' : 'eva:arrow-ios-back-fill'}
-        sx={(theme) => ({
-          ...(theme.direction === 'rtl' && { transform: 'scaleX(-1)' }),
-        })}
-      />
+      {isNavMini ? <RiArrowRightSLine size={16} /> : <RiArrowLeftSLine size={16} />}
     </IconButton>
   );
 }

@@ -9,9 +9,9 @@ import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
 import { createNavItem } from '../utils';
 import { navItemStyles, navSectionClasses } from '../styles';
+import { RiInformationLine, RiArrowRightSLine } from '../../remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -82,7 +82,6 @@ export function NavItem({
         <Tooltip title={caption} arrow placement="right">
           <ItemCaptionIcon
             {...ownerState}
-            icon="eva:info-outline"
             className={navSectionClasses.item.caption}
             sx={slotProps?.caption}
           />
@@ -96,12 +95,7 @@ export function NavItem({
       )}
 
       {hasChild && (
-        <ItemArrow
-          {...ownerState}
-          icon="eva:arrow-ios-forward-fill"
-          className={navSectionClasses.item.arrow}
-          sx={slotProps?.arrow}
-        />
+        <ItemArrow {...ownerState} className={navSectionClasses.item.arrow} sx={slotProps?.arrow} />
       )}
     </ItemRoot>
   );
@@ -208,11 +202,15 @@ const ItemTitle = styled('span', { shouldForwardProp })<StyledState>(({ active, 
 /**
  * @slot caption icon
  */
-const ItemCaptionIcon = styled(Iconify, { shouldForwardProp })<StyledState>(({ theme }) => ({
-  ...navItemStyles.captionIcon,
-  color: 'var(--nav-item-caption-color)',
-  variants: [{ props: { variant: 'rootItem' }, style: { top: 11, left: 6, position: 'absolute' } }],
-}));
+const ItemCaptionIcon = styled(RiInformationLine, { shouldForwardProp })<StyledState>(
+  ({ theme }) => ({
+    ...navItemStyles.captionIcon,
+    color: 'var(--nav-item-caption-color)',
+    variants: [
+      { props: { variant: 'rootItem' }, style: { top: 11, left: 6, position: 'absolute' } },
+    ],
+  })
+);
 
 /**
  * @slot info
@@ -224,7 +222,7 @@ const ItemInfo = styled('span', { shouldForwardProp })<StyledState>(({ theme }) 
 /**
  * @slot arrow
  */
-const ItemArrow = styled(Iconify, { shouldForwardProp })<StyledState>(({ theme }) => ({
+const ItemArrow = styled(RiArrowRightSLine, { shouldForwardProp })<StyledState>(({ theme }) => ({
   ...navItemStyles.arrow(theme),
   variants: [
     {

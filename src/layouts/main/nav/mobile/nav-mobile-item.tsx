@@ -6,7 +6,7 @@ import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from 'src/components/iconify';
+import { RiArrowDownSLine, RiArrowRightSLine } from 'src/components/remix-icon';
 import { createNavItem, navItemStyles, navSectionClasses } from 'src/components/nav-section';
 
 // ----------------------------------------------------------------------
@@ -49,10 +49,7 @@ export function NavItem({
       <ItemTitle {...ownerState}>{title}</ItemTitle>
 
       {hasChild && (
-        <ItemArrow
-          {...ownerState}
-          icon={open ? 'eva:arrow-ios-downward-fill' : 'eva:arrow-ios-forward-fill'}
-        />
+        <>{open ? <ItemArrowDown {...ownerState} /> : <ItemArrowRight {...ownerState} />}</>
       )}
     </ItemRoot>
   );
@@ -119,6 +116,12 @@ const ItemTitle = styled('span', { shouldForwardProp })<StyledState>(({ theme })
 /**
  * @slot arrow
  */
-const ItemArrow = styled(Iconify, { shouldForwardProp })<StyledState>(({ theme }) => ({
+const ItemArrowDown = styled(RiArrowDownSLine, { shouldForwardProp })<StyledState>(({ theme }) => ({
   ...navItemStyles.arrow(theme),
 }));
+
+const ItemArrowRight = styled(RiArrowRightSLine, { shouldForwardProp })<StyledState>(
+  ({ theme }) => ({
+    ...navItemStyles.arrow(theme),
+  })
+);

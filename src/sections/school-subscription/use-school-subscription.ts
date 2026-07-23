@@ -1,19 +1,19 @@
 'use client';
 
 import type { NavMainProps } from 'src/layouts/main/nav/types';
-import type { NavSectionProps } from 'src/components/nav-section';
 import type { SchoolFeatureKey } from 'src/lib/school-subscription-config';
+import type { NavSectionProps, NavItemDataProps } from 'src/components/nav-section';
 
 import { useQuery } from '@tanstack/react-query';
 
-import { getSchoolSubscription } from './school-subscription-actions';
+import { getSchoolSubscriptionAccess } from './school-subscription-actions';
 
 // ----------------------------------------------------------------------
 
 export function useSchoolSubscription(schoolId?: string | null) {
   return useQuery({
-    queryKey: ['school-subscription', schoolId],
-    queryFn: () => getSchoolSubscription(schoolId!),
+    queryKey: ['school-subscription-access', schoolId],
+    queryFn: () => getSchoolSubscriptionAccess(schoolId!),
     enabled: !!schoolId,
     staleTime: 60_000,
   });
@@ -24,12 +24,21 @@ export function filterDashboardNav(
   enabledFeatures: SchoolFeatureKey[]
 ): NavSectionProps['data'] {
   const enabled = new Set(enabledFeatures);
+
+  const filterItems = (items: NavItemDataProps[]): NavItemDataProps[] =>
+    items.flatMap((item) => {
+      if (item.featureKey && !enabled.has(item.featureKey as SchoolFeatureKey)) return [];
+
+      if (!item.children) return [item];
+
+      const children = filterItems(item.children);
+      return children.length ? [{ ...item, children }] : [];
+    });
+
   return data
     .map((group) => ({
       ...group,
-      items: group.items.filter(
-        (item) => !item.featureKey || enabled.has(item.featureKey as SchoolFeatureKey)
-      ),
+      items: filterItems(group.items),
     }))
     .filter((group) => group.items.length > 0);
 }
@@ -60,6 +69,7 @@ const ROUTE_FEATURES: Record<
   ],
   teacher: [
     ['/teacher/attendance-scan', 'teacher.qr_attendance'],
+    ['/teacher/subject', 'teacher.manage_subjects'],
     ['/teacher/enrollment', 'teacher.manage_enrollments'],
     ['/teacher/classroom', 'teacher.manage_classrooms'],
     ['/teacher/announcements', 'teacher.announcements'],

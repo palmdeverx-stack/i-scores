@@ -9,7 +9,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { usePathname } from 'src/routes/hooks';
 
 import { NavItem } from './nav-item';
-import { isNavItemActive } from '../utils';
+import { isNavDataActive } from '../utils';
 import { navSectionClasses } from '../styles';
 import { NavUl, NavLi, NavCollapse } from '../components';
 
@@ -26,10 +26,7 @@ export function NavList({
   const pathname = usePathname();
   const navItemRef = useRef<HTMLButtonElement>(null);
 
-  const isActive = isNavItemActive(pathname, data.path, {
-    deepMatch: data.deepMatch,
-    hasChildren: !!data.children,
-  });
+  const isActive = isNavDataActive(pathname, data);
 
   const { value: open, onFalse: onClose, onToggle } = useBoolean(isActive);
 

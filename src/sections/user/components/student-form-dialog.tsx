@@ -89,9 +89,10 @@ type Props = {
   open: boolean;
   student?: UserRow | null;
   onClose: () => void;
+  onSaved?: (student: UserRow) => void;
 };
 
-export function StudentFormDialog({ open, student = null, onClose }: Props) {
+export function StudentFormDialog({ open, student = null, onClose, onSaved }: Props) {
   const isEdit = !!student;
   const queryClient = useQueryClient();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -138,8 +139,9 @@ export function StudentFormDialog({ open, student = null, onClose }: Props) {
       if (avatarFile) await uploadStudentAvatar(savedStudent.id, avatarFile);
       return savedStudent;
     },
-    onSuccess: async () => {
+    onSuccess: async (savedStudent) => {
       await queryClient.invalidateQueries({ queryKey: ['users'] });
+      onSaved?.(savedStudent);
       onClose();
     },
   });

@@ -16,8 +16,8 @@ import ListItemText from '@mui/material/ListItemText';
 
 import { fToNow } from 'src/utils/format-time';
 
-import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
+import { RiContactsLine } from 'src/components/remix-icon';
 import { CustomPopover } from 'src/components/custom-popover';
 import { varTap, varHover, transitionTap } from 'src/components/animate';
 
@@ -85,7 +85,7 @@ export function ContactsPopover({ data = [], sx, ...other }: ContactsPopoverProp
         ]}
         {...other}
       >
-        <Iconify icon="solar:users-group-rounded-bold-duotone" width={24} />
+        <RiContactsLine size={24} />
       </IconButton>
 
       {renderMenuList()}

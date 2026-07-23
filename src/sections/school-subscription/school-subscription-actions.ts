@@ -43,6 +43,21 @@ export type SchoolSubscriptionData = {
   };
 };
 
+export type SchoolSubscriptionAccessData = {
+  school: SchoolSubscriptionData['school'];
+  subscription: Pick<
+    SchoolSubscription,
+    | 'id'
+    | 'school_id'
+    | 'plan_name'
+    | 'status'
+    | 'starts_at'
+    | 'ends_at'
+    | 'enabled_features'
+    | 'updated_at'
+  >;
+};
+
 export type UpdateSchoolSubscriptionParams = {
   planName: string;
   status: SubscriptionStatus;
@@ -67,6 +82,17 @@ export async function getSchoolSubscription(schoolId: string): Promise<SchoolSub
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดแพ็กเกจโรงเรียนได้');
+  return json;
+}
+
+export async function getSchoolSubscriptionAccess(
+  schoolId: string
+): Promise<SchoolSubscriptionAccessData> {
+  const response = await fetch(`/api/schools/${schoolId}/subscription`, {
+    headers: authHeader(),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถตรวจสอบแพ็กเกจโรงเรียนได้');
   return json;
 }
 

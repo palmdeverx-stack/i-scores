@@ -2,23 +2,30 @@ import type { NavSectionProps } from 'src/components/nav-section';
 
 import { paths } from 'src/routes/paths';
 
-import { CONFIG } from 'src/global-config';
-
-import { SvgColor } from 'src/components/svg-color';
+import {
+  RiTeamLine,
+  RiBook2Line,
+  RiSchoolLine,
+  RiUserAddLine,
+  RiCalendarLine,
+  RiUserStarLine,
+  RiDashboardLine,
+  RiPresentationLine,
+  RiGraduationCapLine,
+} from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
-const icon = (name: string) => (
-  <SvgColor src={`${CONFIG.assetsDir}/assets/icons/navbar/${name}.svg`} />
-);
-
 const ICONS = {
-  user: icon('ic-user'),
-  course: icon('ic-course'),
-  folder: icon('ic-folder'),
-  calendar: icon('ic-calendar'),
-  dashboard: icon('ic-dashboard'),
-  file: icon('ic-file'),
+  dashboard: <RiDashboardLine />,
+  school: <RiSchoolLine />,
+  academicYear: <RiCalendarLine />,
+  classroom: <RiPresentationLine />,
+  subject: <RiBook2Line />,
+  staff: <RiTeamLine />,
+  student: <RiGraduationCapLine />,
+  teacherAssignment: <RiUserStarLine />,
+  enrollment: <RiUserAddLine />,
 };
 
 // ----------------------------------------------------------------------
@@ -34,7 +41,7 @@ export const navData: NavSectionProps['data'] = [
       {
         title: 'ข้อมูลโรงเรียน',
         path: paths.admin.school,
-        icon: ICONS.file,
+        icon: ICONS.school,
         featureKey: 'admin.school_profile',
       },
     ],
@@ -45,19 +52,19 @@ export const navData: NavSectionProps['data'] = [
       {
         title: 'ปีการศึกษา',
         path: paths.admin.academicYear.root,
-        icon: ICONS.calendar,
+        icon: ICONS.academicYear,
         featureKey: 'admin.academic_years',
       },
       {
         title: 'ห้องเรียน',
         path: paths.admin.classroom.root,
-        icon: ICONS.folder,
+        icon: ICONS.classroom,
         featureKey: 'admin.classrooms',
       },
       {
         title: 'รายวิชา',
         path: paths.admin.subject.root,
-        icon: ICONS.course,
+        icon: ICONS.subject,
         featureKey: 'admin.subjects',
       },
     ],
@@ -68,25 +75,25 @@ export const navData: NavSectionProps['data'] = [
       {
         title: 'ครู/บุคลากร',
         path: paths.admin.user.root,
-        icon: ICONS.user,
+        icon: ICONS.staff,
         featureKey: 'admin.staff',
       },
       {
         title: 'นักเรียน',
         path: paths.admin.student.root,
-        icon: ICONS.user,
+        icon: ICONS.student,
         featureKey: 'admin.students',
       },
       {
         title: 'ครูประจำวิชา',
         path: paths.admin.teacherAssignment.root,
-        icon: ICONS.user,
+        icon: ICONS.teacherAssignment,
         featureKey: 'admin.teacher_assignments',
       },
       {
         title: 'ลงทะเบียนนักเรียน',
         path: paths.admin.enrollment.root,
-        icon: ICONS.user,
+        icon: ICONS.enrollment,
         featureKey: 'admin.enrollments',
       },
     ],

@@ -2,22 +2,20 @@ import type { NavSectionProps } from 'src/components/nav-section';
 
 import { paths } from 'src/routes/paths';
 
-import { CONFIG } from 'src/global-config';
-
-import { SvgColor } from 'src/components/svg-color';
-import { RiPriceTag3Line } from 'src/components/remix-icon';
+import {
+  RiAdminLine,
+  RiBuildingLine,
+  RiDashboardLine,
+  RiPriceTag3Line,
+} from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
-const icon = (name: string) => (
-  <SvgColor src={`${CONFIG.assetsDir}/assets/icons/navbar/${name}.svg`} />
-);
-
 const ICONS = {
-  user: icon('ic-user'),
-  folder: icon('ic-folder'),
-  dashboard: icon('ic-dashboard'),
-  subscription: <RiPriceTag3Line size={24} />,
+  dashboard: <RiDashboardLine />,
+  school: <RiBuildingLine />,
+  schoolAdmin: <RiAdminLine />,
+  subscription: <RiPriceTag3Line />,
 };
 
 // ----------------------------------------------------------------------
@@ -36,12 +34,12 @@ export const navData: NavSectionProps['data'] = [
       {
         title: 'โรงเรียนทั้งหมด',
         path: paths.master.school.root,
-        icon: ICONS.folder,
+        icon: ICONS.school,
       },
       {
         title: 'ผู้ดูแลโรงเรียน',
         path: paths.master.schoolAdmin.root,
-        icon: ICONS.user,
+        icon: ICONS.schoolAdmin,
       },
       {
         title: 'ตั้งค่าแพ็กเกจ',

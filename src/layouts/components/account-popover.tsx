@@ -14,8 +14,8 @@ import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
 import { CustomPopover } from 'src/components/custom-popover';
+import { RiTeamLine, RiUser3Line } from 'src/components/remix-icon';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -44,12 +44,12 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
     {
       label: 'โปรไฟล์ของฉัน',
       href: paths.student.profile,
-      icon: <Iconify icon="solar:user-rounded-bold" />,
+      icon: <RiUser3Line />,
     },
     {
       label: 'ห้องเรียนของฉัน',
       href: paths.student.classroom,
-      icon: <Iconify icon="solar:users-group-rounded-bold" />,
+      icon: <RiTeamLine />,
     },
   ];
   const menuData: NonNullable<AccountPopoverProps['data']> =

@@ -16,9 +16,9 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Button, { buttonClasses } from '@mui/material/Button';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { CustomPopover } from 'src/components/custom-popover';
+import { RiAddLine, RiArrowUpDownLine } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -106,7 +106,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
         {workspace?.plan}
       </Label>
 
-      <Iconify width={16} icon="carbon:chevron-sort" sx={{ color: 'text.disabled' }} />
+      <RiArrowUpDownLine size={16} />
     </ButtonBase>
   );
 
@@ -150,7 +150,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
 
       <Button
         fullWidth
-        startIcon={<Iconify width={18} icon="mingcute:add-line" />}
+        startIcon={<RiAddLine size={18} />}
         onClick={() => {
           onClose();
         }}

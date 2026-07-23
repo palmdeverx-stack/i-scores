@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const caller = requireRole(request, ['master_admin', 'school_admin']);
+  const caller = requireRole(request, ['master_admin', 'school_admin', 'teacher']);
 
   if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
       );
     }
     targetSchoolId = schoolId;
-  } else {
+  } else if (caller.role === 'school_admin') {
     if (!SCHOOL_ADMIN_CREATABLE_ROLES.includes(role)) {
       return NextResponse.json(
         { message: 'ผู้ดูแลโรงเรียนสร้างได้เฉพาะบัญชีครูหรือนักเรียน' },
@@ -143,12 +143,26 @@ export async function POST(request: Request) {
       );
     }
     targetSchoolId = caller.schoolId!;
+  } else {
+    if (role !== 'student' || !caller.schoolId) {
+      return NextResponse.json(
+        { message: 'ครูสร้างได้เฉพาะบัญชีนักเรียนในโรงเรียนของตนเอง' },
+        { status: 403 }
+      );
+    }
+    targetSchoolId = caller.schoolId;
   }
 
   const requiredFeature =
-    role === 'teacher' ? 'admin.staff' : role === 'student' ? 'admin.students' : null;
+    caller.role === 'teacher'
+      ? 'teacher.manage_enrollments'
+      : role === 'teacher'
+        ? 'admin.staff'
+        : role === 'student'
+          ? 'admin.students'
+          : null;
   if (
-    caller.role === 'school_admin' &&
+    (caller.role === 'school_admin' || caller.role === 'teacher') &&
     requiredFeature &&
     !(await schoolHasFeature(targetSchoolId, requiredFeature))
   ) {

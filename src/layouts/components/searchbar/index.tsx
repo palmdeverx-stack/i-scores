@@ -21,8 +21,8 @@ import MenuItem, { menuItemClasses } from '@mui/material/MenuItem';
 import InputBase, { inputBaseClasses } from '@mui/material/InputBase';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
+import { RiSearchLine } from 'src/components/remix-icon';
 import { SearchNotFound } from 'src/components/search-not-found';
 
 import { ResultItem } from './result-item';
@@ -119,7 +119,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           },
         }}
       >
-        <Iconify icon="eva:search-fill" />
+        <RiSearchLine />
       </Box>
 
       <Label
@@ -195,7 +195,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           onChange={handleSearch}
           startAdornment={
             <InputAdornment position="start">
-              <Iconify icon="eva:search-fill" width={24} sx={{ color: 'text.disabled' }} />
+              <RiSearchLine size={24} />
             </InputAdornment>
           }
           endAdornment={<Label sx={{ letterSpacing: 1, color: 'text.secondary' }}>esc</Label>}

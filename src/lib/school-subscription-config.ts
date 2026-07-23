@@ -78,6 +78,12 @@ export const SCHOOL_FEATURES = [
     description: 'สร้างและจัดการประกาศ',
   },
   {
+    key: 'teacher.manage_subjects',
+    group: 'ครู',
+    label: 'ครูสร้างรายวิชา',
+    description: 'อนุญาตให้ครูสร้างรายวิชาในปีการศึกษาและภาคเรียนของโรงเรียน',
+  },
+  {
     key: 'teacher.manage_classrooms',
     group: 'ครู',
     label: 'ครูสร้างห้องเรียน',
@@ -87,7 +93,7 @@ export const SCHOOL_FEATURES = [
     key: 'teacher.manage_enrollments',
     group: 'ครู',
     label: 'ครูเพิ่มนักเรียน',
-    description: 'อนุญาตให้ครูเพิ่มนักเรียนเข้าห้อง',
+    description: 'อนุญาตให้ครูสร้างบัญชีนักเรียนและเพิ่มเข้าห้อง',
   },
   {
     key: 'student.subjects',
@@ -125,6 +131,7 @@ export const STARTER_FEATURE_KEYS: SchoolFeatureKey[] = ALL_SCHOOL_FEATURE_KEYS.
   (key) =>
     ![
       'teacher.qr_attendance',
+      'teacher.manage_subjects',
       'teacher.manage_classrooms',
       'teacher.manage_enrollments',
       'student.qr',

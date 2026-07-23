@@ -66,7 +66,8 @@ values
     'admin.subjects', 'admin.staff', 'admin.students',
     'admin.teacher_assignments', 'admin.enrollments',
     'teacher.assignments', 'teacher.students', 'teacher.qr_attendance',
-    'teacher.timetable', 'teacher.announcements', 'teacher.manage_classrooms',
+    'teacher.timetable', 'teacher.announcements', 'teacher.manage_subjects',
+    'teacher.manage_classrooms',
     'teacher.manage_enrollments', 'student.subjects', 'student.assignments',
     'student.attendance', 'student.qr'
   ]::text[],
@@ -86,7 +87,8 @@ values
     'admin.subjects', 'admin.staff', 'admin.students',
     'admin.teacher_assignments', 'admin.enrollments',
     'teacher.assignments', 'teacher.students', 'teacher.qr_attendance',
-    'teacher.timetable', 'teacher.announcements', 'teacher.manage_classrooms',
+    'teacher.timetable', 'teacher.announcements', 'teacher.manage_subjects',
+    'teacher.manage_classrooms',
     'teacher.manage_enrollments', 'student.subjects', 'student.assignments',
     'student.attendance', 'student.qr'
   ]::text[],

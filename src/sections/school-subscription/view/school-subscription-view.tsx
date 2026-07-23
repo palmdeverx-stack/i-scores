@@ -85,7 +85,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
   const [featureGroup, setFeatureGroup] = useState('ผู้ดูแลโรงเรียน');
 
   const subscriptionQuery = useQuery({
-    queryKey: ['school-subscription', schoolId],
+    queryKey: ['school-subscription-management', schoolId],
     queryFn: () => getSchoolSubscription(schoolId),
   });
   const plansQuery = useQuery({
@@ -95,7 +95,12 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
   const updateMutation = useMutation({
     mutationFn: (values: FormState) => updateSchoolSubscription(schoolId, values),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['school-subscription', schoolId] });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['school-subscription-management', schoolId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ['school-subscription-access', schoolId] }),
+      ]);
     },
   });
 
@@ -136,7 +141,12 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
     );
   }
 
-  const { school, usage } = subscriptionQuery.data;
+  const { school } = subscriptionQuery.data;
+  const usage = subscriptionQuery.data.usage ?? {
+    schoolAdmins: 0,
+    teachers: 0,
+    students: 0,
+  };
   const validDates = !form.endsAt || form.endsAt >= form.startsAt;
   const hasFeatures = form.enabledFeatures.length > 0;
   const groups = Array.from(new Set(SCHOOL_FEATURES.map((feature) => feature.group)));
