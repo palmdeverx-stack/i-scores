@@ -44,7 +44,8 @@ export async function GET(request: Request, { params }: RouteParams) {
         .from('attendance')
         .select('id, student_id, status, note')
         .eq('teacher_assignment_id', id)
-        .eq('session_date', sessionDate),
+        .eq('session_date', sessionDate)
+        .eq('period_key', 'daily'),
     ]);
 
   if (rosterError || recordsError) {
@@ -121,11 +122,12 @@ export async function POST(request: Request, { params }: RouteParams) {
         teacher_assignment_id: id,
         student_id: record.studentId,
         session_date: sessionDate,
+        period_key: 'daily',
         status: record.status,
         note: record.note || null,
         recorded_by: caller.sub,
       })),
-      { onConflict: 'teacher_assignment_id,student_id,session_date' }
+      { onConflict: 'teacher_assignment_id,student_id,session_date,period_key' }
     )
     .select();
 

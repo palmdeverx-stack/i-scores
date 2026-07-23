@@ -104,7 +104,7 @@ export function EnrollmentCreateView() {
   const onSubmit = handleSubmit((data) => createMutation.mutate(data));
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,

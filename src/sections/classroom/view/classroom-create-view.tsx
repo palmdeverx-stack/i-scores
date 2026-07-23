@@ -127,7 +127,7 @@ export function ClassroomCreateView() {
   const referenceDataError = academicYearsError || subjectsError || semestersError;
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,

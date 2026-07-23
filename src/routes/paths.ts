@@ -100,6 +100,7 @@ export const paths = {
     subjects: `${ROOTS.STUDENT}/subjects`,
     assignments: `${ROOTS.STUDENT}/assignments`,
     attendance: `${ROOTS.STUDENT}/attendance`,
+    qr: `${ROOTS.STUDENT}/qr`,
   },
   // TEACHER
   teacher: {
@@ -109,6 +110,8 @@ export const paths = {
     assignments: `${ROOTS.TEACHER}/assignments`,
     students: `${ROOTS.TEACHER}/students`,
     attendanceHistory: `${ROOTS.TEACHER}/students/attendance-history`,
+    attendanceScan: `${ROOTS.TEACHER}/attendance-scan`,
+    attendanceScanSession: (id: string) => `${ROOTS.TEACHER}/attendance-scan/session/${id}`,
     assignmentDetail: (id: string) => `${ROOTS.TEACHER}/assignments/${id}`,
     assignmentNew: (id: string) => `${ROOTS.TEACHER}/assignments/${id}/new`,
     gradebook: (assignmentId: string) => `${ROOTS.TEACHER}/gradebook/${assignmentId}`,

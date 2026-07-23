@@ -162,7 +162,7 @@ export function TeacherAssignmentListView() {
   );
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Card
         sx={{
           mb: 4,
@@ -382,7 +382,12 @@ export function TeacherAssignmentListView() {
           sx={{
             gap: 2.5,
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)', lg: 'repeat(3, 1fr)' },
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(3, 1fr)',
+              lg: 'repeat(3, 1fr)',
+              xl: 'repeat(4, 1fr)',
+            },
           }}
         >
           {filteredRows.map((row) => (

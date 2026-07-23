@@ -282,7 +282,7 @@ export function SubjectFormDialog({
                   sx={{
                     gap: 2,
                     display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', sm: 'minmax(180px, 0.7fr) 1.3fr' },
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
                   }}
                 >
                   <Field.Text

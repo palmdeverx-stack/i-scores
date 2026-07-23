@@ -28,4 +28,9 @@ export const studentNavData: NavMainProps['data'] = [
     path: paths.student.attendance,
     icon: <Iconify width={22} icon="solar:check-circle-bold" />,
   },
+  {
+    title: 'QR ของฉัน',
+    path: paths.student.qr,
+    icon: <Iconify width={22} icon="solar:user-id-bold" />,
+  },
 ];

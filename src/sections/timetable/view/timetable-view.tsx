@@ -115,7 +115,7 @@ export function TimetableView() {
   const today = new Date().getDay() || 7;
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box
         sx={{
           p: { xs: 2.5, md: 4 },

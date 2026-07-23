@@ -39,6 +39,7 @@ import { listUsers } from 'src/sections/user/user-actions';
 
 import { useAuthContext } from 'src/auth/hooks';
 
+import { StudentQrDialog } from '../components/student-qr-dialog';
 import { HomeroomAttendanceSection } from '../components/homeroom-attendance-section';
 import {
   getMyHomeroomStudents,
@@ -68,6 +69,7 @@ export function TeacherStudentsView() {
   const [editingRow, setEditingRow] = useState<HomeroomEnrollment | null>(null);
   const [studentNumber, setStudentNumber] = useState('');
   const [deletingRow, setDeletingRow] = useState<HomeroomEnrollment | null>(null);
+  const [qrRow, setQrRow] = useState<HomeroomEnrollment | null>(null);
 
   const {
     data = { classrooms: [], enrollments: [] },
@@ -157,7 +159,7 @@ export function TeacherStudentsView() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,
@@ -184,6 +186,14 @@ export function TeacherStudentsView() {
             startIcon={<Iconify icon="solar:calendar-date-bold" />}
           >
             ประวัติการเข้าแถว
+          </Button>
+          <Button
+            component={RouterLink}
+            href={paths.teacher.attendanceScan}
+            variant="outlined"
+            startIcon={<Iconify icon="solar:camera-add-bold" />}
+          >
+            สแกน QR
           </Button>
           {section === 'students' && (
             <Button
@@ -392,6 +402,15 @@ export function TeacherStudentsView() {
                           <TableCell align="right">
                             <IconButton
                               size="small"
+                              color="primary"
+                              disabled={!row.student.is_active || status !== 'studying'}
+                              onClick={() => setQrRow(row)}
+                              aria-label={`ดู QR ของ ${name}`}
+                            >
+                              <Iconify icon="solar:user-id-bold" width={18} />
+                            </IconButton>
+                            <IconButton
+                              size="small"
                               onClick={() => openEdit(row)}
                               aria-label={`แก้ไขเลขที่ของ ${name}`}
                             >
@@ -427,6 +446,14 @@ export function TeacherStudentsView() {
           )}
         </>
       )}
+
+      <StudentQrDialog
+        open={!!qrRow}
+        student={qrRow?.student ?? null}
+        classroomName={selectedClassroom?.name}
+        academicYear={selectedClassroom?.academic_years?.year}
+        onClose={() => setQrRow(null)}
+      />
 
       <Dialog
         open={addDialogOpen}
