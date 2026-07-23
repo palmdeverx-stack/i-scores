@@ -78,7 +78,7 @@ export function SchoolAdminCreateView() {
   );
 
   return (
-    <Container maxWidth="lg" sx={{ pb: { xs: 5, md: 7 } }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Button
         component={RouterLink}
         href={paths.master.schoolAdmin.root}
@@ -96,7 +96,6 @@ export function SchoolAdminCreateView() {
           สร้างบัญชีและกำหนดโรงเรียนที่รับผิดชอบ
         </Typography>
       </Box>
-
       <Box
         sx={{
           gap: 3,

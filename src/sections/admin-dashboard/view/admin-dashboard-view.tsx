@@ -221,7 +221,7 @@ export function AdminDashboardView() {
   const nextStep = checklist.find((item) => !item.complete);
 
   return (
-    <Container maxWidth="xl" sx={{ pb: { xs: 5, md: 7 } }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 3,

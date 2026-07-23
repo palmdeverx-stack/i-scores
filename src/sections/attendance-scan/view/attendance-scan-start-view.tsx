@@ -104,7 +104,7 @@ export function AttendanceScanStartView() {
     lateAfterMinutes <= durationMinutes;
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box sx={{ mb: 4 }}>
         <Typography component="h1" variant="h3">
           สแกน QR เช็คชื่อ

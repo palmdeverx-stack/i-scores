@@ -153,7 +153,7 @@ export function TeacherProfileView() {
   }).format(new Date(profile.created_at));
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Card
         sx={{
           mb: 3,

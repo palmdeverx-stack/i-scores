@@ -75,7 +75,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
   const openSchedule = useCallback(() => setTab('schedule'), []);
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <TeacherAssignmentDetailHeader teacherAssignmentId={teacherAssignmentId} />
       <TeacherAssignmentDetailTabs
         value={tab}

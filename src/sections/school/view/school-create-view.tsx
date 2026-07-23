@@ -51,7 +51,7 @@ export function SchoolCreateView() {
   );
 
   return (
-    <Container maxWidth="lg" sx={{ pb: { xs: 5, md: 7 } }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Button
         component={RouterLink}
         href={paths.master.school.root}
@@ -69,7 +69,6 @@ export function SchoolCreateView() {
           สร้างพื้นที่สำหรับโรงเรียนใหม่ในระบบ
         </Typography>
       </Box>
-
       <Box
         sx={{
           gap: 3,

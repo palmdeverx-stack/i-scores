@@ -31,8 +31,8 @@ import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
-import { listUsers, updateUserActive, deleteManagedUser } from '../user-actions';
 import { CreateUserDialog } from '../components/create-user-dialog';
+import { listUsers, updateUserActive, deleteManagedUser } from '../user-actions';
 
 // ----------------------------------------------------------------------
 
@@ -117,7 +117,7 @@ export function UserListView() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,

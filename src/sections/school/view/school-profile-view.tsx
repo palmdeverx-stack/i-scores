@@ -120,7 +120,7 @@ export function SchoolProfileView() {
   }).format(new Date(school.created_at));
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Card
         sx={{
           mb: 4,

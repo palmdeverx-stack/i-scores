@@ -120,7 +120,7 @@ export function GradebookView({ assignmentId }: Props) {
       : paths.admin.teacherAssignment.root;
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Button
         component={RouterLink}
         href={assignmentDetailPath}
