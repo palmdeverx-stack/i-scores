@@ -11,6 +11,11 @@ export type School = {
   logo_url: string | null;
   is_active: boolean;
   created_at: string;
+  subscription: {
+    plan_name: string;
+    status: 'trialing' | 'active' | 'past_due' | 'suspended' | 'canceled';
+    ends_at: string | null;
+  } | null;
   teacherCount: number;
   studentCount: number;
   classroomCount: number;

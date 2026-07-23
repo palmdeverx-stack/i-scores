@@ -36,6 +36,7 @@ import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 
 import { listUsers } from 'src/sections/user/user-actions';
+import { useSchoolSubscription } from 'src/sections/school-subscription/use-school-subscription';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -60,6 +61,7 @@ const STATUS_LABEL = {
 
 export function TeacherStudentsView() {
   const { user } = useAuthContext();
+  const subscriptionQuery = useSchoolSubscription(user?.school_id);
   const queryClient = useQueryClient();
   const [classroomId, setClassroomId] = useState('');
   const [section, setSection] = useState<'students' | 'attendance'>('students');
@@ -70,6 +72,9 @@ export function TeacherStudentsView() {
   const [studentNumber, setStudentNumber] = useState('');
   const [deletingRow, setDeletingRow] = useState<HomeroomEnrollment | null>(null);
   const [qrRow, setQrRow] = useState<HomeroomEnrollment | null>(null);
+  const canUseQr =
+    subscriptionQuery.data?.subscription.enabled_features.includes('teacher.qr_attendance') ??
+    false;
 
   const {
     data = { classrooms: [], enrollments: [] },
@@ -187,14 +192,16 @@ export function TeacherStudentsView() {
           >
             ประวัติการเข้าแถว
           </Button>
-          <Button
-            component={RouterLink}
-            href={paths.teacher.attendanceScan}
-            variant="outlined"
-            startIcon={<Iconify icon="solar:camera-add-bold" />}
-          >
-            สแกน QR
-          </Button>
+          {canUseQr && (
+            <Button
+              component={RouterLink}
+              href={paths.teacher.attendanceScan}
+              variant="outlined"
+              startIcon={<Iconify icon="solar:camera-add-bold" />}
+            >
+              สแกน QR
+            </Button>
+          )}
           {section === 'students' && (
             <Button
               variant="contained"
@@ -400,15 +407,17 @@ export function TeacherStudentsView() {
                             </Label>
                           </TableCell>
                           <TableCell align="right">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              disabled={!row.student.is_active || status !== 'studying'}
-                              onClick={() => setQrRow(row)}
-                              aria-label={`ดู QR ของ ${name}`}
-                            >
-                              <Iconify icon="solar:user-id-bold" width={18} />
-                            </IconButton>
+                            {canUseQr && (
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                disabled={!row.student.is_active || status !== 'studying'}
+                                onClick={() => setQrRow(row)}
+                                aria-label={`ดู QR ของ ${name}`}
+                              >
+                                <Iconify icon="solar:user-id-bold" width={18} />
+                              </IconButton>
+                            )}
                             <IconButton
                               size="small"
                               onClick={() => openEdit(row)}

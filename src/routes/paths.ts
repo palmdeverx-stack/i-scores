@@ -127,10 +127,14 @@ export const paths = {
     school: {
       root: `${ROOTS.MASTER}/school`,
       new: `${ROOTS.MASTER}/school/new`,
+      subscription: (id: string) => `${ROOTS.MASTER}/school/${id}/subscription`,
     },
     schoolAdmin: {
       root: `${ROOTS.MASTER}/school-admin`,
       new: `${ROOTS.MASTER}/school-admin/new`,
+    },
+    subscriptionPlan: {
+      root: `${ROOTS.MASTER}/subscription-plan`,
     },
   },
   // SCHOOL ADMIN

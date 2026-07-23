@@ -5,6 +5,7 @@ import { paths } from 'src/routes/paths';
 import { CONFIG } from 'src/global-config';
 
 import { SvgColor } from 'src/components/svg-color';
+import { RiPriceTag3Line } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -16,6 +17,7 @@ const ICONS = {
   user: icon('ic-user'),
   folder: icon('ic-folder'),
   dashboard: icon('ic-dashboard'),
+  subscription: <RiPriceTag3Line size={24} />,
 };
 
 // ----------------------------------------------------------------------
@@ -40,6 +42,11 @@ export const navData: NavSectionProps['data'] = [
         title: 'ผู้ดูแลโรงเรียน',
         path: paths.master.schoolAdmin.root,
         icon: ICONS.user,
+      },
+      {
+        title: 'ตั้งค่าแพ็กเกจ',
+        path: paths.master.subscriptionPlan.root,
+        icon: ICONS.subscription,
       },
     ],
   },

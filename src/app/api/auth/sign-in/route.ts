@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { signAppToken, toPublicUser } from 'src/lib/auth-token';
+import { isSubscriptionUsable, loadSchoolSubscription } from 'src/lib/school-subscription';
 
 // ----------------------------------------------------------------------
 
@@ -37,6 +38,25 @@ export async function POST(request: Request) {
       },
       { status: 403 }
     );
+  }
+
+  if (user.role !== 'master_admin') {
+    const [{ data: school }, subscription] = await Promise.all([
+      supabaseAdmin.from('schools').select('is_active').eq('id', user.school_id).maybeSingle(),
+      loadSchoolSubscription(user.school_id),
+    ]);
+    if (!school?.is_active) {
+      return NextResponse.json(
+        { message: 'โรงเรียนถูกปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบ' },
+        { status: 403 }
+      );
+    }
+    if (!isSubscriptionUsable(subscription)) {
+      return NextResponse.json(
+        { message: 'แพ็กเกจโรงเรียนหมดอายุหรือถูกระงับ กรุณาติดต่อผู้ดูแลระบบ' },
+        { status: 403 }
+      );
+    }
   }
 
   const accessToken = signAppToken({

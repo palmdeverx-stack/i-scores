@@ -5,6 +5,7 @@ import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { generatePassword } from 'src/lib/generate-password';
 import { decryptCredential, encryptCredential } from 'src/lib/credential-cipher';
+import { schoolHasFeature, checkSchoolSeatLimit } from 'src/lib/school-subscription';
 
 // ----------------------------------------------------------------------
 
@@ -142,6 +143,27 @@ export async function POST(request: Request) {
       );
     }
     targetSchoolId = caller.schoolId!;
+  }
+
+  const requiredFeature =
+    role === 'teacher' ? 'admin.staff' : role === 'student' ? 'admin.students' : null;
+  if (
+    caller.role === 'school_admin' &&
+    requiredFeature &&
+    !(await schoolHasFeature(targetSchoolId, requiredFeature))
+  ) {
+    return NextResponse.json(
+      { message: 'แพ็กเกจโรงเรียนไม่รองรับการสร้างบัญชีประเภทนี้' },
+      { status: 403 }
+    );
+  }
+
+  const seat = await checkSchoolSeatLimit(
+    targetSchoolId,
+    role as 'school_admin' | 'teacher' | 'student'
+  );
+  if (!seat.allowed) {
+    return NextResponse.json({ message: seat.message }, { status: 409 });
   }
 
   const { data: existing } = await supabaseAdmin

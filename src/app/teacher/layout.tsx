@@ -1,7 +1,15 @@
 'use client';
 
+import { useMemo } from 'react';
+
 import { navData as teacherNavData } from 'src/layouts/nav-config-teacher';
 import { DashboardLayout, SchoolHeaderIdentity } from 'src/layouts/dashboard';
+
+import { SchoolSubscriptionGuard } from 'src/sections/school-subscription/school-subscription-guard';
+import {
+  filterDashboardNav,
+  useSchoolSubscription,
+} from 'src/sections/school-subscription/use-school-subscription';
 
 import { useAuthContext } from 'src/auth/hooks';
 import { AuthGuard, RoleRedirectGuard, MustChangePasswordGuard } from 'src/auth/guard';
@@ -14,6 +22,15 @@ type Props = {
 
 export default function Layout({ children }: Props) {
   const { user } = useAuthContext();
+  const subscriptionQuery = useSchoolSubscription(user?.school_id);
+  const navData = useMemo(
+    () =>
+      filterDashboardNav(
+        teacherNavData,
+        subscriptionQuery.data?.subscription.enabled_features ?? []
+      ),
+    [subscriptionQuery.data?.subscription.enabled_features]
+  );
 
   return (
     <AuthGuard>
@@ -28,7 +45,7 @@ export default function Layout({ children }: Props) {
             }}
             slotProps={{
               nav: {
-                data: teacherNavData,
+                data: navData,
                 headerIdentity: <SchoolHeaderIdentity />,
               },
               header: {
@@ -39,7 +56,7 @@ export default function Layout({ children }: Props) {
               },
             }}
           >
-            {children}
+            <SchoolSubscriptionGuard>{children}</SchoolSubscriptionGuard>
           </DashboardLayout>
         </MustChangePasswordGuard>
       </RoleRedirectGuard>

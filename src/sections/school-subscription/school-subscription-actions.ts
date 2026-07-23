@@ -1,0 +1,85 @@
+'use client';
+
+import type { SchoolFeatureKey } from 'src/lib/school-subscription-config';
+
+import { getStoredToken } from 'src/auth/context/jwt/utils';
+
+// ----------------------------------------------------------------------
+
+export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'suspended' | 'canceled';
+export type BillingCycle = 'monthly' | 'yearly' | 'custom';
+
+export type SchoolSubscription = {
+  id: string;
+  school_id: string;
+  plan_name: string;
+  status: SubscriptionStatus;
+  billing_cycle: BillingCycle;
+  price: number;
+  currency: string;
+  starts_at: string;
+  ends_at: string | null;
+  max_school_admins: number;
+  max_teachers: number;
+  max_students: number;
+  enabled_features: SchoolFeatureKey[];
+  notes: string | null;
+  updated_at: string;
+};
+
+export type SchoolSubscriptionData = {
+  school: {
+    id: string;
+    name: string;
+    code: string;
+    logo_url: string | null;
+    is_active: boolean;
+  };
+  subscription: SchoolSubscription;
+  usage: {
+    schoolAdmins: number;
+    teachers: number;
+    students: number;
+  };
+};
+
+export type UpdateSchoolSubscriptionParams = {
+  planName: string;
+  status: SubscriptionStatus;
+  billingCycle: BillingCycle;
+  price: number;
+  startsAt: string;
+  endsAt: string | null;
+  maxSchoolAdmins: number;
+  maxTeachers: number;
+  maxStudents: number;
+  enabledFeatures: SchoolFeatureKey[];
+  notes: string;
+};
+
+function authHeader() {
+  return { Authorization: `Bearer ${getStoredToken()}` };
+}
+
+export async function getSchoolSubscription(schoolId: string): Promise<SchoolSubscriptionData> {
+  const response = await fetch(`/api/schools/${schoolId}/subscription`, {
+    headers: authHeader(),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดแพ็กเกจโรงเรียนได้');
+  return json;
+}
+
+export async function updateSchoolSubscription(
+  schoolId: string,
+  params: UpdateSchoolSubscriptionParams
+): Promise<SchoolSubscription> {
+  const response = await fetch(`/api/schools/${schoolId}/subscription`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(params),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถบันทึกแพ็กเกจโรงเรียนได้');
+  return json.subscription;
+}

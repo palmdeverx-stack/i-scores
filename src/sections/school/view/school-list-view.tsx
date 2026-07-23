@@ -228,11 +228,12 @@ export function SchoolListView() {
         </Box>
 
         <TableContainer>
-          <Table sx={{ minWidth: 1020 }}>
+          <Table sx={{ minWidth: 1160 }}>
             <TableHead>
               <TableRow>
                 <TableCell>โรงเรียน</TableCell>
                 <TableCell>รหัส</TableCell>
+                <TableCell>แพ็กเกจ</TableCell>
                 <TableCell align="center">ครู</TableCell>
                 <TableCell align="center">นักเรียน</TableCell>
                 <TableCell align="center">ห้องเรียน</TableCell>
@@ -245,7 +246,7 @@ export function SchoolListView() {
               {isLoading && (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     sx={{ py: 6, textAlign: 'center', color: 'text.secondary' }}
                   >
                     กำลังโหลดข้อมูล...
@@ -254,7 +255,7 @@ export function SchoolListView() {
               )}
               {!isLoading && !filteredSchools.length && (
                 <TableRow>
-                  <TableCell colSpan={8} sx={{ py: 8, textAlign: 'center' }}>
+                  <TableCell colSpan={9} sx={{ py: 8, textAlign: 'center' }}>
                     <Iconify
                       icon="solar:inbox-in-bold"
                       width={36}
@@ -305,6 +306,30 @@ export function SchoolListView() {
                   <TableCell>
                     <Chip size="small" variant="outlined" label={school.code} />
                   </TableCell>
+                  <TableCell>
+                    <Typography variant="subtitle2">
+                      {school.subscription?.plan_name ?? 'ยังไม่กำหนด'}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color:
+                          school.subscription?.status === 'active'
+                            ? 'success.main'
+                            : school.subscription?.status === 'trialing'
+                              ? 'info.main'
+                              : 'warning.main',
+                      }}
+                    >
+                      {school.subscription?.status === 'active'
+                        ? 'ใช้งาน'
+                        : school.subscription?.status === 'trialing'
+                          ? 'ทดลองใช้'
+                          : school.subscription
+                            ? 'ต้องตรวจสอบ'
+                            : '-'}
+                    </Typography>
+                  </TableCell>
                   <TableCell align="center">
                     {school.teacherCount.toLocaleString('th-TH')}
                   </TableCell>
@@ -344,6 +369,17 @@ export function SchoolListView() {
                   </TableCell>
                   <TableCell align="right">
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <Tooltip title="แพ็กเกจและสิทธิ์ใช้งาน">
+                        <IconButton
+                          component={RouterLink}
+                          href={paths.master.school.subscription(school.id)}
+                          size="small"
+                          color="primary"
+                          aria-label={`จัดการแพ็กเกจ ${school.name}`}
+                        >
+                          <Iconify icon="solar:settings-bold" width={18} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="แก้ไขโรงเรียน">
                         <IconButton
                           size="small"

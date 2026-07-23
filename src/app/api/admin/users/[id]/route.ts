@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { encryptCredential } from 'src/lib/credential-cipher';
+import { checkSchoolSeatLimit } from 'src/lib/school-subscription';
 
 // ----------------------------------------------------------------------
 
@@ -67,6 +68,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         { status: 409 }
       );
     }
+    if (body.isActive && !target.is_active && target.school_id) {
+      const seat = await checkSchoolSeatLimit(
+        target.school_id,
+        target.role as 'school_admin' | 'teacher' | 'student'
+      );
+      if (!seat.allowed) {
+        return NextResponse.json({ message: seat.message }, { status: 409 });
+      }
+    }
 
     const { data: user, error } = await supabaseAdmin
       .from('app_users')
@@ -116,6 +126,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
   if (!school) {
     return NextResponse.json({ message: 'ไม่พบโรงเรียนที่เลือก' }, { status: 400 });
+  }
+  if (schoolId !== target.school_id) {
+    const seat = await checkSchoolSeatLimit(
+      schoolId,
+      target.role as 'school_admin' | 'teacher' | 'student'
+    );
+    if (!seat.allowed) {
+      return NextResponse.json({ message: seat.message }, { status: 409 });
+    }
   }
 
   const updates: Record<string, unknown> = {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { schoolHasFeature } from 'src/lib/school-subscription';
 
 // ----------------------------------------------------------------------
 
@@ -9,6 +10,9 @@ export async function POST(request: Request) {
   const caller = requireRole(request, ['student']);
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  }
+  if (!(await schoolHasFeature(caller.schoolId, 'student.qr'))) {
+    return NextResponse.json({ message: 'แพ็กเกจโรงเรียนไม่รองรับ QR นักเรียน' }, { status: 403 });
   }
 
   const { data: student } = await supabaseAdmin

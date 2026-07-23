@@ -30,7 +30,9 @@ export async function GET(request: Request) {
 
   const { data: schools, error } = await supabaseAdmin
     .from('schools')
-    .select('id, name, code, logo_url, is_active, created_at')
+    .select(
+      'id, name, code, logo_url, is_active, created_at, subscription:school_subscriptions(plan_name, status, ends_at)'
+    )
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -38,13 +40,19 @@ export async function GET(request: Request) {
   }
 
   const withCounts = await Promise.all(
-    schools.map(async (school) => ({
-      ...school,
-      teacherCount: await countFor('app_users', school.id, { role: 'teacher' }),
-      studentCount: await countFor('app_users', school.id, { role: 'student' }),
-      classroomCount: await countFor('classrooms', school.id),
-      subjectCount: await countFor('subjects', school.id),
-    }))
+    schools.map(async (school) => {
+      const subscription = Array.isArray(school.subscription)
+        ? (school.subscription[0] ?? null)
+        : school.subscription;
+      return {
+        ...school,
+        subscription,
+        teacherCount: await countFor('app_users', school.id, { role: 'teacher' }),
+        studentCount: await countFor('app_users', school.id, { role: 'student' }),
+        classroomCount: await countFor('classrooms', school.id),
+        subjectCount: await countFor('subjects', school.id),
+      };
+    })
   );
 
   return NextResponse.json({ schools: withCounts });

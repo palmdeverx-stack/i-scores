@@ -29,6 +29,7 @@ import { today } from 'src/utils/format-time';
 import { Iconify } from 'src/components/iconify';
 
 import { getAttendance, saveAttendance } from 'src/sections/attendance/attendance-actions';
+import { useSchoolSubscription } from 'src/sections/school-subscription/use-school-subscription';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -57,6 +58,7 @@ type Props = { teacherAssignmentId: string };
 
 export function AttendanceSection({ teacherAssignmentId }: Props) {
   const { user } = useAuthContext();
+  const subscriptionQuery = useSchoolSubscription(user?.school_id);
   const queryClient = useQueryClient();
   const [sessionDate, setSessionDate] = useState(() => today('YYYY-MM-DD'));
   const [edits, setEdits] = useState<Record<string, AttendanceEdit>>({});
@@ -175,13 +177,17 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
           <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
             {user?.role === 'teacher' && (
               <>
-                <Button
-                  variant="contained"
-                  onClick={() => setScanDialogOpen(true)}
-                  startIcon={<Iconify icon="solar:camera-add-bold" />}
-                >
-                  สแกน QR เข้าเรียน
-                </Button>
+                {subscriptionQuery.data?.subscription.enabled_features.includes(
+                  'teacher.qr_attendance'
+                ) && (
+                  <Button
+                    variant="contained"
+                    onClick={() => setScanDialogOpen(true)}
+                    startIcon={<Iconify icon="solar:camera-add-bold" />}
+                  >
+                    สแกน QR เข้าเรียน
+                  </Button>
+                )}
                 <Button
                   component={RouterLink}
                   href={paths.teacher.assignmentAttendanceHistory(teacherAssignmentId)}
