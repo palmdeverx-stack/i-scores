@@ -10,6 +10,8 @@ export type TeacherProfile = {
   email: string | null;
   first_name: string | null;
   last_name: string | null;
+  first_name_en: string | null;
+  last_name_en: string | null;
   avatar_url: string | null;
   created_at: string;
   school: { id: string; name: string; code: string; logo_url: string | null } | null;
@@ -25,6 +27,8 @@ export type TeacherProfile = {
 export type UpdateTeacherProfileParams = {
   firstName: string;
   lastName: string;
+  firstNameEn: string;
+  lastNameEn: string;
   email: string;
 };
 

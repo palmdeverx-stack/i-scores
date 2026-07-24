@@ -254,7 +254,18 @@ export function SubjectListView() {
                         <Iconify icon="solar:gallery-wide-bold" width={24} />
                       </Avatar>
                       <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="subtitle2">{subject.name}</Typography>
+                        <Box sx={{ display: 'flex' }}>
+                          <Typography variant="subtitle2">{subject.name}</Typography>
+                          {subject.name_en && (
+                            <Typography
+                              variant="body2"
+                              noWrap
+                              sx={{ maxWidth: 420, color: 'text.secondary' }}
+                            >
+                              - {subject.name_en}
+                            </Typography>
+                          )}
+                        </Box>
                         <Typography
                           variant="caption"
                           noWrap
@@ -262,6 +273,15 @@ export function SubjectListView() {
                         >
                           {subject.description || 'ยังไม่มีคำอธิบาย'}
                         </Typography>
+                        {subject.description_en && (
+                          <Typography
+                            variant="caption"
+                            noWrap
+                            sx={{ maxWidth: 420, display: 'block', color: 'text.disabled' }}
+                          >
+                            {subject.description_en}
+                          </Typography>
+                        )}
                       </Box>
                     </Box>
                   </TableCell>

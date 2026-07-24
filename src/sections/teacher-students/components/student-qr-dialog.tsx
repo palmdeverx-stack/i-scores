@@ -2,7 +2,6 @@
 
 import type { HomeroomEnrollment } from '../teacher-students-actions';
 
-import QRCode from 'qrcode';
 import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
@@ -57,14 +56,19 @@ export function StudentQrDialog({ open, student, classroomName, academicYear, on
   }, [open, student?.id]);
 
   useEffect(() => {
-    if (!issueMutation.data?.payload) return undefined;
+    const payload = issueMutation.data?.payload;
+    if (!payload) return undefined;
     let active = true;
-    QRCode.toDataURL(issueMutation.data.payload, {
-      width: 420,
-      margin: 2,
-      errorCorrectionLevel: 'M',
-      color: { dark: '#111827', light: '#FFFFFF' },
-    })
+
+    import('qrcode')
+      .then(({ default: QRCode }) =>
+        QRCode.toDataURL(payload, {
+          width: 420,
+          margin: 2,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#111827', light: '#FFFFFF' },
+        })
+      )
       .then((url) => {
         if (active) setQrImage(url);
       })

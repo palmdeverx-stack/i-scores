@@ -4,7 +4,6 @@ import type { IScannerControls } from '@zxing/browser';
 import type { AttendanceScanResult } from 'src/sections/attendance-scan/attendance-scan-actions';
 
 import dayjs from 'dayjs';
-import { BrowserQRCodeReader } from '@zxing/browser';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -131,31 +130,39 @@ export function AttendanceQrScanDialog({ open, teacherAssignmentId, sessionDate,
   const isSessionOpen = session?.status === 'open' && dayjs().isBefore(dayjs(session.closes_at));
 
   useEffect(() => {
-    if (!open || !isSessionOpen || !videoRef.current) return undefined;
+    const videoElement = videoRef.current;
+    if (!open || !isSessionOpen || !videoElement) return undefined;
 
     let disposed = false;
     setCameraError('');
-    const reader = new BrowserQRCodeReader(undefined, {
-      delayBetweenScanAttempts: 250,
-      delayBetweenScanSuccess: 1000,
-    });
-    reader
-      .decodeFromConstraints(
+    const startScanner = async () => {
+      const { BrowserQRCodeReader } = await import('@zxing/browser');
+      if (disposed) return;
+
+      const reader = new BrowserQRCodeReader(undefined, {
+        delayBetweenScanAttempts: 250,
+        delayBetweenScanSuccess: 1000,
+      });
+      const controls = await reader.decodeFromConstraints(
         { audio: false, video: { facingMode: { ideal: 'environment' } } },
-        videoRef.current,
+        videoElement,
         (result) => {
           if (result) void processPayload(result.getText());
         }
-      )
-      .then((controls) => {
-        if (disposed) controls.stop();
-        else controlsRef.current = controls;
-      })
-      .catch(() => {
-        if (!disposed) {
-          setCameraError('เปิดกล้องไม่ได้ กรุณาอนุญาตการใช้กล้อง หรือเปิดผ่าน HTTPS/localhost');
-        }
-      });
+      );
+
+      if (disposed) {
+        controls.stop();
+      } else {
+        controlsRef.current = controls;
+      }
+    };
+
+    void startScanner().catch(() => {
+      if (!disposed) {
+        setCameraError('เปิดกล้องไม่ได้ กรุณาอนุญาตการใช้กล้อง หรือเปิดผ่าน HTTPS/localhost');
+      }
+    });
 
     return () => {
       disposed = true;

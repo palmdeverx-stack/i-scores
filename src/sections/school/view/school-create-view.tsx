@@ -27,7 +27,8 @@ import { createSchool } from '../school-actions';
 export type SchoolCreateSchemaType = z.infer<typeof SchoolCreateSchema>;
 
 export const SchoolCreateSchema = z.object({
-  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อโรงเรียน!' }),
+  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อโรงเรียนภาษาไทย!' }),
+  nameEn: z.string().trim(),
   code: z.string().trim().min(1, { error: 'กรุณากรอกรหัสโรงเรียน!' }),
 });
 
@@ -37,7 +38,7 @@ export function SchoolCreateView() {
   const router = useRouter();
   const methods = useForm({
     resolver: zodResolver(SchoolCreateSchema),
-    defaultValues: { name: '', code: '' },
+    defaultValues: { name: '', nameEn: '', code: '' },
   });
   const { handleSubmit } = methods;
 
@@ -47,7 +48,11 @@ export function SchoolCreateView() {
   });
 
   const onSubmit = handleSubmit((data) =>
-    createSchoolMutation.mutate({ name: data.name.trim(), code: data.code.trim() })
+    createSchoolMutation.mutate({
+      name: data.name.trim(),
+      nameEn: data.nameEn.trim() || undefined,
+      code: data.code.trim(),
+    })
   );
 
   return (
@@ -112,9 +117,16 @@ export function SchoolCreateView() {
               <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
                 <Field.Text
                   name="name"
-                  label="ชื่อโรงเรียน"
+                  label="ชื่อโรงเรียนภาษาไทย *"
                   placeholder="เช่น โรงเรียนตัวอย่างวิทยา"
-                  helperText="ชื่อเต็มที่ต้องการให้แสดงบนหน้าระบบ"
+                  helperText="ชื่อหลักที่ต้องการให้แสดงบนหน้าระบบ"
+                />
+                <Field.Text
+                  name="nameEn"
+                  label="ชื่อโรงเรียนภาษาอังกฤษ"
+                  placeholder="e.g. Example Wittaya School"
+                  helperText="ไม่บังคับ"
+                  slotProps={{ htmlInput: { lang: 'en' } }}
                 />
                 <Field.Text
                   name="code"

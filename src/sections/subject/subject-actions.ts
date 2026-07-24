@@ -8,8 +8,10 @@ export type Subject = {
   id: string;
   code: string | null;
   name: string;
+  name_en: string | null;
   credits: number;
   description: string | null;
+  description_en: string | null;
   image_url: string | null;
   academic_year_id: string | null;
   semester_id: string | null;
@@ -21,8 +23,10 @@ export type Subject = {
 export type SaveSubjectParams = {
   code?: string;
   name: string;
+  nameEn?: string;
   credits: number;
   description?: string;
+  descriptionEn?: string;
   academicYearId: string;
   semesterId: string;
 };

@@ -23,18 +23,11 @@ import { TruncatedTypography } from 'src/components/typography';
 type Props = {
   row: TeacherAssignment;
   detailPath: string;
-  showTeacherName: boolean;
   onEdit: (row: TeacherAssignment) => void;
   onDelete: (row: TeacherAssignment) => void;
 };
 
-export function TeacherAssignmentCard({
-  row,
-  detailPath,
-  showTeacherName,
-  onEdit,
-  onDelete,
-}: Props) {
+export function TeacherAssignmentCard({ row, detailPath, onEdit, onDelete }: Props) {
   const teacherName =
     `${row.teacher.first_name ?? ''} ${row.teacher.last_name ?? ''}`.trim() || row.teacher.username;
   const teacherInitial = teacherName.charAt(0).toUpperCase();
@@ -131,32 +124,29 @@ export function TeacherAssignmentCard({
               <TruncatedTypography variant="h6">
                 {row.subject.code || '-'} | {row.subject.name}
               </TruncatedTypography>
-              {showTeacherName && (
-                <Box sx={{ gap: 1, mt: 1, display: 'flex', alignItems: 'center' }}>
-                  <Avatar
-                    sx={{
-                      width: 28,
-                      height: 28,
-                      typography: 'caption',
-                      color: 'primary.main',
-                      bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.1),
-                    }}
-                  >
-                    {teacherInitial}
-                  </Avatar>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography
-                      variant="caption"
-                      sx={{ display: 'block', color: 'text.secondary' }}
-                    >
-                      ครูผู้สอน
-                    </Typography>
-                    <Typography variant="subtitle2" noWrap>
-                      {teacherName}
-                    </Typography>
-                  </Box>
+              <Box sx={{ gap: 1, mt: 1, display: 'flex', alignItems: 'center' }}>
+                <Avatar
+                  src={row.teacher.avatar_url ?? undefined}
+                  alt={`รูปครู ${teacherName}`}
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    typography: 'caption',
+                    color: 'primary.main',
+                    bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.1),
+                  }}
+                >
+                  {teacherInitial}
+                </Avatar>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                    ครูผู้สอน
+                  </Typography>
+                  <Typography variant="subtitle2" noWrap>
+                    {teacherName}
+                  </Typography>
                 </Box>
-              )}
+              </Box>
             </Box>
 
             <Divider sx={{ mt: 'auto', borderStyle: 'dashed' }} />
@@ -218,52 +208,5 @@ export function TeacherAssignmentCard({
         </Box>
       </Box>
     </Card>
-  );
-}
-
-// ----------------------------------------------------------------------
-
-type InfoBoxProps = {
-  icon: 'solar:users-group-rounded-bold' | 'solar:calendar-date-bold';
-  label: string;
-  value: string;
-};
-
-function InfoBox({ icon, label, value }: InfoBoxProps) {
-  return (
-    <Box
-      sx={{
-        p: 1.25,
-        gap: 1,
-        minWidth: 0,
-        display: 'flex',
-        borderRadius: 1.25,
-        alignItems: 'center',
-        bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.06),
-      }}
-    >
-      <Box
-        sx={{
-          width: 32,
-          height: 32,
-          display: 'grid',
-          flexShrink: 0,
-          borderRadius: 1,
-          color: 'primary.main',
-          placeItems: 'center',
-          bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.1),
-        }}
-      >
-        <Iconify icon={icon} width={18} />
-      </Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="caption" noWrap sx={{ display: 'block', color: 'text.secondary' }}>
-          {label}
-        </Typography>
-        <Typography variant="subtitle2" noWrap>
-          {value}
-        </Typography>
-      </Box>
-    </Box>
   );
 }

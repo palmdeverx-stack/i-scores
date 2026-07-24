@@ -31,7 +31,7 @@ export async function GET(request: Request) {
   const { data: schools, error } = await supabaseAdmin
     .from('schools')
     .select(
-      'id, name, code, logo_url, is_active, created_at, subscription:school_subscriptions(plan_name, status, ends_at)'
+      'id, name, name_en, code, logo_url, is_active, created_at, subscription:school_subscriptions(plan_name, status, ends_at)'
     )
     .order('created_at', { ascending: false });
 
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { name, code } = await request.json();
+  const { name, nameEn, code } = await request.json();
 
   if (!name || !code) {
     return NextResponse.json({ message: 'กรุณากรอกชื่อและรหัสโรงเรียน' }, { status: 400 });
@@ -83,8 +83,13 @@ export async function POST(request: Request) {
 
   const { data: school, error } = await supabaseAdmin
     .from('schools')
-    .insert({ name, code, created_by: caller.sub })
-    .select('id, name, code, logo_url, is_active, created_at')
+    .insert({
+      name: String(name).trim(),
+      name_en: typeof nameEn === 'string' && nameEn.trim() ? nameEn.trim() : null,
+      code: String(code).trim(),
+      created_by: caller.sub,
+    })
+    .select('id, name, name_en, code, logo_url, is_active, created_at')
     .single();
 
   if (error || !school) {

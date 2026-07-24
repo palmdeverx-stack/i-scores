@@ -1,6 +1,10 @@
 'use client';
 
-import type { StudentDashboard, StudentClassroom } from '../student-dashboard-actions';
+import type {
+  StudentPerson,
+  StudentClassroom,
+  StudentClassMember,
+} from '../student-dashboard-actions';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -17,8 +21,8 @@ import { EmptyCard, displayName, SectionHeading } from '../view/student-dashboar
 
 type Props = {
   classroom?: StudentClassroom;
-  members: StudentDashboard['class_members'];
-  teachers: StudentDashboard['homeroom_teachers'];
+  members: StudentClassMember[];
+  teachers: StudentPerson[];
 };
 
 export function StudentClassroomSection({ classroom, members, teachers }: Props) {

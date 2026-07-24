@@ -27,8 +27,10 @@ import { createUser, updateStaffUser } from '../user-actions';
 // ----------------------------------------------------------------------
 
 const CreateSchema = z.object({
-  firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อ!' }),
-  lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุล!' }),
+  firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อภาษาไทย!' }),
+  lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุลภาษาไทย!' }),
+  firstNameEn: z.string(),
+  lastNameEn: z.string(),
   username: z.string().trim().min(1, { error: 'กรุณากรอกชื่อผู้ใช้งาน!' }),
   email: z.union([z.literal(''), z.email({ error: 'อีเมลไม่ถูกต้อง!' })]),
   password: z.union([
@@ -63,6 +65,8 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
     defaultValues: {
       firstName: '',
       lastName: '',
+      firstNameEn: '',
+      lastNameEn: '',
       username: '',
       email: '',
       password: '',
@@ -89,6 +93,8 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
         ? {
             firstName: user.first_name ?? '',
             lastName: user.last_name ?? '',
+            firstNameEn: user.first_name_en ?? '',
+            lastNameEn: user.last_name_en ?? '',
             username: user.username,
             email: user.email ?? '',
             password: '',
@@ -97,13 +103,15 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
         : {
             firstName: '',
             lastName: '',
+            firstNameEn: '',
+            lastNameEn: '',
             username: '',
             email: '',
             password: generatePassword(),
             role: isStudentMode ? 'student' : 'teacher',
           }
     );
-    setShowPassword(!user);
+    setShowPassword(false);
     createMutation.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isStudentMode, reset, user]);
@@ -121,6 +129,8 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
       ...data,
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),
+      firstNameEn: data.firstNameEn.trim() || undefined,
+      lastNameEn: data.lastNameEn.trim() || undefined,
       username: data.username.trim(),
       email: data.email || undefined,
       password: data.password || (isEdit ? undefined : generatePassword()),
@@ -198,8 +208,18 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
               }}
             >
-              <Field.Text name="firstName" label="ชื่อ *" autoFocus />
-              <Field.Text name="lastName" label="นามสกุล *" />
+              <Field.Text name="firstName" label="ชื่อภาษาไทย *" autoFocus />
+              <Field.Text name="lastName" label="นามสกุลภาษาไทย *" />
+              <Field.Text
+                name="firstNameEn"
+                label="ชื่อภาษาอังกฤษ"
+                slotProps={{ htmlInput: { lang: 'en' } }}
+              />
+              <Field.Text
+                name="lastNameEn"
+                label="นามสกุลภาษาอังกฤษ"
+                slotProps={{ htmlInput: { lang: 'en' } }}
+              />
               <Field.Text
                 name="username"
                 label="ชื่อผู้ใช้งาน *"
@@ -243,7 +263,7 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
                       shouldDirty: true,
                       shouldValidate: true,
                     });
-                    setShowPassword(true);
+                    setShowPassword(false);
                   }}
                   sx={{ mt: 0.75 }}
                 >

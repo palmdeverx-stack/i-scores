@@ -1,6 +1,5 @@
 'use client';
 
-import QRCode from 'qrcode';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -27,16 +26,25 @@ export function StudentQrView() {
   });
 
   useEffect(() => {
-    if (!qrQuery.data?.payload) return undefined;
+    const payload = qrQuery.data?.payload;
+    if (!payload) return undefined;
     let active = true;
-    QRCode.toDataURL(qrQuery.data.payload, {
-      width: 620,
-      margin: 2,
-      errorCorrectionLevel: 'M',
-      color: { dark: '#111827', light: '#FFFFFF' },
-    }).then((url) => {
+
+    const generateQrImage = async () => {
+      const { default: QRCode } = await import('qrcode');
+      const url = await QRCode.toDataURL(payload, {
+        width: 620,
+        margin: 2,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#111827', light: '#FFFFFF' },
+      });
       if (active) setQrImage(url);
+    };
+
+    void generateQrImage().catch(() => {
+      if (active) setQrImage('');
     });
+
     return () => {
       active = false;
     };

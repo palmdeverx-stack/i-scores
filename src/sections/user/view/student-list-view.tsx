@@ -275,8 +275,15 @@ export function StudentListView() {
                     <Typography variant="subtitle2">{student.username}</Typography>
                   </TableCell>
                   <TableCell>
-                    {`${student.name_prefix ?? ''}${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() ||
-                      '-'}
+                    <Typography variant="body2">
+                      {`${student.name_prefix ?? ''}${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() ||
+                        '-'}
+                    </Typography>
+                    {(student.first_name_en || student.last_name_en) && (
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {`${student.first_name_en ?? ''} ${student.last_name_en ?? ''}`.trim()}
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>{student.email ?? '-'}</TableCell>
                   <TableCell>

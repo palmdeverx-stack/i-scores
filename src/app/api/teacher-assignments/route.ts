@@ -8,35 +8,92 @@ import { supabaseAdmin } from 'src/lib/supabase-admin';
 export async function GET(request: Request) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
 
-  if (!caller) {
+  if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  let query = supabaseAdmin
-    .from('teacher_assignments')
-    .select(
-      `id, created_at,
-       teacher:app_users!teacher_assignments_teacher_id_fkey!inner(id, username, first_name, last_name),
-       subject:subjects!inner(id, code, name, image_url, academic_year_id, semester_id),
-       classroom:classrooms!inner(id, name, academic_year_id),
-       semester:semesters!inner(id, name, academic_year_id)`
-    )
-    .eq('teacher.school_id', caller.schoolId)
-    .eq('subject.school_id', caller.schoolId)
-    .eq('classroom.school_id', caller.schoolId)
-    .order('created_at', { ascending: false });
+  const { searchParams } = new URL(request.url);
+  const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 12, 1), 50);
+  const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
+  const search = searchParams.get('search')?.trim() || null;
+  const classroomId = searchParams.get('classroomId') || null;
 
-  if (caller.role === 'teacher') {
-    query = query.eq('teacher_id', caller.sub);
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await supabaseAdmin.rpc('search_teacher_assignments', {
+    p_school_id: caller.schoolId,
+    p_teacher_id: caller.role === 'teacher' ? caller.sub : null,
+    p_classroom_id: classroomId,
+    p_search: search,
+    p_limit: limit,
+    p_offset: offset,
+  });
 
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ teacherAssignments: data });
+  type SearchRow = {
+    id: string;
+    created_at: string;
+    teacher: unknown;
+    subject: unknown;
+    classroom: unknown;
+    semester: unknown;
+    total_count: number | string;
+  };
+  const rows: SearchRow[] = data ?? [];
+  const total = rows.length ? Number(rows[0].total_count) : 0;
+  const teacherIds = Array.from(
+    new Set(
+      rows.flatMap(({ teacher }) => {
+        const teacherId =
+          teacher && typeof teacher === 'object' && 'id' in teacher ? teacher.id : null;
+        return typeof teacherId === 'string' ? [teacherId] : [];
+      })
+    )
+  );
+  const { data: teacherProfiles, error: teacherProfilesError } = teacherIds.length
+    ? await supabaseAdmin
+        .from('app_users')
+        .select('id, avatar_url')
+        .in('id', teacherIds)
+        .eq('school_id', caller.schoolId)
+        .eq('role', 'teacher')
+    : { data: [], error: null };
+
+  if (teacherProfilesError) {
+    return NextResponse.json({ message: teacherProfilesError.message }, { status: 500 });
+  }
+
+  const teacherAvatarById = new Map(
+    teacherProfiles.map((teacher) => [teacher.id, teacher.avatar_url])
+  );
+  const teacherAssignments = rows.map(
+    ({ id, created_at, teacher, subject, classroom, semester }) => {
+      const teacherRecord =
+        teacher && typeof teacher === 'object'
+          ? (teacher as Record<string, unknown>)
+          : ({} as Record<string, unknown>);
+      const teacherId = typeof teacherRecord.id === 'string' ? teacherRecord.id : '';
+
+      return {
+        id,
+        created_at,
+        teacher: {
+          ...teacherRecord,
+          avatar_url: teacherAvatarById.get(teacherId) ?? null,
+        },
+        subject,
+        classroom,
+        semester,
+      };
+    }
+  );
+
+  return NextResponse.json({
+    teacherAssignments,
+    total,
+    hasMore: offset + teacherAssignments.length < total,
+  });
 }
 
 export async function POST(request: Request) {

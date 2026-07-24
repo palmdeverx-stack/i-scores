@@ -33,9 +33,11 @@ import { createSubject } from '../subject-actions';
 
 export const SubjectCreateSchema = z.object({
   code: z.string(),
-  name: z.string().min(1, { error: 'กรุณากรอกชื่อวิชา!' }),
+  name: z.string().min(1, { error: 'กรุณากรอกชื่อวิชาภาษาไทย!' }),
+  nameEn: z.string(),
   credits: z.number().min(0, { error: 'หน่วยกิตต้องไม่ต่ำกว่า 0!' }).max(99),
   description: z.string().max(2000, { error: 'คำอธิบายต้องไม่เกิน 2,000 ตัวอักษร!' }),
+  descriptionEn: z.string().max(2000, { error: 'คำอธิบายภาษาอังกฤษต้องไม่เกิน 2,000 ตัวอักษร!' }),
   academicYearId: z.string().min(1, { error: 'กรุณาเลือกปีการศึกษา!' }),
   semesterId: z.string().min(1, { error: 'กรุณาเลือกภาคเรียน!' }),
 });
@@ -53,8 +55,10 @@ export function SubjectCreateView() {
     defaultValues: {
       code: '',
       name: '',
+      nameEn: '',
       credits: 1,
       description: '',
+      descriptionEn: '',
       academicYearId: '',
       semesterId: '',
     },
@@ -248,10 +252,17 @@ export function SubjectCreateView() {
                     />
                     <Field.Text
                       name="name"
-                      label="ชื่อวิชา *"
+                      label="ชื่อวิชาภาษาไทย *"
                       placeholder="เช่น คณิตศาสตร์พื้นฐาน"
-                      helperText="ชื่อที่ครูและนักเรียนเห็นในระบบ"
+                      helperText="ชื่อหลักที่ครูและนักเรียนเห็นในระบบ"
                       slotProps={{ htmlInput: { maxLength: 200 } }}
+                    />
+                    <Field.Text
+                      name="nameEn"
+                      label="ชื่อวิชาภาษาอังกฤษ"
+                      placeholder="e.g. Fundamental Mathematics"
+                      helperText="ไม่บังคับ"
+                      slotProps={{ htmlInput: { maxLength: 200, lang: 'en' } }}
                     />
                     <Field.Text
                       name="credits"
@@ -268,6 +279,16 @@ export function SubjectCreateView() {
                       multiline
                       minRows={3}
                       slotProps={{ htmlInput: { maxLength: 2000 } }}
+                      sx={{ gridColumn: { sm: '1 / -1' } }}
+                    />
+                    <Field.Text
+                      name="descriptionEn"
+                      label="คำอธิบายรายวิชาภาษาอังกฤษ"
+                      placeholder="Course scope, objectives, or additional details"
+                      helperText="ไม่บังคับ"
+                      multiline
+                      minRows={3}
+                      slotProps={{ htmlInput: { maxLength: 2000, lang: 'en' } }}
                       sx={{ gridColumn: { sm: '1 / -1' } }}
                     />
                   </Box>

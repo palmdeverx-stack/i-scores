@@ -48,8 +48,10 @@ import {
 // ----------------------------------------------------------------------
 
 const CreateSchema = z.object({
-  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อห้องเรียน!' }),
+  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อห้องเรียนภาษาไทย!' }),
+  nameEn: z.string().trim(),
   gradeLevel: z.string().trim(),
+  gradeLevelEn: z.string().trim(),
   academicYearId: z.string().min(1, { error: 'กรุณาเลือกปีการศึกษา!' }),
   teacherIds: z.array(z.string()).min(1, { error: 'กรุณาเลือกครูประจำชั้นอย่างน้อย 1 คน!' }),
 });
@@ -88,7 +90,14 @@ export function ClassroomListView() {
 
   const methods = useForm({
     resolver: zodResolver(CreateSchema),
-    defaultValues: { name: '', gradeLevel: '', academicYearId: '', teacherIds: [] as string[] },
+    defaultValues: {
+      name: '',
+      nameEn: '',
+      gradeLevel: '',
+      gradeLevelEn: '',
+      academicYearId: '',
+      teacherIds: [] as string[],
+    },
   });
   const {
     handleSubmit,
@@ -104,8 +113,10 @@ export function ClassroomListView() {
     mutationFn: (data: z.infer<typeof CreateSchema>) => {
       const params = {
         name: data.name.trim(),
+        nameEn: data.nameEn.trim() || undefined,
         academicYearId: data.academicYearId,
         gradeLevel: data.gradeLevel.trim() || undefined,
+        gradeLevelEn: data.gradeLevelEn.trim() || undefined,
         teacherIds: data.teacherIds,
       };
       return editingClassroom
@@ -130,7 +141,14 @@ export function ClassroomListView() {
 
   const openCreateDialog = () => {
     setEditingClassroom(null);
-    reset({ name: '', gradeLevel: '', academicYearId: '', teacherIds: [] });
+    reset({
+      name: '',
+      nameEn: '',
+      gradeLevel: '',
+      gradeLevelEn: '',
+      academicYearId: '',
+      teacherIds: [],
+    });
     saveMutation.reset();
     setDialogOpen(true);
   };
@@ -139,7 +157,9 @@ export function ClassroomListView() {
     setEditingClassroom(classroom);
     reset({
       name: classroom.name,
+      nameEn: classroom.name_en ?? '',
       gradeLevel: classroom.grade_level ?? '',
+      gradeLevelEn: classroom.grade_level_en ?? '',
       academicYearId: classroom.academic_year_id,
       teacherIds: classroom.homeroom_teachers.map((teacher) => teacher.id),
     });
@@ -241,8 +261,20 @@ export function ClassroomListView() {
                 <TableRow key={classroom.id} hover>
                   <TableCell>
                     <Typography variant="subtitle2">{classroom.name}</Typography>
+                    {classroom.name_en && (
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {classroom.name_en}
+                      </Typography>
+                    )}
                   </TableCell>
-                  <TableCell>{classroom.grade_level ?? 'ไม่ระบุ'}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{classroom.grade_level ?? 'ไม่ระบุ'}</Typography>
+                    {classroom.grade_level_en && (
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {classroom.grade_level_en}
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell>{classroom.academic_years?.year ?? '-'}</TableCell>
                   <TableCell>
                     {classroom.homeroom_teachers.length
@@ -357,18 +389,33 @@ export function ClassroomListView() {
 
                 <Field.Text
                   name="name"
-                  label="ชื่อห้องเรียน *"
+                  label="ชื่อห้องเรียนภาษาไทย *"
                   placeholder="เช่น ม.1/1"
-                  helperText="ชื่อที่ครูและนักเรียนจะเห็น"
+                  helperText="ชื่อหลักที่ครูและนักเรียนจะเห็น"
                   autoFocus
                 />
 
                 <Field.Text
+                  name="nameEn"
+                  label="ชื่อห้องเรียนภาษาอังกฤษ"
+                  placeholder="e.g. Grade 7/1"
+                  helperText="ไม่บังคับ"
+                  slotProps={{ htmlInput: { lang: 'en' } }}
+                />
+
+                <Field.Text
                   name="gradeLevel"
-                  label="ระดับชั้น"
+                  label="ระดับชั้นภาษาไทย"
                   placeholder="เช่น มัธยมศึกษาปีที่ 1"
                   helperText="ไม่บังคับ"
-                  sx={{ gridColumn: { sm: '1 / -1' } }}
+                />
+
+                <Field.Text
+                  name="gradeLevelEn"
+                  label="ระดับชั้นภาษาอังกฤษ"
+                  placeholder="e.g. Grade 7"
+                  helperText="ไม่บังคับ"
+                  slotProps={{ htmlInput: { lang: 'en' } }}
                 />
 
                 <Autocomplete

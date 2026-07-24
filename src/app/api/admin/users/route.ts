@@ -217,6 +217,7 @@ export async function POST(request: Request) {
 
   const password = providedPassword || generatePassword();
   const passwordHash = await bcrypt.hash(password, 10);
+  const supportsBilingualName = role === 'teacher' || role === 'student';
 
   const { data: user, error } = await supabaseAdmin
     .from('app_users')
@@ -234,8 +235,8 @@ export async function POST(request: Request) {
       student_code: role === 'student' ? studentCode.trim() : null,
       national_id: role === 'student' ? nationalId?.trim() || null : null,
       name_prefix: role === 'student' ? namePrefix?.trim() || null : null,
-      first_name_en: role === 'student' ? firstNameEn?.trim() || null : null,
-      last_name_en: role === 'student' ? lastNameEn?.trim() || null : null,
+      first_name_en: supportsBilingualName ? firstNameEn?.trim() || null : null,
+      last_name_en: supportsBilingualName ? lastNameEn?.trim() || null : null,
       nickname: role === 'student' ? nickname?.trim() || null : null,
       gender: role === 'student' ? gender || null : null,
       birth_date: role === 'student' ? birthDate || null : null,

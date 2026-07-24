@@ -1,6 +1,6 @@
 'use client';
 
-import type { StudentDashboard } from '../student-dashboard-actions';
+import type { StudentHomeDashboard } from '../student-dashboard-actions';
 
 import { useState } from 'react';
 
@@ -23,14 +23,14 @@ import {
   SectionHeading,
   StudentPageState,
   StudentPageScaffold,
-  useStudentDashboard,
   getCurrentEnrollment,
+  useStudentHomeDashboard,
 } from './student-dashboard-shared';
 
 // ----------------------------------------------------------------------
 
 export function StudentHomeView() {
-  const { data, isLoading, isError, refetch } = useStudentDashboard('home');
+  const { data, isLoading, isError, refetch } = useStudentHomeDashboard();
 
   if (isLoading || isError || !data) {
     return <StudentPageState isLoading={isLoading} isError={isError || !data} onRetry={refetch} />;
@@ -87,8 +87,8 @@ function RankingSection({
   subjectRankings,
   classroomName,
 }: {
-  ranking: StudentDashboard['ranking'];
-  subjectRankings: StudentDashboard['subject_rankings'];
+  ranking: StudentHomeDashboard['ranking'];
+  subjectRankings: StudentHomeDashboard['subject_rankings'];
   classroomName?: string;
 }) {
   const [selectedSubjectId, setSelectedSubjectId] = useState(subjectRankings[0]?.id ?? '');
@@ -202,7 +202,7 @@ function RankingList({
   emptyText,
   note,
 }: {
-  ranking: StudentDashboard['ranking'];
+  ranking: StudentHomeDashboard['ranking'];
   emptyText: string;
   note: string;
 }) {
@@ -293,7 +293,7 @@ function RankingList({
 function AnnouncementsSection({
   announcements,
 }: {
-  announcements: StudentDashboard['announcements'];
+  announcements: StudentHomeDashboard['announcements'];
 }) {
   const priorityConfig = {
     normal: { label: 'ทั่วไป', color: 'info' as const, border: 'info.main' },

@@ -11,13 +11,13 @@ import {
   SectionHeading,
   StudentPageState,
   StudentPageScaffold,
-  useStudentDashboard,
+  useStudentSubjectsDashboard,
 } from './student-dashboard-shared';
 
 // ----------------------------------------------------------------------
 
 export function StudentSubjectsView() {
-  const { data, isLoading, isError, refetch } = useStudentDashboard('subjects');
+  const { data, isLoading, isError, refetch } = useStudentSubjectsDashboard();
 
   if (isLoading || isError || !data) {
     return <StudentPageState isLoading={isLoading} isError={isError || !data} onRetry={refetch} />;

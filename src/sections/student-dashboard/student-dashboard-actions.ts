@@ -89,14 +89,55 @@ export type StudentRankingRow = {
   is_current_student: boolean;
 };
 
-export type StudentDashboard = {
+export type StudentDashboardEnrollment = {
+  id: string;
+  student_number: string | null;
+  classroom: StudentClassroom;
+};
+
+export type StudentDashboardBase = {
   generated_at: string;
   student: StudentPerson;
-  enrollments: Array<{
+  enrollments: StudentDashboardEnrollment[];
+};
+
+export type StudentClassMember = {
+  student: StudentPerson;
+  student_number: string | null;
+  is_current_student: boolean;
+};
+
+export type StudentAnnouncement = {
+  id: string;
+  title: string;
+  content: string;
+  priority: 'normal' | 'important' | 'urgent';
+  announcement_type: 'general' | 'holiday' | 'exam';
+  published_at: string;
+  expires_at: string | null;
+  event_start: string | null;
+  event_end: string | null;
+};
+
+export type StudentHomeDashboard = StudentDashboardBase & {
+  class_members: StudentClassMember[];
+  homeroom_teachers: StudentPerson[];
+  ranking: StudentRankingRow[];
+  subject_rankings: Array<{
     id: string;
-    student_number: string | null;
-    classroom: StudentClassroom;
+    subject: StudentSubject['subject'];
+    semester: StudentSubject['semester'];
+    ranking: StudentRankingRow[];
   }>;
+  announcements: StudentAnnouncement[];
+};
+
+export type StudentClassroomDashboard = StudentDashboardBase & {
+  class_members: StudentClassMember[];
+  homeroom_teachers: StudentPerson[];
+};
+
+export type StudentSubjectsDashboard = StudentDashboardBase & {
   subjects: StudentSubject[];
   schedules: Array<{
     id: string;
@@ -108,38 +149,14 @@ export type StudentDashboard = {
     classroom: StudentClassroom;
     teacher: StudentPerson;
   }>;
-  class_members: Array<{
-    student: StudentPerson;
-    student_number: string | null;
-    is_current_student: boolean;
-  }>;
-  homeroom_teachers: StudentPerson[];
-  ranking: StudentRankingRow[];
-  subject_rankings: Array<{
-    id: string;
-    subject: StudentSubject['subject'];
-    semester: StudentSubject['semester'];
-    ranking: StudentRankingRow[];
-  }>;
-  announcements: Array<{
-    id: string;
-    title: string;
-    content: string;
-    priority: 'normal' | 'important' | 'urgent';
-    announcement_type: 'general' | 'holiday' | 'exam';
-    published_at: string;
-    expires_at: string | null;
-    event_start: string | null;
-    event_end: string | null;
-  }>;
 };
 
-export type StudentDashboardSection = 'home' | 'classroom' | 'subjects' | 'assignments';
+export type StudentAssignmentsDashboard = StudentDashboardBase & {
+  subjects: StudentSubject[];
+};
 
-export async function getStudentDashboard(
-  section: StudentDashboardSection = 'home'
-): Promise<StudentDashboard> {
-  const response = await fetch(`/api/student/dashboard?section=${section}`, {
+async function fetchJson<T>(url: string): Promise<T> {
+  const response = await fetch(url, {
     headers: { Authorization: `Bearer ${getStoredToken()}` },
     cache: 'no-store',
   });
@@ -148,4 +165,20 @@ export async function getStudentDashboard(
   if (!response.ok) throw new Error(json.message ?? 'Failed to load student dashboard');
 
   return json;
+}
+
+export function getStudentHomeDashboard() {
+  return fetchJson<StudentHomeDashboard>('/api/student/dashboard/home');
+}
+
+export function getStudentClassroomDashboard() {
+  return fetchJson<StudentClassroomDashboard>('/api/student/dashboard/classroom');
+}
+
+export function getStudentSubjectsDashboard() {
+  return fetchJson<StudentSubjectsDashboard>('/api/student/dashboard/subjects');
+}
+
+export function getStudentAssignmentsDashboard() {
+  return fetchJson<StudentAssignmentsDashboard>('/api/student/dashboard/assignments');
 }

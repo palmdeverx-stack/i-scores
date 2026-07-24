@@ -3,6 +3,7 @@
 import type { UserRow } from 'src/sections/user/user-actions';
 import type { HomeroomEnrollment } from '../teacher-students-actions';
 
+import dynamic from 'next/dynamic';
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -40,7 +41,6 @@ import { useSchoolSubscription } from 'src/sections/school-subscription/use-scho
 
 import { useAuthContext } from 'src/auth/hooks';
 
-import { StudentQrDialog } from '../components/student-qr-dialog';
 import { HomeroomAttendanceSection } from '../components/homeroom-attendance-section';
 import {
   getMyHomeroomStudents,
@@ -50,6 +50,11 @@ import {
 } from '../teacher-students-actions';
 
 // ----------------------------------------------------------------------
+
+const StudentQrDialog = dynamic(
+  () => import('../components/student-qr-dialog').then((module) => module.StudentQrDialog),
+  { ssr: false }
+);
 
 const STATUS_LABEL = {
   studying: 'กำลังศึกษา',
@@ -456,13 +461,15 @@ export function TeacherStudentsView() {
         </>
       )}
 
-      <StudentQrDialog
-        open={!!qrRow}
-        student={qrRow?.student ?? null}
-        classroomName={selectedClassroom?.name}
-        academicYear={selectedClassroom?.academic_years?.year}
-        onClose={() => setQrRow(null)}
-      />
+      {qrRow && (
+        <StudentQrDialog
+          open
+          student={qrRow.student}
+          classroomName={selectedClassroom?.name}
+          academicYear={selectedClassroom?.academic_years?.year}
+          onClose={() => setQrRow(null)}
+        />
+      )}
 
       <Dialog
         open={addDialogOpen}

@@ -37,9 +37,14 @@ import {
 
 const FormSchema = z.object({
   code: z.string().trim(),
-  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อวิชา!' }),
+  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อวิชาภาษาไทย!' }),
+  nameEn: z.string().trim(),
   credits: z.number().min(0, { error: 'หน่วยกิตต้องไม่ต่ำกว่า 0!' }).max(99),
   description: z.string().trim().max(2000, { error: 'คำอธิบายต้องไม่เกิน 2,000 ตัวอักษร!' }),
+  descriptionEn: z
+    .string()
+    .trim()
+    .max(2000, { error: 'คำอธิบายภาษาอังกฤษต้องไม่เกิน 2,000 ตัวอักษร!' }),
   academicYearId: z.string().min(1, { error: 'กรุณาเลือกปีการศึกษา!' }),
   semesterId: z.string().min(1, { error: 'กรุณาเลือกภาคเรียน!' }),
 });
@@ -56,8 +61,10 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const EMPTY_VALUES: FormValues = {
   code: '',
   name: '',
+  nameEn: '',
   credits: 1,
   description: '',
+  descriptionEn: '',
   academicYearId: '',
   semesterId: '',
 };
@@ -103,9 +110,11 @@ export function SubjectFormDialog({
     mutationFn: async (data: FormValues) => {
       const params = {
         name: data.name.trim(),
+        nameEn: data.nameEn.trim() || undefined,
         code: data.code.trim() || undefined,
         credits: data.credits,
         description: data.description.trim() || undefined,
+        descriptionEn: data.descriptionEn.trim() || undefined,
         academicYearId: data.academicYearId,
         semesterId: data.semesterId,
       };
@@ -143,8 +152,10 @@ export function SubjectFormDialog({
         ? {
             code: editingSubject.code ?? '',
             name: editingSubject.name,
+            nameEn: editingSubject.name_en ?? '',
             credits: Number(editingSubject.credits),
             description: editingSubject.description ?? '',
+            descriptionEn: editingSubject.description_en ?? '',
             academicYearId: editingSubject.academic_year_id ?? '',
             semesterId: editingSubject.semester_id ?? '',
           }
@@ -294,9 +305,16 @@ export function SubjectFormDialog({
                   />
                   <Field.Text
                     name="name"
-                    label="ชื่อวิชา *"
+                    label="ชื่อวิชาภาษาไทย *"
                     placeholder="เช่น คณิตศาสตร์พื้นฐาน"
-                    helperText="ชื่อที่ครูและนักเรียนจะเห็นในระบบ"
+                    helperText="ชื่อหลักที่ครูและนักเรียนจะเห็นในระบบ"
+                  />
+                  <Field.Text
+                    name="nameEn"
+                    label="ชื่อวิชาภาษาอังกฤษ"
+                    placeholder="e.g. Fundamental Mathematics"
+                    helperText="ไม่บังคับ"
+                    slotProps={{ htmlInput: { lang: 'en' } }}
                   />
                 </Box>
 
@@ -314,6 +332,15 @@ export function SubjectFormDialog({
                   helperText="ไม่บังคับ สูงสุด 2,000 ตัวอักษร"
                   multiline
                   minRows={3}
+                />
+                <Field.Text
+                  name="descriptionEn"
+                  label="คำอธิบายรายวิชาภาษาอังกฤษ"
+                  placeholder="Course scope, objectives, or additional details"
+                  helperText="ไม่บังคับ สูงสุด 2,000 ตัวอักษร"
+                  multiline
+                  minRows={3}
+                  slotProps={{ htmlInput: { lang: 'en' } }}
                 />
               </Box>
 

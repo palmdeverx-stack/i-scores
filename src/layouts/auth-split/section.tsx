@@ -44,7 +44,7 @@ export function AuthSplitSection({
           ...theme.mixins.bgGradient({
             images: [
               `linear-gradient(0deg, ${varAlpha(theme.vars.palette.background.defaultChannel, 0.92)}, ${varAlpha(theme.vars.palette.background.defaultChannel, 0.92)})`,
-              `url(${CONFIG.assetsDir}/assets/background/background-3-blur.webp)`,
+              `url(${CONFIG.assetsDir}/assets/background/og-images-class-go.jpg)`,
             ],
           }),
           px: 3,

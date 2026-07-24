@@ -1,7 +1,10 @@
 'use client';
 
 import type { IconifyName } from 'src/components/iconify/register-icons';
-import type { TeacherDashboardData } from '../teacher-dashboard-actions';
+import type {
+  TeacherDashboardSummary,
+  TeacherDashboardRecentAssignments,
+} from '../teacher-dashboard-actions';
 
 import { varAlpha } from 'minimal-shared/utils';
 import { useQuery } from '@tanstack/react-query';
@@ -22,7 +25,10 @@ import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
 
-import { getTeacherDashboard } from '../teacher-dashboard-actions';
+import {
+  getTeacherDashboardSummary,
+  getTeacherDashboardRecentAssignments,
+} from '../teacher-dashboard-actions';
 
 // ----------------------------------------------------------------------
 
@@ -61,7 +67,7 @@ const summaryCards = [
   },
 ] as const;
 
-function displayName(person: TeacherDashboardData['teacher']) {
+function displayName(person: TeacherDashboardSummary['teacher']) {
   return `${person.first_name ?? ''} ${person.last_name ?? ''}`.trim() || person.username;
 }
 
@@ -76,8 +82,12 @@ function timeToMinutes(value: string) {
 
 export function TeacherDashboardView() {
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['teacher-dashboard'],
-    queryFn: getTeacherDashboard,
+    queryKey: ['teacher-dashboard', 'summary'],
+    queryFn: getTeacherDashboardSummary,
+  });
+  const recentQuery = useQuery({
+    queryKey: ['teacher-dashboard', 'recent-assignments'],
+    queryFn: getTeacherDashboardRecentAssignments,
   });
 
   if (isLoading) return <TeacherDashboardSkeleton />;
@@ -276,7 +286,10 @@ export function TeacherDashboardView() {
       >
         <Box sx={{ gap: 3, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <TodaySchedule schedules={data.today_schedules} />
-          <RecentAssignments assignments={data.recent_assignments} />
+          <RecentAssignments
+            assignments={recentQuery.data?.recent_assignments}
+            isLoading={recentQuery.isLoading}
+          />
         </Box>
 
         <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
@@ -322,7 +335,7 @@ function SectionHeader({
   );
 }
 
-function TodaySchedule({ schedules }: { schedules: TeacherDashboardData['today_schedules'] }) {
+function TodaySchedule({ schedules }: { schedules: TeacherDashboardSummary['today_schedules'] }) {
   const bangkokTime = new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
@@ -413,8 +426,10 @@ function TodaySchedule({ schedules }: { schedules: TeacherDashboardData['today_s
 
 function RecentAssignments({
   assignments,
+  isLoading,
 }: {
-  assignments: TeacherDashboardData['recent_assignments'];
+  assignments: TeacherDashboardRecentAssignments['recent_assignments'] | undefined;
+  isLoading: boolean;
 }) {
   return (
     <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3 } }}>
@@ -425,7 +440,13 @@ function RecentAssignments({
         href={paths.teacher.assignments}
       />
 
-      {assignments.length ? (
+      {isLoading ? (
+        <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
+          {Array.from({ length: 3 }, (_, index) => (
+            <Skeleton key={index} variant="rounded" height={72} sx={{ borderRadius: 2 }} />
+          ))}
+        </Box>
+      ) : assignments?.length ? (
         <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
           {assignments.map((assignment) => {
             const submittedPercent = assignment.student_count
@@ -490,7 +511,7 @@ function RecentAssignments({
   );
 }
 
-function WorkloadSummary({ data }: { data: TeacherDashboardData }) {
+function WorkloadSummary({ data }: { data: TeacherDashboardSummary }) {
   return (
     <Card variant="outlined" sx={{ p: 3 }}>
       <Typography component="h2" variant="h6">

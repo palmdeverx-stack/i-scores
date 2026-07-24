@@ -60,7 +60,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     .from('schools')
     .update({ logo_url: `${publicUrl}?v=${Date.now()}` })
     .eq('id', id)
-    .select('id, name, code, logo_url, is_active, created_at')
+    .select('id, name, name_en, code, logo_url, is_active, created_at')
     .single();
 
   if (error || !school) {

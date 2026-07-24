@@ -5,7 +5,7 @@ import { supabaseAdmin } from 'src/lib/supabase-admin';
 
 // ----------------------------------------------------------------------
 
-type Relation = Record<string, any> | null;
+const GRADABLE_STATUSES = ['submitted', 'late', 'pending_review'];
 
 function bangkokDayOfWeek() {
   const weekday = new Intl.DateTimeFormat('en-US', {
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     supabaseAdmin
       .from('teacher_assignments')
       .select(
-        `id, created_at,
+        `id, classroom_id,
          subject:subjects(id, code, name, image_url),
          classroom:classrooms(id, name, grade_level, academic_year:academic_years(year)),
          semester:semesters(id, name, is_active, start_date, end_date)`
@@ -67,86 +67,53 @@ export async function GET(request: Request) {
     )
   );
 
-  const [assignmentsResult, enrollmentsResult, schedulesResult] = await Promise.all([
-    teachingIds.length
-      ? supabaseAdmin
-          .from('assignments')
-          .select('id, teacher_assignment_id, title, full_score, created_at')
-          .in('teacher_assignment_id', teachingIds)
-          .order('created_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
+  const [enrollmentsResult, schedulesResult, assignmentIdsResult] = await Promise.all([
     classroomIds.length
-      ? supabaseAdmin
-          .from('enrollments')
-          .select('student_id, classroom_id')
-          .in('classroom_id', classroomIds)
+      ? supabaseAdmin.from('enrollments').select('student_id').in('classroom_id', classroomIds)
       : Promise.resolve({ data: [], error: null }),
     teachingIds.length
       ? supabaseAdmin
           .from('teaching_schedules')
-          .select('id, teacher_assignment_id, day_of_week, start_time, end_time')
+          .select(
+            `id, teacher_assignment_id, day_of_week, start_time, end_time`
+          )
           .in('teacher_assignment_id', teachingIds)
           .eq('day_of_week', bangkokDayOfWeek())
           .order('start_time')
       : Promise.resolve({ data: [], error: null }),
+    teachingIds.length
+      ? supabaseAdmin.from('assignments').select('id').in('teacher_assignment_id', teachingIds)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  const relatedError = assignmentsResult.error ?? enrollmentsResult.error ?? schedulesResult.error;
+  const relatedError =
+    enrollmentsResult.error ?? schedulesResult.error ?? assignmentIdsResult.error;
   if (relatedError) {
     return NextResponse.json({ message: relatedError.message }, { status: 500 });
   }
 
-  const assignments = assignmentsResult.data ?? [];
-  const enrollments = enrollmentsResult.data ?? [];
-  const schedules = schedulesResult.data ?? [];
-  const assignmentIds = assignments.map((row) => row.id);
-  const scoresResult = assignmentIds.length
+  const assignmentIds = (assignmentIdsResult.data ?? []).map((row) => row.id);
+  const { count: waitingToGradeCount, error: waitingError } = assignmentIds.length
     ? await supabaseAdmin
         .from('scores')
-        .select('assignment_id, student_id, score, status')
+        .select('id', { count: 'exact', head: true })
         .in('assignment_id', assignmentIds)
-    : { data: [], error: null };
+        .in('status', GRADABLE_STATUSES)
+        .is('score', null)
+    : { count: 0, error: null };
 
-  if (scoresResult.error) {
-    return NextResponse.json({ message: scoresResult.error.message }, { status: 500 });
+  if (waitingError) {
+    return NextResponse.json({ message: waitingError.message }, { status: 500 });
   }
 
-  const scoreRows = scoresResult.data ?? [];
   const teachingById = new Map(teachingRows.map((row) => [row.id, row]));
-  const enrollmentCountByClassroom = new Map<string, number>();
-  enrollments.forEach((row) => {
-    enrollmentCountByClassroom.set(
-      row.classroom_id,
-      (enrollmentCountByClassroom.get(row.classroom_id) ?? 0) + 1
-    );
-  });
-
-  const recentAssignments = assignments.slice(0, 6).map((assignment) => {
-    const assignmentScores = scoreRows.filter((score) => score.assignment_id === assignment.id);
-    const teaching = teachingById.get(assignment.teacher_assignment_id);
-    const classroom = teaching?.classroom as unknown as { id: string } | null;
-
-    return {
-      ...assignment,
-      full_score: Number(assignment.full_score),
-      subject: teaching?.subject as unknown as Relation,
-      classroom: teaching?.classroom as unknown as Relation,
-      semester: teaching?.semester as unknown as Relation,
-      student_count: classroom ? (enrollmentCountByClassroom.get(classroom.id) ?? 0) : 0,
-      submitted_count: assignmentScores.filter((score) =>
-        ['submitted', 'late', 'pending_review'].includes(score.status)
-      ).length,
-      graded_count: assignmentScores.filter((score) => score.score !== null).length,
-    };
-  });
-
-  const todaySchedules = schedules.map((schedule) => {
+  const todaySchedules = (schedulesResult.data ?? []).map((schedule) => {
     const teaching = teachingById.get(schedule.teacher_assignment_id);
     return {
       ...schedule,
-      subject: teaching?.subject as unknown as Relation,
-      classroom: teaching?.classroom as unknown as Relation,
-      semester: teaching?.semester as unknown as Relation,
+      subject: teaching?.subject ?? null,
+      classroom: teaching?.classroom ?? null,
+      semester: teaching?.semester ?? null,
     };
   });
 
@@ -161,14 +128,10 @@ export async function GET(request: Request) {
           .filter(Boolean)
       ).size,
       classrooms: classroomIds.length,
-      students: new Set(enrollments.map((row) => row.student_id)).size,
-      assignments: assignments.length,
-      waiting_to_grade: scoreRows.filter(
-        (score) =>
-          ['submitted', 'late', 'pending_review'].includes(score.status) && score.score === null
-      ).length,
+      students: new Set((enrollmentsResult.data ?? []).map((row) => row.student_id)).size,
+      assignments: assignmentIds.length,
+      waiting_to_grade: waitingToGradeCount ?? 0,
     },
     today_schedules: todaySchedules,
-    recent_assignments: recentAssignments,
   });
 }

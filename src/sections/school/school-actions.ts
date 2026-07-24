@@ -7,6 +7,7 @@ import { getStoredToken } from 'src/auth/context/jwt/utils';
 export type School = {
   id: string;
   name: string;
+  name_en: string | null;
   code: string;
   logo_url: string | null;
   is_active: boolean;
@@ -25,6 +26,7 @@ export type School = {
 export type SchoolProfile = {
   id: string;
   name: string;
+  name_en: string | null;
   code: string;
   logo_url: string | null;
   is_active: boolean;
@@ -33,6 +35,7 @@ export type SchoolProfile = {
 
 export type CreateSchoolParams = {
   name: string;
+  nameEn?: string;
   code: string;
 };
 
@@ -86,7 +89,7 @@ export async function getSchool(id: string): Promise<SchoolProfile> {
 
 export async function updateSchool(
   id: string,
-  params: { name?: string; code?: string }
+  params: { name?: string; nameEn?: string; code?: string }
 ): Promise<SchoolProfile> {
   const response = await fetch(`/api/schools/${id}`, {
     method: 'PATCH',

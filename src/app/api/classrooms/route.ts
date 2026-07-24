@@ -17,7 +17,9 @@ export async function GET(request: Request) {
 
   let query = supabaseAdmin
     .from('classrooms')
-    .select('id, name, grade_level, academic_year_id, academic_years(year), created_at')
+    .select(
+      'id, name, name_en, grade_level, grade_level_en, academic_year_id, academic_years(year), created_at'
+    )
     .eq('school_id', caller.schoolId)
     .order('name');
 
@@ -60,8 +62,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { name, gradeLevel, academicYearId, teacherIds, subjectId, semesterId } =
-    await request.json();
+  const {
+    name,
+    nameEn,
+    gradeLevel,
+    gradeLevelEn,
+    academicYearId,
+    teacherIds,
+    subjectId,
+    semesterId,
+  } = await request.json();
 
   const requestedTeacherIds =
     caller.role === 'teacher'
@@ -110,12 +120,15 @@ export async function POST(request: Request) {
   const { data: classroom, error } = await supabaseAdmin
     .from('classrooms')
     .insert({
-      name,
-      grade_level: gradeLevel || null,
+      name: String(name).trim(),
+      name_en: typeof nameEn === 'string' && nameEn.trim() ? nameEn.trim() : null,
+      grade_level: typeof gradeLevel === 'string' && gradeLevel.trim() ? gradeLevel.trim() : null,
+      grade_level_en:
+        typeof gradeLevelEn === 'string' && gradeLevelEn.trim() ? gradeLevelEn.trim() : null,
       academic_year_id: academicYearId,
       school_id: caller.schoolId,
     })
-    .select('id, name, grade_level, academic_year_id, created_at')
+    .select('id, name, name_en, grade_level, grade_level_en, academic_year_id, created_at')
     .single();
 
   if (error || !classroom) {

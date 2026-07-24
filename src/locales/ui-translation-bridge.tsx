@@ -1,9 +1,10 @@
 'use client';
 
+import type { UiTextTranslator } from './ui-translation';
+
 import { useEffect } from 'react';
 
 import { useTranslate } from './use-locales';
-import { translateUiText } from './ui-translation';
 
 // ----------------------------------------------------------------------
 
@@ -20,10 +21,10 @@ function shouldSkip(element: Element | null) {
   return !!element.closest('[data-no-translate], [contenteditable="true"]');
 }
 
-function updateTextNode(node: Text, english: boolean) {
+function updateTextNode(node: Text, translator?: UiTextTranslator) {
   if (shouldSkip(node.parentElement)) return;
 
-  if (!english) {
+  if (!translator) {
     const original = originalText.get(node);
     if (original !== undefined && node.nodeValue !== original) node.nodeValue = original;
     translatedText.delete(node);
@@ -44,12 +45,12 @@ function updateTextNode(node: Text, english: boolean) {
   }
 
   const source = originalText.get(node) ?? current;
-  const translated = translateUiText(source);
+  const translated = translator(source);
   translatedText.set(node, translated);
   if (translated !== current) node.nodeValue = translated;
 }
 
-function updateElementAttributes(element: Element, english: boolean) {
+function updateElementAttributes(element: Element, translator?: UiTextTranslator) {
   if (shouldSkip(element)) return;
 
   for (const attribute of TRANSLATABLE_ATTRIBUTES) {
@@ -69,7 +70,7 @@ function updateElementAttributes(element: Element, english: boolean) {
 
     const lastTranslated = translated.get(attribute);
 
-    if (!english) {
+    if (!translator) {
       const source = attributes.get(attribute);
       if (source !== undefined && source !== current) element.setAttribute(attribute, source);
       translated.delete(attribute);
@@ -86,28 +87,28 @@ function updateElementAttributes(element: Element, english: boolean) {
       attributes.set(attribute, current);
     }
     const source = attributes.get(attribute) ?? current;
-    const nextValue = translateUiText(source);
+    const nextValue = translator(source);
     translated.set(attribute, nextValue);
     if (nextValue !== current) element.setAttribute(attribute, nextValue);
   }
 }
 
-function translateTree(root: Node, english: boolean) {
+function translateTree(root: Node, translator?: UiTextTranslator) {
   if (root.nodeType === Node.TEXT_NODE) {
-    updateTextNode(root as Text, english);
+    updateTextNode(root as Text, translator);
     return;
   }
 
   if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return;
 
-  if (root.nodeType === Node.ELEMENT_NODE) updateElementAttributes(root as Element, english);
+  if (root.nodeType === Node.ELEMENT_NODE) updateElementAttributes(root as Element, translator);
 
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT + NodeFilter.SHOW_TEXT);
   let node = walker.nextNode();
 
   while (node) {
-    if (node.nodeType === Node.TEXT_NODE) updateTextNode(node as Text, english);
-    if (node.nodeType === Node.ELEMENT_NODE) updateElementAttributes(node as Element, english);
+    if (node.nodeType === Node.TEXT_NODE) updateTextNode(node as Text, translator);
+    if (node.nodeType === Node.ELEMENT_NODE) updateElementAttributes(node as Element, translator);
     node = walker.nextNode();
   }
 }
@@ -118,32 +119,50 @@ export function UiTranslationBridge() {
   useEffect(() => {
     const english = currentLang.value === 'en';
     const root = document.documentElement;
+    let cancelled = false;
+    let observer: MutationObserver | undefined;
 
-    translateTree(root, english);
+    if (!english) {
+      translateTree(root);
+      return undefined;
+    }
 
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'characterData') {
-          updateTextNode(mutation.target as Text, english);
+    const startEnglishTranslation = async () => {
+      const { loadUiTextTranslator } = await import('./ui-translation');
+      const translator = await loadUiTextTranslator();
+      if (cancelled) return;
+
+      translateTree(root, translator);
+
+      observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === 'characterData') {
+            updateTextNode(mutation.target as Text, translator);
+          }
+
+          if (mutation.type === 'attributes' && mutation.target instanceof Element) {
+            updateElementAttributes(mutation.target, translator);
+          }
+
+          mutation.addedNodes.forEach((node) => translateTree(node, translator));
         }
+      });
 
-        if (mutation.type === 'attributes' && mutation.target instanceof Element) {
-          updateElementAttributes(mutation.target, english);
-        }
+      observer.observe(root, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: [...TRANSLATABLE_ATTRIBUTES],
+      });
+    };
 
-        mutation.addedNodes.forEach((node) => translateTree(node, english));
-      }
-    });
+    void startEnglishTranslation();
 
-    observer.observe(root, {
-      subtree: true,
-      childList: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: [...TRANSLATABLE_ATTRIBUTES],
-    });
-
-    return () => observer.disconnect();
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+    };
   }, [currentLang.value]);
 
   return null;

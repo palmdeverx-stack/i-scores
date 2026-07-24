@@ -19,8 +19,7 @@ export default function Layout({ children }: Props) {
           backgroundSize: 'cover',
           backgroundRepeat: 'no-repeat',
           backgroundPosition: { xs: '42% center', md: 'center' },
-          backgroundImage:
-            'url("https://res.cloudinary.com/dkdbilwtj/image/upload/v1784725452/og-images_mnmhy7.svg")',
+          backgroundImage: 'url("/assets/background/og-images-class-go.jpg")',
         }}
         slotProps={{
           header: {

@@ -43,6 +43,7 @@ export function SchoolListView() {
   const [editingSchool, setEditingSchool] = useState<School | null>(null);
   const [deletingSchool, setDeletingSchool] = useState<School | null>(null);
   const [editName, setEditName] = useState('');
+  const [editNameEn, setEditNameEn] = useState('');
   const [editCode, setEditCode] = useState('');
   const queryClient = useQueryClient();
 
@@ -60,8 +61,17 @@ export function SchoolListView() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, name, code }: { id: string; name: string; code: string }) =>
-      updateSchool(id, { name, code }),
+    mutationFn: ({
+      id,
+      name,
+      nameEn,
+      code,
+    }: {
+      id: string;
+      name: string;
+      nameEn?: string;
+      code: string;
+    }) => updateSchool(id, { name, nameEn, code }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['schools'] });
       setEditingSchool(null);
@@ -80,6 +90,7 @@ export function SchoolListView() {
     updateMutation.reset();
     setEditingSchool(school);
     setEditName(school.name);
+    setEditNameEn(school.name_en ?? '');
     setEditCode(school.code);
   };
 
@@ -88,6 +99,7 @@ export function SchoolListView() {
     updateMutation.mutate({
       id: editingSchool.id,
       name: editName.trim(),
+      nameEn: editNameEn.trim(),
       code: editCode.trim(),
     });
   };
@@ -96,7 +108,9 @@ export function SchoolListView() {
     const keyword = search.trim().toLocaleLowerCase('th');
     if (!keyword) return schools;
     return schools.filter((school) =>
-      `${school.name} ${school.code}`.toLocaleLowerCase('th').includes(keyword)
+      `${school.name} ${school.name_en ?? ''} ${school.code}`
+        .toLocaleLowerCase('th')
+        .includes(keyword)
     );
   }, [schools, search]);
 
@@ -292,6 +306,15 @@ export function SchoolListView() {
                         <Typography variant="subtitle2" noWrap>
                           {school.name}
                         </Typography>
+                        {school.name_en && (
+                          <Typography
+                            variant="caption"
+                            noWrap
+                            sx={{ display: 'block', color: 'text.secondary' }}
+                          >
+                            {school.name_en}
+                          </Typography>
+                        )}
                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                           สร้างเมื่อ{' '}
                           {new Intl.DateTimeFormat('th-TH', {
@@ -430,10 +453,16 @@ export function SchoolListView() {
           <Box sx={{ gap: 2.5, display: 'flex', flexDirection: 'column' }}>
             <TextField
               autoFocus
-              label="ชื่อโรงเรียน"
+              label="ชื่อโรงเรียนภาษาไทย"
               value={editName}
               onChange={(event) => setEditName(event.target.value)}
               required
+            />
+            <TextField
+              label="ชื่อโรงเรียนภาษาอังกฤษ"
+              value={editNameEn}
+              onChange={(event) => setEditNameEn(event.target.value)}
+              slotProps={{ htmlInput: { lang: 'en' } }}
             />
             <TextField
               label="รหัสโรงเรียน"

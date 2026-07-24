@@ -94,7 +94,15 @@ export function UserListView() {
     if (!keyword) return staffUsers;
 
     return staffUsers.filter((user) =>
-      [user.username, user.email, user.first_name, user.last_name, ROLE_LABEL[user.role]]
+      [
+        user.username,
+        user.email,
+        user.first_name,
+        user.last_name,
+        user.first_name_en,
+        user.last_name_en,
+        ROLE_LABEL[user.role],
+      ]
         .filter(Boolean)
         .join(' ')
         .toLocaleLowerCase('th')
@@ -243,7 +251,14 @@ export function UserListView() {
                     <Typography variant="subtitle2">{user.username}</Typography>
                   </TableCell>
                   <TableCell>
-                    {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '-'}
+                    <Typography variant="body2">
+                      {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '-'}
+                    </Typography>
+                    {(user.first_name_en || user.last_name_en) && (
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {`${user.first_name_en ?? ''} ${user.last_name_en ?? ''}`.trim()}
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>{user.email ?? '-'}</TableCell>
                   <TableCell>

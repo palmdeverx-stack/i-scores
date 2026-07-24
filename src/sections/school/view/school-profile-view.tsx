@@ -27,7 +27,8 @@ import { getSchool, updateSchool, uploadSchoolLogo } from '../school-actions';
 // ----------------------------------------------------------------------
 
 export const SchoolProfileSchema = z.object({
-  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อโรงเรียน!' }),
+  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อโรงเรียนภาษาไทย!' }),
+  nameEn: z.string().trim(),
 });
 
 type SchoolProfileSchemaType = z.infer<typeof SchoolProfileSchema>;
@@ -59,8 +60,8 @@ export function SchoolProfileView() {
 
   const methods = useForm<SchoolProfileSchemaType>({
     resolver: zodResolver(SchoolProfileSchema),
-    defaultValues: { name: '' },
-    values: school ? { name: school.name } : undefined,
+    defaultValues: { name: '', nameEn: '' },
+    values: school ? { name: school.name, nameEn: school.name_en ?? '' } : undefined,
   });
 
   const {
@@ -69,7 +70,7 @@ export function SchoolProfileView() {
   } = methods;
 
   const updateMutation = useMutation({
-    mutationFn: (params: { name: string }) => updateSchool(schoolId, params),
+    mutationFn: (params: { name: string; nameEn?: string }) => updateSchool(schoolId, params),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['school', schoolId] }),
   });
 
@@ -78,7 +79,12 @@ export function SchoolProfileView() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['school', schoolId] }),
   });
 
-  const onSubmit = handleSubmit(async (data) => updateMutation.mutate({ name: data.name.trim() }));
+  const onSubmit = handleSubmit(async (data) =>
+    updateMutation.mutate({
+      name: data.name.trim(),
+      nameEn: data.nameEn.trim(),
+    })
+  );
 
   const errorMessage = updateMutation.error?.message ?? logoMutation.error?.message;
 
@@ -188,6 +194,9 @@ export function SchoolProfileView() {
             <Typography component="h1" variant="h3" sx={{ mb: 1 }}>
               {school.name}
             </Typography>
+            {school.name_en && (
+              <Typography sx={{ mb: 1, opacity: 0.8 }}>{school.name_en}</Typography>
+            )}
             <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
               <Chip
                 size="small"
@@ -298,9 +307,16 @@ export function SchoolProfileView() {
               <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
                 <Field.Text
                   name="name"
-                  label="ชื่อโรงเรียน *"
-                  placeholder="กรอกชื่อโรงเรียน"
-                  helperText="กรอกชื่อเต็มอย่างเป็นทางการของโรงเรียน"
+                  label="ชื่อโรงเรียนภาษาไทย *"
+                  placeholder="เช่น โรงเรียนตัวอย่างวิทยา"
+                  helperText="ชื่อหลักที่ใช้แสดงในระบบ"
+                />
+                <Field.Text
+                  name="nameEn"
+                  label="ชื่อโรงเรียนภาษาอังกฤษ"
+                  placeholder="e.g. Example Wittaya School"
+                  helperText="ไม่บังคับ"
+                  slotProps={{ htmlInput: { lang: 'en' } }}
                 />
 
                 <Divider />

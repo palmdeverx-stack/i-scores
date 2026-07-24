@@ -13,7 +13,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
   const { id } = await params;
-  const { name, gradeLevel, academicYearId, teacherIds } = await request.json();
+  const { name, nameEn, gradeLevel, gradeLevelEn, academicYearId, teacherIds } =
+    await request.json();
   const requestedTeacherIds = Array.from(
     new Set(Array.isArray(teacherIds) ? teacherIds.filter(Boolean) : [])
   ) as string[];
@@ -52,12 +53,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .from('classrooms')
     .update({
       name: String(name).trim(),
+      name_en: typeof nameEn === 'string' && nameEn.trim() ? nameEn.trim() : null,
       grade_level: typeof gradeLevel === 'string' && gradeLevel.trim() ? gradeLevel.trim() : null,
+      grade_level_en:
+        typeof gradeLevelEn === 'string' && gradeLevelEn.trim() ? gradeLevelEn.trim() : null,
       academic_year_id: academicYearId,
     })
     .eq('id', id)
     .eq('school_id', caller.schoolId)
-    .select('id, name, grade_level, academic_year_id, created_at')
+    .select('id, name, name_en, grade_level, grade_level_en, academic_year_id, created_at')
     .maybeSingle();
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });

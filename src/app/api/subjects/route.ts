@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   let query = supabaseAdmin
     .from('subjects')
     .select(
-      'id, code, name, credits, description, image_url, academic_year_id, semester_id, academic_years(year), semesters(name), created_at'
+      'id, code, name, name_en, credits, description, description_en, image_url, academic_year_id, semester_id, academic_years(year), semesters(name), created_at'
     )
     .eq('school_id', caller.schoolId)
     .order('name');
@@ -53,7 +53,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const { code, name, credits, description, academicYearId, semesterId } = await request.json();
+  const { code, name, nameEn, credits, description, descriptionEn, academicYearId, semesterId } =
+    await request.json();
   const parsedCredits = Number(credits);
 
   if (
@@ -86,15 +87,18 @@ export async function POST(request: Request) {
     .insert({
       code: typeof code === 'string' && code.trim() ? code.trim() : null,
       name: String(name).trim(),
+      name_en: typeof nameEn === 'string' && nameEn.trim() ? nameEn.trim() : null,
       credits: parsedCredits,
       description:
         typeof description === 'string' && description.trim() ? description.trim() : null,
+      description_en:
+        typeof descriptionEn === 'string' && descriptionEn.trim() ? descriptionEn.trim() : null,
       academic_year_id: academicYearId,
       semester_id: semesterId,
       school_id: caller.schoolId,
     })
     .select(
-      'id, code, name, credits, description, image_url, academic_year_id, semester_id, academic_years(year), semesters(name), created_at'
+      'id, code, name, name_en, credits, description, description_en, image_url, academic_year_id, semester_id, academic_years(year), semesters(name), created_at'
     )
     .single();
 

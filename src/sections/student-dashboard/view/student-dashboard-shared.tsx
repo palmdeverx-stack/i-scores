@@ -3,9 +3,8 @@
 import type { IconifyName } from 'src/components/iconify/register-icons';
 import type {
   StudentPerson,
-  StudentDashboard,
   SubmissionStatus,
-  StudentDashboardSection,
+  StudentDashboardBase,
 } from '../student-dashboard-actions';
 
 import { varAlpha } from 'minimal-shared/utils';
@@ -24,7 +23,16 @@ import { fIsBetween, today as getTodayDate } from 'src/utils/format-time';
 
 import { Iconify } from 'src/components/iconify';
 
-import { getStudentDashboard } from '../student-dashboard-actions';
+import {
+  getStudentHomeDashboard,
+  getStudentSubjectsDashboard,
+  getStudentClassroomDashboard,
+  getStudentAssignmentsDashboard,
+} from '../student-dashboard-actions';
+
+// ----------------------------------------------------------------------
+
+export type StudentDashboardSection = 'home' | 'classroom' | 'subjects' | 'assignments';
 
 // ----------------------------------------------------------------------
 
@@ -36,7 +44,7 @@ export function isSubmitted(status: SubmissionStatus) {
   return ['submitted', 'late', 'pending_review'].includes(status);
 }
 
-export function getCurrentEnrollment(data: StudentDashboard) {
+export function getCurrentEnrollment(data: StudentDashboardBase) {
   return (
     data.enrollments.find((row) =>
       fIsBetween(
@@ -48,10 +56,37 @@ export function getCurrentEnrollment(data: StudentDashboard) {
   );
 }
 
-export function useStudentDashboard(section: StudentDashboardSection) {
+export function useStudentHomeDashboard() {
   return useQuery({
-    queryKey: ['student-dashboard', section],
-    queryFn: () => getStudentDashboard(section),
+    queryKey: ['student-dashboard', 'home'],
+    queryFn: getStudentHomeDashboard,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+}
+
+export function useStudentClassroomDashboard() {
+  return useQuery({
+    queryKey: ['student-dashboard', 'classroom'],
+    queryFn: getStudentClassroomDashboard,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+}
+
+export function useStudentSubjectsDashboard() {
+  return useQuery({
+    queryKey: ['student-dashboard', 'subjects'],
+    queryFn: getStudentSubjectsDashboard,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+}
+
+export function useStudentAssignmentsDashboard() {
+  return useQuery({
+    queryKey: ['student-dashboard', 'assignments'],
+    queryFn: getStudentAssignmentsDashboard,
     staleTime: 0,
     refetchOnMount: 'always',
   });
@@ -91,7 +126,7 @@ export function StudentPageScaffold({
   stats,
   children,
 }: {
-  data: StudentDashboard;
+  data: StudentDashboardBase;
   section: StudentDashboardSection;
   stats: React.ReactNode;
   children: React.ReactNode;

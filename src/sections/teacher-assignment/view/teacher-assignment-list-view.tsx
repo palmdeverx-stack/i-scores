@@ -2,9 +2,10 @@
 
 import type { TeacherAssignment } from '../teacher-assignment-actions';
 
-import { useMemo, useState } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useDebounce } from 'minimal-shared/hooks';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -30,9 +31,15 @@ import { useAuthContext } from 'src/auth/hooks';
 
 import { TeacherAssignmentCard } from '../components/teacher-assignment-card';
 import { TeacherAssignmentFormDialog } from '../components/teacher-assignment-form-dialog';
-import { listTeacherAssignments, deleteTeacherAssignment } from '../teacher-assignment-actions';
+import {
+  deleteTeacherAssignment,
+  listTeacherAssignmentsPage,
+  getTeacherAssignmentSummary,
+} from '../teacher-assignment-actions';
 
 // ----------------------------------------------------------------------
+
+const PAGE_SIZE = 9;
 
 const summaryItems = [
   {
@@ -69,25 +76,68 @@ export function TeacherAssignmentListView() {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 400);
   const [classroomFilter, setClassroomFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<TeacherAssignment | null>(null);
   const [deletingRow, setDeletingRow] = useState<TeacherAssignment | null>(null);
   const queryClient = useQueryClient();
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const detailPath = (id: string) =>
     isTeacher ? paths.teacher.assignmentDetail(id) : paths.admin.teacherAssignment.detail(id);
 
-  const {
-    data: rows = [],
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ['teacher-assignments', user?.school_id, user?.id],
-    queryFn: listTeacherAssignments,
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: [
+        'teacher-assignments',
+        'list',
+        user?.school_id,
+        user?.id,
+        classroomFilter,
+        debouncedSearch,
+      ],
+      queryFn: ({ pageParam }) =>
+        listTeacherAssignmentsPage({
+          classroomId: classroomFilter || undefined,
+          search: debouncedSearch || undefined,
+          limit: PAGE_SIZE,
+          offset: pageParam,
+        }),
+      initialPageParam: 0,
+      getNextPageParam: (lastPage, allPages) => {
+        if (!lastPage.hasMore) return undefined;
+        return allPages.reduce((total, page) => total + page.teacherAssignments.length, 0);
+      },
+      enabled: !!user?.school_id && !!user?.id,
+    });
+
+  const summaryQuery = useQuery({
+    queryKey: ['teacher-assignments', 'summary', user?.school_id, user?.id],
+    queryFn: getTeacherAssignmentSummary,
     enabled: !!user?.school_id && !!user?.id,
   });
+
+  const rows = data?.pages.flatMap((page) => page.teacherAssignments) ?? [];
+  const total = data?.pages[0]?.total ?? 0;
+  const classroomOptions = summaryQuery.data?.classroomOptions ?? [];
+  const summary = summaryQuery.data ?? { classes: 0, subjects: 0, classrooms: 0, semesters: 0 };
+
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return undefined;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) loadMore();
+    });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const deleteMutation = useMutation({
     mutationFn: deleteTeacherAssignment,
@@ -113,53 +163,12 @@ export function TeacherAssignmentListView() {
     setEditingRow(null);
   };
 
-  const classroomOptions = useMemo(
-    () =>
-      Array.from(new Map(rows.map((row) => [row.classroom.id, row.classroom])).values()).sort(
-        (a, b) => a.name.localeCompare(b.name, 'th')
-      ),
-    [rows]
-  );
-
-  const filteredRows = useMemo(() => {
-    const keyword = search.trim().toLocaleLowerCase('th');
-
-    return rows.filter((row) => {
-      if (classroomFilter && row.classroom.id !== classroomFilter) return false;
-      if (!keyword) return true;
-
-      const teacherName = `${row.teacher.first_name ?? ''} ${row.teacher.last_name ?? ''}`;
-      const searchableText = [
-        teacherName,
-        row.teacher.username,
-        row.subject.code,
-        row.subject.name,
-        row.classroom.name,
-        row.semester.name,
-      ]
-        .join(' ')
-        .toLocaleLowerCase('th');
-
-      return searchableText.includes(keyword);
-    });
-  }, [classroomFilter, rows, search]);
-
   const hasFilters = Boolean(search || classroomFilter);
 
   const clearFilters = () => {
     setSearch('');
     setClassroomFilter('');
   };
-
-  const summary = useMemo(
-    () => ({
-      classes: rows.length,
-      subjects: new Set(rows.map((row) => row.subject.id)).size,
-      classrooms: new Set(rows.map((row) => row.classroom.id)).size,
-      semesters: new Set(rows.map((row) => row.semester.id)).size,
-    }),
-    [rows]
-  );
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
@@ -261,7 +270,7 @@ export function TeacherAssignmentListView() {
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h4" sx={{ lineHeight: 1.1 }}>
-                  {isLoading ? <Skeleton width={32} /> : summary[item.key]}
+                  {summaryQuery.isLoading ? <Skeleton width={32} /> : summary[item.key]}
                 </Typography>
                 <Typography variant="caption" noWrap sx={{ color: 'text.secondary' }}>
                   {item.label}
@@ -287,7 +296,7 @@ export function TeacherAssignmentListView() {
             วิชาของฉัน
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {isLoading ? 'กำลังโหลดข้อมูล...' : `พบ ${filteredRows.length} วิชา`}
+            {isLoading ? 'กำลังโหลดข้อมูล...' : `พบ ${total} วิชา`}
           </Typography>
         </Box>
 
@@ -390,12 +399,11 @@ export function TeacherAssignmentListView() {
             },
           }}
         >
-          {filteredRows.map((row) => (
+          {rows.map((row) => (
             <TeacherAssignmentCard
               key={row.id}
               row={row}
               detailPath={detailPath(row.id)}
-              showTeacherName={!isTeacher}
               onEdit={openEditDialog}
               onDelete={(target) => {
                 deleteMutation.reset();
@@ -406,7 +414,30 @@ export function TeacherAssignmentListView() {
         </Box>
       )}
 
-      {!isLoading && !isError && !filteredRows.length && (
+      {!isLoading && !isError && !!rows.length && (
+        <Box ref={sentinelRef} sx={{ mt: 2.5 }}>
+          {isFetchingNextPage && (
+            <Box
+              sx={{
+                gap: 2.5,
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(3, 1fr)',
+                  lg: 'repeat(3, 1fr)',
+                  xl: 'repeat(4, 1fr)',
+                },
+              }}
+            >
+              {[0, 1].map((item) => (
+                <Skeleton key={item} variant="rounded" height={235} sx={{ borderRadius: 2 }} />
+              ))}
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {!isLoading && !isError && !rows.length && (
         <Card variant="outlined" sx={{ py: 7, px: 3, textAlign: 'center' }}>
           <Box
             sx={{

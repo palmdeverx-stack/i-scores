@@ -1,6 +1,6 @@
 'use client';
 
-import type { StudentDashboard } from '../student-dashboard-actions';
+import type { StudentSubjectsDashboard } from '../student-dashboard-actions';
 
 import { useMemo } from 'react';
 
@@ -27,7 +27,7 @@ const DAYS = [
 const ROW_HEIGHT = 92;
 const SLOT_COLORS = ['primary', 'secondary', 'error', 'info', 'success', 'warning'] as const;
 
-type Props = { schedules: StudentDashboard['schedules'] };
+type Props = { schedules: StudentSubjectsDashboard['schedules'] };
 
 function timeToMinutes(value: string) {
   const [hour, minute] = value.split(':').map(Number);

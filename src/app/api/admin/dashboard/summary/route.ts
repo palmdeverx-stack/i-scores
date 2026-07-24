@@ -22,8 +22,6 @@ export async function GET(request: Request) {
     subjectsResult,
     enrollmentsResult,
     academicYearResult,
-    recentAssignmentsResult,
-    recentEnrollmentsResult,
   ] = await Promise.all([
     supabaseAdmin.from('schools').select('id, name, code, logo_url').eq('id', schoolId).single(),
     supabaseAdmin
@@ -55,28 +53,6 @@ export async function GET(request: Request) {
       )
       .eq('school_id', schoolId)
       .order('year', { ascending: false }),
-    supabaseAdmin
-      .from('teacher_assignments')
-      .select(
-        `id, created_at,
-         teacher:app_users!teacher_assignments_teacher_id_fkey(first_name, last_name, username),
-         subject:subjects(name, code),
-         classroom:classrooms!inner(name, school_id),
-         semester:semesters(name)`
-      )
-      .eq('classroom.school_id', schoolId)
-      .order('created_at', { ascending: false })
-      .limit(5),
-    supabaseAdmin
-      .from('enrollments')
-      .select(
-        `id, created_at, student_number,
-         student:app_users!enrollments_student_id_fkey(first_name, last_name, username),
-         classroom:classrooms!inner(name, school_id)`
-      )
-      .eq('classroom.school_id', schoolId)
-      .order('created_at', { ascending: false })
-      .limit(5),
   ]);
 
   const firstError = [
@@ -87,8 +63,6 @@ export async function GET(request: Request) {
     subjectsResult.error,
     enrollmentsResult.error,
     academicYearResult.error,
-    recentAssignmentsResult.error,
-    recentEnrollmentsResult.error,
   ].find(Boolean);
 
   if (firstError) {
@@ -111,7 +85,5 @@ export async function GET(request: Request) {
       enrollments: enrollmentsResult.count ?? 0,
     },
     academicYear: currentAcademicYear,
-    recentAssignments: recentAssignmentsResult.data ?? [],
-    recentEnrollments: recentEnrollmentsResult.data ?? [],
   });
 }

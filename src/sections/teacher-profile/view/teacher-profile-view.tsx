@@ -37,8 +37,10 @@ import {
 // ----------------------------------------------------------------------
 
 const ProfileSchema = z.object({
-  firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อ' }),
-  lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุล' }),
+  firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อภาษาไทย' }),
+  lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุลภาษาไทย' }),
+  firstNameEn: z.string(),
+  lastNameEn: z.string(),
   email: z.union([z.literal(''), z.email({ error: 'รูปแบบอีเมลไม่ถูกต้อง' })]),
   username: z.string(),
 });
@@ -69,11 +71,20 @@ export function TeacherProfileView() {
 
   const methods = useForm<ProfileSchemaType>({
     resolver: zodResolver(ProfileSchema),
-    defaultValues: { firstName: '', lastName: '', email: '', username: '' },
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      firstNameEn: '',
+      lastNameEn: '',
+      email: '',
+      username: '',
+    },
     values: profile
       ? {
           firstName: profile.first_name ?? '',
           lastName: profile.last_name ?? '',
+          firstNameEn: profile.first_name_en ?? '',
+          lastNameEn: profile.last_name_en ?? '',
           email: profile.email ?? '',
           username: profile.username,
         }
@@ -89,6 +100,8 @@ export function TeacherProfileView() {
       methods.reset({
         firstName: updatedProfile.first_name ?? '',
         lastName: updatedProfile.last_name ?? '',
+        firstNameEn: updatedProfile.first_name_en ?? '',
+        lastNameEn: updatedProfile.last_name_en ?? '',
         email: updatedProfile.email ?? '',
         username: updatedProfile.username,
       });
@@ -117,6 +130,8 @@ export function TeacherProfileView() {
     mutation.mutate({
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
+      firstNameEn: values.firstNameEn.trim(),
+      lastNameEn: values.lastNameEn.trim(),
       email: values.email.trim(),
     })
   );
@@ -207,6 +222,11 @@ export function TeacherProfileView() {
             <Typography component="h1" variant="h3" sx={{ overflowWrap: 'anywhere' }}>
               {displayName}
             </Typography>
+            {(profile.first_name_en || profile.last_name_en) && (
+              <Typography sx={{ mt: 0.25, opacity: 0.8 }}>
+                {`${profile.first_name_en ?? ''} ${profile.last_name_en ?? ''}`.trim()}
+              </Typography>
+            )}
             <Box sx={{ gap: 1, mt: 1.25, display: 'flex', flexWrap: 'wrap' }}>
               <Chip
                 size="small"
@@ -270,8 +290,18 @@ export function TeacherProfileView() {
                     gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
                   }}
                 >
-                  <Field.Text name="firstName" label="ชื่อ *" autoComplete="given-name" />
-                  <Field.Text name="lastName" label="นามสกุล *" autoComplete="family-name" />
+                  <Field.Text name="firstName" label="ชื่อภาษาไทย *" autoComplete="given-name" />
+                  <Field.Text name="lastName" label="นามสกุลภาษาไทย *" autoComplete="family-name" />
+                  <Field.Text
+                    name="firstNameEn"
+                    label="ชื่อภาษาอังกฤษ"
+                    slotProps={{ htmlInput: { lang: 'en' } }}
+                  />
+                  <Field.Text
+                    name="lastNameEn"
+                    label="นามสกุลภาษาอังกฤษ"
+                    slotProps={{ htmlInput: { lang: 'en' } }}
+                  />
                 </Box>
                 <Field.Text
                   name="email"

@@ -13,7 +13,7 @@ type Classroom = {
 } | null;
 type Semester = { id: string; name: string; is_active: boolean } | null;
 
-export type TeacherDashboardData = {
+export type TeacherDashboardSummary = {
   teacher: {
     id: string;
     username: string;
@@ -39,6 +39,9 @@ export type TeacherDashboardData = {
     classroom: Classroom;
     semester: Semester;
   }>;
+};
+
+export type TeacherDashboardRecentAssignments = {
   recent_assignments: Array<{
     id: string;
     teacher_assignment_id: string;
@@ -54,13 +57,25 @@ export type TeacherDashboardData = {
   }>;
 };
 
-export async function getTeacherDashboard(): Promise<TeacherDashboardData> {
-  const response = await fetch('/api/teacher/dashboard', {
-    headers: { Authorization: `Bearer ${getStoredToken()}` },
-  });
+async function fetchJson<T>(url: string, errorMessage: string): Promise<T> {
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${getStoredToken()}` } });
   const json = await response.json();
 
-  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดแดชบอร์ดครูได้');
+  if (!response.ok) throw new Error(json.message ?? errorMessage);
 
   return json;
+}
+
+export function getTeacherDashboardSummary() {
+  return fetchJson<TeacherDashboardSummary>(
+    '/api/teacher/dashboard/summary',
+    'ไม่สามารถโหลดแดชบอร์ดครูได้'
+  );
+}
+
+export function getTeacherDashboardRecentAssignments() {
+  return fetchJson<TeacherDashboardRecentAssignments>(
+    '/api/teacher/dashboard/recent-assignments',
+    'ไม่สามารถโหลดงานที่มอบหมายล่าสุดได้'
+  );
 }

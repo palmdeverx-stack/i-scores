@@ -34,8 +34,10 @@ import { createClassroom } from '../classroom-actions';
 // ----------------------------------------------------------------------
 
 export const ClassroomCreateSchema = z.object({
-  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อห้องเรียน!' }),
+  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อห้องเรียนภาษาไทย!' }),
+  nameEn: z.string(),
   gradeLevel: z.string(),
+  gradeLevelEn: z.string(),
   academicYearId: z.string().min(1, { error: 'กรุณาเลือกปีการศึกษา!' }),
   subjectId: z.string(),
   semesterId: z.string(),
@@ -78,7 +80,9 @@ export function ClassroomCreateView() {
     resolver: zodResolver(isTeacher ? TeacherClassroomCreateSchema : ClassroomCreateSchema),
     defaultValues: {
       name: '',
+      nameEn: '',
       gradeLevel: '',
+      gradeLevelEn: '',
       academicYearId: '',
       subjectId: '',
       semesterId: '',
@@ -117,8 +121,10 @@ export function ClassroomCreateView() {
   const onSubmit = handleSubmit(async (data) =>
     createMutation.mutate({
       name: data.name.trim(),
+      nameEn: data.nameEn.trim() || undefined,
       academicYearId: data.academicYearId,
       gradeLevel: data.gradeLevel.trim() || undefined,
+      gradeLevelEn: data.gradeLevelEn.trim() || undefined,
       subjectId: isTeacher ? data.subjectId : undefined,
       semesterId: isTeacher ? data.semesterId : undefined,
     })
@@ -232,17 +238,32 @@ export function ClassroomCreateView() {
 
                     <Field.Text
                       name="name"
-                      label="ชื่อห้องเรียน *"
+                      label="ชื่อห้องเรียนภาษาไทย *"
                       placeholder="เช่น ม.1/1"
-                      helperText="ชื่อที่ครูและนักเรียนเห็นในระบบ"
+                      helperText="ชื่อหลักที่ครูและนักเรียนเห็นในระบบ"
+                    />
+
+                    <Field.Text
+                      name="nameEn"
+                      label="ชื่อห้องเรียนภาษาอังกฤษ"
+                      placeholder="e.g. Grade 7/1"
+                      helperText="ไม่บังคับ"
+                      slotProps={{ htmlInput: { lang: 'en' } }}
                     />
 
                     <Field.Text
                       name="gradeLevel"
-                      label="ระดับชั้น"
+                      label="ระดับชั้นภาษาไทย"
                       placeholder="เช่น มัธยมศึกษาปีที่ 1"
                       helperText="ไม่บังคับ"
-                      sx={{ gridColumn: { sm: '1 / -1' } }}
+                    />
+
+                    <Field.Text
+                      name="gradeLevelEn"
+                      label="ระดับชั้นภาษาอังกฤษ"
+                      placeholder="e.g. Grade 7"
+                      helperText="ไม่บังคับ"
+                      slotProps={{ htmlInput: { lang: 'en' } }}
                     />
                   </Box>
                 </Box>

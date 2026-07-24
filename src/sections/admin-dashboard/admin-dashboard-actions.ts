@@ -10,7 +10,7 @@ type Person = {
   username: string;
 };
 
-export type AdminDashboardData = {
+export type AdminDashboardSummary = {
   school: { id: string; name: string; code: string; logo_url: string | null };
   counts: {
     students: number;
@@ -33,6 +33,9 @@ export type AdminDashboardData = {
       end_date: string | null;
     }>;
   } | null;
+};
+
+export type AdminDashboardRecentActivity = {
   recentAssignments: Array<{
     id: string;
     created_at: string;
@@ -50,12 +53,24 @@ export type AdminDashboardData = {
   }>;
 };
 
-export async function getAdminDashboard(): Promise<AdminDashboardData> {
-  const response = await fetch('/api/admin/dashboard', {
-    headers: { Authorization: `Bearer ${getStoredToken()}` },
-  });
+async function fetchJson<T>(url: string, errorMessage: string): Promise<T> {
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${getStoredToken()}` } });
   const json = await response.json();
 
-  if (!response.ok) throw new Error(json.message ?? 'Failed to load dashboard');
+  if (!response.ok) throw new Error(json.message ?? errorMessage);
   return json;
+}
+
+export function getAdminDashboardSummary() {
+  return fetchJson<AdminDashboardSummary>(
+    '/api/admin/dashboard/summary',
+    'Failed to load dashboard'
+  );
+}
+
+export function getAdminDashboardRecentActivity() {
+  return fetchJson<AdminDashboardRecentActivity>(
+    '/api/admin/dashboard/recent-activity',
+    'Failed to load recent activity'
+  );
 }

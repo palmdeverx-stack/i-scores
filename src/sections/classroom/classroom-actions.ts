@@ -7,7 +7,9 @@ import { getStoredToken } from 'src/auth/context/jwt/utils';
 export type Classroom = {
   id: string;
   name: string;
+  name_en: string | null;
   grade_level: string | null;
+  grade_level_en: string | null;
   academic_year_id: string;
   academic_years: { year: string } | null;
   homeroom_teachers: ClassroomTeacher[];
@@ -23,7 +25,9 @@ export type ClassroomTeacher = {
 
 export type CreateClassroomParams = {
   name: string;
+  nameEn?: string;
   gradeLevel?: string;
+  gradeLevelEn?: string;
   academicYearId: string;
   teacherIds?: string[];
   subjectId?: string;

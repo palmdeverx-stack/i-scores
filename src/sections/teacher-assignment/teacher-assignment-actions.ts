@@ -9,7 +9,13 @@ import { getStoredToken } from 'src/auth/context/jwt/utils';
 export type TeacherAssignment = {
   id: string;
   created_at: string;
-  teacher: { id: string; username: string; first_name: string | null; last_name: string | null };
+  teacher: {
+    id: string;
+    username: string;
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+  };
   subject: {
     id: string;
     code: string | null;
@@ -27,6 +33,20 @@ export type CreateTeacherAssignmentParams = {
   subjectId: string;
   classroomId: string;
   semesterId: string;
+};
+
+export type TeacherAssignmentPage = {
+  teacherAssignments: TeacherAssignment[];
+  total: number;
+  hasMore: boolean;
+};
+
+export type TeacherAssignmentSummary = {
+  classes: number;
+  subjects: number;
+  classrooms: number;
+  semesters: number;
+  classroomOptions: Array<{ id: string; name: string }>;
 };
 
 export type RosterStudent = {
@@ -95,13 +115,44 @@ function authHeader() {
   return { Authorization: `Bearer ${getStoredToken()}` };
 }
 
-export async function listTeacherAssignments(): Promise<TeacherAssignment[]> {
-  const response = await fetch('/api/teacher-assignments', { headers: authHeader() });
+export async function listTeacherAssignmentsPage(params: {
+  classroomId?: string;
+  search?: string;
+  limit: number;
+  offset: number;
+}): Promise<TeacherAssignmentPage> {
+  const query = new URLSearchParams({
+    limit: String(params.limit),
+    offset: String(params.offset),
+  });
+  if (params.classroomId) query.set('classroomId', params.classroomId);
+  if (params.search) query.set('search', params.search);
+
+  const response = await fetch(`/api/teacher-assignments?${query.toString()}`, {
+    headers: authHeader(),
+  });
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load teacher assignments');
 
-  return json.teacherAssignments;
+  return json;
+}
+
+export async function getTeacherAssignmentSummary(): Promise<TeacherAssignmentSummary> {
+  const response = await fetch('/api/teacher-assignments/summary', { headers: authHeader() });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to load teacher assignment summary');
+
+  return json;
+}
+
+// Small, bounded pickers (e.g. a teacher's own subject dropdown) that need
+// the full list rather than a paginated page: reuse the paginated endpoint
+// with the max page size instead of adding a separate unpaginated route.
+export async function listTeacherAssignments(): Promise<TeacherAssignment[]> {
+  const page = await listTeacherAssignmentsPage({ limit: 50, offset: 0 });
+  return page.teacherAssignments;
 }
 
 export async function getRoster(teacherAssignmentId: string): Promise<Roster> {

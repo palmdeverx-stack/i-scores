@@ -23,8 +23,10 @@ import { createUser } from '../user-actions';
 // ----------------------------------------------------------------------
 
 export const UserCreateSchema = z.object({
-  firstName: z.string().min(1, { error: 'กรุณากรอกชื่อ!' }),
-  lastName: z.string().min(1, { error: 'กรุณากรอกนามสกุล!' }),
+  firstName: z.string().min(1, { error: 'กรุณากรอกชื่อภาษาไทย!' }),
+  lastName: z.string().min(1, { error: 'กรุณากรอกนามสกุลภาษาไทย!' }),
+  firstNameEn: z.string(),
+  lastNameEn: z.string(),
   username: z.string().min(1, { error: 'กรุณากรอกชื่อผู้ใช้งาน!' }),
   email: z.union([z.literal(''), z.email({ error: 'อีเมลไม่ถูกต้อง!' })]),
   password: z.string().min(6, { error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร!' }),
@@ -41,6 +43,8 @@ export function UserCreateView() {
     defaultValues: {
       firstName: '',
       lastName: '',
+      firstNameEn: '',
+      lastNameEn: '',
       username: '',
       email: '',
       password: '',
@@ -74,9 +78,17 @@ export function UserCreateView() {
 
         <Form methods={methods} onSubmit={onSubmit}>
           <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Field.Text name="firstName" label="ชื่อ" />
-              <Field.Text name="lastName" label="นามสกุล" />
+            <Box
+              sx={{
+                gap: 2,
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+              }}
+            >
+              <Field.Text name="firstName" label="ชื่อภาษาไทย *" />
+              <Field.Text name="lastName" label="นามสกุลภาษาไทย *" />
+              <Field.Text name="firstNameEn" label="ชื่อภาษาอังกฤษ" />
+              <Field.Text name="lastNameEn" label="นามสกุลภาษาอังกฤษ" />
             </Box>
 
             <Field.Text name="username" label="ชื่อผู้ใช้งาน" />

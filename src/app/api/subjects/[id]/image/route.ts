@@ -89,7 +89,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     .update({ image_url: `${publicUrl}?v=${Date.now()}` })
     .eq('id', id)
     .eq('school_id', caller.schoolId)
-    .select('id, code, name, credits, description, image_url, created_at')
+    .select(
+      'id, code, name, name_en, credits, description, description_en, image_url, academic_year_id, semester_id, created_at'
+    )
     .single();
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
@@ -127,7 +129,9 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     .update({ image_url: null })
     .eq('id', id)
     .eq('school_id', caller.schoolId)
-    .select('id, code, name, credits, description, image_url, created_at')
+    .select(
+      'id, code, name, name_en, credits, description, description_en, image_url, academic_year_id, semester_id, created_at'
+    )
     .single();
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });

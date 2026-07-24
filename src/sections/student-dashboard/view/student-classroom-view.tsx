@@ -6,14 +6,14 @@ import {
   HeroStats,
   StudentPageState,
   StudentPageScaffold,
-  useStudentDashboard,
   getCurrentEnrollment,
+  useStudentClassroomDashboard,
 } from './student-dashboard-shared';
 
 // ----------------------------------------------------------------------
 
 export function StudentClassroomView() {
-  const { data, isLoading, isError, refetch } = useStudentDashboard('classroom');
+  const { data, isLoading, isError, refetch } = useStudentClassroomDashboard();
 
   if (isLoading || isError || !data) {
     return <StudentPageState isLoading={isLoading} isError={isError || !data} onRetry={refetch} />;

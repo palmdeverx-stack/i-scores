@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   const { data: school, error } = await supabaseAdmin
     .from('schools')
-    .select('id, name, code, logo_url, is_active, created_at')
+    .select('id, name, name_en, code, logo_url, is_active, created_at')
     .eq('id', id)
     .single();
 
@@ -53,7 +53,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { name, code, isActive } = await request.json();
+  const { name, nameEn, code, isActive } = await request.json();
 
   const updates: Record<string, unknown> = {};
 
@@ -62,6 +62,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ message: 'กรุณากรอกชื่อโรงเรียน' }, { status: 400 });
     }
     updates.name = name.trim();
+  }
+
+  if (nameEn !== undefined) {
+    if (typeof nameEn !== 'string') {
+      return NextResponse.json({ message: 'ชื่อโรงเรียนภาษาอังกฤษไม่ถูกต้อง' }, { status: 400 });
+    }
+    updates.name_en = nameEn.trim() || null;
   }
 
   if (code !== undefined) {
@@ -112,7 +119,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .from('schools')
     .update(updates)
     .eq('id', id)
-    .select('id, name, code, logo_url, is_active, created_at')
+    .select('id, name, name_en, code, logo_url, is_active, created_at')
     .single();
 
   if (error || !school) {

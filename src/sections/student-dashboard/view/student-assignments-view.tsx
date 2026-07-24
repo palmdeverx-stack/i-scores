@@ -12,13 +12,13 @@ import {
   SectionHeading,
   StudentPageState,
   StudentPageScaffold,
-  useStudentDashboard,
+  useStudentAssignmentsDashboard,
 } from './student-dashboard-shared';
 
 // ----------------------------------------------------------------------
 
 export function StudentAssignmentsView() {
-  const { data, isLoading, isError, refetch } = useStudentDashboard('assignments');
+  const { data, isLoading, isError, refetch } = useStudentAssignmentsDashboard();
 
   const overview = useMemo(() => {
     const assignments =

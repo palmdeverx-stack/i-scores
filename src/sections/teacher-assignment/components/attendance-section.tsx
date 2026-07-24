@@ -3,6 +3,7 @@
 import type { AttendanceRow, AttendanceStatus } from 'src/sections/attendance/attendance-actions';
 
 import dayjs from 'dayjs';
+import dynamic from 'next/dynamic';
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -33,9 +34,12 @@ import { useSchoolSubscription } from 'src/sections/school-subscription/use-scho
 
 import { useAuthContext } from 'src/auth/hooks';
 
-import { AttendanceQrScanDialog } from './attendance-qr-scan-dialog';
-
 // ----------------------------------------------------------------------
+
+const AttendanceQrScanDialog = dynamic(
+  () => import('./attendance-qr-scan-dialog').then((module) => module.AttendanceQrScanDialog),
+  { ssr: false }
+);
 
 const STATUS_OPTIONS: Array<{
   value: AttendanceStatus;
@@ -460,12 +464,14 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
         </Button>
       </Box>
 
-      <AttendanceQrScanDialog
-        open={scanDialogOpen}
-        teacherAssignmentId={teacherAssignmentId}
-        sessionDate={sessionDate}
-        onClose={() => setScanDialogOpen(false)}
-      />
+      {scanDialogOpen && (
+        <AttendanceQrScanDialog
+          open
+          teacherAssignmentId={teacherAssignmentId}
+          sessionDate={sessionDate}
+          onClose={() => setScanDialogOpen(false)}
+        />
+      )}
     </Card>
   );
 }

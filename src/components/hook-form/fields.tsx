@@ -1,6 +1,11 @@
+'use client';
+
+import type { RHFEditorProps } from './rhf-editor';
+
+import dynamic from 'next/dynamic';
+
 import { RHFCode } from './rhf-code';
 import { RHFRating } from './rhf-rating';
-import { RHFEditor } from './rhf-editor';
 import { RHFSlider } from './rhf-slider';
 import { RHFTextField } from './rhf-text-field';
 import { RHFRadioGroup } from './rhf-radio-group';
@@ -15,6 +20,11 @@ import { RHFUpload, RHFUploadBox, RHFUploadAvatar } from './rhf-upload';
 import { RHFDatePicker, RHFTimePicker, RHFDateTimePicker } from './rhf-date-picker';
 
 // ----------------------------------------------------------------------
+
+const RHFEditor = dynamic<RHFEditorProps>(
+  () => import('./rhf-editor').then((module) => module.RHFEditor),
+  { ssr: false }
+);
 
 export const Field = {
   Code: RHFCode,

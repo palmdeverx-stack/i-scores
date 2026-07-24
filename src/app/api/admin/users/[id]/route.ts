@@ -11,7 +11,7 @@ import { checkSchoolSeatLimit } from 'src/lib/school-subscription';
 type RouteParams = { params: Promise<{ id: string }> };
 
 const USER_SELECT =
-  'id, username, email, first_name, last_name, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, is_active';
+  'id, username, email, first_name, last_name, first_name_en, last_name_en, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, is_active';
 
 async function getManagedUser(id: string) {
   return supabaseAdmin.from('app_users').select(USER_SELECT).eq('id', id).maybeSingle();
@@ -97,6 +97,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const username = typeof body?.username === 'string' ? body.username.trim() : '';
   const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : '';
   const lastName = typeof body?.lastName === 'string' ? body.lastName.trim() : '';
+  const firstNameEn = typeof body?.firstNameEn === 'string' ? body.firstNameEn.trim() : '';
+  const lastNameEn = typeof body?.lastNameEn === 'string' ? body.lastNameEn.trim() : '';
   const email = typeof body?.email === 'string' ? body.email.trim() : '';
   const password = typeof body?.password === 'string' ? body.password : '';
   const schoolId =
@@ -144,6 +146,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     email: email || null,
     school_id: schoolId,
   };
+  if (target.role === 'teacher' || target.role === 'student') {
+    updates.first_name_en = firstNameEn || null;
+    updates.last_name_en = lastNameEn || null;
+  }
   if (password) {
     updates.password_hash = await bcrypt.hash(password, 10);
     updates.must_change_password = true;

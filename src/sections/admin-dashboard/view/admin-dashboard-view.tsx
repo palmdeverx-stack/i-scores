@@ -25,7 +25,10 @@ import { Iconify } from 'src/components/iconify';
 
 import { useAuthContext } from 'src/auth/hooks';
 
-import { getAdminDashboard } from '../admin-dashboard-actions';
+import {
+  getAdminDashboardSummary,
+  getAdminDashboardRecentActivity,
+} from '../admin-dashboard-actions';
 
 // ----------------------------------------------------------------------
 
@@ -138,14 +141,19 @@ function formatLongDate(value: string | null) {
 export function AdminDashboardView() {
   const { user } = useAuthContext();
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['admin-dashboard'],
-    queryFn: getAdminDashboard,
+    queryKey: ['admin-dashboard', 'summary'],
+    queryFn: getAdminDashboardSummary,
+  });
+  const activityQuery = useQuery({
+    queryKey: ['admin-dashboard', 'recent-activity'],
+    queryFn: getAdminDashboardRecentActivity,
   });
 
   const activities = useMemo(() => {
-    if (!data) return [];
+    const activityData = activityQuery.data;
+    if (!activityData) return [];
     return [
-      ...data.recentAssignments.map((item) => ({
+      ...activityData.recentAssignments.map((item) => ({
         id: `assignment-${item.id}`,
         date: item.created_at,
         type: 'มอบหมายครู',
@@ -155,7 +163,7 @@ export function AdminDashboardView() {
         title: displayName(item.teacher),
         detail: `${item.subject.code ? `${item.subject.code} · ` : ''}${item.subject.name} · ${item.classroom.name}`,
       })),
-      ...data.recentEnrollments.map((item) => ({
+      ...activityData.recentEnrollments.map((item) => ({
         id: `enrollment-${item.id}`,
         date: item.created_at,
         type: 'ลงทะเบียนเรียน',
@@ -168,7 +176,7 @@ export function AdminDashboardView() {
     ]
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 6);
-  }, [data]);
+  }, [activityQuery.data]);
 
   if (isLoading) return <DashboardSkeleton />;
 
@@ -469,7 +477,15 @@ export function AdminDashboardView() {
               </Button>
             </Box>
             <Divider />
-            {activities.length ? (
+            {activityQuery.isLoading ? (
+              <Box sx={{ p: { xs: 2.5, sm: 3 } }}>
+                <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
+                  {Array.from({ length: 3 }, (_, index) => (
+                    <Skeleton key={index} variant="rounded" height={64} sx={{ borderRadius: 2 }} />
+                  ))}
+                </Box>
+              </Box>
+            ) : activities.length ? (
               activities.map((activity, index) => (
                 <Box key={activity.id}>
                   <Box

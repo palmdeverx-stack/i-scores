@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import setupLocatorUI from '@locator/runtime';
 
 let locatorStarted = false;
 
@@ -12,7 +11,7 @@ export function LocatorJS() {
     }
 
     locatorStarted = true;
-    setupLocatorUI();
+    import('@locator/runtime').then(({ default: setupLocatorUI }) => setupLocatorUI());
   }, []);
 
   return null;

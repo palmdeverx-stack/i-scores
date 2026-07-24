@@ -9,7 +9,9 @@ async function loadTeacherProfile(teacherId: string, schoolId: string | null) {
   const [teacherResult, schoolResult, assignmentsResult] = await Promise.all([
     supabaseAdmin
       .from('app_users')
-      .select('id, username, email, first_name, last_name, avatar_url, created_at')
+      .select(
+        'id, username, email, first_name, last_name, first_name_en, last_name_en, avatar_url, created_at'
+      )
       .eq('id', teacherId)
       .eq('role', 'teacher')
       .maybeSingle(),
@@ -97,6 +99,8 @@ export async function PUT(request: Request) {
   const body = await request.json().catch(() => null);
   const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : '';
   const lastName = typeof body?.lastName === 'string' ? body.lastName.trim() : '';
+  const firstNameEn = typeof body?.firstNameEn === 'string' ? body.firstNameEn.trim() : '';
+  const lastNameEn = typeof body?.lastNameEn === 'string' ? body.lastNameEn.trim() : '';
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
 
   if (!firstName || !lastName) {
@@ -109,7 +113,13 @@ export async function PUT(request: Request) {
 
   const { error: updateError } = await supabaseAdmin
     .from('app_users')
-    .update({ first_name: firstName, last_name: lastName, email: email || null })
+    .update({
+      first_name: firstName,
+      last_name: lastName,
+      first_name_en: firstNameEn || null,
+      last_name_en: lastNameEn || null,
+      email: email || null,
+    })
     .eq('id', caller.sub)
     .eq('role', 'teacher');
 
