@@ -1,7 +1,7 @@
 import 'server-only';
 
 import jwt from 'jsonwebtoken';
-import { createHmac, createHash } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 // ----------------------------------------------------------------------
 
@@ -45,17 +45,6 @@ export function signGuardianPortalSessionToken(
   studentId: string
 ) {
   return signGuardianPortalToken({ schoolId, lineUserId, studentId, purpose: 'session' }, '30d');
-}
-
-export function hashGuardianPortalCode(
-  schoolId: string,
-  lineUserId: string,
-  studentId: string,
-  code: string
-) {
-  return createHmac('sha256', secret)
-    .update(`${schoolId}:${lineUserId}:${studentId}:${code}`)
-    .digest('hex');
 }
 
 export function verifyGuardianPortalToken(

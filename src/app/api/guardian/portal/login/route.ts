@@ -1,21 +1,18 @@
 import { cookies } from 'next/headers';
-import { randomInt } from 'node:crypto';
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { decryptLineCredential } from 'src/lib/line-credentials';
-import { hashGuardianPortalCode, verifyGuardianPortalToken } from 'src/lib/guardian-portal-token';
+import {
+  verifyGuardianPortalToken,
+  signGuardianPortalSessionToken,
+} from 'src/lib/guardian-portal-token';
 
 // ----------------------------------------------------------------------
 
-const OTP_LIFETIME_MS = 5 * 60 * 1000;
-const RESEND_DELAY_MS = 60 * 1000;
-
 async function findStudent(schoolId: string, studentCode: string) {
-  const select = 'id, username, student_code, is_active, student_status';
   const { data: byStudentCode } = await supabaseAdmin
     .from('app_users')
-    .select(select)
+    .select('id, student_code, is_active, student_status')
     .eq('school_id', schoolId)
     .eq('role', 'student')
     .ilike('student_code', studentCode)
@@ -24,19 +21,7 @@ async function findStudent(schoolId: string, studentCode: string) {
   const exactStudentCode = (byStudentCode ?? []).find(
     (student) => student.student_code?.toLocaleLowerCase('en') === normalized
   );
-  if (exactStudentCode) return exactStudentCode;
-
-  const { data: byUsername } = await supabaseAdmin
-    .from('app_users')
-    .select(select)
-    .eq('school_id', schoolId)
-    .eq('role', 'student')
-    .ilike('username', studentCode)
-    .limit(5);
-  return (
-    (byUsername ?? []).find((student) => student.username.toLocaleLowerCase('en') === normalized) ??
-    null
-  );
+  return exactStudentCode ?? null;
 }
 
 export async function POST(request: Request) {
@@ -80,103 +65,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: latestCode } = await supabaseAdmin
-    .from('guardian_portal_login_codes')
-    .select('created_at')
-    .eq('school_id', identity.schoolId)
-    .eq('line_user_id', identity.lineUserId)
-    .eq('student_id', student.id)
-    .is('consumed_at', null)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (latestCode && Date.now() - new Date(latestCode.created_at).getTime() < RESEND_DELAY_MS) {
-    return NextResponse.json(
-      { message: 'ส่งรหัสแล้ว กรุณารอ 1 นาทีก่อนขอรหัสใหม่' },
-      { status: 429 }
-    );
-  }
-
-  const { data: integration } = await supabaseAdmin
-    .from('school_line_integrations')
-    .select('is_enabled, channel_access_token_encrypted')
-    .eq('school_id', identity.schoolId)
-    .maybeSingle();
-  if (!integration?.is_enabled || !integration.channel_access_token_encrypted) {
-    return NextResponse.json(
-      { message: 'โรงเรียนยังไม่พร้อมส่งรหัสยืนยันผ่าน LINE' },
-      { status: 409 }
-    );
-  }
-
-  const code = randomInt(100000, 1000000).toString();
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + OTP_LIFETIME_MS);
-  await supabaseAdmin
-    .from('guardian_portal_login_codes')
-    .update({ consumed_at: now.toISOString() })
-    .eq('school_id', identity.schoolId)
-    .eq('line_user_id', identity.lineUserId)
-    .eq('student_id', student.id)
-    .is('consumed_at', null);
-  const { error: codeError } = await supabaseAdmin.from('guardian_portal_login_codes').insert({
-    school_id: identity.schoolId,
-    line_user_id: identity.lineUserId,
-    student_id: student.id,
-    code_hash: hashGuardianPortalCode(identity.schoolId, identity.lineUserId, student.id, code),
-    expires_at: expiresAt.toISOString(),
+  const response = NextResponse.json({ success: true });
+  response.cookies.set({
+    name: 'guardian_portal_session',
+    value: signGuardianPortalSessionToken(identity.schoolId, identity.lineUserId, student.id),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 30 * 24 * 60 * 60,
   });
-  if (codeError) {
-    return NextResponse.json({ message: codeError.message }, { status: 500 });
-  }
+  return response;
+}
 
-  try {
-    const lineResponse = await fetch('https://api.line.me/v2/bot/message/push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${decryptLineCredential(
-          integration.channel_access_token_encrypted
-        )}`,
-      },
-      body: JSON.stringify({
-        to: identity.lineUserId,
-        messages: [
-          {
-            type: 'text',
-            text: [
-              '🔐 รหัสเข้าสู่ระบบ Parent Portal',
-              `OTP: ${code}`,
-              'รหัสมีอายุ 5 นาทีและใช้ได้ครั้งเดียว',
-              'หากคุณไม่ได้เป็นผู้ขอรหัส กรุณาไม่ต้องดำเนินการใด ๆ',
-            ].join('\n\n'),
-          },
-        ],
-      }),
-    });
-    if (!lineResponse.ok) {
-      await supabaseAdmin
-        .from('guardian_portal_login_codes')
-        .update({ consumed_at: new Date().toISOString() })
-        .eq('school_id', identity.schoolId)
-        .eq('line_user_id', identity.lineUserId)
-        .eq('student_id', student.id)
-        .is('consumed_at', null);
-      return NextResponse.json(
-        { message: 'ไม่สามารถส่ง OTP ไปยัง LINE ได้ กรุณาลองใหม่' },
-        { status: 502 }
-      );
-    }
-  } catch {
-    return NextResponse.json(
-      { message: 'ไม่สามารถเชื่อมต่อ LINE เพื่อส่ง OTP ได้' },
-      { status: 502 }
-    );
-  }
-
-  return NextResponse.json({
-    success: true,
-    studentCode,
-    expiresIn: OTP_LIFETIME_MS / 1000,
-  });
+export async function DELETE() {
+  const response = NextResponse.json({ success: true });
+  response.cookies.delete('guardian_portal_session');
+  return response;
 }

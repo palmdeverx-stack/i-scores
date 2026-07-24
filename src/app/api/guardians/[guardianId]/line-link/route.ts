@@ -148,7 +148,7 @@ export async function POST(request: Request, { params }: RouteParams) {
                   ? [
                       `คุณ ${access.guardian.full_name}`,
                       `เปิดดูโปรไฟล์นักเรียนของ ${school?.name ?? 'โรงเรียน'} ได้จากลิงก์นี้`,
-                      'ลิงก์นี้ไม่หมดอายุ กรุณากรอกรหัสนักเรียนและยืนยัน OTP ทาง LINE ก่อนเข้าดูข้อมูล',
+                      'ลิงก์นี้ไม่หมดอายุ กรุณากรอกรหัสนักเรียนที่เชื่อมกับ LINE นี้ก่อนเข้าดูข้อมูล',
                       profileUrl.toString(),
                     ].join('\n\n')
                   : `สวัสดีคุณ ${access.guardian.full_name}\nเชื่อมต่อ LINE กับ ${

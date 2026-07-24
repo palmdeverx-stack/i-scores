@@ -108,22 +108,14 @@ async function portalRequest(url: string, body: Record<string, string>) {
   return json;
 }
 
-export async function requestGuardianPortalOtp(studentCode: string) {
+export async function loginGuardianPortal(studentCode: string) {
   return portalRequest('/api/guardian/portal/login', { studentCode }) as Promise<{
-    success: boolean;
-    studentCode: string;
-    expiresIn: number;
-  }>;
-}
-
-export async function verifyGuardianPortalOtp(studentCode: string, code: string) {
-  return portalRequest('/api/guardian/portal/verify', { studentCode, code }) as Promise<{
     success: boolean;
   }>;
 }
 
 export async function logoutGuardianPortal() {
-  await fetch('/api/guardian/portal/verify', {
+  await fetch('/api/guardian/portal/login', {
     method: 'DELETE',
     credentials: 'same-origin',
   });

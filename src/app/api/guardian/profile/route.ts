@@ -14,7 +14,7 @@ export async function GET() {
   );
   if (!payload) {
     return NextResponse.json(
-      { message: 'กรุณาเข้าสู่ระบบด้วยรหัสนักเรียนและ OTP จาก LINE' },
+      { message: 'กรุณาเข้าสู่ระบบด้วยรหัสนักเรียนที่เชื่อมกับ LINE ผู้ปกครอง' },
       { status: 401 }
     );
   }
@@ -52,6 +52,8 @@ export async function GET() {
         )
         .eq('school_id', payload.schoolId)
         .eq('role', 'student')
+        .eq('is_active', true)
+        .eq('student_status', 'studying')
         .in('id', studentIds),
     ]);
   if (schoolError || studentError) {

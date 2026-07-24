@@ -122,7 +122,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         [
           '👨‍👩‍👧 ข้อมูลนักเรียนสำหรับผู้ปกครอง',
           'ลิงก์นี้ใช้เข้าสู่ Parent Portal ได้ตลอด จนกว่าจะยกเลิกการเชื่อม LINE',
-          'กรอกรหัสนักเรียน แล้วรับ OTP ทาง LINE เพื่อดูโปรไฟล์และประวัติการเข้าเรียน',
+          'กรอกรหัสนักเรียนที่เชื่อมกับบัญชี LINE นี้ เพื่อดูโปรไฟล์และประวัติการเข้าเรียน',
           guardianPortalUrl(request, schoolId, event.source.userId),
         ].join('\n\n')
       );
@@ -209,7 +209,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         'คุณจะได้รับการแจ้งเตือนจากโรงเรียนผ่าน LINE',
         'เปิด Parent Portal เพื่อดูโปรไฟล์และประวัติการเข้าเรียนได้จากลิงก์นี้',
         guardianPortalUrl(request, schoolId, event.source.userId),
-        'ลิงก์ไม่หมดอายุ และต้องยืนยัน OTP ก่อนเข้าดูข้อมูล',
+        'ลิงก์ไม่หมดอายุ และต้องกรอกรหัสนักเรียนที่เชื่อมไว้ก่อนเข้าดูข้อมูล',
       ].join('\n\n')
     );
   }
