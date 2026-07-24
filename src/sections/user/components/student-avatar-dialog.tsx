@@ -2,6 +2,7 @@
 
 import type { UserRow } from '../user-actions';
 
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
@@ -12,6 +13,12 @@ import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+
+import {
+  formatImageSize,
+  resizeProfileImage,
+  PROFILE_IMAGE_SOURCE_LIMIT_BYTES,
+} from 'src/utils/resize-profile-image';
 
 import { Iconify } from 'src/components/iconify';
 import { UploadAvatar } from 'src/components/upload';
@@ -26,8 +33,6 @@ const AVATAR_ACCEPT = {
   'image/webp': ['.webp'],
 };
 
-const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
-
 type Props = {
   student: UserRow | null;
   onClose: () => void;
@@ -35,8 +40,13 @@ type Props = {
 
 export function StudentAvatarDialog({ student, onClose }: Props) {
   const queryClient = useQueryClient();
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [prepareError, setPrepareError] = useState<string | null>(null);
+  const [isPreparing, setIsPreparing] = useState(false);
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['users'] });
+    setAvatarFile(null);
+    setPrepareError(null);
     onClose();
   };
 
@@ -49,7 +59,7 @@ export function StudentAvatarDialog({ student, onClose }: Props) {
     onSuccess: refresh,
   });
 
-  const pending = uploadMutation.isPending || deleteMutation.isPending;
+  const pending = isPreparing || uploadMutation.isPending || deleteMutation.isPending;
   const error = uploadMutation.error ?? deleteMutation.error;
   const displayName = student
     ? `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() || student.username
@@ -59,7 +69,27 @@ export function StudentAvatarDialog({ student, onClose }: Props) {
     if (pending) return;
     uploadMutation.reset();
     deleteMutation.reset();
+    setAvatarFile(null);
+    setPrepareError(null);
     onClose();
+  };
+
+  const prepareAvatar = async (file: File) => {
+    setPrepareError(null);
+    setIsPreparing(true);
+    uploadMutation.reset();
+    try {
+      setAvatarFile(await resizeProfileImage(file));
+    } catch (prepareAvatarError) {
+      setAvatarFile(null);
+      setPrepareError(
+        prepareAvatarError instanceof Error
+          ? prepareAvatarError.message
+          : 'ไม่สามารถเตรียมรูปภาพได้'
+      );
+    } finally {
+      setIsPreparing(false);
+    }
   };
 
   return (
@@ -74,29 +104,31 @@ export function StudentAvatarDialog({ student, onClose }: Props) {
       </DialogTitle>
 
       <DialogContent>
-        {error && (
+        {(error || prepareError) && (
           <Alert severity="error" sx={{ mb: 2.5 }}>
-            {error.message}
+            {error?.message ?? prepareError}
           </Alert>
         )}
         <Box sx={{ py: 1, display: 'flex', justifyContent: 'center' }}>
           <UploadAvatar
-            value={student?.avatar_url ?? undefined}
-            loading={uploadMutation.isPending}
+            value={avatarFile ?? student?.avatar_url ?? undefined}
+            loading={isPreparing || uploadMutation.isPending}
             disabled={pending}
             accept={AVATAR_ACCEPT}
-            maxSize={MAX_AVATAR_SIZE}
+            maxSize={PROFILE_IMAGE_SOURCE_LIMIT_BYTES}
             onDrop={(files) => {
               const file = files[0];
-              if (file) uploadMutation.mutate(file);
+              if (file) void prepareAvatar(file);
             }}
             helperText={
               <Box sx={{ mt: 2, textAlign: 'center' }}>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  คลิกหรือลากรูปมาวางเพื่อเปลี่ยนรูป
+                  {avatarFile ? 'ตรวจสอบรูปก่อนกดบันทึก' : 'คลิกหรือลากรูปมาวางเพื่อเปลี่ยนรูป'}
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  PNG, JPEG หรือ WEBP ขนาดไม่เกิน 2MB
+                  {avatarFile
+                    ? `ย่อแล้ว ${formatImageSize(avatarFile.size)} · WEBP`
+                    : 'PNG, JPEG หรือ WEBP · ระบบย่อให้ไม่เกิน 1MB'}
                 </Typography>
               </Box>
             }
@@ -108,7 +140,7 @@ export function StudentAvatarDialog({ student, onClose }: Props) {
       </DialogContent>
 
       <DialogActions>
-        {student?.avatar_url && (
+        {student?.avatar_url && !avatarFile && (
           <Button
             color="error"
             loading={deleteMutation.isPending}
@@ -120,9 +152,19 @@ export function StudentAvatarDialog({ student, onClose }: Props) {
             ลบรูป
           </Button>
         )}
-        <Button color="inherit" onClick={handleClose} disabled={pending}>
-          ปิด
+        <Button color="inherit" variant="outlined" onClick={handleClose} disabled={pending}>
+          {avatarFile ? 'ยกเลิก' : 'ปิด'}
         </Button>
+        {avatarFile && (
+          <Button
+            variant="contained"
+            loading={uploadMutation.isPending}
+            disabled={isPreparing || deleteMutation.isPending}
+            onClick={() => uploadMutation.mutate(avatarFile)}
+          >
+            บันทึกรูป
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

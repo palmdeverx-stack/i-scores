@@ -2,6 +2,7 @@
 
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
+import { useState, useEffect } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -19,6 +20,13 @@ import Typography from '@mui/material/Typography';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
+
+import { getTeachingScheduleStatus } from 'src/utils/teaching-schedule';
+import {
+  formatImageSize,
+  resizeProfileImage,
+  PROFILE_IMAGE_SOURCE_LIMIT_BYTES,
+} from 'src/utils/resize-profile-image';
 
 import { Iconify } from 'src/components/iconify';
 import { UploadAvatar } from 'src/components/upload';
@@ -53,11 +61,19 @@ const AVATAR_ACCEPT = {
   'image/webp': ['.webp'],
 };
 
-const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
-
 export function TeacherProfileView() {
   const queryClient = useQueryClient();
   const { checkUserSession } = useAuthContext();
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [isPreparingAvatar, setIsPreparingAvatar] = useState(false);
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setCurrentTime(new Date());
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const {
     data: profile,
@@ -118,13 +134,30 @@ export function TeacherProfileView() {
 
   const avatarMutation = useMutation({
     mutationFn: uploadTeacherAvatar,
-    onSuccess: refreshProfile,
+    onSuccess: async () => {
+      setAvatarFile(null);
+      await refreshProfile();
+    },
   });
 
   const deleteAvatarMutation = useMutation({
     mutationFn: deleteTeacherAvatar,
     onSuccess: refreshProfile,
   });
+
+  const prepareAvatar = async (file: File) => {
+    setAvatarError(null);
+    setIsPreparingAvatar(true);
+    avatarMutation.reset();
+    try {
+      setAvatarFile(await resizeProfileImage(file));
+    } catch (error) {
+      setAvatarFile(null);
+      setAvatarError(error instanceof Error ? error.message : 'ไม่สามารถเตรียมรูปภาพได้');
+    } finally {
+      setIsPreparingAvatar(false);
+    }
+  };
 
   const onSubmit = methods.handleSubmit((values) =>
     mutation.mutate({
@@ -166,7 +199,6 @@ export function TeacherProfileView() {
     month: 'long',
     year: 'numeric',
   }).format(new Date(profile.created_at));
-
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
       <Card
@@ -249,9 +281,10 @@ export function TeacherProfileView() {
         </Box>
       </Card>
 
-      {(mutation.error || avatarMutation.error || deleteAvatarMutation.error) && (
+      {(mutation.error || avatarMutation.error || deleteAvatarMutation.error || avatarError) && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {(mutation.error || avatarMutation.error || deleteAvatarMutation.error)?.message}
+          {(mutation.error || avatarMutation.error || deleteAvatarMutation.error)?.message ??
+            avatarError}
         </Alert>
       )}
       {(mutation.isSuccess || avatarMutation.isSuccess || deleteAvatarMutation.isSuccess) && (
@@ -354,44 +387,62 @@ export function TeacherProfileView() {
 
             {profile.teaching_assignments.length ? (
               <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
-                {profile.teaching_assignments.map((item) => (
-                  <Box
-                    key={item.id}
-                    component={RouterLink}
-                    href={paths.teacher.assignmentDetail(item.id)}
-                    sx={{
-                      gap: 1.5,
-                      p: 2,
-                      display: 'flex',
-                      borderRadius: 2,
-                      alignItems: 'center',
-                      color: 'text.primary',
-                      textDecoration: 'none',
-                      bgcolor: 'background.neutral',
-                      border: '1px solid transparent',
-                      '&:hover': { borderColor: 'primary.main', bgcolor: 'primary.lighter' },
-                    }}
-                  >
-                    <Avatar
-                      variant="rounded"
-                      sx={{ color: 'primary.main', bgcolor: 'primary.lighter' }}
+                {profile.teaching_assignments.map((item) => {
+                  const isTeachingNow =
+                    currentTime &&
+                    item.semester?.is_active &&
+                    Boolean(getTeachingScheduleStatus(item.schedules ?? [], currentTime).active);
+
+                  return (
+                    <Box
+                      key={item.id}
+                      component={RouterLink}
+                      href={paths.teacher.assignmentDetail(item.id)}
+                      sx={{
+                        gap: 1.5,
+                        p: 2,
+                        display: 'flex',
+                        borderRadius: 2,
+                        alignItems: 'center',
+                        color: 'text.primary',
+                        textDecoration: 'none',
+                        bgcolor: isTeachingNow ? 'success.lighter' : 'background.neutral',
+                        border: '1px solid',
+                        borderColor: isTeachingNow ? 'success.light' : 'transparent',
+                        '&:hover': {
+                          borderColor: isTeachingNow ? 'success.main' : 'primary.main',
+                          bgcolor: isTeachingNow ? 'success.lighter' : 'primary.lighter',
+                        },
+                      }}
                     >
-                      <Iconify icon="solar:notebook-bold-duotone" />
-                    </Avatar>
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography variant="subtitle2" noWrap>
-                        {item.subject?.code ? `${item.subject.code} · ` : ''}
-                        {item.subject?.name ?? 'ไม่ระบุรายวิชา'}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
-                        ห้อง {item.classroom?.name ?? '-'} · {item.semester?.name ?? '-'}
-                      </Typography>
+                      <Avatar
+                        variant="rounded"
+                        sx={{
+                          color: isTeachingNow ? 'success.main' : 'primary.main',
+                          bgcolor: isTeachingNow ? 'success.lighter' : 'primary.lighter',
+                        }}
+                      >
+                        <Iconify icon="solar:notebook-bold-duotone" />
+                      </Avatar>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography variant="subtitle2" noWrap>
+                          {item.subject?.code ? `${item.subject.code} · ` : ''}
+                          {item.subject?.name ?? 'ไม่ระบุรายวิชา'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
+                          ห้อง {item.classroom?.name ?? '-'} · {item.semester?.name ?? '-'}
+                        </Typography>
+                      </Box>
+                      {isTeachingNow ? (
+                        <Chip size="small" color="success" variant="soft" label="กำลังสอน" />
+                      ) : (
+                        item.semester?.is_active && (
+                          <Chip size="small" color="info" variant="soft" label="ภาคเรียนปัจจุบัน" />
+                        )
+                      )}
                     </Box>
-                    {item.semester?.is_active && (
-                      <Chip size="small" color="success" variant="soft" label="กำลังสอน" />
-                    )}
-                  </Box>
-                ))}
+                  );
+                })}
               </Box>
             ) : (
               <Alert severity="info">ยังไม่มีรายวิชาที่ได้รับมอบหมาย</Alert>
@@ -410,27 +461,54 @@ export function TeacherProfileView() {
 
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               <UploadAvatar
-                value={profile.avatar_url ?? undefined}
-                loading={avatarMutation.isPending}
-                disabled={avatarMutation.isPending || deleteAvatarMutation.isPending}
+                value={avatarFile ?? profile.avatar_url ?? undefined}
+                loading={isPreparingAvatar || avatarMutation.isPending}
+                disabled={
+                  isPreparingAvatar || avatarMutation.isPending || deleteAvatarMutation.isPending
+                }
                 accept={AVATAR_ACCEPT}
-                maxSize={MAX_AVATAR_SIZE}
+                maxSize={PROFILE_IMAGE_SOURCE_LIMIT_BYTES}
                 onDrop={(files) => {
                   const file = files[0];
-                  if (file) avatarMutation.mutate(file);
+                  if (file) void prepareAvatar(file);
                 }}
                 helperText={
                   <Box sx={{ mt: 2, textAlign: 'center' }}>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      คลิกหรือลากรูปมาวางเพื่อเปลี่ยนรูป
+                      {avatarFile ? 'ตรวจสอบรูปก่อนกดบันทึก' : 'คลิกหรือลากรูปมาวาง'}
                     </Typography>
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      PNG, JPEG หรือ WEBP ขนาดไม่เกิน 2MB
+                      {avatarFile
+                        ? `ย่อแล้ว ${formatImageSize(avatarFile.size)} · WEBP`
+                        : 'ระบบจะย่อรูปอัตโนมัติให้ไม่เกิน 1MB'}
                     </Typography>
                   </Box>
                 }
               />
             </Box>
+
+            {avatarFile && (
+              <Box sx={{ gap: 1, mt: 2, display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                <Button
+                  color="inherit"
+                  variant="outlined"
+                  disabled={avatarMutation.isPending}
+                  onClick={() => {
+                    setAvatarFile(null);
+                    setAvatarError(null);
+                  }}
+                >
+                  ยกเลิก
+                </Button>
+                <Button
+                  variant="contained"
+                  loading={avatarMutation.isPending}
+                  onClick={() => avatarMutation.mutate(avatarFile)}
+                >
+                  บันทึกรูป
+                </Button>
+              </Box>
+            )}
 
             {profile.avatar_url && (
               <Button
@@ -438,7 +516,7 @@ export function TeacherProfileView() {
                 color="error"
                 variant="text"
                 loading={deleteAvatarMutation.isPending}
-                disabled={avatarMutation.isPending}
+                disabled={isPreparingAvatar || avatarMutation.isPending || Boolean(avatarFile)}
                 startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
                 onClick={() => deleteAvatarMutation.mutate()}
                 sx={{ mt: 2 }}

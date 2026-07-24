@@ -47,6 +47,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     subjectImageUrl: (teacherAssignment as any)?.subjects?.image_url ?? null,
     academicYear: (teacherAssignment as any)?.classrooms?.academic_years?.year ?? null,
     semesterName: (teacherAssignment as any)?.semesters?.name ?? null,
+    semesterIsActive: Boolean((teacherAssignment as any)?.semesters?.is_active),
     teacher: (teacherAssignment as any)?.teacher ?? null,
   });
 }

@@ -150,7 +150,7 @@ export function TimetableView() {
               {timetable.terms.map((term) => (
                 <Chip
                   key={term}
-                  label={term}
+                  label={`ภาคเรียนที่ ${term}`}
                   size="small"
                   sx={(theme) => ({
                     color: 'common.white',

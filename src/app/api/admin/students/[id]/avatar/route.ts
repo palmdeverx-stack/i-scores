@@ -10,7 +10,7 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 const BUCKET = 'profile-avatars';
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
-const MAX_SIZE = 2 * 1024 * 1024;
+const MAX_SIZE = Math.round(1.5 * 1024 * 1024);
 
 async function getOwnedStudent(id: string, schoolId: string) {
   return supabaseAdmin
@@ -59,7 +59,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'รองรับเฉพาะไฟล์ PNG, JPEG หรือ WEBP' }, { status: 400 });
   }
   if (file.size > MAX_SIZE) {
-    return NextResponse.json({ message: 'ไฟล์ต้องมีขนาดไม่เกิน 2MB' }, { status: 400 });
+    return NextResponse.json({ message: 'ไฟล์หลังย่อต้องมีขนาดไม่เกิน 1.5MB' }, { status: 400 });
   }
 
   const removeError = await removeStoredAvatar(id);

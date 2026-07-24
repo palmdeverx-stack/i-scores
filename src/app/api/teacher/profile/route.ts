@@ -28,7 +28,8 @@ async function loadTeacherProfile(teacherId: string, schoolId: string | null) {
         `id, created_at,
          subject:subjects(id, code, name),
          classroom:classrooms(id, name),
-         semester:semesters(id, name, is_active)`
+         semester:semesters(id, name, is_active),
+         schedules:teaching_schedules(day_of_week, start_time, end_time)`
       )
       .eq('teacher_id', teacherId)
       .order('created_at', { ascending: false }),

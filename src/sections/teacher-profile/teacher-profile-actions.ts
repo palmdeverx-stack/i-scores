@@ -21,6 +21,7 @@ export type TeacherProfile = {
     subject: { id: string; code: string | null; name: string } | null;
     classroom: { id: string; name: string } | null;
     semester: { id: string; name: string; is_active: boolean } | null;
+    schedules: Array<{ day_of_week: number; start_time: string; end_time: string }>;
   }[];
 };
 

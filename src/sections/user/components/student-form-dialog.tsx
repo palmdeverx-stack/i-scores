@@ -22,6 +22,12 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import InputAdornment from '@mui/material/InputAdornment';
 
+import {
+  formatImageSize,
+  resizeProfileImage,
+  PROFILE_IMAGE_SOURCE_LIMIT_BYTES,
+} from 'src/utils/resize-profile-image';
+
 import { Iconify } from 'src/components/iconify';
 import { UploadAvatar } from 'src/components/upload';
 import { Form, Field } from 'src/components/hook-form';
@@ -96,6 +102,8 @@ export function StudentFormDialog({ open, student = null, onClose, onSaved }: Pr
   const isEdit = !!student;
   const queryClient = useQueryClient();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [isPreparingAvatar, setIsPreparingAvatar] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const methods = useForm<StudentFormValues>({
@@ -172,16 +180,32 @@ export function StudentFormDialog({ open, student = null, onClose, onSaved }: Pr
         : { ...EMPTY_VALUES, password: generatePassword() }
     );
     setAvatarFile(null);
+    setAvatarError(null);
+    setIsPreparingAvatar(false);
     setShowPassword(!student);
     saveMutation.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, student, reset]);
 
   const closeDialog = () => {
-    if (saveMutation.isPending) return;
+    if (saveMutation.isPending || isPreparingAvatar) return;
     saveMutation.reset();
     setAvatarFile(null);
+    setAvatarError(null);
     onClose();
+  };
+
+  const prepareAvatar = async (file: File) => {
+    setAvatarError(null);
+    setIsPreparingAvatar(true);
+    try {
+      setAvatarFile(await resizeProfileImage(file));
+    } catch (error) {
+      setAvatarFile(null);
+      setAvatarError(error instanceof Error ? error.message : 'ไม่สามารถเตรียมรูปภาพได้');
+    } finally {
+      setIsPreparingAvatar(false);
+    }
   };
 
   return (
@@ -199,7 +223,7 @@ export function StudentFormDialog({ open, student = null, onClose, onSaved }: Pr
             </Box>
             <IconButton
               onClick={closeDialog}
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || isPreparingAvatar}
               aria-label="ปิดหน้าต่าง"
             >
               <Iconify icon="mingcute:close-line" />
@@ -208,9 +232,9 @@ export function StudentFormDialog({ open, student = null, onClose, onSaved }: Pr
         </DialogTitle>
 
         <DialogContent sx={{ pt: 2 }}>
-          {saveMutation.error && (
+          {(saveMutation.error || avatarError) && (
             <Alert severity="error" sx={{ mb: 3 }}>
-              {saveMutation.error.message}
+              {saveMutation.error?.message ?? avatarError}
             </Alert>
           )}
 
@@ -225,17 +249,23 @@ export function StudentFormDialog({ open, student = null, onClose, onSaved }: Pr
               <UploadAvatar
                 value={avatarFile ?? student?.avatar_url ?? null}
                 accept={AVATAR_ACCEPT}
-                maxSize={2 * 1024 * 1024}
-                disabled={saveMutation.isPending}
-                onDrop={(files) => setAvatarFile(files[0] ?? null)}
+                maxSize={PROFILE_IMAGE_SOURCE_LIMIT_BYTES}
+                loading={isPreparingAvatar}
+                disabled={saveMutation.isPending || isPreparingAvatar}
+                onDrop={(files) => {
+                  const file = files[0];
+                  if (file) void prepareAvatar(file);
+                }}
                 helperText={
                   <Typography
                     variant="caption"
                     sx={{ mt: 1.5, display: 'block', textAlign: 'center', color: 'text.secondary' }}
                   >
-                    PNG, JPEG หรือ WEBP
+                    {avatarFile
+                      ? `ตัวอย่างหลังย่อ ${formatImageSize(avatarFile.size)} · WEBP`
+                      : 'PNG, JPEG หรือ WEBP'}
                     <br />
-                    ไม่เกิน 2MB
+                    {avatarFile ? 'รูปจะบันทึกพร้อมข้อมูลนักเรียน' : 'ระบบย่อให้ไม่เกิน 1MB'}
                   </Typography>
                 }
               />
@@ -347,10 +377,19 @@ export function StudentFormDialog({ open, student = null, onClose, onSaved }: Pr
         </DialogContent>
 
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button color="inherit" onClick={closeDialog} disabled={saveMutation.isPending}>
+          <Button
+            color="inherit"
+            onClick={closeDialog}
+            disabled={saveMutation.isPending || isPreparingAvatar}
+          >
             ยกเลิก
           </Button>
-          <Button type="submit" variant="contained" loading={saveMutation.isPending}>
+          <Button
+            type="submit"
+            variant="contained"
+            loading={saveMutation.isPending}
+            disabled={isPreparingAvatar}
+          >
             {isEdit ? 'บันทึกการแก้ไข' : 'เพิ่มนักเรียน'}
           </Button>
         </DialogActions>

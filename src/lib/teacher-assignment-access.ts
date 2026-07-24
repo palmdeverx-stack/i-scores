@@ -14,7 +14,7 @@ export async function loadTeacherAssignment(id: string) {
        classrooms(school_id, name, academic_years(year)),
        subjects(name, code, credits, image_url),
        teacher:app_users!teacher_assignments_teacher_id_fkey(username, first_name, last_name),
-       semesters(name)`
+       semesters(name, is_active)`
     )
     .eq('id', id)
     .single();

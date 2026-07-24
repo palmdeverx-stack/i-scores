@@ -73,6 +73,7 @@ export type Roster = {
   subjectImageUrl: string | null;
   academicYear: string | null;
   semesterName: string | null;
+  semesterIsActive: boolean;
   teacher: { username: string; first_name: string | null; last_name: string | null } | null;
 };
 
@@ -201,6 +202,26 @@ export async function createSchedule(teacherAssignmentId: string, params: Create
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to create schedule');
+
+  return json.schedule;
+}
+
+export async function updateSchedule(
+  teacherAssignmentId: string,
+  scheduleId: string,
+  params: CreateScheduleParams
+) {
+  const response = await fetch(
+    `/api/teacher-assignments/${teacherAssignmentId}/schedules/${scheduleId}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(params),
+    }
+  );
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to update schedule');
 
   return json.schedule;
 }
