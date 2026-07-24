@@ -137,6 +137,16 @@ export async function sendGuardianLineHello(guardianId: string) {
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถส่งข้อความสวัสดีได้');
 }
 
+export async function sendGuardianProfileLink(guardianId: string) {
+  const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ action: 'profile' }),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถส่งลิงก์โปรไฟล์ได้');
+}
+
 export async function unlinkGuardianLine(guardianId: string) {
   const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
     method: 'DELETE',

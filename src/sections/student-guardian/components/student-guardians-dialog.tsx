@@ -35,6 +35,7 @@ import {
   deleteStudentGuardian,
   getGuardianLineStatus,
   sendGuardianLineHello,
+  sendGuardianProfileLink,
   createGuardianLineInvitation,
 } from '../student-guardian-actions';
 
@@ -133,6 +134,9 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
   const helloLineMutation = useMutation({
     mutationFn: (guardianId: string) => sendGuardianLineHello(guardianId),
   });
+  const profileLineMutation = useMutation({
+    mutationFn: (guardianId: string) => sendGuardianProfileLink(guardianId),
+  });
 
   useEffect(() => {
     const payload = lineInvitation?.lineChatUrl;
@@ -222,6 +226,16 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
           {helloLineMutation.error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {helloLineMutation.error.message}
+            </Alert>
+          )}
+          {profileLineMutation.isSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              ส่งลิงก์โปรไฟล์นักเรียนไปยัง LINE ผู้ปกครองแล้ว
+            </Alert>
+          )}
+          {profileLineMutation.error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {profileLineMutation.error.message}
             </Alert>
           )}
           {isLoading && <Typography sx={{ py: 4, textAlign: 'center' }}>กำลังโหลด...</Typography>}
@@ -317,19 +331,34 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                         {guardian.line_linked_at ? 'ยกเลิกการเชื่อม' : 'สร้างรหัสเชื่อม'}
                       </Button>
                       {guardian.line_linked_at && (
-                        <Button
-                          size="small"
-                          color="success"
-                          variant="outlined"
-                          loading={
-                            helloLineMutation.isPending &&
-                            helloLineMutation.variables === guardian.id
-                          }
-                          startIcon={<Iconify icon="solar:chat-round-dots-bold" />}
-                          onClick={() => helloLineMutation.mutate(guardian.id)}
-                        >
-                          ส่งสวัสดี
-                        </Button>
+                        <>
+                          <Button
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                            loading={
+                              profileLineMutation.isPending &&
+                              profileLineMutation.variables === guardian.id
+                            }
+                            startIcon={<Iconify icon="solar:user-id-bold" />}
+                            onClick={() => profileLineMutation.mutate(guardian.id)}
+                          >
+                            ส่งลิงก์โปรไฟล์
+                          </Button>
+                          <Button
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                            loading={
+                              helloLineMutation.isPending &&
+                              helloLineMutation.variables === guardian.id
+                            }
+                            startIcon={<Iconify icon="solar:chat-round-dots-bold" />}
+                            onClick={() => helloLineMutation.mutate(guardian.id)}
+                          >
+                            ส่งสวัสดี
+                          </Button>
+                        </>
                       )}
                     </Box>
                   </Box>

@@ -3,6 +3,7 @@ import { createHmac, createHash, timingSafeEqual } from 'node:crypto';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { decryptLineCredential } from 'src/lib/line-credentials';
+import { signGuardianPortalLinkToken } from 'src/lib/guardian-portal-token';
 
 // ----------------------------------------------------------------------
 
@@ -27,6 +28,13 @@ async function reply(accessToken: string, replyToken: string, text: string) {
     },
     body: JSON.stringify({ replyToken, messages: [{ type: 'text', text }] }),
   });
+}
+
+function guardianPortalUrl(request: Request, schoolId: string, lineUserId: string) {
+  const token = signGuardianPortalLinkToken(schoolId, lineUserId);
+  const url = new URL('/api/guardian/portal/session/', request.url);
+  url.searchParams.set('token', token);
+  return url.toString();
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
@@ -93,7 +101,34 @@ export async function POST(request: Request, { params }: RouteParams) {
     ) {
       continue;
     }
-    const match = /^(?:LINK|เชื่อม)\s+([A-Z0-9]{8})$/i.exec(event.message.text.trim());
+    const messageText = event.message.text.trim();
+    if (/^(?:PROFILE|โปรไฟล์|ข้อมูลนักเรียน)$/i.test(messageText)) {
+      const { count } = await supabaseAdmin
+        .from('student_guardians')
+        .select('id', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('line_user_id', event.source.userId);
+      if (!count) {
+        await reply(
+          accessToken,
+          event.replyToken,
+          'บัญชี LINE นี้ยังไม่ได้เชื่อมกับนักเรียน กรุณาสแกน QR จากโรงเรียนก่อน'
+        );
+        continue;
+      }
+      await reply(
+        accessToken,
+        event.replyToken,
+        [
+          '👨‍👩‍👧 ข้อมูลนักเรียนสำหรับผู้ปกครอง',
+          'ลิงก์เข้าสู่ระบบมีอายุ 10 นาที และหน้าโปรไฟล์เป็นแบบอ่านอย่างเดียว',
+          guardianPortalUrl(request, schoolId, event.source.userId),
+        ].join('\n\n')
+      );
+      continue;
+    }
+
+    const match = /^(?:LINK|เชื่อม)\s+([A-Z0-9]{8})$/i.exec(messageText);
     if (!match) continue;
 
     const tokenHash = createHash('sha256').update(match[1].toUpperCase()).digest('hex');
@@ -139,7 +174,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     await reply(
       accessToken,
       event.replyToken,
-      'เชื่อมบัญชีกับโรงเรียนเรียบร้อยแล้ว คุณจะได้รับเฉพาะการแจ้งเตือน ขาด ลา สาย และไม่เข้าเรียนรายคาบ'
+      [
+        'เชื่อมบัญชีกับโรงเรียนเรียบร้อยแล้ว',
+        'คุณจะได้รับการแจ้งเตือนจากโรงเรียนผ่าน LINE',
+        'เปิดดูโปรไฟล์นักเรียนได้จากลิงก์นี้ (ลิงก์มีอายุ 10 นาที)',
+        guardianPortalUrl(request, schoolId, event.source.userId),
+        'ครั้งถัดไปพิมพ์ “ข้อมูลนักเรียน” เพื่อขอลิงก์ใหม่',
+      ].join('\n\n')
     );
   }
 

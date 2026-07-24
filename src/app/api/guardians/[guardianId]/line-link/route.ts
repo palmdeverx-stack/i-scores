@@ -5,6 +5,7 @@ import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { schoolHasFeature } from 'src/lib/school-subscription';
 import { decryptLineCredential } from 'src/lib/line-credentials';
+import { signGuardianPortalLinkToken } from 'src/lib/guardian-portal-token';
 
 // ----------------------------------------------------------------------
 
@@ -92,7 +93,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เชื่อม LINE ผู้ปกครอง' }, { status: 403 });
   }
   const body = await request.json().catch(() => null);
-  const action = body?.action === 'hello' ? 'hello' : 'invite';
+  const action =
+    body?.action === 'hello' ? 'hello' : body?.action === 'profile' ? 'profile' : 'invite';
   const { data: integration } = await supabaseAdmin
     .from('school_line_integrations')
     .select('is_enabled, oa_basic_id, channel_access_token_encrypted')
@@ -105,7 +107,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
   }
 
-  if (action === 'hello') {
+  if (action === 'hello' || action === 'profile') {
     if (!access.guardian.line_user_id) {
       return NextResponse.json({ message: 'ผู้ปกครองยังไม่ได้เชื่อม LINE' }, { status: 409 });
     }
@@ -121,6 +123,13 @@ export async function POST(request: Request, { params }: RouteParams) {
       .eq('id', access.caller.schoolId)
       .maybeSingle();
     try {
+      const profileUrl = new URL('/api/guardian/portal/session/', request.url);
+      if (action === 'profile') {
+        profileUrl.searchParams.set(
+          'token',
+          signGuardianPortalLinkToken(access.caller.schoolId, access.guardian.line_user_id)
+        );
+      }
       const response = await fetch('https://api.line.me/v2/bot/message/push', {
         method: 'POST',
         headers: {
@@ -134,9 +143,17 @@ export async function POST(request: Request, { params }: RouteParams) {
           messages: [
             {
               type: 'text',
-              text: `สวัสดีคุณ ${access.guardian.full_name}\nเชื่อมต่อ LINE กับ ${
-                school?.name ?? 'โรงเรียน'
-              } เรียบร้อยแล้ว\nข้อความนี้เป็นการทดสอบการแจ้งเตือนจากระบบ`,
+              text:
+                action === 'profile'
+                  ? [
+                      `คุณ ${access.guardian.full_name}`,
+                      `เปิดดูโปรไฟล์นักเรียนของ ${school?.name ?? 'โรงเรียน'} ได้จากลิงก์นี้`,
+                      'ลิงก์มีอายุ 10 นาที และข้อมูลเป็นแบบอ่านอย่างเดียว',
+                      profileUrl.toString(),
+                    ].join('\n\n')
+                  : `สวัสดีคุณ ${access.guardian.full_name}\nเชื่อมต่อ LINE กับ ${
+                      school?.name ?? 'โรงเรียน'
+                    } เรียบร้อยแล้ว\nข้อความนี้เป็นการทดสอบการแจ้งเตือนจากระบบ`,
             },
           ],
         }),
