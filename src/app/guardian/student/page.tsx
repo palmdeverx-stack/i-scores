@@ -19,7 +19,7 @@ export default function Page() {
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: { md: 'fixed' },
-        backgroundImage: 'url("/assets/background/og-images-class-go.jpg")',
+        backgroundImage: 'url("/assets/background/bg-images.png")',
       }}
     >
       <GuardianStudentProfileView />

@@ -70,9 +70,9 @@ export function GuardianStudentProfileView() {
 
   if (query.isLoading) {
     return (
-      <Container maxWidth="md" sx={{ py: 5 }}>
-        <Skeleton variant="rounded" height={150} />
-        <Skeleton variant="rounded" height={320} sx={{ mt: 3 }} />
+      <Container maxWidth="md" sx={{ px: { xs: 1.5, sm: 3 }, py: { xs: 2, sm: 5 } }}>
+        <Skeleton variant="rounded" height={120} sx={{ borderRadius: 3 }} />
+        <Skeleton variant="rounded" height={320} sx={{ mt: 2, borderRadius: 3 }} />
       </Container>
     );
   }
@@ -82,7 +82,7 @@ export function GuardianStudentProfileView() {
       return <GuardianPortalLogin onAuthenticated={() => query.refetch()} />;
     }
     return (
-      <Container maxWidth="sm" sx={{ py: { xs: 5, md: 10 } }}>
+      <Container maxWidth="sm" sx={{ px: { xs: 1.5, sm: 3 }, py: { xs: 3, md: 10 } }}>
         <Alert
           severity="warning"
           action={
@@ -101,30 +101,53 @@ export function GuardianStudentProfileView() {
   const { school, students } = query.data;
 
   return (
-    <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 }, pb: 8 }}>
+    <Container
+      maxWidth="md"
+      sx={{ px: { xs: 1.5, sm: 3 }, pt: { xs: 1.5, sm: 3, md: 5 }, pb: { xs: 4, md: 8 } }}
+    >
       <Card
         sx={{
-          p: { xs: 2.5, sm: 3.5 },
+          p: { xs: 2, sm: 3.5 },
           color: 'common.white',
-          borderRadius: 4,
+          borderRadius: { xs: 2.5, sm: 4 },
+          boxShadow: { xs: '0 8px 24px rgba(18,58,114,0.22)', sm: 8 },
           background: 'linear-gradient(135deg, #123A72 0%, #1976D2 100%)',
         }}
       >
-        <Box sx={{ gap: 2, display: 'flex', alignItems: 'center' }}>
+        <Box sx={{ gap: { xs: 1.25, sm: 2 }, display: 'flex', alignItems: 'center' }}>
           <Avatar
             src={school?.logo_url ?? undefined}
-            sx={{ width: 68, height: 68, bgcolor: 'common.white', color: 'primary.main' }}
+            sx={{
+              width: { xs: 52, sm: 68 },
+              height: { xs: 52, sm: 68 },
+              flexShrink: 0,
+              bgcolor: 'common.white',
+              color: 'primary.main',
+              border: '3px solid rgba(255,255,255,0.22)',
+            }}
           >
-            <RiSchoolLine size={30} />
+            <RiSchoolLine size={26} />
           </Avatar>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="overline" sx={{ opacity: 0.75 }}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography variant="overline" sx={{ lineHeight: 1.2, opacity: 0.75 }}>
               Parent Portal
             </Typography>
-            <Typography component="h1" variant="h4">
+            <Typography
+              component="h1"
+              variant="h4"
+              sx={{
+                mt: 0.25,
+                fontSize: { xs: 20, sm: 28, md: 32 },
+                lineHeight: { xs: 1.3, sm: 1.25 },
+                overflowWrap: 'anywhere',
+              }}
+            >
               {school?.name ?? 'ข้อมูลนักเรียน'}
             </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.8 }}>
+            <Typography
+              variant="body2"
+              sx={{ mt: 0.5, display: { xs: 'none', sm: 'block' }, opacity: 0.8 }}
+            >
               โปรไฟล์บุตรหลานที่เชื่อมกับบัญชี LINE ของคุณ
             </Typography>
           </Box>
@@ -134,26 +157,46 @@ export function GuardianStudentProfileView() {
             loading={logoutMutation.isPending}
             startIcon={<RiLogoutBoxRLine />}
             onClick={() => logoutMutation.mutate()}
+            aria-label="ออกจากระบบ Parent Portal"
             sx={{
-              ml: 'auto',
+              minWidth: { xs: 40, sm: 64 },
+              px: { xs: 1, sm: 2 },
               flexShrink: 0,
               color: 'common.white',
               borderColor: 'rgba(255,255,255,0.4)',
+              '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
               '&:hover': { borderColor: 'common.white' },
             }}
           >
-            ออกจากระบบ
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              ออกจากระบบ
+            </Box>
           </Button>
         </Box>
+        <Typography
+          variant="caption"
+          sx={{ mt: 1.25, display: { xs: 'block', sm: 'none' }, opacity: 0.8 }}
+        >
+          โปรไฟล์และประวัติการเข้าเรียนของบุตรหลาน
+        </Typography>
       </Card>
 
-      <Box sx={{ gap: 3, mt: 3, display: 'grid' }}>
+      <Box sx={{ gap: { xs: 1.5, sm: 3 }, mt: { xs: 1.5, sm: 3 }, display: 'grid' }}>
         {students.map((student) => (
           <StudentProfileCard key={student.id} student={student} />
         ))}
       </Box>
 
-      <Alert severity="info" icon={<RiShieldCheckLine />} sx={{ mt: 3 }}>
+      <Alert
+        severity="info"
+        icon={<RiShieldCheckLine />}
+        sx={{
+          mt: { xs: 1.5, sm: 3 },
+          alignItems: 'flex-start',
+          borderRadius: 2.5,
+          '& .MuiAlert-message': { fontSize: { xs: 12, sm: 14 } },
+        }}
+      >
         ข้อมูลเป็นแบบอ่านอย่างเดียว การเข้าสู่ระบบจดจำไว้ 30 วัน และเปิดได้เฉพาะบัญชี LINE
         ผู้ปกครองที่เชื่อมกับนักเรียน
       </Alert>
@@ -172,18 +215,46 @@ function StudentProfileCard({ student }: { student: GuardianStudentProfile }) {
   const status = STATUS[student.student_status ?? 'studying'];
 
   return (
-    <Card variant="outlined" sx={{ overflow: 'hidden', borderRadius: 3 }}>
-      <Box sx={{ p: { xs: 2.5, sm: 3 }, gap: 2.5, display: 'flex', alignItems: 'center' }}>
+    <Card
+      variant="outlined"
+      sx={{
+        overflow: 'hidden',
+        borderRadius: { xs: 2.5, sm: 3 },
+        bgcolor: 'rgba(255,255,255,0.96)',
+        boxShadow: { xs: '0 6px 20px rgba(15,23,42,0.10)', sm: 2 },
+      }}
+    >
+      <Box
+        sx={{
+          p: { xs: 2, sm: 3 },
+          gap: { xs: 1.5, sm: 2.5 },
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
         <Avatar
           src={student.avatar_url ?? undefined}
           alt={displayName}
-          sx={{ width: 82, height: 82, fontSize: 28, bgcolor: 'primary.lighter' }}
+          sx={{
+            width: { xs: 64, sm: 82 },
+            height: { xs: 64, sm: 82 },
+            flexShrink: 0,
+            fontSize: { xs: 22, sm: 28 },
+            color: 'primary.main',
+            bgcolor: 'primary.lighter',
+            border: '3px solid',
+            borderColor: 'primary.lighter',
+          }}
         >
           {student.first_name?.charAt(0) ?? <RiGraduationCapLine />}
         </Avatar>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
-            <Typography component="h2" variant="h5">
+          <Box sx={{ gap: 0.75, display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
+            <Typography
+              component="h2"
+              variant="h5"
+              sx={{ fontSize: { xs: 18, sm: 24 }, lineHeight: 1.35, overflowWrap: 'anywhere' }}
+            >
               {displayName}
             </Typography>
             <Chip size="small" color={status.color} label={status.label} variant="soft" />
@@ -193,10 +264,17 @@ function StudentProfileCard({ student }: { student: GuardianStudentProfile }) {
               {englishName}
             </Typography>
           )}
-          <Typography variant="body2" sx={{ mt: 0.75, color: 'text.secondary' }}>
-            รหัสนักเรียน {student.student_code ?? 'ไม่ระบุ'}
-            {student.nickname ? ` · ชื่อเล่น ${student.nickname}` : ''}
-          </Typography>
+          <Box sx={{ gap: 0.75, mt: 0.75, display: 'flex', flexWrap: 'wrap' }}>
+            <Chip
+              size="small"
+              variant="soft"
+              icon={<RiGraduationCapLine size={15} />}
+              label={`รหัส ${student.student_code ?? 'ไม่ระบุ'}`}
+            />
+            {student.nickname && (
+              <Chip size="small" variant="soft" label={`ชื่อเล่น ${student.nickname}`} />
+            )}
+          </Box>
         </Box>
       </Box>
 
@@ -204,10 +282,10 @@ function StudentProfileCard({ student }: { student: GuardianStudentProfile }) {
 
       <Box
         sx={{
-          p: { xs: 2.5, sm: 3 },
-          gap: 2,
+          p: { xs: 2, sm: 3 },
+          gap: { xs: 1.75, sm: 2 },
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: '1fr 1fr' },
         }}
       >
         <ProfileFact label="ชั้นเรียน" value={classroomValue?.name ?? 'ยังไม่ได้ลงทะเบียน'} />
@@ -284,7 +362,7 @@ function AttendanceSection({ student }: { student: GuardianStudentProfile }) {
   return (
     <>
       <Divider />
-      <Box sx={{ p: { xs: 2.5, sm: 3 } }}>
+      <Box sx={{ p: { xs: 2, sm: 3 } }}>
         <Box
           sx={{
             gap: 1.5,
@@ -294,29 +372,57 @@ function AttendanceSection({ student }: { student: GuardianStudentProfile }) {
           }}
         >
           <Box sx={{ flex: 1 }}>
-            <Typography variant="h6">ประวัติการเข้าเรียน</Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            <Typography variant="h6" sx={{ fontSize: { xs: 17, sm: 20 } }}>
+              ประวัติการเข้าเรียน
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ fontSize: { xs: 12, sm: 14 }, color: 'text.secondary' }}
+            >
               รวมข้อมูลเข้าแถวและเข้าเรียนรายวิชาย้อนหลัง 1 ปี
             </Typography>
           </Box>
-          <Box sx={{ gap: 0.75, display: 'flex', flexWrap: 'wrap' }}>
-            {(Object.keys(ATTENDANCE_STATUS) as GuardianAttendanceStatus[]).map((status) => (
-              <Chip
+        </Box>
+
+        <Box
+          sx={{
+            gap: 0.75,
+            mt: 2,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          }}
+        >
+          {(Object.keys(ATTENDANCE_STATUS) as GuardianAttendanceStatus[]).map((status) => {
+            const item = ATTENDANCE_STATUS[status];
+            return (
+              <Box
                 key={status}
-                size="small"
-                variant="soft"
-                color={ATTENDANCE_STATUS[status].color}
-                label={`${ATTENDANCE_STATUS[status].label} ${summary[status]}`}
-              />
-            ))}
-          </Box>
+                sx={{
+                  py: { xs: 1, sm: 1.25 },
+                  px: 0.5,
+                  minWidth: 0,
+                  textAlign: 'center',
+                  borderRadius: 1.5,
+                  color: `${item.color}.dark`,
+                  bgcolor: `${item.color}.lighter`,
+                }}
+              >
+                <Typography variant="h6" sx={{ fontSize: { xs: 18, sm: 20 }, lineHeight: 1.2 }}>
+                  {summary[status]}
+                </Typography>
+                <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                  {item.label}
+                </Typography>
+              </Box>
+            );
+          })}
         </Box>
 
         {!records.length ? (
           <Box
             sx={{
-              py: 5,
-              mt: 2.5,
+              py: { xs: 4, sm: 5 },
+              mt: 2,
               textAlign: 'center',
               borderRadius: 2,
               bgcolor: 'background.neutral',
@@ -328,24 +434,25 @@ function AttendanceSection({ student }: { student: GuardianStudentProfile }) {
             </Typography>
           </Box>
         ) : (
-          <Box sx={{ mt: 2.5 }}>
+          <Box sx={{ mt: 2 }}>
             {records.slice(0, 30).map((record, index) => {
               const status = ATTENDANCE_STATUS[record.status];
               return (
                 <Box key={record.id}>
                   <Box
                     sx={{
-                      gap: 1.5,
-                      py: 1.5,
+                      gap: { xs: 1, sm: 1.5 },
+                      py: { xs: 1.25, sm: 1.5 },
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
                     }}
                   >
                     <Avatar
                       variant="rounded"
                       sx={{
-                        width: 38,
-                        height: 38,
+                        width: { xs: 34, sm: 38 },
+                        height: { xs: 34, sm: 38 },
+                        flexShrink: 0,
                         color: record.type === 'homeroom' ? 'primary.main' : 'info.main',
                         bgcolor: record.type === 'homeroom' ? 'primary.lighter' : 'info.lighter',
                       }}
@@ -357,8 +464,22 @@ function AttendanceSection({ student }: { student: GuardianStudentProfile }) {
                       )}
                     </Avatar>
                     <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography variant="subtitle2">{record.title}</Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontSize: { xs: 13, sm: 14 }, lineHeight: 1.35 }}
+                      >
+                        {record.title}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          mt: 0.25,
+                          display: 'block',
+                          lineHeight: 1.45,
+                          color: 'text.secondary',
+                          overflowWrap: 'anywhere',
+                        }}
+                      >
                         {new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' }).format(
                           new Date(`${record.date}T00:00:00`)
                         )}
@@ -366,7 +487,13 @@ function AttendanceSection({ student }: { student: GuardianStudentProfile }) {
                         {record.note ? ` · ${record.note}` : ''}
                       </Typography>
                     </Box>
-                    <Chip size="small" color={status.color} variant="soft" label={status.label} />
+                    <Chip
+                      size="small"
+                      color={status.color}
+                      variant="soft"
+                      label={status.label}
+                      sx={{ flexShrink: 0 }}
+                    />
                   </Box>
                   {index < Math.min(records.length, 30) - 1 && <Divider />}
                 </Box>
@@ -389,15 +516,29 @@ function ProfileFact({
   icon?: React.ReactNode;
 }) {
   return (
-    <Box>
+    <Box sx={{ minWidth: 0 }}>
       <Typography
         variant="caption"
-        sx={{ gap: 0.5, display: 'flex', alignItems: 'center', color: 'text.secondary' }}
+        sx={{
+          gap: 0.5,
+          display: 'flex',
+          fontSize: { xs: 11, sm: 12 },
+          alignItems: 'center',
+          color: 'text.secondary',
+        }}
       >
         {icon}
         {label}
       </Typography>
-      <Typography variant="subtitle2" sx={{ mt: 0.25 }}>
+      <Typography
+        variant="subtitle2"
+        sx={{
+          mt: 0.25,
+          fontSize: { xs: 13, sm: 14 },
+          lineHeight: 1.4,
+          overflowWrap: 'anywhere',
+        }}
+      >
         {value}
       </Typography>
     </Box>

@@ -9,6 +9,14 @@ import { signGuardianPortalIdentityToken } from 'src/lib/guardian-portal-token';
 
 type RouteParams = { params: Promise<{ schoolId: string }> };
 
+type LineMessage =
+  | { type: 'text'; text: string }
+  | {
+      type: 'flex';
+      altText: string;
+      contents: Record<string, unknown>;
+    };
+
 function validSignature(body: string, signature: string, secret: string) {
   const expected = createHmac('sha256', secret).update(body).digest('base64');
   const expectedBuffer = Buffer.from(expected);
@@ -19,7 +27,12 @@ function validSignature(body: string, signature: string, secret: string) {
   );
 }
 
-async function sendText(accessToken: string, replyToken: string, lineUserId: string, text: string) {
+async function sendMessages(
+  accessToken: string,
+  replyToken: string,
+  lineUserId: string,
+  messages: LineMessage[]
+) {
   try {
     const replyResponse = await fetch('https://api.line.me/v2/bot/message/reply', {
       method: 'POST',
@@ -27,7 +40,7 @@ async function sendText(accessToken: string, replyToken: string, lineUserId: str
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ replyToken, messages: [{ type: 'text', text }] }),
+      body: JSON.stringify({ replyToken, messages }),
     });
     if (replyResponse.ok) return true;
 
@@ -41,7 +54,7 @@ async function sendText(accessToken: string, replyToken: string, lineUserId: str
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text }] }),
+      body: JSON.stringify({ to: lineUserId, messages }),
     });
     if (!pushResponse.ok) {
       console.error('LINE push fallback failed', {
@@ -54,6 +67,65 @@ async function sendText(accessToken: string, replyToken: string, lineUserId: str
     console.error('Unable to send LINE bot response', error);
     return false;
   }
+}
+
+function sendText(accessToken: string, replyToken: string, lineUserId: string, text: string) {
+  return sendMessages(accessToken, replyToken, lineUserId, [{ type: 'text', text }]);
+}
+
+function guardianPortalMessage(url: string): LineMessage {
+  return {
+    type: 'flex',
+    altText: 'เปิดข้อมูลนักเรียน',
+    contents: {
+      type: 'bubble',
+      size: 'kilo',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'text',
+            text: 'ข้อมูลนักเรียน',
+            weight: 'bold',
+            size: 'xl',
+            color: '#172B4D',
+          },
+          {
+            type: 'text',
+            text: 'ดูโปรไฟล์และประวัติการเข้าเรียนของบุตรหลาน',
+            size: 'sm',
+            color: '#6B7A90',
+            wrap: true,
+          },
+          {
+            type: 'text',
+            text: 'กรุณากรอกรหัสนักเรียนที่เชื่อมกับ LINE นี้',
+            size: 'xs',
+            color: '#8A94A6',
+            wrap: true,
+          },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            style: 'primary',
+            color: '#1976D2',
+            action: {
+              type: 'uri',
+              label: 'เปิดข้อมูลนักเรียน',
+              uri: url,
+            },
+          },
+        ],
+      },
+    },
+  };
 }
 
 function normalizeCommand(value: string) {
@@ -138,6 +210,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const messageText = normalizeCommand(rawCommand);
     const respond = (text: string) =>
       sendText(accessToken, event.replyToken!, event.source!.userId!, text);
+    const respondWithPortal = (text: string) =>
+      sendMessages(accessToken, event.replyToken!, event.source!.userId!, [
+        { type: 'text', text },
+        guardianPortalMessage(guardianPortalUrl(request, schoolId, event.source!.userId!)),
+      ]);
     if (
       /^(?:PROFILE|โปรไฟล์|ดู\s*โปรไฟล์|ข้อมูลนักเรียน|ดู\s*ข้อมูลนักเรียน|รายละเอียดนักเรียน|ดู\s*รายละเอียดนักเรียน|ATTENDANCE|การเข้าเรียน|ดู\s*การเข้าเรียน)$/i.test(
         messageText
@@ -152,13 +229,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         await respond('บัญชี LINE นี้ยังไม่ได้เชื่อมกับนักเรียน กรุณาสแกน QR จากโรงเรียนก่อน');
         continue;
       }
-      await respond(
-        [
-          '👨‍👩‍👧 ข้อมูลนักเรียนสำหรับผู้ปกครอง',
-          'ลิงก์นี้ใช้เข้าสู่ Parent Portal ได้ตลอด จนกว่าจะยกเลิกการเชื่อม LINE',
-          'กรอกรหัสนักเรียนที่เชื่อมกับบัญชี LINE นี้ เพื่อดูโปรไฟล์และประวัติการเข้าเรียน',
-          guardianPortalUrl(request, schoolId, event.source.userId),
-        ].join('\n\n')
+      await respondWithPortal(
+        '👨‍👩‍👧 เปิดดูข้อมูลนักเรียนได้จากปุ่มด้านล่าง\nลิงก์ใช้งานได้จนกว่าจะยกเลิกการเชื่อม LINE'
       );
       continue;
     }
@@ -227,14 +299,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       .from('guardian_line_link_tokens')
       .update({ used_at: new Date().toISOString() })
       .eq('id', link.id);
-    await respond(
-      [
-        'เชื่อมบัญชีกับโรงเรียนเรียบร้อยแล้ว',
-        'คุณจะได้รับการแจ้งเตือนจากโรงเรียนผ่าน LINE',
-        'เปิด Parent Portal เพื่อดูโปรไฟล์และประวัติการเข้าเรียนได้จากลิงก์นี้',
-        guardianPortalUrl(request, schoolId, event.source.userId),
-        'ลิงก์ไม่หมดอายุ และต้องกรอกรหัสนักเรียนที่เชื่อมไว้ก่อนเข้าดูข้อมูล',
-      ].join('\n\n')
+    await respondWithPortal(
+      ['เชื่อมบัญชีกับโรงเรียนเรียบร้อยแล้ว', 'คุณจะได้รับการแจ้งเตือนจากโรงเรียนผ่าน LINE'].join(
+        '\n'
+      )
     );
   }
 

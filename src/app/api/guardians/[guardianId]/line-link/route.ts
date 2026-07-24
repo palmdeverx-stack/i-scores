@@ -141,20 +141,75 @@ export async function POST(request: Request, { params }: RouteParams) {
         body: JSON.stringify({
           to: access.guardian.line_user_id,
           messages: [
-            {
-              type: 'text',
-              text:
-                action === 'profile'
-                  ? [
-                      `คุณ ${access.guardian.full_name}`,
-                      `เปิดดูโปรไฟล์นักเรียนของ ${school?.name ?? 'โรงเรียน'} ได้จากลิงก์นี้`,
-                      'ลิงก์นี้ไม่หมดอายุ กรุณากรอกรหัสนักเรียนที่เชื่อมกับ LINE นี้ก่อนเข้าดูข้อมูล',
-                      profileUrl.toString(),
-                    ].join('\n\n')
-                  : `สวัสดีคุณ ${access.guardian.full_name}\nเชื่อมต่อ LINE กับ ${
+            ...(action === 'profile'
+              ? [
+                  {
+                    type: 'text',
+                    text: `คุณ ${access.guardian.full_name}\nเปิดดูข้อมูลนักเรียนของ ${
+                      school?.name ?? 'โรงเรียน'
+                    } ได้จากปุ่มด้านล่าง`,
+                  },
+                  {
+                    type: 'flex',
+                    altText: 'เปิดข้อมูลนักเรียน',
+                    contents: {
+                      type: 'bubble',
+                      size: 'kilo',
+                      body: {
+                        type: 'box',
+                        layout: 'vertical',
+                        spacing: 'md',
+                        contents: [
+                          {
+                            type: 'text',
+                            text: 'ข้อมูลนักเรียน',
+                            weight: 'bold',
+                            size: 'xl',
+                            color: '#172B4D',
+                          },
+                          {
+                            type: 'text',
+                            text: 'ดูโปรไฟล์และประวัติการเข้าเรียนของบุตรหลาน',
+                            size: 'sm',
+                            color: '#6B7A90',
+                            wrap: true,
+                          },
+                          {
+                            type: 'text',
+                            text: 'กรุณากรอกรหัสนักเรียนที่เชื่อมกับ LINE นี้',
+                            size: 'xs',
+                            color: '#8A94A6',
+                            wrap: true,
+                          },
+                        ],
+                      },
+                      footer: {
+                        type: 'box',
+                        layout: 'vertical',
+                        contents: [
+                          {
+                            type: 'button',
+                            style: 'primary',
+                            color: '#1976D2',
+                            action: {
+                              type: 'uri',
+                              label: 'เปิดข้อมูลนักเรียน',
+                              uri: profileUrl.toString(),
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  },
+                ]
+              : [
+                  {
+                    type: 'text',
+                    text: `สวัสดีคุณ ${access.guardian.full_name}\nเชื่อมต่อ LINE กับ ${
                       school?.name ?? 'โรงเรียน'
                     } เรียบร้อยแล้ว\nข้อความนี้เป็นการทดสอบการแจ้งเตือนจากระบบ`,
-            },
+                  },
+                ]),
           ],
         }),
       });
