@@ -23,6 +23,7 @@ import {
   getLineRichMenu,
   createLineRichMenu,
   deleteLineRichMenu,
+  getLineRichMenuImage,
 } from '../line-notification-actions';
 
 // ----------------------------------------------------------------------
@@ -49,6 +50,13 @@ function previewColumns(layout: LineRichMenuLayout) {
   if (layout === 'one') return '1fr';
   if (layout === 'two') return 'repeat(2, 1fr)';
   return 'repeat(3, 1fr)';
+}
+
+function layoutFromAreaCount(count: number): LineRichMenuLayout {
+  if (count === 1) return 'one';
+  if (count === 2) return 'two';
+  if (count === 6) return 'six';
+  return 'three';
 }
 
 function imageDimensions(file: File) {
@@ -81,7 +89,8 @@ export function LineRichMenuCard({ hasAccessToken }: Props) {
   const [image, setImage] = useState<File | null>(null);
   const [imageError, setImageError] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState('');
+  const [currentPreviewUrl, setCurrentPreviewUrl] = useState('');
 
   const query = useQuery({
     queryKey: ['line-rich-menu'],
@@ -89,10 +98,21 @@ export function LineRichMenuCard({ hasAccessToken }: Props) {
     enabled: hasAccessToken,
     staleTime: 30_000,
   });
+  const current = query.data?.richMenu;
+  const currentLayout = current ? layoutFromAreaCount(current.areas.length) : null;
+  const imageQuery = useQuery({
+    queryKey: ['line-rich-menu-image', current?.id],
+    queryFn: getLineRichMenuImage,
+    enabled: Boolean(current?.id),
+    staleTime: 30_000,
+  });
   const createMutation = useMutation({
     mutationFn: createLineRichMenu,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['line-rich-menu'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['line-rich-menu'] }),
+        queryClient.invalidateQueries({ queryKey: ['line-rich-menu-image'] }),
+      ]);
       setImage(null);
       setImageError('');
     },
@@ -100,23 +120,72 @@ export function LineRichMenuCard({ hasAccessToken }: Props) {
   const deleteMutation = useMutation({
     mutationFn: deleteLineRichMenu,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['line-rich-menu'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['line-rich-menu'] }),
+        queryClient.invalidateQueries({ queryKey: ['line-rich-menu-image'] }),
+      ]);
       setDeleteOpen(false);
     },
   });
 
   useEffect(() => {
     if (!image) {
-      setPreviewUrl('');
+      setUploadedPreviewUrl('');
       return undefined;
     }
     const url = URL.createObjectURL(image);
-    setPreviewUrl(url);
+    setUploadedPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [image]);
 
+  useEffect(() => {
+    if (!imageQuery.data) {
+      setCurrentPreviewUrl('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(imageQuery.data);
+    setCurrentPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageQuery.data]);
+
+  useEffect(() => {
+    if (!current) return;
+    const loadedLayout = layoutFromAreaCount(current.areas.length);
+    setLayout(loadedLayout);
+    setName(current.name);
+    setChatBarText(current.chatBarText);
+    setSelected(current.selected);
+    setActions(
+      current.areas.map((area, index) => {
+        if (area.action.type === 'message' && 'text' in area.action) {
+          return {
+            label: area.action.label ?? `ช่อง ${index + 1}`,
+            type: 'message',
+            value: area.action.text,
+          };
+        }
+        if (area.action.type === 'uri' && 'uri' in area.action) {
+          return {
+            label: area.action.label ?? `ช่อง ${index + 1}`,
+            type: 'uri',
+            value: area.action.uri,
+          };
+        }
+        return (
+          DEFAULT_ACTIONS[index] ?? {
+            label: `ช่อง ${index + 1}`,
+            type: 'message',
+            value: `เมนู ${index + 1}`,
+          }
+        );
+      })
+    );
+    setImage(null);
+    setImageError('');
+  }, [current]);
+
   const size = expectedSize(layout);
-  const current = query.data?.richMenu;
+  const previewUrl = uploadedPreviewUrl || (currentLayout === layout ? currentPreviewUrl : '');
   const statusLabel = useMemo(() => {
     if (!hasAccessToken) return 'รอเชื่อม LINE OA';
     if (query.data?.source === 'manager') return 'ตั้งค่าจาก LINE Manager';
@@ -208,6 +277,11 @@ export function LineRichMenuCard({ hasAccessToken }: Props) {
             {query.error.message}
           </Alert>
         )}
+        {imageQuery.isError && (
+          <Alert severity="warning" sx={{ mt: 2.5 }}>
+            โหลดข้อมูล Rich Menu ได้ แต่ไม่สามารถแสดงภาพปัจจุบัน: {imageQuery.error.message}
+          </Alert>
+        )}
         {query.data?.source === 'manager' && (
           <Alert severity="warning" sx={{ mt: 2.5 }}>
             บัญชีนี้มี Rich Menu ที่สร้างจาก LINE Official Account Manager
@@ -280,6 +354,11 @@ export function LineRichMenuCard({ hasAccessToken }: Props) {
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             PNG หรือ JPEG ขนาด {size.width} × {size.height} px และไม่เกิน 1 MB
           </Typography>
+          {current && !image && previewUrl && (
+            <Typography variant="caption" sx={{ ml: 1, color: 'success.main', fontWeight: 600 }}>
+              · กำลังแสดงภาพที่ใช้งานอยู่
+            </Typography>
+          )}
           <Box
             sx={{
               mt: 1.25,

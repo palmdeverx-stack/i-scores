@@ -81,7 +81,13 @@ export type LineRichMenuStatus = {
     chatBarText: string;
     selected: boolean;
     size: { width: number; height: number };
-    areas: unknown[];
+    areas: Array<{
+      bounds: { x: number; y: number; width: number; height: number };
+      action:
+        | { type: 'message'; label?: string; text: string }
+        | { type: 'uri'; label?: string; uri: string }
+        | { type: string; label?: string };
+    }>;
   } | null;
 };
 
@@ -124,6 +130,17 @@ export async function testLineConnection() {
 export async function getLineRichMenu() {
   const response = await fetch('/api/admin/line-rich-menu', { headers: headers() });
   return parse<LineRichMenuStatus>(response, 'ไม่สามารถตรวจสอบ Rich Menu ได้');
+}
+
+export async function getLineRichMenuImage() {
+  const response = await fetch('/api/admin/line-rich-menu?content=1', {
+    headers: headers(),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.message ?? 'ไม่สามารถโหลดภาพ Rich Menu ได้');
+  }
+  return response.blob();
 }
 
 export async function createLineRichMenu(input: {

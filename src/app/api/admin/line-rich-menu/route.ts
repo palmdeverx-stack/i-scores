@@ -168,6 +168,39 @@ export async function GET(request: Request) {
 
   try {
     const current = await getDefaultRichMenu(access.accessToken);
+    if (new URL(request.url).searchParams.get('content') === '1') {
+      if (!current.richMenu) {
+        return NextResponse.json(
+          {
+            message:
+              current.source === 'manager'
+                ? 'ไม่สามารถโหลดภาพเมนูที่สร้างจาก LINE Manager ผ่าน Messaging API'
+                : 'ยังไม่ได้ตั้ง Rich Menu',
+          },
+          { status: 404 }
+        );
+      }
+      const imageResponse = await fetch(
+        `${LINE_DATA_API}/richmenu/${encodeURIComponent(current.richMenu.id)}/content`,
+        {
+          headers: authHeaders(access.accessToken),
+          cache: 'no-store',
+        }
+      );
+      if (!imageResponse.ok) {
+        return NextResponse.json(
+          { message: await lineError(imageResponse, 'ไม่สามารถโหลดภาพ Rich Menu ได้') },
+          { status: imageResponse.status }
+        );
+      }
+      return new NextResponse(await imageResponse.arrayBuffer(), {
+        status: 200,
+        headers: {
+          'Cache-Control': 'private, no-store',
+          'Content-Type': imageResponse.headers.get('content-type') ?? 'image/png',
+        },
+      });
+    }
     return NextResponse.json({ connected: true, ...current });
   } catch (error) {
     return NextResponse.json(
