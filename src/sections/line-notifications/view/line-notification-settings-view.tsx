@@ -288,9 +288,7 @@ export function LineNotificationSettingsView() {
                 helperText={
                   connectionLocked
                     ? 'บันทึกไว้แล้ว · กดแก้ไขข้อมูลเชื่อมต่อเมื่อต้องการเปลี่ยน'
-                    : `ต้องเป็น HTTPS และลงท้ายด้วย /api/line/webhook/${webhookUrl
-                        .split('/')
-                        .at(-1)}`
+                    : 'ต้องเป็น HTTPS และมีเครื่องหมาย / ต่อท้าย URL เพื่อไม่ให้ LINE ได้รับ 308'
                 }
                 slotProps={{ input: { readOnly: connectionLocked } }}
                 sx={{ gridColumn: { sm: '1 / -1' } }}

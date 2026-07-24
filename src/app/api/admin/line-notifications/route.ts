@@ -13,6 +13,10 @@ async function authorize(request: Request) {
   return (await schoolHasFeature(caller.schoolId, 'admin.line_notifications')) ? caller : null;
 }
 
+function withTrailingSlash(url: string) {
+  return `${url.replace(/\/+$/, '')}/`;
+}
+
 export async function GET(request: Request) {
   const caller = await authorize(request);
   if (!caller?.schoolId) {
@@ -83,9 +87,10 @@ export async function GET(request: Request) {
       limit: subscription?.max_line_notifications ?? 0,
       linkedGuardians: linkedGuardians ?? 0,
     },
-    webhookUrl:
+    webhookUrl: withTrailingSlash(
       integration?.webhook_url ??
-      `${new URL(request.url).origin}/api/line/webhook/${caller.schoolId}`,
+        `${new URL(request.url).origin}/api/line/webhook/${caller.schoolId}`
+    ),
     recentDeliveries: recentDeliveries ?? [],
   });
 }
@@ -149,7 +154,7 @@ export async function PATCH(request: Request) {
     school_id: caller.schoolId,
     channel_id: channelId,
     oa_basic_id: oaBasicId || null,
-    webhook_url: `${parsedWebhookUrl.origin}${expectedWebhookPath}`,
+    webhook_url: `${parsedWebhookUrl.origin}${expectedWebhookPath}/`,
     is_enabled: isEnabled,
     notify_absent: body.notifyAbsent,
     notify_leave: body.notifyLeave,
