@@ -19,13 +19,16 @@ export type LineNotificationSettings = {
   };
   usage: {
     sent: number;
+    pending: number;
+    failed: number;
+    skipped: number;
     limit: number;
     linkedGuardians: number;
   };
   webhookUrl: string;
   recentDeliveries: Array<{
     id: string;
-    event_type: 'absent' | 'leave' | 'late' | 'class_absent';
+    event_type: 'absent' | 'leave' | 'late' | 'class_absent' | 'announcement';
     status: 'pending' | 'processing' | 'sent' | 'failed' | 'skipped';
     last_error: string | null;
     sent_at: string | null;

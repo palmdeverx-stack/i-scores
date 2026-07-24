@@ -10,6 +10,7 @@ import {
   RiCalendarLine,
   RiUserStarLine,
   RiMessage2Line,
+  RiMegaphoneLine,
   RiDashboardLine,
   RiPresentationLine,
   RiGraduationCapLine,
@@ -28,6 +29,7 @@ const ICONS = {
   teacherAssignment: <RiUserStarLine />,
   enrollment: <RiUserAddLine />,
   lineNotifications: <RiMessage2Line />,
+  announcements: <RiMegaphoneLine />,
 };
 
 // ----------------------------------------------------------------------
@@ -51,6 +53,11 @@ export const navData: NavSectionProps['data'] = [
         path: paths.admin.lineNotifications,
         icon: ICONS.lineNotifications,
         featureKey: 'admin.line_notifications',
+      },
+      {
+        title: 'ประกาศ',
+        path: paths.admin.announcements,
+        icon: ICONS.announcements,
       },
     ],
   },

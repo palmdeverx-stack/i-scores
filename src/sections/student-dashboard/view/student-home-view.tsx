@@ -380,6 +380,20 @@ function AnnouncementsSection({
                 >
                   {announcement.content}
                 </Typography>
+                {announcement.image_url && (
+                  <Box
+                    component="img"
+                    src={announcement.image_url}
+                    alt={announcement.title}
+                    sx={{
+                      mt: 2,
+                      width: '100%',
+                      maxHeight: 320,
+                      borderRadius: 2,
+                      objectFit: 'cover',
+                    }}
+                  />
+                )}
                 {(announcement.event_start || announcement.event_end) && (
                   <Typography
                     variant="caption"

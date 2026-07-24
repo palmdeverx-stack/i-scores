@@ -80,7 +80,7 @@ export function fetchAnnouncements(schoolId: string) {
   return supabaseAdmin
     .from('school_announcements')
     .select(
-      `id, title, content, priority, announcement_type, published_at, expires_at,
+      `id, title, content, image_url, priority, announcement_type, published_at, expires_at,
        event_start, event_end, targets:announcement_classrooms(classroom_id)`
     )
     .eq('school_id', schoolId)
@@ -91,9 +91,10 @@ export function fetchAnnouncements(schoolId: string) {
     .limit(10);
 }
 
-export function filterVisibleAnnouncements<
-  T extends { targets: unknown },
->(announcements: T[], currentClassroomId: string | undefined) {
+export function filterVisibleAnnouncements<T extends { targets: unknown }>(
+  announcements: T[],
+  currentClassroomId: string | undefined
+) {
   return announcements.filter((announcement) => {
     const targets = announcement.targets as unknown as Array<{ classroom_id: string }>;
     return !targets.length || targets.some((target) => target.classroom_id === currentClassroomId);

@@ -111,6 +111,7 @@ export type StudentAnnouncement = {
   id: string;
   title: string;
   content: string;
+  image_url: string | null;
   priority: 'normal' | 'important' | 'urgent';
   announcement_type: 'general' | 'holiday' | 'exam';
   published_at: string;

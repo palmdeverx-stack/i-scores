@@ -142,6 +142,7 @@ export const paths = {
   admin: {
     root: ROOTS.ADMIN,
     school: `${ROOTS.ADMIN}/school`,
+    announcements: `${ROOTS.ADMIN}/announcements`,
     lineNotifications: `${ROOTS.ADMIN}/line-notifications`,
     user: {
       root: `${ROOTS.ADMIN}/user`,

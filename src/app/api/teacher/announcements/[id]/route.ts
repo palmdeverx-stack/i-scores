@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import {
+  removeAnnouncementImage,
+  replaceAnnouncementImage,
+  validateAnnouncementImage,
+} from 'src/lib/announcement-image';
 
 // ----------------------------------------------------------------------
 
@@ -9,63 +14,105 @@ type RouteParams = { params: Promise<{ id: string }> };
 const TYPES = ['general', 'holiday', 'exam'];
 const PRIORITIES = ['normal', 'important', 'urgent'];
 
-async function getOwnedAnnouncement(id: string, teacherId: string, schoolId: string) {
-  return supabaseAdmin
+async function getOwnedAnnouncement(
+  id: string,
+  caller: { role: string; sub: string; schoolId: string }
+) {
+  let query = supabaseAdmin
     .from('school_announcements')
-    .select('id')
+    .select('id, image_url')
     .eq('id', id)
-    .eq('created_by', teacherId)
-    .eq('school_id', schoolId)
-    .maybeSingle();
+    .eq('school_id', caller.schoolId);
+  if (caller.role === 'teacher') query = query.eq('created_by', caller.sub);
+  return query.maybeSingle();
 }
 
-async function getAllowedClassroomIds(teacherId: string, schoolId: string) {
+async function getAllowedClassroomIds(caller: { role: string; sub: string; schoolId: string }) {
+  if (caller.role === 'school_admin') {
+    const { data, error } = await supabaseAdmin
+      .from('classrooms')
+      .select('id')
+      .eq('school_id', caller.schoolId);
+    if (error) throw new Error(error.message);
+    return new Set((data ?? []).map((classroom) => classroom.id));
+  }
+
   const { data, error } = await supabaseAdmin
-    .from('teacher_assignments')
+    .from('classroom_homeroom_teachers')
     .select('classroom:classrooms!inner(id, school_id)')
-    .eq('teacher_id', teacherId)
-    .eq('classrooms.school_id', schoolId);
+    .eq('teacher_id', caller.sub)
+    .eq('classrooms.school_id', caller.schoolId);
   if (error) throw new Error(error.message);
 
   return new Set(
-    data.map((row) => (row.classroom as unknown as { id: string }).id).filter(Boolean)
+    (data ?? []).map((row) => (row.classroom as unknown as { id: string }).id).filter(Boolean)
   );
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['teacher']);
+  const caller = requireRole(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
   const { id } = await params;
-  const { data: owned } = await getOwnedAnnouncement(id, caller.sub, caller.schoolId);
+  const { data: owned } = await getOwnedAnnouncement(id, {
+    role: caller.role,
+    sub: caller.sub,
+    schoolId: caller.schoolId,
+  });
   if (!owned)
     return NextResponse.json({ message: 'ไม่พบประกาศหรือไม่มีสิทธิ์แก้ไข' }, { status: 404 });
 
-  const body = await request.json().catch(() => null);
-  const title = typeof body?.title === 'string' ? body.title.trim() : '';
-  const content = typeof body?.content === 'string' ? body.content.trim() : '';
-  const announcementType = typeof body?.announcementType === 'string' ? body.announcementType : '';
-  const priority = typeof body?.priority === 'string' ? body.priority : '';
-  const classroomIds: string[] = Array.isArray(body?.classroomIds)
-    ? Array.from(
-        new Set(
-          body.classroomIds.filter((value: unknown): value is string => typeof value === 'string')
+  const formData = await request.formData().catch(() => null);
+  if (!formData) {
+    return NextResponse.json({ message: 'ข้อมูลประกาศไม่ถูกต้อง' }, { status: 400 });
+  }
+  const title = String(formData.get('title') ?? '').trim();
+  const content = String(formData.get('content') ?? '').trim();
+  const announcementType = String(formData.get('announcementType') ?? '');
+  const priority = String(formData.get('priority') ?? '');
+  let classroomIds: string[] = [];
+  try {
+    const parsed = JSON.parse(String(formData.get('classroomIds') ?? '[]'));
+    classroomIds = Array.isArray(parsed)
+      ? Array.from(
+          new Set(parsed.filter((value: unknown): value is string => typeof value === 'string'))
         )
-      )
-    : [];
+      : [];
+  } catch {
+    classroomIds = [];
+  }
   const eventStart =
-    typeof body?.eventStart === 'string' && body.eventStart ? body.eventStart : null;
-  const eventEnd = typeof body?.eventEnd === 'string' && body.eventEnd ? body.eventEnd : null;
-  const expiresAt = typeof body?.expiresAt === 'string' && body.expiresAt ? body.expiresAt : null;
+    typeof formData.get('eventStart') === 'string' && formData.get('eventStart')
+      ? String(formData.get('eventStart'))
+      : null;
+  const eventEnd =
+    typeof formData.get('eventEnd') === 'string' && formData.get('eventEnd')
+      ? String(formData.get('eventEnd'))
+      : null;
+  const expiresAt =
+    typeof formData.get('expiresAt') === 'string' && formData.get('expiresAt')
+      ? String(formData.get('expiresAt'))
+      : null;
+  const imageValue = formData.get('image');
+  const image = imageValue instanceof File && imageValue.size ? imageValue : null;
+  const removeImage = formData.get('removeImage') === 'true';
 
-  if (!title || !content || !classroomIds.length) {
+  if (
+    !title ||
+    (!content && !image && (!owned.image_url || removeImage)) ||
+    !classroomIds.length ||
+    title.length > 200 ||
+    content.length > 4000
+  ) {
     return NextResponse.json(
-      { message: 'กรุณากรอกข้อมูลและเลือกห้องเรียนอย่างน้อย 1 ห้อง' },
+      { message: 'กรุณากรอกหัวข้อ เพิ่มข้อความหรือรูปภาพ และเลือกห้องเรียนอย่างน้อย 1 ห้อง' },
       { status: 400 }
     );
   }
+  const imageError = validateAnnouncementImage(image);
+  if (imageError) return NextResponse.json({ message: imageError }, { status: 400 });
   if (!TYPES.includes(announcementType) || !PRIORITIES.includes(priority)) {
     return NextResponse.json({ message: 'ประเภทหรือระดับความสำคัญไม่ถูกต้อง' }, { status: 400 });
   }
@@ -74,10 +121,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   try {
-    const allowedIds = await getAllowedClassroomIds(caller.sub, caller.schoolId);
+    const allowedIds = await getAllowedClassroomIds({
+      role: caller.role,
+      sub: caller.sub,
+      schoolId: caller.schoolId,
+    });
     if (classroomIds.some((classroomId) => !allowedIds.has(classroomId))) {
       return NextResponse.json(
-        { message: 'เลือกได้เฉพาะห้องเรียนที่คุณรับผิดชอบ' },
+        {
+          message:
+            caller.role === 'teacher'
+              ? 'เลือกได้เฉพาะห้องที่คุณเป็นครูประจำชั้น'
+              : 'พบห้องเรียนที่ไม่ได้อยู่ในโรงเรียนนี้',
+        },
         { status: 403 }
       );
     }
@@ -126,7 +182,23 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       if (removeError) throw new Error(removeError.message);
     }
 
-    return NextResponse.json({ success: true });
+    let imageUrl = owned.image_url;
+    if (image) {
+      imageUrl = await replaceAnnouncementImage(caller.schoolId, id, image);
+    } else if (removeImage && owned.image_url) {
+      await removeAnnouncementImage(caller.schoolId, id);
+      imageUrl = null;
+    }
+    if (imageUrl !== owned.image_url) {
+      const { error: imageUpdateError } = await supabaseAdmin
+        .from('school_announcements')
+        .update({ image_url: imageUrl })
+        .eq('id', id)
+        .eq('school_id', caller.schoolId);
+      if (imageUpdateError) throw new Error(imageUpdateError.message);
+    }
+
+    return NextResponse.json({ success: true, imageUrl });
   } catch (error) {
     return NextResponse.json(
       { message: error instanceof Error ? error.message : 'ไม่สามารถแก้ไขประกาศได้' },
@@ -136,17 +208,35 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['teacher']);
+  const caller = requireRole(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
   const { id } = await params;
-  const { data: owned } = await getOwnedAnnouncement(id, caller.sub, caller.schoolId);
+  const { data: owned } = await getOwnedAnnouncement(id, {
+    role: caller.role,
+    sub: caller.sub,
+    schoolId: caller.schoolId,
+  });
   if (!owned)
     return NextResponse.json({ message: 'ไม่พบประกาศหรือไม่มีสิทธิ์ลบ' }, { status: 404 });
 
-  const { error } = await supabaseAdmin.from('school_announcements').delete().eq('id', id);
+  if (owned.image_url) {
+    try {
+      await removeAnnouncementImage(caller.schoolId, id);
+    } catch (error) {
+      return NextResponse.json(
+        { message: error instanceof Error ? error.message : 'ไม่สามารถลบรูปประกาศได้' },
+        { status: 500 }
+      );
+    }
+  }
+  const { error } = await supabaseAdmin
+    .from('school_announcements')
+    .delete()
+    .eq('id', id)
+    .eq('school_id', caller.schoolId);
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

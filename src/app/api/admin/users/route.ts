@@ -47,8 +47,47 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
+  const studentIds = data.filter((user) => user.role === 'student').map((user) => user.id);
+  const guardianSummary = new Map<
+    string,
+    { guardianCount: number; linkedCount: number; notificationsEnabledCount: number }
+  >();
+
+  if (studentIds.length) {
+    const guardiansQuery = supabaseAdmin
+      .from('student_guardians')
+      .select('student_id, line_user_id, line_notifications_enabled');
+    const { data: guardians, error: guardiansError } = caller.schoolId
+      ? await guardiansQuery.eq('school_id', caller.schoolId)
+      : await guardiansQuery.in('student_id', studentIds);
+
+    if (guardiansError) {
+      return NextResponse.json({ message: guardiansError.message }, { status: 500 });
+    }
+
+    for (const guardian of guardians ?? []) {
+      const summary = guardianSummary.get(guardian.student_id) ?? {
+        guardianCount: 0,
+        linkedCount: 0,
+        notificationsEnabledCount: 0,
+      };
+      summary.guardianCount += 1;
+      if (guardian.line_user_id) {
+        summary.linkedCount += 1;
+        if (guardian.line_notifications_enabled) summary.notificationsEnabledCount += 1;
+      }
+      guardianSummary.set(guardian.student_id, summary);
+    }
+  }
+
   const users = data.map(({ password_ciphertext: passwordCiphertext, ...user }) => ({
     ...user,
+    ...(user.role === 'student' && {
+      guardian_count: guardianSummary.get(user.id)?.guardianCount ?? 0,
+      line_guardian_count: guardianSummary.get(user.id)?.linkedCount ?? 0,
+      line_notifications_enabled_count:
+        guardianSummary.get(user.id)?.notificationsEnabledCount ?? 0,
+    }),
     ...(caller.role === 'school_admin' &&
       (user.role === 'student' || user.role === 'teacher') && {
         login_password: decryptCredential(passwordCiphertext ?? null),

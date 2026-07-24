@@ -34,6 +34,9 @@ export type UserRow = {
   ethnicity?: string | null;
   religion?: string | null;
   is_active?: boolean;
+  guardian_count?: number;
+  line_guardian_count?: number;
+  line_notifications_enabled_count?: number;
 };
 
 export type CreateUserParams = {

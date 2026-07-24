@@ -30,6 +30,7 @@ import TableContainer from '@mui/material/TableContainer';
 
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
+import { RiLineFill, RiLineLine } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { StudentGuardiansDialog } from 'src/sections/student-guardian/components/student-guardians-dialog';
@@ -209,7 +210,7 @@ export function StudentListView() {
         </Box>
 
         <TableContainer>
-          <Table sx={{ minWidth: 1260 }}>
+          <Table sx={{ minWidth: 1340 }}>
             <TableHead>
               <TableRow>
                 <TableCell width={88}>รูป</TableCell>
@@ -219,6 +220,7 @@ export function StudentListView() {
                 <TableCell>อีเมล</TableCell>
                 <TableCell>รหัสผ่าน</TableCell>
                 <TableCell>บทบาท</TableCell>
+                <TableCell align="center">LINE</TableCell>
                 <TableCell align="center">เข้าใช้งาน</TableCell>
                 <TableCell align="right">การจัดการ</TableCell>
               </TableRow>
@@ -226,13 +228,13 @@ export function StudentListView() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={9}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={10}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!isLoading && !filteredStudents.length && (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={10}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
                     ไม่พบนักเรียน
@@ -337,6 +339,48 @@ export function StudentListView() {
                   <TableCell align="center">
                     <Tooltip
                       title={
+                        student.line_guardian_count
+                          ? `เชื่อมต่อ LINE แล้ว ${student.line_guardian_count} คน${
+                              student.line_notifications_enabled_count
+                                ? ` · เปิดแจ้งเตือน ${student.line_notifications_enabled_count} คน`
+                                : ' · ปิดการแจ้งเตือนอยู่'
+                            }`
+                          : student.guardian_count
+                            ? 'ผู้ปกครองยังไม่ได้เชื่อมต่อ LINE'
+                            : 'ยังไม่มีข้อมูลผู้ปกครอง'
+                      }
+                    >
+                      <IconButton
+                        size="small"
+                        onClick={() => setGuardianStudent(student)}
+                        aria-label={
+                          student.line_guardian_count
+                            ? `เชื่อมต่อ LINE แล้ว ${student.line_guardian_count} คน`
+                            : 'ยังไม่ได้เชื่อมต่อ LINE'
+                        }
+                        sx={{
+                          color: student.line_guardian_count ? '#06C755' : 'text.disabled',
+                          bgcolor: student.line_guardian_count
+                            ? 'rgba(6, 199, 85, 0.10)'
+                            : 'action.hover',
+                          '&:hover': {
+                            bgcolor: student.line_guardian_count
+                              ? 'rgba(6, 199, 85, 0.18)'
+                              : 'action.selected',
+                          },
+                        }}
+                      >
+                        {student.line_guardian_count ? (
+                          <RiLineFill size={22} />
+                        ) : (
+                          <RiLineLine size={22} />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Tooltip
+                      title={
                         (student.student_status ?? 'studying') !== 'studying'
                           ? 'เปลี่ยนสถานะเป็น “กำลังศึกษา” ก่อนเปิดใช้งาน'
                           : student.is_active === false
@@ -429,7 +473,10 @@ export function StudentListView() {
       <StudentGuardiansDialog
         open={!!guardianStudent}
         student={guardianStudent}
-        onClose={() => setGuardianStudent(null)}
+        onClose={() => {
+          setGuardianStudent(null);
+          queryClient.invalidateQueries({ queryKey: ['users', 'student'] });
+        }}
       />
 
       <Dialog

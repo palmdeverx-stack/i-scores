@@ -49,7 +49,7 @@ const priorityConfig = {
   urgent: { label: 'เร่งด่วน', color: 'error' as const },
 };
 
-export function TeacherAnnouncementListView() {
+export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teacher' | 'admin' }) {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TeacherAnnouncement | null>(null);
@@ -91,10 +91,12 @@ export function TeacherAnnouncementListView() {
       >
         <Box>
           <Typography component="h1" variant="h3">
-            ประกาศถึงนักเรียน
+            {mode === 'admin' ? 'ประกาศโรงเรียน' : 'ประกาศถึงนักเรียน'}
           </Typography>
           <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
-            แจ้งข่าว วันหยุด และวันสอบไปยังห้องเรียนที่คุณรับผิดชอบ
+            {mode === 'admin'
+              ? 'ส่งข่าว วันหยุด และเหตุการณ์สำคัญถึงนักเรียนและ LINE ผู้ปกครอง'
+              : 'แจ้งข่าว วันหยุด และวันสอบเฉพาะห้องที่คุณเป็นครูประจำชั้น'}
           </Typography>
         </Box>
         <Button
@@ -177,6 +179,21 @@ export function TeacherAnnouncementListView() {
                     >
                       {announcement.content}
                     </Typography>
+                    {announcement.image_url && (
+                      <Box
+                        component="img"
+                        src={announcement.image_url}
+                        alt={announcement.title}
+                        sx={{
+                          mt: 2,
+                          width: '100%',
+                          maxWidth: 520,
+                          maxHeight: 280,
+                          borderRadius: 2,
+                          objectFit: 'cover',
+                        }}
+                      />
+                    )}
                     <Box sx={{ gap: 0.75, mt: 2, display: 'flex', flexWrap: 'wrap' }}>
                       {announcement.targets.map((target) => (
                         <Chip
@@ -248,6 +265,7 @@ export function TeacherAnnouncementListView() {
         open={dialogOpen}
         announcement={editing}
         classrooms={data?.classrooms ?? []}
+        mode={mode}
         onClose={() => setDialogOpen(false)}
       />
 

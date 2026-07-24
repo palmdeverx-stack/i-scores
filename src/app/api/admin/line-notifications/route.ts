@@ -31,6 +31,9 @@ export async function GET(request: Request) {
     { data: integration },
     { data: subscription },
     { count: sentCount },
+    { count: pendingCount },
+    { count: failedCount },
+    { count: skippedCount },
     { count: linkedGuardians },
     { data: recentDeliveries },
   ] = await Promise.all([
@@ -52,6 +55,24 @@ export async function GET(request: Request) {
       .eq('school_id', caller.schoolId)
       .eq('status', 'sent')
       .gte('sent_at', monthStart.toISOString()),
+    supabaseAdmin
+      .from('line_notification_deliveries')
+      .select('id', { count: 'exact', head: true })
+      .eq('school_id', caller.schoolId)
+      .in('status', ['pending', 'processing'])
+      .gte('created_at', monthStart.toISOString()),
+    supabaseAdmin
+      .from('line_notification_deliveries')
+      .select('id', { count: 'exact', head: true })
+      .eq('school_id', caller.schoolId)
+      .eq('status', 'failed')
+      .gte('created_at', monthStart.toISOString()),
+    supabaseAdmin
+      .from('line_notification_deliveries')
+      .select('id', { count: 'exact', head: true })
+      .eq('school_id', caller.schoolId)
+      .eq('status', 'skipped')
+      .gte('created_at', monthStart.toISOString()),
     supabaseAdmin
       .from('student_guardians')
       .select('id', { count: 'exact', head: true })
@@ -84,6 +105,9 @@ export async function GET(request: Request) {
     },
     usage: {
       sent: sentCount ?? 0,
+      pending: pendingCount ?? 0,
+      failed: failedCount ?? 0,
+      skipped: skippedCount ?? 0,
       limit: subscription?.max_line_notifications ?? 0,
       linkedGuardians: linkedGuardians ?? 0,
     },

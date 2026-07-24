@@ -7,8 +7,9 @@ import { isSubscriptionUsable } from './school-subscription';
 // ----------------------------------------------------------------------
 
 type AttendanceStatus = 'present' | 'absent' | 'leave' | 'late';
-type SourceType = 'homeroom_attendance' | 'class_attendance';
-type EventType = 'absent' | 'leave' | 'late' | 'class_absent';
+type SourceType = 'homeroom_attendance' | 'class_attendance' | 'announcement';
+type EventType = 'absent' | 'leave' | 'late' | 'class_absent' | 'announcement';
+type AttendanceEventType = Exclude<EventType, 'announcement'>;
 
 export type AttendanceNotificationInput = {
   sourceRecordId: string;
@@ -19,7 +20,7 @@ export type AttendanceNotificationInput = {
 
 type QueueParams = {
   schoolId: string;
-  sourceType: SourceType;
+  sourceType: Exclude<SourceType, 'announcement'>;
   attendanceDate: string;
   contextLabel: string;
   records: AttendanceNotificationInput[];
@@ -30,16 +31,20 @@ const STATUS_LABEL: Record<EventType, string> = {
   leave: 'ลา',
   late: 'สาย',
   class_absent: 'ไม่เข้าเรียนรายคาบ',
+  announcement: 'ประกาศ',
 };
 
-function eventTypeFor(sourceType: SourceType, status: AttendanceStatus): EventType | null {
+function eventTypeFor(
+  sourceType: Exclude<SourceType, 'announcement'>,
+  status: AttendanceStatus
+): AttendanceEventType | null {
   if (status === 'present') return null;
   if (sourceType === 'class_attendance' && status === 'absent') return 'class_absent';
   return status;
 }
 
 function eventEnabled(
-  eventType: EventType,
+  eventType: AttendanceEventType,
   integration: {
     notify_absent: boolean;
     notify_leave: boolean;
@@ -70,7 +75,7 @@ export async function queueAttendanceNotifications({
 }: QueueParams) {
   const relevantRecords = records
     .map((record) => ({ ...record, eventType: eventTypeFor(sourceType, record.status) }))
-    .filter((record): record is AttendanceNotificationInput & { eventType: EventType } =>
+    .filter((record): record is AttendanceNotificationInput & { eventType: AttendanceEventType } =>
       Boolean(record.eventType)
     );
   if (!relevantRecords.length) return [];
@@ -176,6 +181,131 @@ export async function queueAttendanceNotifications({
   return (data ?? []).map((row) => row.id);
 }
 
+export async function queueAnnouncementNotifications({
+  schoolId,
+  announcementId,
+  title,
+  content,
+  imageUrl,
+  classroomIds,
+}: {
+  schoolId: string;
+  announcementId: string;
+  title: string;
+  content: string;
+  imageUrl: string | null;
+  classroomIds: string[];
+}) {
+  if (!classroomIds.length || (!content && !imageUrl)) return [];
+
+  const [{ data: integration }, { data: subscription }, { data: school }] = await Promise.all([
+    supabaseAdmin
+      .from('school_line_integrations')
+      .select('is_enabled, channel_access_token_encrypted')
+      .eq('school_id', schoolId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('school_subscriptions')
+      .select('status, ends_at, enabled_features, max_line_notifications')
+      .eq('school_id', schoolId)
+      .maybeSingle(),
+    supabaseAdmin.from('schools').select('name').eq('id', schoolId).maybeSingle(),
+  ]);
+
+  if (
+    !integration?.is_enabled ||
+    !integration.channel_access_token_encrypted ||
+    !subscription ||
+    !isSubscriptionUsable(subscription as never) ||
+    !(subscription.enabled_features ?? []).includes('admin.line_notifications')
+  ) {
+    return [];
+  }
+
+  const { data: enrollments, error: enrollmentError } = await supabaseAdmin
+    .from('enrollments')
+    .select(
+      `student_id,
+       classroom:classrooms!inner(school_id),
+       student:app_users!enrollments_student_id_fkey!inner(school_id, role, is_active, student_status)`
+    )
+    .in('classroom_id', classroomIds)
+    .eq('classroom.school_id', schoolId)
+    .eq('student.school_id', schoolId)
+    .eq('student.role', 'student')
+    .eq('student.is_active', true)
+    .eq('student.student_status', 'studying');
+  if (enrollmentError) {
+    console.error('Unable to load announcement recipients', enrollmentError);
+    return [];
+  }
+
+  const studentIds = Array.from(new Set((enrollments ?? []).map((row) => row.student_id)));
+  if (!studentIds.length) return [];
+
+  const guardianResults = await Promise.all(
+    Array.from({ length: Math.ceil(studentIds.length / 200) }, (_, index) =>
+      supabaseAdmin
+        .from('student_guardians')
+        .select('id, student_id, line_user_id')
+        .eq('school_id', schoolId)
+        .in('student_id', studentIds.slice(index * 200, (index + 1) * 200))
+        .not('line_user_id', 'is', null)
+        .eq('line_notifications_enabled', true)
+    )
+  );
+  const guardianError = guardianResults.find((result) => result.error)?.error;
+  if (guardianError) {
+    console.error('Unable to load LINE guardians for announcement', guardianError);
+    return [];
+  }
+
+  const recipientByLineId = new Map<
+    string,
+    { id: string; student_id: string; line_user_id: string }
+  >();
+  for (const guardian of guardianResults.flatMap((result) => result.data ?? [])) {
+    if (guardian.line_user_id && !recipientByLineId.has(guardian.line_user_id)) {
+      recipientByLineId.set(guardian.line_user_id, {
+        id: guardian.id,
+        student_id: guardian.student_id,
+        line_user_id: guardian.line_user_id,
+      });
+    }
+  }
+
+  const messageText = [`📣 ${title}`, school?.name ? `โรงเรียน ${school.name}` : '', content]
+    .filter(Boolean)
+    .join('\n\n');
+  const deliveries = Array.from(recipientByLineId.values()).map((guardian) => ({
+    school_id: schoolId,
+    guardian_id: guardian.id,
+    student_id: guardian.student_id,
+    source_type: 'announcement',
+    source_record_id: announcementId,
+    event_type: 'announcement',
+    message_text: messageText,
+    image_url: imageUrl,
+    status: 'pending',
+    attempts: 0,
+    next_attempt_at: new Date().toISOString(),
+  }));
+  if (!deliveries.length) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('line_notification_deliveries')
+    .upsert(deliveries, {
+      onConflict: 'guardian_id,source_type,source_record_id,event_type',
+      ignoreDuplicates: true,
+    })
+    .select('id');
+  if (error) {
+    console.error('Unable to queue LINE announcement', error);
+    return [];
+  }
+  return (data ?? []).map((row) => row.id);
+}
+
 export async function processPendingLineNotifications(schoolId: string, deliveryIds?: string[]) {
   const [{ data: integration }, { data: subscription }] = await Promise.all([
     supabaseAdmin
@@ -202,7 +332,7 @@ export async function processPendingLineNotifications(schoolId: string, delivery
   let query = supabaseAdmin
     .from('line_notification_deliveries')
     .select(
-      'id, message_text, attempts, guardian:student_guardians!inner(line_user_id, line_notifications_enabled)'
+      'id, message_text, image_url, attempts, guardian:student_guardians!inner(line_user_id, line_notifications_enabled)'
     )
     .eq('school_id', schoolId)
     .in('status', ['pending', 'failed'])
@@ -256,6 +386,18 @@ export async function processPendingLineNotifications(schoolId: string, delivery
     if (!claimed) continue;
 
     try {
+      const messages = [
+        ...(delivery.message_text ? [{ type: 'text', text: delivery.message_text }] : []),
+        ...(delivery.image_url
+          ? [
+              {
+                type: 'image',
+                originalContentUrl: delivery.image_url,
+                previewImageUrl: delivery.image_url,
+              },
+            ]
+          : []),
+      ];
       const response = await fetch('https://api.line.me/v2/bot/message/push', {
         method: 'POST',
         headers: {
@@ -264,7 +406,7 @@ export async function processPendingLineNotifications(schoolId: string, delivery
         },
         body: JSON.stringify({
           to: guardian.line_user_id,
-          messages: [{ type: 'text', text: delivery.message_text }],
+          messages,
         }),
       });
       if (!response.ok) {

@@ -46,6 +46,7 @@ const EVENT_LABEL = {
   leave: 'ลา',
   late: 'สาย',
   class_absent: 'ไม่เข้าเรียนรายคาบ',
+  announcement: 'ประกาศ',
 };
 
 const STATUS_COLOR = {
@@ -65,6 +66,9 @@ export function LineNotificationSettingsView() {
   const query = useQuery({
     queryKey: ['line-notification-settings'],
     queryFn: getLineNotificationSettings,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchInterval: 10000,
   });
   const saveMutation = useMutation({
     mutationFn: saveLineNotificationSettings,
@@ -408,6 +412,29 @@ export function LineNotificationSettingsView() {
                 / {usage.limit === 0 ? 'ไม่จำกัด' : usage.limit.toLocaleString('th-TH')} ข้อความ
               </Typography>
             </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              นับเฉพาะข้อความที่ LINE รับและส่งสำเร็จแล้ว
+            </Typography>
+            <Box sx={{ gap: 1, mt: 1.5, display: 'flex', flexWrap: 'wrap' }}>
+              <Chip
+                size="small"
+                color={usage.pending ? 'warning' : 'default'}
+                label={`รอส่ง ${usage.pending.toLocaleString('th-TH')}`}
+                variant="soft"
+              />
+              <Chip
+                size="small"
+                color={usage.failed ? 'error' : 'default'}
+                label={`กำลังลองใหม่ ${usage.failed.toLocaleString('th-TH')}`}
+                variant="soft"
+              />
+              <Chip
+                size="small"
+                color={usage.skipped ? 'error' : 'default'}
+                label={`ไม่สำเร็จ ${usage.skipped.toLocaleString('th-TH')}`}
+                variant="soft"
+              />
+            </Box>
             {usage.limit > 0 && (
               <LinearProgress
                 variant="determinate"
