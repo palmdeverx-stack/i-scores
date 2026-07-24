@@ -19,15 +19,48 @@ function validSignature(body: string, signature: string, secret: string) {
   );
 }
 
-async function reply(accessToken: string, replyToken: string, text: string) {
-  await fetch('https://api.line.me/v2/bot/message/reply', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ replyToken, messages: [{ type: 'text', text }] }),
-  });
+async function sendText(accessToken: string, replyToken: string, lineUserId: string, text: string) {
+  try {
+    const replyResponse = await fetch('https://api.line.me/v2/bot/message/reply', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ replyToken, messages: [{ type: 'text', text }] }),
+    });
+    if (replyResponse.ok) return true;
+
+    console.error('LINE reply failed; falling back to push', {
+      status: replyResponse.status,
+      body: await replyResponse.text(),
+    });
+    const pushResponse = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text }] }),
+    });
+    if (!pushResponse.ok) {
+      console.error('LINE push fallback failed', {
+        status: pushResponse.status,
+        body: await pushResponse.text(),
+      });
+    }
+    return pushResponse.ok;
+  } catch (error) {
+    console.error('Unable to send LINE bot response', error);
+    return false;
+  }
+}
+
+function normalizeCommand(value: string) {
+  const text = value.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+  if (!text.includes('=')) return text;
+  const params = new URLSearchParams(text);
+  return params.get('command') ?? params.get('action') ?? params.get('data') ?? text;
 }
 
 function guardianPortalUrl(request: Request, schoolId: string, lineUserId: string) {
@@ -43,7 +76,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const signature = request.headers.get('x-line-signature') ?? '';
   const { data: integration } = await supabaseAdmin
     .from('school_line_integrations')
-    .select('is_enabled, channel_secret_encrypted, channel_access_token_encrypted')
+    .select('channel_secret_encrypted, channel_access_token_encrypted')
     .eq('school_id', schoolId)
     .maybeSingle();
 
@@ -67,6 +100,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       replyToken?: string;
       source?: { type?: string; userId?: string };
       message?: { type?: string; text?: string };
+      postback?: { data?: string };
     }>;
   };
   try {
@@ -80,7 +114,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (!payload.events?.length) {
     return NextResponse.json({ success: true });
   }
-  if (!integration.is_enabled || !integration.channel_access_token_encrypted) {
+  if (!integration.channel_access_token_encrypted) {
     return NextResponse.json({ success: true, ignored: true });
   }
 
@@ -92,16 +126,18 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   for (const event of payload.events) {
-    if (
-      event.type !== 'message' ||
-      event.message?.type !== 'text' ||
-      !event.message.text ||
-      !event.source?.userId ||
-      !event.replyToken
-    ) {
-      continue;
-    }
-    const messageText = event.message.text.trim();
+    if (!event.source?.userId || !event.replyToken) continue;
+    const rawCommand =
+      event.type === 'message' && event.message?.type === 'text'
+        ? event.message.text
+        : event.type === 'postback'
+          ? event.postback?.data
+          : null;
+    if (!rawCommand) continue;
+
+    const messageText = normalizeCommand(rawCommand);
+    const respond = (text: string) =>
+      sendText(accessToken, event.replyToken!, event.source!.userId!, text);
     if (/^(?:PROFILE|โปรไฟล์|ข้อมูลนักเรียน|ATTENDANCE|การเข้าเรียน)$/i.test(messageText)) {
       const { count } = await supabaseAdmin
         .from('student_guardians')
@@ -109,16 +145,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         .eq('school_id', schoolId)
         .eq('line_user_id', event.source.userId);
       if (!count) {
-        await reply(
-          accessToken,
-          event.replyToken,
-          'บัญชี LINE นี้ยังไม่ได้เชื่อมกับนักเรียน กรุณาสแกน QR จากโรงเรียนก่อน'
-        );
+        await respond('บัญชี LINE นี้ยังไม่ได้เชื่อมกับนักเรียน กรุณาสแกน QR จากโรงเรียนก่อน');
         continue;
       }
-      await reply(
-        accessToken,
-        event.replyToken,
+      await respond(
         [
           '👨‍👩‍👧 ข้อมูลนักเรียนสำหรับผู้ปกครอง',
           'ลิงก์นี้ใช้เข้าสู่ Parent Portal ได้ตลอด จนกว่าจะยกเลิกการเชื่อม LINE',
@@ -129,9 +159,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       continue;
     }
     if (/^(?:HELP|ช่วยเหลือ)$/i.test(messageText)) {
-      await reply(
-        accessToken,
-        event.replyToken,
+      await respond(
         [
           'เมนูช่วยเหลือผู้ปกครอง',
           '• พิมพ์ “ข้อมูลนักเรียน” เพื่อเปิด Parent Portal',
@@ -142,17 +170,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       continue;
     }
     if (/^(?:ประกาศ|ANNOUNCEMENT)$/i.test(messageText)) {
-      await reply(
-        accessToken,
-        event.replyToken,
-        'ประกาศสำคัญจากโรงเรียนจะถูกส่งมายังห้องแชตนี้โดยตรง'
-      );
+      await respond('ประกาศสำคัญจากโรงเรียนจะถูกส่งมายังห้องแชตนี้โดยตรง');
       continue;
     }
     if (/^(?:ติดต่อโรงเรียน|CONTACT|เชื่อมบัญชี)$/i.test(messageText)) {
-      await reply(
-        accessToken,
-        event.replyToken,
+      await respond(
         'กรุณาติดต่อครูประจำชั้นหรือผู้ดูแลโรงเรียน หากต้องการความช่วยเหลือหรือขอ QR เชื่อมบัญชี'
       );
       continue;
@@ -169,7 +191,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       .eq('token_hash', tokenHash)
       .maybeSingle();
     if (!link || link.used_at || link.expires_at < new Date().toISOString()) {
-      await reply(accessToken, event.replyToken, 'รหัสเชื่อมบัญชีไม่ถูกต้องหรือหมดอายุแล้ว');
+      await respond('รหัสเชื่อมบัญชีไม่ถูกต้องหรือหมดอายุแล้ว');
       continue;
     }
 
@@ -194,16 +216,14 @@ export async function POST(request: Request, { params }: RouteParams) {
       .eq('id', link.guardian_id)
       .eq('school_id', schoolId);
     if (error) {
-      await reply(accessToken, event.replyToken, 'เชื่อมบัญชีไม่สำเร็จ กรุณาติดต่อโรงเรียน');
+      await respond('เชื่อมบัญชีไม่สำเร็จ กรุณาติดต่อโรงเรียน');
       continue;
     }
     await supabaseAdmin
       .from('guardian_line_link_tokens')
       .update({ used_at: new Date().toISOString() })
       .eq('id', link.id);
-    await reply(
-      accessToken,
-      event.replyToken,
+    await respond(
       [
         'เชื่อมบัญชีกับโรงเรียนเรียบร้อยแล้ว',
         'คุณจะได้รับการแจ้งเตือนจากโรงเรียนผ่าน LINE',
