@@ -138,7 +138,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const messageText = normalizeCommand(rawCommand);
     const respond = (text: string) =>
       sendText(accessToken, event.replyToken!, event.source!.userId!, text);
-    if (/^(?:PROFILE|โปรไฟล์|ข้อมูลนักเรียน|ATTENDANCE|การเข้าเรียน)$/i.test(messageText)) {
+    if (
+      /^(?:PROFILE|โปรไฟล์|ดู\s*โปรไฟล์|ข้อมูลนักเรียน|ดู\s*ข้อมูลนักเรียน|รายละเอียดนักเรียน|ดู\s*รายละเอียดนักเรียน|ATTENDANCE|การเข้าเรียน|ดู\s*การเข้าเรียน)$/i.test(
+        messageText
+      )
+    ) {
       const { count } = await supabaseAdmin
         .from('student_guardians')
         .select('id', { count: 'exact', head: true })
