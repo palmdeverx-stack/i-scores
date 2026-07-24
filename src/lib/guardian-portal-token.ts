@@ -1,7 +1,7 @@
 import 'server-only';
 
 import jwt from 'jsonwebtoken';
-import { createHash } from 'node:crypto';
+import { createHmac, createHash } from 'node:crypto';
 
 // ----------------------------------------------------------------------
 
@@ -15,11 +15,12 @@ const secret = createHash('sha256').update(`${rawSecret}:guardian-portal`).diges
 const issuer = 'i-scores';
 const audience = 'guardian-portal';
 
-type GuardianPortalPurpose = 'link' | 'session';
+type GuardianPortalPurpose = 'identity' | 'link' | 'session';
 
 export type GuardianPortalToken = {
   schoolId: string;
   lineUserId: string;
+  studentId?: string;
   purpose: GuardianPortalPurpose;
 };
 
@@ -34,8 +35,27 @@ export function signGuardianPortalLinkToken(schoolId: string, lineUserId: string
   return signGuardianPortalToken({ schoolId, lineUserId, purpose: 'link' }, '10m');
 }
 
-export function signGuardianPortalSessionToken(schoolId: string, lineUserId: string) {
-  return signGuardianPortalToken({ schoolId, lineUserId, purpose: 'session' }, '12h');
+export function signGuardianPortalIdentityToken(schoolId: string, lineUserId: string) {
+  return jwt.sign({ schoolId, lineUserId, purpose: 'identity' }, secret, { issuer, audience });
+}
+
+export function signGuardianPortalSessionToken(
+  schoolId: string,
+  lineUserId: string,
+  studentId: string
+) {
+  return signGuardianPortalToken({ schoolId, lineUserId, studentId, purpose: 'session' }, '30d');
+}
+
+export function hashGuardianPortalCode(
+  schoolId: string,
+  lineUserId: string,
+  studentId: string,
+  code: string
+) {
+  return createHmac('sha256', secret)
+    .update(`${schoolId}:${lineUserId}:${studentId}:${code}`)
+    .digest('hex');
 }
 
 export function verifyGuardianPortalToken(
@@ -47,7 +67,8 @@ export function verifyGuardianPortalToken(
     if (
       payload.purpose !== purpose ||
       typeof payload.schoolId !== 'string' ||
-      typeof payload.lineUserId !== 'string'
+      typeof payload.lineUserId !== 'string' ||
+      (purpose === 'session' && typeof payload.studentId !== 'string')
     ) {
       return null;
     }

@@ -3,7 +3,7 @@ import { createHmac, createHash, timingSafeEqual } from 'node:crypto';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { decryptLineCredential } from 'src/lib/line-credentials';
-import { signGuardianPortalLinkToken } from 'src/lib/guardian-portal-token';
+import { signGuardianPortalIdentityToken } from 'src/lib/guardian-portal-token';
 
 // ----------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ async function reply(accessToken: string, replyToken: string, text: string) {
 }
 
 function guardianPortalUrl(request: Request, schoolId: string, lineUserId: string) {
-  const token = signGuardianPortalLinkToken(schoolId, lineUserId);
+  const token = signGuardianPortalIdentityToken(schoolId, lineUserId);
   const url = new URL('/api/guardian/portal/session/', request.url);
   url.searchParams.set('token', token);
   return url.toString();
@@ -121,7 +121,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         event.replyToken,
         [
           '👨‍👩‍👧 ข้อมูลนักเรียนสำหรับผู้ปกครอง',
-          'ลิงก์เข้าสู่ระบบมีอายุ 10 นาที และหน้าโปรไฟล์เป็นแบบอ่านอย่างเดียว',
+          'ลิงก์นี้ใช้เข้าสู่ Parent Portal ได้ตลอด จนกว่าจะยกเลิกการเชื่อม LINE',
+          'กรอกรหัสนักเรียน แล้วรับ OTP ทาง LINE เพื่อดูโปรไฟล์และประวัติการเข้าเรียน',
           guardianPortalUrl(request, schoolId, event.source.userId),
         ].join('\n\n')
       );
@@ -177,9 +178,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       [
         'เชื่อมบัญชีกับโรงเรียนเรียบร้อยแล้ว',
         'คุณจะได้รับการแจ้งเตือนจากโรงเรียนผ่าน LINE',
-        'เปิดดูโปรไฟล์นักเรียนได้จากลิงก์นี้ (ลิงก์มีอายุ 10 นาที)',
+        'เปิด Parent Portal เพื่อดูโปรไฟล์และประวัติการเข้าเรียนได้จากลิงก์นี้',
         guardianPortalUrl(request, schoolId, event.source.userId),
-        'ครั้งถัดไปพิมพ์ “ข้อมูลนักเรียน” เพื่อขอลิงก์ใหม่',
+        'ลิงก์ไม่หมดอายุ และต้องยืนยัน OTP ก่อนเข้าดูข้อมูล',
       ].join('\n\n')
     );
   }

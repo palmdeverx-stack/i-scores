@@ -174,7 +174,7 @@ export function JwtSignInView() {
         variant="overline"
         sx={{ color: 'primary.main', fontWeight: 800, letterSpacing: 1.2 }}
       >
-        CLASS GO
+        eKru
       </Typography>
 
       <FormHead

@@ -2,6 +2,32 @@
 
 // ----------------------------------------------------------------------
 
+export type GuardianAttendanceStatus = 'present' | 'absent' | 'leave' | 'late';
+
+type GuardianClassAttendance = {
+  id: string;
+  date: string;
+  period: string;
+  status: GuardianAttendanceStatus;
+  note: string | null;
+  assignment: {
+    subject:
+      | { name: string; code: string | null }
+      | Array<{ name: string; code: string | null }>
+      | null;
+    classroom: { name: string } | Array<{ name: string }> | null;
+  } | null;
+};
+
+type GuardianHomeroomAttendance = {
+  id: string;
+  date: string;
+  period: 'morning' | 'evening';
+  status: GuardianAttendanceStatus;
+  note: string | null;
+  classroom: { name: string } | null;
+};
+
 export type GuardianStudentProfile = {
   id: string;
   name_prefix: string | null;
@@ -35,6 +61,10 @@ export type GuardianStudentProfile = {
         }>
       | null;
   } | null;
+  attendance: {
+    classes: GuardianClassAttendance[];
+    homeroom: GuardianHomeroomAttendance[];
+  };
 };
 
 export type GuardianProfileResponse = {
@@ -42,11 +72,59 @@ export type GuardianProfileResponse = {
   students: GuardianStudentProfile[];
 };
 
+export class GuardianPortalError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'GuardianPortalError';
+    this.status = status;
+  }
+}
+
 export async function getGuardianProfile(): Promise<GuardianProfileResponse> {
   const response = await fetch('/api/guardian/profile', { credentials: 'same-origin' });
   const json = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(json?.message ?? 'ไม่สามารถโหลดข้อมูลนักเรียนได้');
+    throw new GuardianPortalError(
+      json?.message ?? 'ไม่สามารถโหลดข้อมูลนักเรียนได้',
+      response.status
+    );
   }
   return json;
+}
+
+async function portalRequest(url: string, body: Record<string, string>) {
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new GuardianPortalError(json?.message ?? 'ไม่สามารถดำเนินการได้', response.status);
+  }
+  return json;
+}
+
+export async function requestGuardianPortalOtp(studentCode: string) {
+  return portalRequest('/api/guardian/portal/login', { studentCode }) as Promise<{
+    success: boolean;
+    studentCode: string;
+    expiresIn: number;
+  }>;
+}
+
+export async function verifyGuardianPortalOtp(studentCode: string, code: string) {
+  return portalRequest('/api/guardian/portal/verify', { studentCode, code }) as Promise<{
+    success: boolean;
+  }>;
+}
+
+export async function logoutGuardianPortal() {
+  await fetch('/api/guardian/portal/verify', {
+    method: 'DELETE',
+    credentials: 'same-origin',
+  });
 }

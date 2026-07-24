@@ -1,8 +1,8 @@
 'use client';
 
-import type { GuardianStudentProfile } from '../guardian-profile-actions';
+import type { GuardianStudentProfile, GuardianAttendanceStatus } from '../guardian-profile-actions';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -16,13 +16,21 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 
 import {
-  RiShieldCheckLine,
+  RiTimeLine,
   RiSchoolLine,
   RiUserHeartLine,
+  RiLogoutBoxRLine,
+  RiShieldCheckLine,
+  RiCalendarCheckLine,
   RiGraduationCapLine,
 } from 'src/components/remix-icon';
 
-import { getGuardianProfile } from '../guardian-profile-actions';
+import { GuardianPortalLogin } from '../components/guardian-portal-login';
+import {
+  getGuardianProfile,
+  GuardianPortalError,
+  logoutGuardianPortal,
+} from '../guardian-profile-actions';
 
 // ----------------------------------------------------------------------
 
@@ -41,12 +49,23 @@ const GENDER = {
   unspecified: 'ไม่ระบุ',
 };
 
+const ATTENDANCE_STATUS = {
+  present: { label: 'มา', color: 'success' as const },
+  absent: { label: 'ขาด', color: 'error' as const },
+  leave: { label: 'ลา', color: 'info' as const },
+  late: { label: 'สาย', color: 'warning' as const },
+};
+
 export function GuardianStudentProfileView() {
   const query = useQuery({
     queryKey: ['guardian-student-profile'],
     queryFn: getGuardianProfile,
     staleTime: 0,
     retry: false,
+  });
+  const logoutMutation = useMutation({
+    mutationFn: logoutGuardianPortal,
+    onSuccess: () => query.refetch(),
   });
 
   if (query.isLoading) {
@@ -59,6 +78,9 @@ export function GuardianStudentProfileView() {
   }
 
   if (query.isError || !query.data) {
+    if (query.error instanceof GuardianPortalError && query.error.status === 401) {
+      return <GuardianPortalLogin onAuthenticated={() => query.refetch()} />;
+    }
     return (
       <Container maxWidth="sm" sx={{ py: { xs: 5, md: 10 } }}>
         <Alert
@@ -106,6 +128,22 @@ export function GuardianStudentProfileView() {
               โปรไฟล์บุตรหลานที่เชื่อมกับบัญชี LINE ของคุณ
             </Typography>
           </Box>
+          <Button
+            color="inherit"
+            variant="outlined"
+            loading={logoutMutation.isPending}
+            startIcon={<RiLogoutBoxRLine />}
+            onClick={() => logoutMutation.mutate()}
+            sx={{
+              ml: 'auto',
+              flexShrink: 0,
+              color: 'common.white',
+              borderColor: 'rgba(255,255,255,0.4)',
+              '&:hover': { borderColor: 'common.white' },
+            }}
+          >
+            ออกจากระบบ
+          </Button>
         </Box>
       </Card>
 
@@ -116,7 +154,8 @@ export function GuardianStudentProfileView() {
       </Box>
 
       <Alert severity="info" icon={<RiShieldCheckLine />} sx={{ mt: 3 }}>
-        หน้านี้เป็นข้อมูลแบบอ่านอย่างเดียวและเปิดได้เฉพาะบัญชี LINE ผู้ปกครองที่เชื่อมกับโรงเรียน
+        ข้อมูลเป็นแบบอ่านอย่างเดียว การเข้าสู่ระบบจดจำไว้ 30 วัน และเปิดได้เฉพาะบัญชี LINE
+        ผู้ปกครองที่เชื่อมกับนักเรียน
       </Alert>
     </Container>
   );
@@ -197,7 +236,146 @@ function StudentProfileCard({ student }: { student: GuardianStudentProfile }) {
           icon={<RiUserHeartLine size={18} />}
         />
       </Box>
+
+      <AttendanceSection student={student} />
     </Card>
+  );
+}
+
+function AttendanceSection({ student }: { student: GuardianStudentProfile }) {
+  const records = [
+    ...student.attendance.homeroom.map((record) => ({
+      id: `homeroom-${record.id}`,
+      date: record.date,
+      status: record.status,
+      title: record.period === 'morning' ? 'เข้าแถวช่วงเช้า' : 'เข้าแถวช่วงเย็น',
+      detail: record.classroom?.name ?? '',
+      note: record.note,
+      type: 'homeroom' as const,
+    })),
+    ...student.attendance.classes.map((record) => {
+      const assignment = Array.isArray(record.assignment)
+        ? record.assignment[0]
+        : record.assignment;
+      const subjectValue = Array.isArray(assignment?.subject)
+        ? assignment.subject[0]
+        : assignment?.subject;
+      const classroomValue = Array.isArray(assignment?.classroom)
+        ? assignment.classroom[0]
+        : assignment?.classroom;
+      return {
+        id: `class-${record.id}`,
+        date: record.date,
+        status: record.status,
+        title: subjectValue?.name ?? 'เข้าเรียนรายวิชา',
+        detail: [classroomValue?.name, record.period !== 'daily' ? record.period : null]
+          .filter(Boolean)
+          .join(' · '),
+        note: record.note,
+        type: 'class' as const,
+      };
+    }),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+  const summary = records.reduce<Record<GuardianAttendanceStatus, number>>(
+    (result, record) => ({ ...result, [record.status]: result[record.status] + 1 }),
+    { present: 0, absent: 0, leave: 0, late: 0 }
+  );
+
+  return (
+    <>
+      <Divider />
+      <Box sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Box
+          sx={{
+            gap: 1.5,
+            display: 'flex',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            flexDirection: { xs: 'column', sm: 'row' },
+          }}
+        >
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6">ประวัติการเข้าเรียน</Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              รวมข้อมูลเข้าแถวและเข้าเรียนรายวิชาย้อนหลัง 1 ปี
+            </Typography>
+          </Box>
+          <Box sx={{ gap: 0.75, display: 'flex', flexWrap: 'wrap' }}>
+            {(Object.keys(ATTENDANCE_STATUS) as GuardianAttendanceStatus[]).map((status) => (
+              <Chip
+                key={status}
+                size="small"
+                variant="soft"
+                color={ATTENDANCE_STATUS[status].color}
+                label={`${ATTENDANCE_STATUS[status].label} ${summary[status]}`}
+              />
+            ))}
+          </Box>
+        </Box>
+
+        {!records.length ? (
+          <Box
+            sx={{
+              py: 5,
+              mt: 2.5,
+              textAlign: 'center',
+              borderRadius: 2,
+              bgcolor: 'background.neutral',
+            }}
+          >
+            <RiCalendarCheckLine size={30} />
+            <Typography variant="subtitle2" sx={{ mt: 1 }}>
+              ยังไม่มีประวัติการเข้าเรียน
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ mt: 2.5 }}>
+            {records.slice(0, 30).map((record, index) => {
+              const status = ATTENDANCE_STATUS[record.status];
+              return (
+                <Box key={record.id}>
+                  <Box
+                    sx={{
+                      gap: 1.5,
+                      py: 1.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Avatar
+                      variant="rounded"
+                      sx={{
+                        width: 38,
+                        height: 38,
+                        color: record.type === 'homeroom' ? 'primary.main' : 'info.main',
+                        bgcolor: record.type === 'homeroom' ? 'primary.lighter' : 'info.lighter',
+                      }}
+                    >
+                      {record.type === 'homeroom' ? (
+                        <RiCalendarCheckLine size={19} />
+                      ) : (
+                        <RiTimeLine size={19} />
+                      )}
+                    </Avatar>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography variant="subtitle2">{record.title}</Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' }).format(
+                          new Date(`${record.date}T00:00:00`)
+                        )}
+                        {record.detail ? ` · ${record.detail}` : ''}
+                        {record.note ? ` · ${record.note}` : ''}
+                      </Typography>
+                    </Box>
+                    <Chip size="small" color={status.color} variant="soft" label={status.label} />
+                  </Box>
+                  {index < Math.min(records.length, 30) - 1 && <Divider />}
+                </Box>
+              );
+            })}
+          </Box>
+        )}
+      </Box>
+    </>
   );
 }
 

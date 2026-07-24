@@ -10,23 +10,25 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
+import Avatar from '@mui/material/Avatar';
 import Dialog from '@mui/material/Dialog';
 import Button from '@mui/material/Button';
-import Checkbox from '@mui/material/Checkbox';
-import TextField from '@mui/material/TextField';
+import Divider from '@mui/material/Divider';
+import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from 'src/components/iconify';
 
+import { GuardianFormDialog } from './guardian-form-dialog';
+import { GuardianLineDialog } from './guardian-line-dialog';
+import { GuardianDeleteDialog } from './guardian-delete-dialog';
 import {
   unlinkGuardianLine,
   listStudentGuardians,
@@ -174,6 +176,18 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
     ? `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() || student.username
     : '';
   const lineConnected = Boolean(lineTarget?.line_linked_at || lineStatusQuery.data?.linked);
+  const closeLineDialog = () => {
+    setLineTarget(null);
+    setLineInvitation(null);
+    setLineQrImage('');
+  };
+
+  const openLineDialog = (guardian: StudentGuardian) => {
+    setLineTarget(guardian);
+    setLineInvitation(null);
+    setLineQrImage('');
+    if (!guardian.line_linked_at) lineInviteMutation.mutate(guardian.id);
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -209,43 +223,137 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ pb: 1 }}>
-          ข้อมูลผู้ปกครอง
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {studentName} · @{student?.username}
-          </Typography>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="md"
+        slotProps={{
+          paper: {
+            sx: {
+              overflow: 'hidden',
+              borderRadius: { xs: 0, sm: 2.5 },
+            },
+          },
+        }}
+      >
+        <DialogTitle sx={{ p: 0 }}>
+          <Box
+            sx={{
+              px: { xs: 2, sm: 3 },
+              py: 2.5,
+              gap: 2,
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: 'background.neutral',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <Avatar
+              variant="rounded"
+              sx={{
+                width: 48,
+                height: 48,
+                color: 'primary.main',
+                bgcolor: 'primary.lighter',
+              }}
+            >
+              <Iconify icon="solar:users-group-rounded-bold" width={26} />
+            </Avatar>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Typography variant="h5">ข้อมูลผู้ปกครอง</Typography>
+                {!isLoading && (
+                  <Chip size="small" color="primary" variant="soft" label={`${data.length} คน`} />
+                )}
+              </Box>
+              <Typography variant="body2" noWrap sx={{ mt: 0.25, color: 'text.secondary' }}>
+                {studentName} · รหัสนักเรียน {student?.username}
+              </Typography>
+            </Box>
+            <IconButton aria-label="ปิดหน้าข้อมูลผู้ปกครอง" onClick={onClose}>
+              <Iconify icon="mingcute:close-line" />
+            </IconButton>
+          </Box>
         </DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          {isError && <Alert severity="error">ไม่สามารถโหลดข้อมูลผู้ปกครองได้</Alert>}
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+          {isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              ไม่สามารถโหลดข้อมูลผู้ปกครองได้
+            </Alert>
+          )}
           {helloLineMutation.isSuccess && (
-            <Alert severity="success" sx={{ mb: 2 }}>
+            <Alert
+              severity="success"
+              variant="outlined"
+              onClose={() => helloLineMutation.reset()}
+              sx={{ mb: 2 }}
+            >
               ส่งข้อความสวัสดีไปยัง LINE ผู้ปกครองแล้ว
             </Alert>
           )}
           {helloLineMutation.error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert
+              severity="error"
+              variant="outlined"
+              onClose={() => helloLineMutation.reset()}
+              sx={{ mb: 2 }}
+            >
               {helloLineMutation.error.message}
             </Alert>
           )}
           {profileLineMutation.isSuccess && (
-            <Alert severity="success" sx={{ mb: 2 }}>
+            <Alert
+              severity="success"
+              variant="outlined"
+              onClose={() => profileLineMutation.reset()}
+              sx={{ mb: 2 }}
+            >
               ส่งลิงก์โปรไฟล์นักเรียนไปยัง LINE ผู้ปกครองแล้ว
             </Alert>
           )}
           {profileLineMutation.error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert
+              severity="error"
+              variant="outlined"
+              onClose={() => profileLineMutation.reset()}
+              sx={{ mb: 2 }}
+            >
               {profileLineMutation.error.message}
             </Alert>
           )}
-          {isLoading && <Typography sx={{ py: 4, textAlign: 'center' }}>กำลังโหลด...</Typography>}
+          {isLoading && (
+            <Box sx={{ py: 8, gap: 1.5, display: 'grid', placeItems: 'center' }}>
+              <CircularProgress size={32} />
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                กำลังโหลดข้อมูลผู้ปกครอง...
+              </Typography>
+            </Box>
+          )}
           {!isLoading && !isError && !data.length && (
-            <Box sx={{ py: 5, textAlign: 'center' }}>
-              <Iconify
-                icon="solar:users-group-rounded-bold"
-                width={48}
-                sx={{ color: 'text.disabled' }}
-              />
+            <Box
+              sx={{
+                py: 7,
+                px: 2,
+                textAlign: 'center',
+                borderRadius: 2,
+                bgcolor: 'background.neutral',
+                border: '1px dashed',
+                borderColor: 'divider',
+              }}
+            >
+              <Avatar
+                sx={{
+                  mx: 'auto',
+                  width: 56,
+                  height: 56,
+                  color: 'text.secondary',
+                  bgcolor: 'background.paper',
+                }}
+              >
+                <Iconify icon="solar:users-group-rounded-bold" width={30} />
+              </Avatar>
               <Typography variant="subtitle1" sx={{ mt: 1 }}>
                 ยังไม่มีข้อมูลผู้ปกครอง
               </Typography>
@@ -254,81 +362,160 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
               </Typography>
             </Box>
           )}
-          <Box sx={{ gap: 1.5, display: 'grid' }}>
-            {data.map((guardian) => (
-              <Card key={guardian.id} variant="outlined" sx={{ p: 2 }}>
-                <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'flex-start' }}>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <Typography variant="subtitle1">{guardian.full_name}</Typography>
-                      <Chip size="small" variant="soft" label={guardian.relationship} />
-                      {guardian.is_primary && (
-                        <Chip size="small" color="primary" label="ผู้ติดต่อหลัก" />
-                      )}
-                    </Box>
-                    <Typography variant="body2" sx={{ mt: 0.75 }}>
-                      โทร {guardian.phone}
-                      {guardian.email ? ` · ${guardian.email}` : ''}
-                    </Typography>
-                    {guardian.occupation && (
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        อาชีพ {guardian.occupation}
-                      </Typography>
-                    )}
-                    {guardian.address && (
-                      <Typography
-                        variant="caption"
-                        sx={{ display: 'block', color: 'text.secondary' }}
-                      >
-                        ที่อยู่ {guardian.address}
-                      </Typography>
-                    )}
-                    {guardian.notes && (
-                      <Typography
-                        variant="caption"
-                        sx={{ display: 'block', color: 'text.secondary' }}
-                      >
-                        หมายเหตุ {guardian.notes}
-                      </Typography>
-                    )}
-                    <Box
+          {!isLoading && data.length > 0 && (
+            <Box
+              sx={{
+                overflow: 'hidden',
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              {data.map((guardian, index) => (
+                <Box
+                  key={guardian.id}
+                  sx={{
+                    p: { xs: 2, sm: 2.5 },
+                    bgcolor: 'background.paper',
+                    borderBottom: index < data.length - 1 ? '1px solid' : 'none',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'flex-start' }}>
+                    <Avatar
                       sx={{
-                        gap: 1,
-                        mt: 1.25,
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
+                        width: 44,
+                        height: 44,
+                        flexShrink: 0,
+                        fontWeight: 700,
+                        color: guardian.is_primary ? 'primary.main' : 'text.secondary',
+                        bgcolor: guardian.is_primary ? 'primary.lighter' : 'background.neutral',
                       }}
                     >
-                      <Chip
-                        size="small"
-                        color={guardian.line_linked_at ? 'success' : 'default'}
-                        icon={
-                          <Iconify
-                            icon={
-                              guardian.line_linked_at
-                                ? 'solar:check-circle-bold'
-                                : 'solar:chat-round-dots-bold'
-                            }
-                          />
-                        }
-                        label={
-                          guardian.line_linked_at
-                            ? `LINE: ${guardian.line_display_name ?? 'เชื่อมแล้ว'}`
-                            : 'ยังไม่เชื่อม LINE'
-                        }
-                      />
-                      <Button
-                        size="small"
-                        color={guardian.line_linked_at ? 'error' : 'success'}
-                        onClick={() => {
-                          setLineTarget(guardian);
-                          setLineInvitation(null);
-                          setLineQrImage('');
-                          if (!guardian.line_linked_at) lineInviteMutation.mutate(guardian.id);
+                      {guardian.full_name.trim().charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Box
+                        sx={{
+                          gap: 0.75,
+                          display: 'flex',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
                         }}
                       >
-                        {guardian.line_linked_at ? 'ยกเลิกการเชื่อม' : 'สร้างรหัสเชื่อม'}
+                        <Typography variant="subtitle1">{guardian.full_name}</Typography>
+                        <Chip size="small" variant="soft" label={guardian.relationship} />
+                        {guardian.is_primary && (
+                          <Chip
+                            size="small"
+                            color="primary"
+                            variant="soft"
+                            icon={<Iconify icon="eva:star-fill" />}
+                            label="ผู้ติดต่อหลัก"
+                          />
+                        )}
+                      </Box>
+                      <Box
+                        sx={{
+                          gap: { xs: 0.75, sm: 2 },
+                          mt: 0.75,
+                          display: 'flex',
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          flexWrap: 'wrap',
+                          color: 'text.secondary',
+                        }}
+                      >
+                        <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center' }}>
+                          <Iconify icon="solar:phone-bold" width={16} />
+                          <Typography variant="body2">{guardian.phone}</Typography>
+                        </Box>
+                        {guardian.email && (
+                          <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center' }}>
+                            <Iconify icon="solar:letter-bold" width={16} />
+                            <Typography variant="body2">{guardian.email}</Typography>
+                          </Box>
+                        )}
+                        {guardian.occupation && (
+                          <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center' }}>
+                            <Iconify icon="solar:case-minimalistic-bold" width={16} />
+                            <Typography variant="body2">{guardian.occupation}</Typography>
+                          </Box>
+                        )}
+                      </Box>
+                      {(guardian.address || guardian.notes) && (
+                        <Typography
+                          variant="caption"
+                          sx={{ mt: 0.75, display: 'block', color: 'text.disabled' }}
+                        >
+                          {[guardian.address, guardian.notes].filter(Boolean).join(' · ')}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Box sx={{ display: 'flex' }}>
+                      <Tooltip title="แก้ไข">
+                        <IconButton
+                          size="small"
+                          aria-label="แก้ไขข้อมูลผู้ปกครอง"
+                          onClick={() => openEdit(guardian)}
+                        >
+                          <Iconify icon="solar:pen-bold" width={19} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="ลบ">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          aria-label="ลบข้อมูลผู้ปกครอง"
+                          onClick={() => setDeleteTarget(guardian)}
+                        >
+                          <Iconify icon="solar:trash-bin-trash-bold" width={19} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Box>
+
+                  <Divider sx={{ my: 1.75, borderStyle: 'dashed' }} />
+
+                  <Box
+                    sx={{
+                      gap: 1,
+                      display: 'flex',
+                      alignItems: { xs: 'stretch', sm: 'center' },
+                      flexDirection: { xs: 'column', sm: 'row' },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        gap: 0.75,
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: guardian.line_linked_at ? 'success.dark' : 'text.secondary',
+                      }}
+                    >
+                      <Iconify
+                        icon={
+                          guardian.line_linked_at
+                            ? 'solar:check-circle-bold'
+                            : 'solar:chat-round-dots-bold'
+                        }
+                        width={20}
+                      />
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {guardian.line_linked_at
+                          ? `เชื่อม LINE แล้ว · ${guardian.line_display_name ?? 'ผู้ปกครอง'}`
+                          : 'ยังไม่เชื่อมต่อ LINE'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1 }} />
+                    <Box sx={{ gap: 0.75, display: 'flex', flexWrap: 'wrap' }}>
+                      <Button
+                        size="small"
+                        color={guardian.line_linked_at ? 'inherit' : 'success'}
+                        variant={guardian.line_linked_at ? 'text' : 'contained'}
+                        startIcon={<Iconify icon="eva:link-2-fill" />}
+                        onClick={() => openLineDialog(guardian)}
+                      >
+                        {guardian.line_linked_at ? 'จัดการการเชื่อม' : 'เชื่อม LINE'}
                       </Button>
                       {guardian.line_linked_at && (
                         <>
@@ -343,7 +530,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                             startIcon={<Iconify icon="solar:user-id-bold" />}
                             onClick={() => profileLineMutation.mutate(guardian.id)}
                           >
-                            ส่งลิงก์โปรไฟล์
+                            ส่งโปรไฟล์
                           </Button>
                           <Button
                             size="small"
@@ -362,22 +549,19 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                       )}
                     </Box>
                   </Box>
-                  <IconButton aria-label="แก้ไขข้อมูลผู้ปกครอง" onClick={() => openEdit(guardian)}>
-                    <Iconify icon="solar:pen-bold" />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    aria-label="ลบข้อมูลผู้ปกครอง"
-                    onClick={() => setDeleteTarget(guardian)}
-                  >
-                    <Iconify icon="solar:trash-bin-trash-bold" />
-                  </IconButton>
                 </Box>
-              </Card>
-            ))}
-          </Box>
+              ))}
+            </Box>
+          )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: 2,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
           <Button color="inherit" onClick={onClose}>
             ปิด
           </Button>
@@ -391,251 +575,37 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
         </DialogActions>
       </Dialog>
 
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{editing ? 'แก้ไขข้อมูลผู้ปกครอง' : 'เพิ่มข้อมูลผู้ปกครอง'}</DialogTitle>
-        <DialogContent>
-          {(formError || saveMutation.error) && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {formError || saveMutation.error?.message}
-            </Alert>
-          )}
-          <Box sx={{ gap: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
-            <TextField
-              required
-              label="ชื่อ-นามสกุล"
-              value={form.fullName}
-              onChange={(e) => setForm((v) => ({ ...v, fullName: e.target.value }))}
-              sx={{ gridColumn: { sm: '1 / -1' } }}
-            />
-            <TextField
-              required
-              label="ความสัมพันธ์"
-              placeholder="เช่น บิดา มารดา"
-              value={form.relationship}
-              onChange={(e) => setForm((v) => ({ ...v, relationship: e.target.value }))}
-            />
-            <TextField
-              required
-              label="เบอร์โทรศัพท์"
-              value={form.phone}
-              onChange={(e) => setForm((v) => ({ ...v, phone: e.target.value }))}
-            />
-            <TextField
-              label="อีเมล"
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))}
-            />
-            <TextField
-              label="อาชีพ"
-              value={form.occupation}
-              onChange={(e) => setForm((v) => ({ ...v, occupation: e.target.value }))}
-            />
-            <TextField
-              label="ที่อยู่"
-              multiline
-              minRows={2}
-              value={form.address}
-              onChange={(e) => setForm((v) => ({ ...v, address: e.target.value }))}
-              sx={{ gridColumn: { sm: '1 / -1' } }}
-            />
-            <TextField
-              label="หมายเหตุ"
-              multiline
-              minRows={2}
-              value={form.notes}
-              onChange={(e) => setForm((v) => ({ ...v, notes: e.target.value }))}
-              sx={{ gridColumn: { sm: '1 / -1' } }}
-            />
-          </Box>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={form.isPrimary}
-                onChange={(e) => setForm((v) => ({ ...v, isPrimary: e.target.checked }))}
-              />
-            }
-            label="กำหนดเป็นผู้ติดต่อหลัก"
-            sx={{ mt: 1 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button color="inherit" onClick={() => setFormOpen(false)}>
-            ยกเลิก
-          </Button>
-          <Button variant="contained" loading={saveMutation.isPending} onClick={submit}>
-            บันทึก
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <GuardianFormDialog
+        open={formOpen}
+        editing={Boolean(editing)}
+        value={form}
+        errorMessage={formError || saveMutation.error?.message}
+        loading={saveMutation.isPending}
+        onChange={setForm}
+        onClose={() => setFormOpen(false)}
+        onSubmit={submit}
+      />
 
-      <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>ลบข้อมูลผู้ปกครอง?</DialogTitle>
-        <DialogContent>
-          <Typography>ต้องการลบข้อมูลของ {deleteTarget?.full_name} ใช่หรือไม่</Typography>
-          {deleteMutation.error && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {deleteMutation.error.message}
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button color="inherit" onClick={() => setDeleteTarget(null)}>
-            ยกเลิก
-          </Button>
-          <Button
-            color="error"
-            variant="contained"
-            loading={deleteMutation.isPending}
-            onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-          >
-            ลบข้อมูล
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <GuardianDeleteDialog
+        guardian={deleteTarget}
+        errorMessage={deleteMutation.error?.message}
+        loading={deleteMutation.isPending}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+      />
 
-      <Dialog
-        open={!!lineTarget}
-        onClose={() => {
-          setLineTarget(null);
-          setLineInvitation(null);
-          setLineQrImage('');
-        }}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>{lineConnected ? 'เชื่อม LINE สำเร็จ' : 'เชื่อม LINE ผู้ปกครอง'}</DialogTitle>
-        <DialogContent>
-          {lineInviteMutation.isPending && (
-            <Typography sx={{ py: 3, textAlign: 'center' }}>กำลังสร้างรหัส...</Typography>
-          )}
-          {(lineInviteMutation.error || unlinkLineMutation.error) && (
-            <Alert severity="error">
-              {lineInviteMutation.error?.message ?? unlinkLineMutation.error?.message}
-            </Alert>
-          )}
-          {lineConnected ? (
-            <Box>
-              <Alert severity="success">
-                เชื่อม LINE
-                {lineStatusQuery.data?.displayName
-                  ? ` (${lineStatusQuery.data.displayName})`
-                  : ''}{' '}
-                เรียบร้อยแล้ว
-              </Alert>
-              <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-                ผู้ปกครองจะได้รับแจ้งเตือน ขาด ลา สาย และไม่เข้าเรียนรายคาบตามการตั้งค่าโรงเรียน
-              </Typography>
-            </Box>
-          ) : (
-            lineInvitation && (
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  ให้ผู้ปกครองสแกน QR เปิดแชต LINE OA แล้วกดส่งข้อความภายใน 24 ชั่วโมง
-                </Typography>
-                {lineInvitation.lineChatUrl ? (
-                  <Box
-                    sx={{
-                      my: 2,
-                      mx: 'auto',
-                      p: 1,
-                      width: 240,
-                      height: 240,
-                      display: 'grid',
-                      borderRadius: 2,
-                      placeItems: 'center',
-                      bgcolor: 'common.white',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    {lineQrImage ? (
-                      <Box
-                        component="img"
-                        src={lineQrImage}
-                        alt={`QR เชื่อม LINE ของ ${lineTarget?.full_name ?? 'ผู้ปกครอง'}`}
-                        sx={{ width: 1, height: 1 }}
-                      />
-                    ) : (
-                      <CircularProgress color="success" />
-                    )}
-                  </Box>
-                ) : (
-                  <Alert severity="warning" sx={{ mt: 2, textAlign: 'left' }}>
-                    กรุณากรอก LINE OA Basic ID ในหน้าแจ้งเตือน LINE เพื่อสร้าง QR
-                  </Alert>
-                )}
-                <Typography
-                  variant="h6"
-                  sx={{
-                    my: 1.5,
-                    p: 1.5,
-                    borderRadius: 1.5,
-                    letterSpacing: 2,
-                    bgcolor: 'background.neutral',
-                  }}
-                >
-                  {lineInvitation.message}
-                </Typography>
-                <Box sx={{ gap: 1, display: 'flex', justifyContent: 'center' }}>
-                  {lineQrImage && (
-                    <Button
-                      color="success"
-                      variant="contained"
-                      startIcon={<Iconify icon="solar:download-bold" />}
-                      onClick={() => {
-                        const anchor = document.createElement('a');
-                        anchor.href = lineQrImage;
-                        anchor.download = `line-link-${lineTarget?.full_name ?? 'guardian'}.png`;
-                        anchor.click();
-                      }}
-                    >
-                      ดาวน์โหลด QR
-                    </Button>
-                  )}
-                  {lineInvitation.addFriendUrl && (
-                    <Button
-                      color="success"
-                      variant="outlined"
-                      onClick={() => window.open(lineInvitation.addFriendUrl!, '_blank')}
-                    >
-                      เพิ่มเพื่อน LINE OA
-                    </Button>
-                  )}
-                  <Button
-                    variant="contained"
-                    onClick={() => navigator.clipboard.writeText(lineInvitation.message)}
-                  >
-                    คัดลอกข้อความ
-                  </Button>
-                </Box>
-              </Box>
-            )
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            color="inherit"
-            onClick={() => {
-              setLineTarget(null);
-              setLineInvitation(null);
-              setLineQrImage('');
-            }}
-          >
-            ปิด
-          </Button>
-          {lineConnected && lineTarget && (
-            <Button
-              color="error"
-              variant="contained"
-              loading={unlinkLineMutation.isPending}
-              onClick={() => unlinkLineMutation.mutate(lineTarget.id)}
-            >
-              ยืนยันยกเลิก
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
+      <GuardianLineDialog
+        guardian={lineTarget}
+        invitation={lineInvitation}
+        qrImage={lineQrImage}
+        connected={lineConnected}
+        connectedDisplayName={lineStatusQuery.data?.displayName}
+        creatingInvitation={lineInviteMutation.isPending}
+        unlinking={unlinkLineMutation.isPending}
+        errorMessage={lineInviteMutation.error?.message ?? unlinkLineMutation.error?.message}
+        onClose={closeLineDialog}
+        onUnlink={() => lineTarget && unlinkLineMutation.mutate(lineTarget.id)}
+      />
     </>
   );
 }

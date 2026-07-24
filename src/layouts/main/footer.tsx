@@ -117,7 +117,7 @@ function BrandSummary() {
         <Logo />
         <Box>
           <Typography variant="subtitle1" sx={{ lineHeight: 1.2 }}>
-            Class Go
+            eKru
           </Typography>
           <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
             {t('brand.tagline')}
@@ -201,7 +201,7 @@ function FooterBottom() {
         }}
       >
         <Typography variant="caption">
-          © {year} Class Go {t('brand.copyright')}
+          © {year} eKru {t('brand.copyright')}
         </Typography>
         <Typography variant="caption">
           {t('brand.version')} {CONFIG.appVersion} · {t('brand.languages')}

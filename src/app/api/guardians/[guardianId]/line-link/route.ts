@@ -5,7 +5,7 @@ import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { schoolHasFeature } from 'src/lib/school-subscription';
 import { decryptLineCredential } from 'src/lib/line-credentials';
-import { signGuardianPortalLinkToken } from 'src/lib/guardian-portal-token';
+import { signGuardianPortalIdentityToken } from 'src/lib/guardian-portal-token';
 
 // ----------------------------------------------------------------------
 
@@ -127,7 +127,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (action === 'profile') {
         profileUrl.searchParams.set(
           'token',
-          signGuardianPortalLinkToken(access.caller.schoolId, access.guardian.line_user_id)
+          signGuardianPortalIdentityToken(access.caller.schoolId, access.guardian.line_user_id)
         );
       }
       const response = await fetch('https://api.line.me/v2/bot/message/push', {
@@ -148,7 +148,7 @@ export async function POST(request: Request, { params }: RouteParams) {
                   ? [
                       `คุณ ${access.guardian.full_name}`,
                       `เปิดดูโปรไฟล์นักเรียนของ ${school?.name ?? 'โรงเรียน'} ได้จากลิงก์นี้`,
-                      'ลิงก์มีอายุ 10 นาที และข้อมูลเป็นแบบอ่านอย่างเดียว',
+                      'ลิงก์นี้ไม่หมดอายุ กรุณากรอกรหัสนักเรียนและยืนยัน OTP ทาง LINE ก่อนเข้าดูข้อมูล',
                       profileUrl.toString(),
                     ].join('\n\n')
                   : `สวัสดีคุณ ${access.guardian.full_name}\nเชื่อมต่อ LINE กับ ${

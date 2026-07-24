@@ -14,7 +14,7 @@ export async function GET() {
   );
   if (!payload) {
     return NextResponse.json(
-      { message: 'ลิงก์หมดอายุ กรุณาพิมพ์ “ข้อมูลนักเรียน” ใน LINE อีกครั้ง' },
+      { message: 'กรุณาเข้าสู่ระบบด้วยรหัสนักเรียนและ OTP จาก LINE' },
       { status: 401 }
     );
   }
@@ -23,7 +23,8 @@ export async function GET() {
     .from('student_guardians')
     .select('student_id, full_name, relationship')
     .eq('school_id', payload.schoolId)
-    .eq('line_user_id', payload.lineUserId);
+    .eq('line_user_id', payload.lineUserId)
+    .eq('student_id', payload.studentId!);
   if (guardianError) {
     return NextResponse.json({ message: guardianError.message }, { status: 500 });
   }
@@ -74,6 +75,46 @@ export async function GET() {
     return NextResponse.json({ message: enrollmentError.message }, { status: 500 });
   }
 
+  const historyStartDate = new Date();
+  historyStartDate.setFullYear(historyStartDate.getFullYear() - 1);
+  const historyStart = historyStartDate.toISOString().slice(0, 10);
+  const [
+    { data: classAttendance, error: classAttendanceError },
+    { data: homeroomAttendance, error: homeroomAttendanceError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('attendance')
+      .select(
+        `id, student_id, session_date, period_key, status, note,
+         teacher_assignment:teacher_assignments!inner(
+           subject:subjects(name, code),
+           classroom:classrooms!inner(name, school_id)
+         )`
+      )
+      .in('student_id', studentIds)
+      .eq('teacher_assignment.classroom.school_id', payload.schoolId)
+      .gte('session_date', historyStart)
+      .order('session_date', { ascending: false })
+      .limit(500),
+    supabaseAdmin
+      .from('homeroom_assembly_attendance')
+      .select(
+        `id, student_id, attendance_date, period, status, note,
+         classroom:classrooms!inner(name, school_id)`
+      )
+      .in('student_id', studentIds)
+      .eq('classroom.school_id', payload.schoolId)
+      .gte('attendance_date', historyStart)
+      .order('attendance_date', { ascending: false })
+      .limit(500),
+  ]);
+  if (classAttendanceError || homeroomAttendanceError) {
+    return NextResponse.json(
+      { message: classAttendanceError?.message ?? homeroomAttendanceError?.message },
+      { status: 500 }
+    );
+  }
+
   const enrollmentByStudent = new Map<string, (typeof enrollments)[number]>();
   for (const enrollment of enrollments ?? []) {
     if (!enrollmentByStudent.has(enrollment.student_id)) {
@@ -93,6 +134,30 @@ export async function GET() {
       ...student,
       guardian: guardianByStudent.get(student.id) ?? null,
       enrollment: enrollmentByStudent.get(student.id) ?? null,
+      attendance: {
+        classes: (classAttendance ?? [])
+          .filter((record) => record.student_id === student.id)
+          .map((record) => ({
+            id: record.id,
+            date: record.session_date,
+            period: record.period_key,
+            status: record.status,
+            note: record.note,
+            assignment: Array.isArray(record.teacher_assignment)
+              ? record.teacher_assignment[0]
+              : record.teacher_assignment,
+          })),
+        homeroom: (homeroomAttendance ?? [])
+          .filter((record) => record.student_id === student.id)
+          .map((record) => ({
+            id: record.id,
+            date: record.attendance_date,
+            period: record.period,
+            status: record.status,
+            note: record.note,
+            classroom: Array.isArray(record.classroom) ? record.classroom[0] : record.classroom,
+          })),
+      },
     })),
   });
 }

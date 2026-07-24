@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import {
-  verifyGuardianPortalToken,
-  signGuardianPortalSessionToken,
-} from 'src/lib/guardian-portal-token';
+import { verifyGuardianPortalToken } from 'src/lib/guardian-portal-token';
 
 // ----------------------------------------------------------------------
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const payload = verifyGuardianPortalToken(searchParams.get('token') ?? '', 'link');
+  const token = searchParams.get('token') ?? '';
+  const payload =
+    verifyGuardianPortalToken(token, 'identity') ?? verifyGuardianPortalToken(token, 'link');
   if (!payload) {
-    return NextResponse.redirect(new URL('/guardian/student/?error=expired', request.url));
+    return NextResponse.redirect(new URL('/guardian/student/?error=invalid-link', request.url));
   }
 
   const { count, error } = await supabaseAdmin
@@ -26,13 +25,14 @@ export async function GET(request: Request) {
 
   const response = NextResponse.redirect(new URL('/guardian/student/', request.url));
   response.cookies.set({
-    name: 'guardian_portal_session',
-    value: signGuardianPortalSessionToken(payload.schoolId, payload.lineUserId),
+    name: 'guardian_portal_identity',
+    value: token,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 12 * 60 * 60,
+    maxAge: 10 * 365 * 24 * 60 * 60,
   });
+  response.cookies.delete('guardian_portal_session');
   return response;
 }
