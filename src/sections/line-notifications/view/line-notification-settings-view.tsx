@@ -20,6 +20,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { Iconify } from 'src/components/iconify';
 
+import { LineRichMenuCard } from '../components/line-rich-menu-card';
 import {
   testLineConnection,
   getLineNotificationSettings,
@@ -336,6 +337,8 @@ export function LineNotificationSettingsView() {
               </Button>
             </Box>
           </Card>
+
+          <LineRichMenuCard hasAccessToken={integration.hasAccessToken} />
 
           <Card variant="outlined" sx={{ p: { xs: 2.5, md: 3 } }}>
             <Typography variant="h6">เหตุการณ์ที่ส่งแจ้งเตือน</Typography>

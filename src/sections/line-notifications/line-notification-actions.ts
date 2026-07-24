@@ -64,6 +64,27 @@ export type LineNotificationSettingsInput = {
   notifyClassAbsent: boolean;
 };
 
+export type LineRichMenuLayout = 'one' | 'two' | 'three' | 'six';
+
+export type LineRichMenuAction = {
+  label: string;
+  type: 'message' | 'uri';
+  value: string;
+};
+
+export type LineRichMenuStatus = {
+  connected: boolean;
+  source: 'none' | 'manager' | 'messaging-api';
+  richMenu: {
+    id: string;
+    name: string;
+    chatBarText: string;
+    selected: boolean;
+    size: { width: number; height: number };
+    areas: unknown[];
+  } | null;
+};
+
 const headers = (json = false) => ({
   ...(json ? { 'Content-Type': 'application/json' } : {}),
   Authorization: `Bearer ${getStoredToken()}`,
@@ -98,4 +119,40 @@ export async function testLineConnection() {
     response,
     'ไม่สามารถทดสอบ LINE ได้'
   );
+}
+
+export async function getLineRichMenu() {
+  const response = await fetch('/api/admin/line-rich-menu', { headers: headers() });
+  return parse<LineRichMenuStatus>(response, 'ไม่สามารถตรวจสอบ Rich Menu ได้');
+}
+
+export async function createLineRichMenu(input: {
+  image: File;
+  layout: LineRichMenuLayout;
+  name: string;
+  chatBarText: string;
+  selected: boolean;
+  actions: LineRichMenuAction[];
+}) {
+  const formData = new FormData();
+  formData.append('image', input.image);
+  formData.append('layout', input.layout);
+  formData.append('name', input.name);
+  formData.append('chatBarText', input.chatBarText);
+  formData.append('selected', String(input.selected));
+  formData.append('actions', JSON.stringify(input.actions));
+  const response = await fetch('/api/admin/line-rich-menu', {
+    method: 'POST',
+    headers: headers(),
+    body: formData,
+  });
+  return parse<{ success: boolean; richMenuId: string }>(response, 'ไม่สามารถสร้าง Rich Menu ได้');
+}
+
+export async function deleteLineRichMenu() {
+  const response = await fetch('/api/admin/line-rich-menu', {
+    method: 'DELETE',
+    headers: headers(),
+  });
+  return parse<{ success: boolean }>(response, 'ไม่สามารถยกเลิก Rich Menu ได้');
 }

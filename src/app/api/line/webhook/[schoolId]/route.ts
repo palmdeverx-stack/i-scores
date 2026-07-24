@@ -102,7 +102,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       continue;
     }
     const messageText = event.message.text.trim();
-    if (/^(?:PROFILE|โปรไฟล์|ข้อมูลนักเรียน)$/i.test(messageText)) {
+    if (/^(?:PROFILE|โปรไฟล์|ข้อมูลนักเรียน|ATTENDANCE|การเข้าเรียน)$/i.test(messageText)) {
       const { count } = await supabaseAdmin
         .from('student_guardians')
         .select('id', { count: 'exact', head: true })
@@ -125,6 +125,35 @@ export async function POST(request: Request, { params }: RouteParams) {
           'กรอกรหัสนักเรียน แล้วรับ OTP ทาง LINE เพื่อดูโปรไฟล์และประวัติการเข้าเรียน',
           guardianPortalUrl(request, schoolId, event.source.userId),
         ].join('\n\n')
+      );
+      continue;
+    }
+    if (/^(?:HELP|ช่วยเหลือ)$/i.test(messageText)) {
+      await reply(
+        accessToken,
+        event.replyToken,
+        [
+          'เมนูช่วยเหลือผู้ปกครอง',
+          '• พิมพ์ “ข้อมูลนักเรียน” เพื่อเปิด Parent Portal',
+          '• พิมพ์ “การเข้าเรียน” เพื่อดูประวัติการเข้าเรียน',
+          '• หากต้องการเชื่อมบัญชี กรุณาสแกน QR ที่ได้รับจากโรงเรียน',
+        ].join('\n')
+      );
+      continue;
+    }
+    if (/^(?:ประกาศ|ANNOUNCEMENT)$/i.test(messageText)) {
+      await reply(
+        accessToken,
+        event.replyToken,
+        'ประกาศสำคัญจากโรงเรียนจะถูกส่งมายังห้องแชตนี้โดยตรง'
+      );
+      continue;
+    }
+    if (/^(?:ติดต่อโรงเรียน|CONTACT|เชื่อมบัญชี)$/i.test(messageText)) {
+      await reply(
+        accessToken,
+        event.replyToken,
+        'กรุณาติดต่อครูประจำชั้นหรือผู้ดูแลโรงเรียน หากต้องการความช่วยเหลือหรือขอ QR เชื่อมบัญชี'
       );
       continue;
     }
