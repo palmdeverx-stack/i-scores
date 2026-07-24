@@ -74,6 +74,7 @@ function toForm(data: Awaited<ReturnType<typeof getSchoolSubscription>>): FormSt
     maxSchoolAdmins: subscription.max_school_admins,
     maxTeachers: subscription.max_teachers,
     maxStudents: subscription.max_students,
+    maxLineNotifications: subscription.max_line_notifications,
     enabledFeatures: subscription.enabled_features,
     notes: subscription.notes ?? '',
   };
@@ -169,6 +170,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
             maxSchoolAdmins: template.max_school_admins,
             maxTeachers: template.max_teachers,
             maxStudents: template.max_students,
+            maxLineNotifications: template.max_line_notifications,
             enabledFeatures: [...template.enabled_features],
           }
         : current
@@ -423,6 +425,20 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
                 used={usage.students}
                 value={form.maxStudents}
                 onChange={(value) => setField('maxStudents', value)}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="แจ้งเตือน LINE ต่อเดือน"
+                value={form.maxLineNotifications}
+                onChange={(event) =>
+                  setField(
+                    'maxLineNotifications',
+                    Math.max(0, Math.floor(Number(event.target.value)))
+                  )
+                }
+                helperText="0 = ไม่จำกัดจากระบบ (โควตาของ LINE OA ยังมีผล)"
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
               />
             </Box>
           </Card>

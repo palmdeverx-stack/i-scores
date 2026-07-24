@@ -22,6 +22,7 @@ export type SchoolSubscription = {
   max_school_admins: number;
   max_teachers: number;
   max_students: number;
+  max_line_notifications: number;
   enabled_features: SchoolFeatureKey[];
   notes: string | null;
   updated_at: string;
@@ -68,6 +69,7 @@ export type UpdateSchoolSubscriptionParams = {
   maxSchoolAdmins: number;
   maxTeachers: number;
   maxStudents: number;
+  maxLineNotifications: number;
   enabledFeatures: SchoolFeatureKey[];
   notes: string;
 };

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 
 import { today } from 'src/utils/format-time';
 
@@ -8,6 +8,10 @@ import {
   loadTeacherAssignment,
   canAccessTeacherAssignment,
 } from 'src/lib/teacher-assignment-access';
+import {
+  queueAttendanceNotifications,
+  processPendingLineNotifications,
+} from 'src/lib/line-notifications';
 
 // ----------------------------------------------------------------------
 
@@ -134,6 +138,28 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
+
+  const classroom = teacherAssignment!.classrooms as unknown as { name?: string };
+  const subject = teacherAssignment!.subjects as unknown as { name?: string; code?: string };
+  after(async () => {
+    const deliveryIds = await queueAttendanceNotifications({
+      schoolId: caller.schoolId!,
+      sourceType: 'class_attendance',
+      attendanceDate: sessionDate,
+      contextLabel: `รายวิชา ${subject?.code ? `${subject.code} · ` : ''}${subject?.name ?? ''}${
+        classroom?.name ? ` · ห้อง ${classroom.name}` : ''
+      }`,
+      records: (saved ?? []).map((savedRecord) => ({
+        sourceRecordId: savedRecord.id,
+        studentId: savedRecord.student_id,
+        status: savedRecord.status,
+        note: savedRecord.note,
+      })),
+    });
+    if (deliveryIds.length) {
+      await processPendingLineNotifications(caller.schoolId!);
+    }
+  });
 
   return NextResponse.json({ records: saved });
 }

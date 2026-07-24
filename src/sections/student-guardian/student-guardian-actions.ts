@@ -15,6 +15,9 @@ export type StudentGuardian = {
   address: string | null;
   notes: string | null;
   is_primary: boolean;
+  line_display_name: string | null;
+  line_linked_at: string | null;
+  line_notifications_enabled: boolean;
 };
 
 export type GuardianInput = {
@@ -83,4 +86,30 @@ export async function deleteStudentGuardian(
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถลบข้อมูลผู้ปกครองได้');
+}
+
+export type GuardianLineInvitation = {
+  code: string;
+  expiresAt: string;
+  message: string;
+  addFriendUrl: string | null;
+};
+
+export async function createGuardianLineInvitation(guardianId: string) {
+  const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
+    method: 'POST',
+    headers: authHeader(),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถสร้างรหัสเชื่อม LINE ได้');
+  return json as GuardianLineInvitation;
+}
+
+export async function unlinkGuardianLine(guardianId: string) {
+  const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
+    method: 'DELETE',
+    headers: authHeader(),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถยกเลิกการเชื่อม LINE ได้');
 }

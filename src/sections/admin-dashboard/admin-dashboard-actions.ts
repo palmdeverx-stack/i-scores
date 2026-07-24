@@ -53,6 +53,40 @@ export type AdminDashboardRecentActivity = {
   }>;
 };
 
+export type EnrolledStudentExportRow = {
+  id: string;
+  student_number: string | null;
+  created_at: string;
+  student: {
+    id: string;
+    username: string;
+    email: string | null;
+    student_code: string | null;
+    national_id: string | null;
+    name_prefix: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    first_name_en: string | null;
+    last_name_en: string | null;
+    nickname: string | null;
+    gender: 'male' | 'female' | 'other' | 'unspecified' | null;
+    birth_date: string | null;
+    nationality: string | null;
+    ethnicity: string | null;
+    religion: string | null;
+    student_status: string | null;
+    is_active: boolean;
+  };
+  classroom: {
+    id: string;
+    name: string;
+    name_en: string | null;
+    grade_level: string | null;
+    grade_level_en: string | null;
+    academic_year: { id: string; year: string } | null;
+  };
+};
+
 async function fetchJson<T>(url: string, errorMessage: string): Promise<T> {
   const response = await fetch(url, { headers: { Authorization: `Bearer ${getStoredToken()}` } });
   const json = await response.json();
@@ -73,4 +107,14 @@ export function getAdminDashboardRecentActivity() {
     '/api/admin/dashboard/recent-activity',
     'Failed to load recent activity'
   );
+}
+
+export async function getEnrolledStudentsForExport(): Promise<EnrolledStudentExportRow[]> {
+  const response = await fetch('/api/admin/dashboard/enrolled-students', {
+    headers: { Authorization: `Bearer ${getStoredToken()}` },
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดข้อมูลนักเรียนได้');
+  return json.enrollments;
 }

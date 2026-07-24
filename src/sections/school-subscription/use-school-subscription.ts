@@ -58,6 +58,7 @@ const ROUTE_FEATURES: Record<
   Array<[string, SchoolFeatureKey]>
 > = {
   school_admin: [
+    ['/admin/line-notifications', 'admin.line_notifications'],
     ['/admin/teacher-assignment', 'admin.teacher_assignments'],
     ['/admin/academic-year', 'admin.academic_years'],
     ['/admin/enrollment', 'admin.enrollments'],

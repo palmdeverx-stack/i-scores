@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { parseGuardianBody } from 'src/lib/student-guardian';
+import { parseGuardianBody, GUARDIAN_PUBLIC_FIELDS } from 'src/lib/student-guardian';
 
 // ----------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .eq('id', guardianId)
     .eq('student_id', id)
     .eq('school_id', caller.schoolId!)
-    .select('*')
+    .select(GUARDIAN_PUBLIC_FIELDS)
     .maybeSingle();
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ message: 'ไม่พบข้อมูลผู้ปกครอง' }, { status: 404 });

@@ -25,6 +25,7 @@ import { Iconify } from 'src/components/iconify';
 
 import { useAuthContext } from 'src/auth/hooks';
 
+import { EnrolledStudentsExportButtons } from '../components/enrolled-students-export-buttons';
 import {
   getAdminDashboardSummary,
   getAdminDashboardRecentActivity,
@@ -251,14 +252,24 @@ export function AdminDashboardView() {
             ข้อมูลสำคัญและรายการที่ต้องดูแลในวันนี้
           </Typography>
         </Box>
-        <Button
-          component={RouterLink}
-          href={paths.admin.school}
-          variant="outlined"
-          startIcon={<Iconify icon="solar:settings-bold" />}
+        <Box
+          sx={{
+            gap: 1,
+            display: 'flex',
+            alignItems: { xs: 'stretch', sm: 'flex-start' },
+            flexDirection: { xs: 'column', sm: 'row' },
+          }}
         >
-          ตั้งค่าโรงเรียน
-        </Button>
+          <EnrolledStudentsExportButtons />
+          <Button
+            component={RouterLink}
+            href={paths.admin.school}
+            variant="outlined"
+            startIcon={<Iconify icon="solar:settings-bold" />}
+          >
+            ตั้งค่าโรงเรียน
+          </Button>
+        </Box>
       </Box>
 
       <Card

@@ -15,6 +15,7 @@ export type PlanPayload = {
   max_school_admins: number;
   max_teachers: number;
   max_students: number;
+  max_line_notifications: number;
   enabled_features: string[];
   is_active: boolean;
   sort_order: number;
@@ -33,6 +34,7 @@ export function parsePlanPayload(body: unknown): PlanPayload | null {
   const maxSchoolAdmins = Number(value.maxSchoolAdmins);
   const maxTeachers = Number(value.maxTeachers);
   const maxStudents = Number(value.maxStudents);
+  const maxLineNotifications = Number(value.maxLineNotifications);
   const enabledFeatures = value.enabledFeatures;
   const isActive = value.isActive;
   const sortOrder = Number(value.sortOrder);
@@ -52,6 +54,8 @@ export function parsePlanPayload(body: unknown): PlanPayload | null {
     maxTeachers < 0 ||
     !Number.isInteger(maxStudents) ||
     maxStudents < 0 ||
+    !Number.isInteger(maxLineNotifications) ||
+    maxLineNotifications < 0 ||
     !Array.isArray(enabledFeatures) ||
     enabledFeatures.length === 0 ||
     enabledFeatures.some((key) => typeof key !== 'string' || !FEATURE_KEYS.has(key)) ||
@@ -71,6 +75,7 @@ export function parsePlanPayload(body: unknown): PlanPayload | null {
     max_school_admins: maxSchoolAdmins,
     max_teachers: maxTeachers,
     max_students: maxStudents,
+    max_line_notifications: maxLineNotifications,
     enabled_features: Array.from(new Set(enabledFeatures)),
     is_active: isActive,
     sort_order: sortOrder,

@@ -1,0 +1,132 @@
+import { NextResponse } from 'next/server';
+import { createHmac, createHash, timingSafeEqual } from 'node:crypto';
+
+import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { decryptLineCredential } from 'src/lib/line-credentials';
+
+// ----------------------------------------------------------------------
+
+type RouteParams = { params: Promise<{ schoolId: string }> };
+
+function validSignature(body: string, signature: string, secret: string) {
+  const expected = createHmac('sha256', secret).update(body).digest('base64');
+  const expectedBuffer = Buffer.from(expected);
+  const receivedBuffer = Buffer.from(signature);
+  return (
+    expectedBuffer.length === receivedBuffer.length &&
+    timingSafeEqual(expectedBuffer, receivedBuffer)
+  );
+}
+
+async function reply(accessToken: string, replyToken: string, text: string) {
+  await fetch('https://api.line.me/v2/bot/message/reply', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ replyToken, messages: [{ type: 'text', text }] }),
+  });
+}
+
+export async function POST(request: Request, { params }: RouteParams) {
+  const { schoolId } = await params;
+  const rawBody = await request.text();
+  const signature = request.headers.get('x-line-signature') ?? '';
+  const { data: integration } = await supabaseAdmin
+    .from('school_line_integrations')
+    .select('is_enabled, channel_secret_encrypted, channel_access_token_encrypted')
+    .eq('school_id', schoolId)
+    .maybeSingle();
+
+  if (
+    !integration?.is_enabled ||
+    !integration.channel_secret_encrypted ||
+    !integration.channel_access_token_encrypted
+  ) {
+    return NextResponse.json({ message: 'LINE integration is unavailable' }, { status: 404 });
+  }
+
+  let channelSecret: string;
+  let accessToken: string;
+  try {
+    channelSecret = decryptLineCredential(integration.channel_secret_encrypted);
+    accessToken = decryptLineCredential(integration.channel_access_token_encrypted);
+  } catch {
+    return NextResponse.json({ message: 'Invalid LINE credentials' }, { status: 500 });
+  }
+  if (!signature || !validSignature(rawBody, signature, channelSecret)) {
+    return NextResponse.json({ message: 'Invalid signature' }, { status: 401 });
+  }
+
+  const payload = JSON.parse(rawBody) as {
+    events?: Array<{
+      type: string;
+      replyToken?: string;
+      source?: { type?: string; userId?: string };
+      message?: { type?: string; text?: string };
+    }>;
+  };
+
+  for (const event of payload.events ?? []) {
+    if (
+      event.type !== 'message' ||
+      event.message?.type !== 'text' ||
+      !event.message.text ||
+      !event.source?.userId ||
+      !event.replyToken
+    ) {
+      continue;
+    }
+    const match = /^(?:LINK|เชื่อม)\s+([A-Z0-9]{8})$/i.exec(event.message.text.trim());
+    if (!match) continue;
+
+    const tokenHash = createHash('sha256').update(match[1].toUpperCase()).digest('hex');
+    const { data: link } = await supabaseAdmin
+      .from('guardian_line_link_tokens')
+      .select('id, guardian_id, expires_at, used_at')
+      .eq('school_id', schoolId)
+      .eq('token_hash', tokenHash)
+      .maybeSingle();
+    if (!link || link.used_at || link.expires_at < new Date().toISOString()) {
+      await reply(accessToken, event.replyToken, 'รหัสเชื่อมบัญชีไม่ถูกต้องหรือหมดอายุแล้ว');
+      continue;
+    }
+
+    let displayName: string | null = null;
+    const profileResponse = await fetch(
+      `https://api.line.me/v2/bot/profile/${event.source.userId}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (profileResponse.ok) {
+      const profile = (await profileResponse.json()) as { displayName?: string };
+      displayName = profile.displayName ?? null;
+    }
+
+    const { error } = await supabaseAdmin
+      .from('student_guardians')
+      .update({
+        line_user_id: event.source.userId,
+        line_display_name: displayName,
+        line_linked_at: new Date().toISOString(),
+        line_notifications_enabled: true,
+      })
+      .eq('id', link.guardian_id)
+      .eq('school_id', schoolId);
+    if (error) {
+      await reply(accessToken, event.replyToken, 'เชื่อมบัญชีไม่สำเร็จ กรุณาติดต่อโรงเรียน');
+      continue;
+    }
+    await supabaseAdmin
+      .from('guardian_line_link_tokens')
+      .update({ used_at: new Date().toISOString() })
+      .eq('id', link.id);
+    await reply(
+      accessToken,
+      event.replyToken,
+      'เชื่อมบัญชีกับโรงเรียนเรียบร้อยแล้ว คุณจะได้รับเฉพาะการแจ้งเตือน ขาด ลา สาย และไม่เข้าเรียนรายคาบ'
+    );
+  }
+
+  return NextResponse.json({ success: true });
+}

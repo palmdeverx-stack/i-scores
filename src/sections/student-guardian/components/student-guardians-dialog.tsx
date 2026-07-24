@@ -1,6 +1,10 @@
 'use client';
 
-import type { GuardianInput, StudentGuardian } from '../student-guardian-actions';
+import type {
+  GuardianInput,
+  StudentGuardian,
+  GuardianLineInvitation,
+} from '../student-guardian-actions';
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -23,10 +27,12 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import { Iconify } from 'src/components/iconify';
 
 import {
+  unlinkGuardianLine,
   listStudentGuardians,
   createStudentGuardian,
   updateStudentGuardian,
   deleteStudentGuardian,
+  createGuardianLineInvitation,
 } from '../student-guardian-actions';
 
 // ----------------------------------------------------------------------
@@ -63,6 +69,8 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
   const [form, setForm] = useState<GuardianInput>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<StudentGuardian | null>(null);
+  const [lineTarget, setLineTarget] = useState<StudentGuardian | null>(null);
+  const [lineInvitation, setLineInvitation] = useState<GuardianLineInvitation | null>(null);
   const assignmentScope = teacherAssignmentId ?? null;
   const queryKey = ['student-guardians', assignmentScope ?? 'admin', student?.id];
 
@@ -94,6 +102,19 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
       setDeleteTarget(null);
+    },
+  });
+
+  const lineInviteMutation = useMutation({
+    mutationFn: (guardianId: string) => createGuardianLineInvitation(guardianId),
+    onSuccess: (invitation) => setLineInvitation(invitation),
+  });
+  const unlinkLineMutation = useMutation({
+    mutationFn: (guardianId: string) => unlinkGuardianLine(guardianId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey });
+      setLineTarget(null);
+      setLineInvitation(null);
     },
   });
 
@@ -197,6 +218,37 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                         หมายเหตุ {guardian.notes}
                       </Typography>
                     )}
+                    <Box sx={{ gap: 1, mt: 1.25, display: 'flex', alignItems: 'center' }}>
+                      <Chip
+                        size="small"
+                        color={guardian.line_linked_at ? 'success' : 'default'}
+                        icon={
+                          <Iconify
+                            icon={
+                              guardian.line_linked_at
+                                ? 'solar:check-circle-bold'
+                                : 'solar:chat-round-dots-bold'
+                            }
+                          />
+                        }
+                        label={
+                          guardian.line_linked_at
+                            ? `LINE: ${guardian.line_display_name ?? 'เชื่อมแล้ว'}`
+                            : 'ยังไม่เชื่อม LINE'
+                        }
+                      />
+                      <Button
+                        size="small"
+                        color={guardian.line_linked_at ? 'error' : 'success'}
+                        onClick={() => {
+                          setLineTarget(guardian);
+                          setLineInvitation(null);
+                          if (!guardian.line_linked_at) lineInviteMutation.mutate(guardian.id);
+                        }}
+                      >
+                        {guardian.line_linked_at ? 'ยกเลิกการเชื่อม' : 'สร้างรหัสเชื่อม'}
+                      </Button>
+                    </Box>
                   </Box>
                   <IconButton aria-label="แก้ไขข้อมูลผู้ปกครอง" onClick={() => openEdit(guardian)}>
                     <Iconify icon="solar:pen-bold" />
@@ -327,6 +379,93 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
           >
             ลบข้อมูล
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!lineTarget}
+        onClose={() => {
+          setLineTarget(null);
+          setLineInvitation(null);
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          {lineTarget?.line_linked_at ? 'ยกเลิกการเชื่อม LINE?' : 'เชื่อม LINE ผู้ปกครอง'}
+        </DialogTitle>
+        <DialogContent>
+          {lineInviteMutation.isPending && (
+            <Typography sx={{ py: 3, textAlign: 'center' }}>กำลังสร้างรหัส...</Typography>
+          )}
+          {(lineInviteMutation.error || unlinkLineMutation.error) && (
+            <Alert severity="error">
+              {lineInviteMutation.error?.message ?? unlinkLineMutation.error?.message}
+            </Alert>
+          )}
+          {lineTarget?.line_linked_at ? (
+            <Typography>
+              เมื่อตัดการเชื่อม {lineTarget.full_name} จะไม่ได้รับการแจ้งเตือนผ่าน LINE
+            </Typography>
+          ) : (
+            lineInvitation && (
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  ให้ผู้ปกครองเพิ่มเพื่อน LINE OA ของโรงเรียน แล้วส่งข้อความนี้ภายใน 24 ชั่วโมง
+                </Typography>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    my: 2,
+                    p: 2,
+                    borderRadius: 1.5,
+                    letterSpacing: 2,
+                    bgcolor: 'background.neutral',
+                  }}
+                >
+                  {lineInvitation.message}
+                </Typography>
+                <Box sx={{ gap: 1, display: 'flex', justifyContent: 'center' }}>
+                  {lineInvitation.addFriendUrl && (
+                    <Button
+                      color="success"
+                      variant="outlined"
+                      onClick={() => window.open(lineInvitation.addFriendUrl!, '_blank')}
+                    >
+                      เพิ่มเพื่อน LINE OA
+                    </Button>
+                  )}
+                  <Button
+                    variant="contained"
+                    onClick={() => navigator.clipboard.writeText(lineInvitation.message)}
+                  >
+                    คัดลอกข้อความ
+                  </Button>
+                </Box>
+              </Box>
+            )
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="inherit"
+            onClick={() => {
+              setLineTarget(null);
+              setLineInvitation(null);
+            }}
+          >
+            ปิด
+          </Button>
+          {lineTarget?.line_linked_at && (
+            <Button
+              color="error"
+              variant="contained"
+              loading={unlinkLineMutation.isPending}
+              onClick={() => unlinkLineMutation.mutate(lineTarget.id)}
+            >
+              ยืนยันยกเลิก
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </>

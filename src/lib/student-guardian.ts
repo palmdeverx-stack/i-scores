@@ -6,6 +6,9 @@ import { loadTeacherAssignment, canAccessTeacherAssignment } from './teacher-ass
 
 // ----------------------------------------------------------------------
 
+export const GUARDIAN_PUBLIC_FIELDS =
+  'id, student_id, full_name, relationship, phone, email, occupation, address, notes, is_primary, line_display_name, line_linked_at, line_notifications_enabled, created_at, updated_at';
+
 export async function authorizeGuardianAccess(
   request: Request,
   teacherAssignmentId: string,

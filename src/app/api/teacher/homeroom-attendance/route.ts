@@ -1,7 +1,11 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import {
+  queueAttendanceNotifications,
+  processPendingLineNotifications,
+} from 'src/lib/line-notifications';
 
 const PERIODS = ['morning', 'evening'] as const;
 const STATUSES = ['present', 'absent', 'leave', 'late'] as const;
@@ -209,6 +213,27 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
+
+  after(async () => {
+    const deliveryIds = await queueAttendanceNotifications({
+      schoolId: caller.schoolId!,
+      sourceType: 'homeroom_attendance',
+      attendanceDate,
+      contextLabel: period === 'morning' ? 'เข้าแถวตอนเช้า' : 'เข้าแถวตอนเย็น',
+      records: (data ?? []).map((savedRecord) => {
+        const input = validRecords.find((record) => record.studentId === savedRecord.student_id);
+        return {
+          sourceRecordId: savedRecord.id,
+          studentId: savedRecord.student_id,
+          status: savedRecord.status,
+          note: input?.note || null,
+        };
+      }),
+    });
+    if (deliveryIds.length) {
+      await processPendingLineNotifications(caller.schoolId!);
+    }
+  });
 
   return NextResponse.json({ records: data });
 }

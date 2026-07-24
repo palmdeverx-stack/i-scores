@@ -48,6 +48,7 @@ function initialForm(plan: SubscriptionPlan | null): SubscriptionPlanInput {
       maxSchoolAdmins: 1,
       maxTeachers: 20,
       maxStudents: 500,
+      maxLineNotifications: 300,
       enabledFeatures: [...STARTER_FEATURE_KEYS],
       isActive: true,
       sortOrder: 0,
@@ -62,6 +63,7 @@ function initialForm(plan: SubscriptionPlan | null): SubscriptionPlanInput {
     maxSchoolAdmins: plan.max_school_admins,
     maxTeachers: plan.max_teachers,
     maxStudents: plan.max_students,
+    maxLineNotifications: plan.max_line_notifications,
     enabledFeatures: [...plan.enabled_features],
     isActive: plan.is_active,
     sortOrder: plan.sort_order,
@@ -81,7 +83,7 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
     form.name.trim() &&
     form.enabledFeatures.length > 0 &&
     form.price >= 0 &&
-    [form.maxSchoolAdmins, form.maxTeachers, form.maxStudents].every(
+    [form.maxSchoolAdmins, form.maxTeachers, form.maxStudents, form.maxLineNotifications].every(
       (value) => Number.isInteger(value) && value >= 0
     );
 
@@ -162,6 +164,18 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
             sx={{ gridColumn: { sm: '1 / -1' } }}
           />
         </Box>
+
+        <TextField
+          type="number"
+          label="โควตาแจ้งเตือน LINE ต่อเดือน"
+          value={form.maxLineNotifications}
+          onChange={(event) =>
+            setField('maxLineNotifications', Math.max(0, Math.floor(Number(event.target.value))))
+          }
+          helperText="ใส่ 0 เมื่อต้องการไม่จำกัด (โควตา LINE OA ยังมีผล)"
+          slotProps={{ htmlInput: { min: 0 } }}
+          sx={{ mt: 2, maxWidth: 360 }}
+        />
 
         <Divider sx={{ my: 3 }} />
         <Typography variant="subtitle1">โควตาผู้ใช้งาน</Typography>

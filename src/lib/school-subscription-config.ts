@@ -48,6 +48,12 @@ export const SCHOOL_FEATURES = [
     description: 'เพิ่ม ย้าย และเลื่อนชั้นนักเรียน',
   },
   {
+    key: 'admin.line_notifications',
+    group: 'ผู้ดูแลโรงเรียน',
+    label: 'แจ้งเตือนผู้ปกครองผ่าน LINE',
+    description: 'แจ้งขาด ลา สาย และไม่เข้าเรียนรายคาบผ่าน LINE Official Account',
+  },
+  {
     key: 'teacher.assignments',
     group: 'ครู',
     label: 'วิชาที่สอน งาน และคะแนน',

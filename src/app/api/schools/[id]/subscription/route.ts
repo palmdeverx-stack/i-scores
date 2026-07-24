@@ -43,7 +43,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       supabaseAdmin
         .from('school_subscriptions')
         .select(
-          'id, school_id, plan_name, status, billing_cycle, price, currency, starts_at, ends_at, max_school_admins, max_teachers, max_students, enabled_features, notes, updated_at'
+          'id, school_id, plan_name, status, billing_cycle, price, currency, starts_at, ends_at, max_school_admins, max_teachers, max_students, max_line_notifications, enabled_features, notes, updated_at'
         )
         .eq('school_id', id)
         .maybeSingle(),
@@ -109,6 +109,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const maxSchoolAdmins = Number(body?.maxSchoolAdmins);
   const maxTeachers = Number(body?.maxTeachers);
   const maxStudents = Number(body?.maxStudents);
+  const maxLineNotifications = Number(body?.maxLineNotifications);
   const enabledFeatures = body?.enabledFeatures;
   const notes = typeof body?.notes === 'string' ? body.notes.trim().slice(0, 2000) : '';
 
@@ -128,6 +129,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     maxTeachers < 0 ||
     !Number.isInteger(maxStudents) ||
     maxStudents < 0 ||
+    !Number.isInteger(maxLineNotifications) ||
+    maxLineNotifications < 0 ||
     !Array.isArray(enabledFeatures) ||
     enabledFeatures.some((feature) => typeof feature !== 'string' || !FEATURE_KEYS.has(feature))
   ) {
@@ -149,13 +152,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         max_school_admins: maxSchoolAdmins,
         max_teachers: maxTeachers,
         max_students: maxStudents,
+        max_line_notifications: maxLineNotifications,
         enabled_features: Array.from(new Set(enabledFeatures)),
         notes: notes || null,
       },
       { onConflict: 'school_id' }
     )
     .select(
-      'id, school_id, plan_name, status, billing_cycle, price, currency, starts_at, ends_at, max_school_admins, max_teachers, max_students, enabled_features, notes, updated_at'
+      'id, school_id, plan_name, status, billing_cycle, price, currency, starts_at, ends_at, max_school_admins, max_teachers, max_students, max_line_notifications, enabled_features, notes, updated_at'
     )
     .single();
 

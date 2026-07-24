@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { parseGuardianBody } from 'src/lib/student-guardian';
+import { parseGuardianBody, GUARDIAN_PUBLIC_FIELDS } from 'src/lib/student-guardian';
 
 // ----------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   const { data, error } = await supabaseAdmin
     .from('student_guardians')
-    .select('*')
+    .select(GUARDIAN_PUBLIC_FIELDS)
     .eq('student_id', id)
     .eq('school_id', caller.schoolId!)
     .order('is_primary', { ascending: false })
@@ -53,7 +53,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { data, error } = await supabaseAdmin
     .from('student_guardians')
     .insert({ ...parsed.data, student_id: id, school_id: caller.schoolId! })
-    .select('*')
+    .select(GUARDIAN_PUBLIC_FIELDS)
     .single();
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
   return NextResponse.json({ guardian: data }, { status: 201 });

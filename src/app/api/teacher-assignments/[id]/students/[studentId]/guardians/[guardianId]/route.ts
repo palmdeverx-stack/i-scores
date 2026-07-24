@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { parseGuardianBody, authorizeGuardianAccess } from 'src/lib/student-guardian';
+import {
+  parseGuardianBody,
+  GUARDIAN_PUBLIC_FIELDS,
+  authorizeGuardianAccess,
+} from 'src/lib/student-guardian';
 
 // ----------------------------------------------------------------------
 
@@ -31,7 +35,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .eq('id', guardianId)
     .eq('student_id', studentId)
     .eq('school_id', access.schoolId)
-    .select('*')
+    .select(GUARDIAN_PUBLIC_FIELDS)
     .maybeSingle();
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });

@@ -19,6 +19,7 @@ export type SubscriptionPlan = {
   max_school_admins: number;
   max_teachers: number;
   max_students: number;
+  max_line_notifications: number;
   enabled_features: SchoolFeatureKey[];
   is_active: boolean;
   sort_order: number;
@@ -35,6 +36,7 @@ export type SubscriptionPlanInput = {
   maxSchoolAdmins: number;
   maxTeachers: number;
   maxStudents: number;
+  maxLineNotifications: number;
   enabledFeatures: SchoolFeatureKey[];
   isActive: boolean;
   sortOrder: number;
