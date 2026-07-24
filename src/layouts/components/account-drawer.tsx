@@ -24,6 +24,7 @@ import { Label } from 'src/components/label';
 import { Scrollbar } from 'src/components/scrollbar';
 import {
   RiTeamLine,
+  RiGuideLine,
   RiCloseLine,
   RiHome5Line,
   RiUser3Line,
@@ -117,6 +118,11 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
             icon: <RiGraduationCapLine />,
           },
           {
+            label: 'วิธีใช้งาน',
+            href: paths.admin.guide,
+            icon: <RiGuideLine />,
+          },
+          {
             label: 'เปลี่ยนรหัสผ่าน',
             href: paths.auth.jwt.changePassword,
             icon: <RiShieldKeyholeLine />,
@@ -133,6 +139,11 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
       label: 'โปรไฟล์ของฉัน',
       href: paths.teacher.profile,
       icon: <RiUser3Line />,
+    },
+    {
+      label: 'วิธีใช้งาน',
+      href: paths.teacher.guide,
+      icon: <RiGuideLine />,
     },
     {
       label: 'เปลี่ยนรหัสผ่าน',
@@ -283,7 +294,13 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
             >
               {isAdmin ? t('เมนูผู้ดูแล') : t('เมนูบัญชี')}
             </Typography>
-            <MenuList disablePadding sx={{ gap: 0.5, display: 'grid' }}>
+            <MenuList
+              disablePadding
+              sx={{
+                gap: 0.5,
+                display: 'grid',
+              }}
+            >
               {menuData.map((option) => {
                 const isRootPath = ROOT_PATHS.includes(option.href);
                 const selected =
@@ -315,7 +332,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
                         '& svg': { width: 23, height: 23, flexShrink: 0 },
                         '&:hover': {
                           color: 'text.primary',
-                          bgcolor: 'action.hover',
+                          bgcolor: 'none',
                         },
                       }}
                     >

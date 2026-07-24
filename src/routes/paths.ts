@@ -106,6 +106,7 @@ export const paths = {
   teacher: {
     root: ROOTS.TEACHER,
     profile: `${ROOTS.TEACHER}/profile`,
+    guide: `${ROOTS.TEACHER}/guide`,
     announcements: `${ROOTS.TEACHER}/announcements`,
     assignments: `${ROOTS.TEACHER}/assignments`,
     students: `${ROOTS.TEACHER}/students`,
@@ -142,6 +143,7 @@ export const paths = {
   admin: {
     root: ROOTS.ADMIN,
     school: `${ROOTS.ADMIN}/school`,
+    guide: `${ROOTS.ADMIN}/guide`,
     announcements: `${ROOTS.ADMIN}/announcements`,
     lineNotifications: `${ROOTS.ADMIN}/line-notifications`,
     user: {
