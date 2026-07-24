@@ -168,14 +168,22 @@ export function JwtSignInView() {
         }),
       })}
     >
-      <Logo />
+      <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', mb: 2 }}>
+        <Logo />
 
-      <Typography
-        variant="overline"
-        sx={{ color: 'primary.main', fontWeight: 800, letterSpacing: 1.2 }}
-      >
-        eKru
-      </Typography>
+        <Typography
+          variant="h6"
+          sx={{
+            color: 'primary.main',
+            textTransform: 'uppercase',
+            fontWeight: 800,
+            letterSpacing: 1.2,
+            ml: 1,
+          }}
+        >
+          e-Kru
+        </Typography>
+      </Box>
 
       <FormHead
         title="ยินดีต้อนรับกลับมา"
