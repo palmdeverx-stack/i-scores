@@ -93,6 +93,7 @@ export type GuardianLineInvitation = {
   expiresAt: string;
   message: string;
   addFriendUrl: string | null;
+  lineChatUrl: string | null;
 };
 
 export async function createGuardianLineInvitation(guardianId: string) {

@@ -6,7 +6,7 @@ import type {
   GuardianLineInvitation,
 } from '../student-guardian-actions';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
@@ -23,6 +23,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -71,6 +72,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
   const [deleteTarget, setDeleteTarget] = useState<StudentGuardian | null>(null);
   const [lineTarget, setLineTarget] = useState<StudentGuardian | null>(null);
   const [lineInvitation, setLineInvitation] = useState<GuardianLineInvitation | null>(null);
+  const [lineQrImage, setLineQrImage] = useState('');
   const assignmentScope = teacherAssignmentId ?? null;
   const queryKey = ['student-guardians', assignmentScope ?? 'admin', student?.id];
 
@@ -107,7 +109,10 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
 
   const lineInviteMutation = useMutation({
     mutationFn: (guardianId: string) => createGuardianLineInvitation(guardianId),
-    onSuccess: (invitation) => setLineInvitation(invitation),
+    onSuccess: (invitation) => {
+      setLineQrImage('');
+      setLineInvitation(invitation);
+    },
   });
   const unlinkLineMutation = useMutation({
     mutationFn: (guardianId: string) => unlinkGuardianLine(guardianId),
@@ -117,6 +122,30 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
       setLineInvitation(null);
     },
   });
+
+  useEffect(() => {
+    const payload = lineInvitation?.lineChatUrl;
+    if (!payload) return undefined;
+    let active = true;
+    void import('qrcode')
+      .then(({ default: QRCode }) =>
+        QRCode.toDataURL(payload, {
+          width: 520,
+          margin: 2,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#111827', light: '#FFFFFF' },
+        })
+      )
+      .then((image) => {
+        if (active) setLineQrImage(image);
+      })
+      .catch(() => {
+        if (active) setLineQrImage('');
+      });
+    return () => {
+      active = false;
+    };
+  }, [lineInvitation?.lineChatUrl]);
 
   const studentName = student
     ? `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() || student.username
@@ -243,6 +272,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                         onClick={() => {
                           setLineTarget(guardian);
                           setLineInvitation(null);
+                          setLineQrImage('');
                           if (!guardian.line_linked_at) lineInviteMutation.mutate(guardian.id);
                         }}
                       >
@@ -387,6 +417,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
         onClose={() => {
           setLineTarget(null);
           setLineInvitation(null);
+          setLineQrImage('');
         }}
         maxWidth="xs"
         fullWidth
@@ -411,13 +442,45 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
             lineInvitation && (
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  ให้ผู้ปกครองเพิ่มเพื่อน LINE OA ของโรงเรียน แล้วส่งข้อความนี้ภายใน 24 ชั่วโมง
+                  ให้ผู้ปกครองสแกน QR เปิดแชต LINE OA แล้วกดส่งข้อความภายใน 24 ชั่วโมง
                 </Typography>
+                {lineInvitation.lineChatUrl ? (
+                  <Box
+                    sx={{
+                      my: 2,
+                      mx: 'auto',
+                      p: 1,
+                      width: 240,
+                      height: 240,
+                      display: 'grid',
+                      borderRadius: 2,
+                      placeItems: 'center',
+                      bgcolor: 'common.white',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                    }}
+                  >
+                    {lineQrImage ? (
+                      <Box
+                        component="img"
+                        src={lineQrImage}
+                        alt={`QR เชื่อม LINE ของ ${lineTarget?.full_name ?? 'ผู้ปกครอง'}`}
+                        sx={{ width: 1, height: 1 }}
+                      />
+                    ) : (
+                      <CircularProgress color="success" />
+                    )}
+                  </Box>
+                ) : (
+                  <Alert severity="warning" sx={{ mt: 2, textAlign: 'left' }}>
+                    กรุณากรอก LINE OA Basic ID ในหน้าแจ้งเตือน LINE เพื่อสร้าง QR
+                  </Alert>
+                )}
                 <Typography
-                  variant="h4"
+                  variant="h6"
                   sx={{
-                    my: 2,
-                    p: 2,
+                    my: 1.5,
+                    p: 1.5,
                     borderRadius: 1.5,
                     letterSpacing: 2,
                     bgcolor: 'background.neutral',
@@ -426,6 +489,21 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                   {lineInvitation.message}
                 </Typography>
                 <Box sx={{ gap: 1, display: 'flex', justifyContent: 'center' }}>
+                  {lineQrImage && (
+                    <Button
+                      color="success"
+                      variant="contained"
+                      startIcon={<Iconify icon="solar:download-bold" />}
+                      onClick={() => {
+                        const anchor = document.createElement('a');
+                        anchor.href = lineQrImage;
+                        anchor.download = `line-link-${lineTarget?.full_name ?? 'guardian'}.png`;
+                        anchor.click();
+                      }}
+                    >
+                      ดาวน์โหลด QR
+                    </Button>
+                  )}
                   {lineInvitation.addFriendUrl && (
                     <Button
                       color="success"
@@ -452,6 +530,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
             onClick={() => {
               setLineTarget(null);
               setLineInvitation(null);
+              setLineQrImage('');
             }}
           >
             ปิด

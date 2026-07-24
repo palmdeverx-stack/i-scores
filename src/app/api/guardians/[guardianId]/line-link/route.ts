@@ -82,12 +82,18 @@ export async function POST(request: Request, { params }: RouteParams) {
   );
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
 
+  const message = `LINK ${code}`;
   return NextResponse.json({
     code,
     expiresAt,
-    message: `LINK ${code}`,
+    message,
     addFriendUrl: integration.oa_basic_id
       ? `https://line.me/R/ti/p/${encodeURIComponent(integration.oa_basic_id)}`
+      : null,
+    lineChatUrl: integration.oa_basic_id
+      ? `https://line.me/R/oaMessage/${encodeURIComponent(
+          integration.oa_basic_id
+        )}/?${encodeURIComponent(message)}`
       : null,
   });
 }
