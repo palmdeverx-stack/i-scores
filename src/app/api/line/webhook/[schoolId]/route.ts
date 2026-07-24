@@ -39,19 +39,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     .eq('school_id', schoolId)
     .maybeSingle();
 
-  if (
-    !integration?.is_enabled ||
-    !integration.channel_secret_encrypted ||
-    !integration.channel_access_token_encrypted
-  ) {
+  if (!integration?.channel_secret_encrypted) {
     return NextResponse.json({ message: 'LINE integration is unavailable' }, { status: 404 });
   }
 
   let channelSecret: string;
-  let accessToken: string;
   try {
     channelSecret = decryptLineCredential(integration.channel_secret_encrypted);
-    accessToken = decryptLineCredential(integration.channel_access_token_encrypted);
   } catch {
     return NextResponse.json({ message: 'Invalid LINE credentials' }, { status: 500 });
   }
@@ -59,7 +53,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'Invalid signature' }, { status: 401 });
   }
 
-  const payload = JSON.parse(rawBody) as {
+  let payload: {
     events?: Array<{
       type: string;
       replyToken?: string;
@@ -67,8 +61,29 @@ export async function POST(request: Request, { params }: RouteParams) {
       message?: { type?: string; text?: string };
     }>;
   };
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ message: 'Invalid JSON payload' }, { status: 400 });
+  }
 
-  for (const event of payload.events ?? []) {
+  // LINE verifies a webhook with a signed request containing no events.
+  // It must receive 200 even before the school enables real notifications.
+  if (!payload.events?.length) {
+    return NextResponse.json({ success: true });
+  }
+  if (!integration.is_enabled || !integration.channel_access_token_encrypted) {
+    return NextResponse.json({ success: true, ignored: true });
+  }
+
+  let accessToken: string;
+  try {
+    accessToken = decryptLineCredential(integration.channel_access_token_encrypted);
+  } catch {
+    return NextResponse.json({ message: 'Invalid LINE access token' }, { status: 500 });
+  }
+
+  for (const event of payload.events) {
     if (
       event.type !== 'message' ||
       event.message?.type !== 'text' ||

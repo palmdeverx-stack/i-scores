@@ -19,6 +19,9 @@ const isStaticExport = false;
 
 const nextConfig: NextConfig = {
   trailingSlash: true,
+  // LINE does not follow the 308 redirect returned for POST webhooks.
+  // Accept both webhook URL forms instead of redirecting before the route handler.
+  skipTrailingSlashRedirect: true,
   output: isStaticExport ? 'export' : undefined,
   env: {
     BUILD_STATIC_EXPORT: JSON.stringify(isStaticExport),
