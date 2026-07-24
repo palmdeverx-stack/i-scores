@@ -106,6 +106,37 @@ export async function createGuardianLineInvitation(guardianId: string) {
   return json as GuardianLineInvitation;
 }
 
+export type GuardianLineStatus = {
+  linked: boolean;
+  displayName: string | null;
+  linkedAt: string | null;
+  notificationsEnabled: boolean;
+  invitation: {
+    expiresAt: string;
+    used: boolean;
+    expired: boolean;
+  } | null;
+};
+
+export async function getGuardianLineStatus(guardianId: string) {
+  const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
+    headers: authHeader(),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถตรวจสอบสถานะ LINE ได้');
+  return json as GuardianLineStatus;
+}
+
+export async function sendGuardianLineHello(guardianId: string) {
+  const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ action: 'hello' }),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถส่งข้อความสวัสดีได้');
+}
+
 export async function unlinkGuardianLine(guardianId: string) {
   const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
     method: 'DELETE',

@@ -31,6 +31,7 @@ import {
 const EMPTY_FORM: LineNotificationSettingsInput = {
   channelId: '',
   oaBasicId: '',
+  webhookUrl: '',
   channelSecret: '',
   accessToken: '',
   isEnabled: false,
@@ -59,6 +60,7 @@ export function LineNotificationSettingsView() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(EMPTY_FORM);
   const [copied, setCopied] = useState(false);
+  const [editingCredentials, setEditingCredentials] = useState(false);
 
   const query = useQuery({
     queryKey: ['line-notification-settings'],
@@ -69,6 +71,7 @@ export function LineNotificationSettingsView() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['line-notification-settings'] });
       setForm((current) => ({ ...current, channelSecret: '', accessToken: '' }));
+      setEditingCredentials(false);
     },
   });
   const testMutation = useMutation({ mutationFn: testLineConnection });
@@ -78,6 +81,7 @@ export function LineNotificationSettingsView() {
     setForm({
       channelId: query.data.integration.channelId,
       oaBasicId: query.data.integration.oaBasicId,
+      webhookUrl: query.data.webhookUrl,
       channelSecret: '',
       accessToken: '',
       isEnabled: query.data.integration.isEnabled,
@@ -109,6 +113,9 @@ export function LineNotificationSettingsView() {
   }
 
   const { integration, usage, recentDeliveries, webhookUrl } = query.data;
+  const connectionLocked = Boolean(integration.channelId) && !editingCredentials;
+  const secretLocked = integration.hasChannelSecret && !editingCredentials;
+  const tokenLocked = integration.hasAccessToken && !editingCredentials;
   const percent =
     usage.limit === 0 ? 0 : Math.min(100, Math.round((usage.sent / usage.limit) * 100));
 
@@ -169,10 +176,49 @@ export function LineNotificationSettingsView() {
       >
         <Box sx={{ gap: 3, display: 'grid' }}>
           <Card variant="outlined" sx={{ p: { xs: 2.5, md: 3 } }}>
-            <Typography variant="h6">เชื่อม LINE Official Account</Typography>
+            <Box
+              sx={{
+                gap: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Typography variant="h6">เชื่อม LINE Official Account</Typography>
+              {(integration.channelId ||
+                integration.hasChannelSecret ||
+                integration.hasAccessToken) &&
+                (editingCredentials ? (
+                  <Button
+                    size="small"
+                    color="inherit"
+                    onClick={() => {
+                      setEditingCredentials(false);
+                      setForm((current) => ({
+                        ...current,
+                        channelId: integration.channelId,
+                        oaBasicId: integration.oaBasicId,
+                        webhookUrl,
+                        channelSecret: '',
+                        accessToken: '',
+                      }));
+                    }}
+                  >
+                    ยกเลิกแก้ไข
+                  </Button>
+                ) : (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Iconify icon="solar:pen-bold" />}
+                    onClick={() => setEditingCredentials(true)}
+                  >
+                    แก้ไขข้อมูลเชื่อมต่อ
+                  </Button>
+                ))}
+            </Box>
             <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-              Credentials จะถูกเข้ารหัสก่อนจัดเก็บ ช่อง Secret และ Token
-              เว้นว่างได้เมื่อไม่ต้องการเปลี่ยน
+              กดแก้ไขเมื่อต้องการเปลี่ยน Channel, Credentials หรือ Webhook URL
             </Typography>
             <Box
               sx={{
@@ -187,35 +233,77 @@ export function LineNotificationSettingsView() {
                 label="Channel ID"
                 value={form.channelId}
                 onChange={(event) => setField('channelId', event.target.value)}
+                slotProps={{ input: { readOnly: connectionLocked } }}
               />
               <TextField
                 label="LINE OA Basic ID"
                 placeholder="@school"
                 value={form.oaBasicId}
                 onChange={(event) => setField('oaBasicId', event.target.value)}
+                slotProps={{ input: { readOnly: connectionLocked } }}
               />
               <TextField
-                type="password"
+                type={secretLocked ? 'text' : 'password'}
                 label="Channel secret"
-                placeholder={integration.hasChannelSecret ? 'บันทึกไว้แล้ว' : ''}
-                value={form.channelSecret}
+                placeholder="กรอก Channel secret"
+                value={secretLocked ? '************' : form.channelSecret}
                 onChange={(event) => setField('channelSecret', event.target.value)}
+                helperText={
+                  secretLocked
+                    ? 'บันทึกไว้แล้ว · กดแก้ไขเมื่อต้องการเปลี่ยน'
+                    : integration.hasChannelSecret
+                      ? 'กรอกค่าใหม่ หรือเว้นว่างเพื่อใช้ค่าเดิม'
+                      : 'ยังไม่ได้บันทึก'
+                }
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  input: { readOnly: secretLocked },
+                  htmlInput: { autoComplete: 'new-password' },
+                }}
               />
               <TextField
-                type="password"
+                type={tokenLocked ? 'text' : 'password'}
                 label="Channel access token"
-                placeholder={integration.hasAccessToken ? 'บันทึกไว้แล้ว' : ''}
-                value={form.accessToken}
+                placeholder="กรอก Access token"
+                value={tokenLocked ? '************' : form.accessToken}
                 onChange={(event) => setField('accessToken', event.target.value)}
+                helperText={
+                  tokenLocked
+                    ? 'บันทึกไว้แล้ว · กดแก้ไขเมื่อต้องการเปลี่ยน'
+                    : integration.hasAccessToken
+                      ? 'กรอกค่าใหม่ หรือเว้นว่างเพื่อใช้ค่าเดิม'
+                      : 'ยังไม่ได้บันทึก'
+                }
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  input: { readOnly: tokenLocked },
+                  htmlInput: { autoComplete: 'new-password' },
+                }}
               />
               <TextField
                 fullWidth
                 label="Webhook URL"
-                value={webhookUrl}
-                slotProps={{ input: { readOnly: true } }}
+                value={form.webhookUrl}
+                onChange={(event) => setField('webhookUrl', event.target.value)}
+                helperText={
+                  connectionLocked
+                    ? 'บันทึกไว้แล้ว · กดแก้ไขข้อมูลเชื่อมต่อเมื่อต้องการเปลี่ยน'
+                    : `ต้องเป็น HTTPS และลงท้ายด้วย /api/line/webhook/${webhookUrl
+                        .split('/')
+                        .at(-1)}`
+                }
+                slotProps={{ input: { readOnly: connectionLocked } }}
                 sx={{ gridColumn: { sm: '1 / -1' } }}
               />
             </Box>
+            {(!form.webhookUrl.startsWith('https://') ||
+              form.webhookUrl.includes('localhost') ||
+              form.webhookUrl.includes('127.0.0.1')) && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                Webhook นี้เป็น Local URL ซึ่ง LINE เรียกกลับไม่ได้ กรุณาใช้โดเมน HTTPS ที่ Deploy
+                แล้ว หรือเปิด HTTPS Tunnel สำหรับทดสอบ
+              </Alert>
+            )}
             <Box sx={{ gap: 1, mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
               <Button
                 color="inherit"
@@ -223,7 +311,7 @@ export function LineNotificationSettingsView() {
                   <Iconify icon={copied ? 'solar:check-circle-bold' : 'solar:copy-bold'} />
                 }
                 onClick={async () => {
-                  await navigator.clipboard.writeText(webhookUrl);
+                  await navigator.clipboard.writeText(form.webhookUrl);
                   setCopied(true);
                   window.setTimeout(() => setCopied(false), 2000);
                 }}

@@ -4,6 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { schoolHasFeature } from 'src/lib/school-subscription';
+import { decryptLineCredential } from 'src/lib/line-credentials';
 
 // ----------------------------------------------------------------------
 
@@ -15,7 +16,7 @@ async function authorize(request: Request, guardianId: string) {
   if (!(await schoolHasFeature(caller.schoolId, 'admin.line_notifications'))) return null;
   const { data: guardian } = await supabaseAdmin
     .from('student_guardians')
-    .select('id, full_name, student_id')
+    .select('id, full_name, student_id, line_user_id')
     .eq('id', guardianId)
     .eq('school_id', caller.schoolId)
     .maybeSingle();
@@ -48,15 +49,53 @@ async function authorize(request: Request, guardianId: string) {
   return { caller, guardian };
 }
 
+export async function GET(request: Request, { params }: RouteParams) {
+  const { guardianId } = await params;
+  const access = await authorize(request, guardianId);
+  if (!access?.caller.schoolId) {
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ตรวจสอบการเชื่อม LINE' }, { status: 403 });
+  }
+
+  const [{ data: guardian }, { data: pendingLink }] = await Promise.all([
+    supabaseAdmin
+      .from('student_guardians')
+      .select('line_display_name, line_linked_at, line_notifications_enabled')
+      .eq('id', guardianId)
+      .eq('school_id', access.caller.schoolId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('guardian_line_link_tokens')
+      .select('expires_at, used_at')
+      .eq('guardian_id', guardianId)
+      .maybeSingle(),
+  ]);
+
+  return NextResponse.json({
+    linked: Boolean(guardian?.line_linked_at),
+    displayName: guardian?.line_display_name ?? null,
+    linkedAt: guardian?.line_linked_at ?? null,
+    notificationsEnabled: guardian?.line_notifications_enabled ?? false,
+    invitation: pendingLink
+      ? {
+          expiresAt: pendingLink.expires_at,
+          used: Boolean(pendingLink.used_at),
+          expired: pendingLink.expires_at < new Date().toISOString(),
+        }
+      : null,
+  });
+}
+
 export async function POST(request: Request, { params }: RouteParams) {
   const { guardianId } = await params;
   const access = await authorize(request, guardianId);
   if (!access?.caller.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เชื่อม LINE ผู้ปกครอง' }, { status: 403 });
   }
+  const body = await request.json().catch(() => null);
+  const action = body?.action === 'hello' ? 'hello' : 'invite';
   const { data: integration } = await supabaseAdmin
     .from('school_line_integrations')
-    .select('is_enabled, oa_basic_id')
+    .select('is_enabled, oa_basic_id, channel_access_token_encrypted')
     .eq('school_id', access.caller.schoolId)
     .maybeSingle();
   if (!integration?.is_enabled) {
@@ -64,6 +103,58 @@ export async function POST(request: Request, { params }: RouteParams) {
       { message: 'ผู้ดูแลโรงเรียนยังไม่ได้เปิดการแจ้งเตือน LINE' },
       { status: 409 }
     );
+  }
+
+  if (action === 'hello') {
+    if (!access.guardian.line_user_id) {
+      return NextResponse.json({ message: 'ผู้ปกครองยังไม่ได้เชื่อม LINE' }, { status: 409 });
+    }
+    if (!integration.channel_access_token_encrypted) {
+      return NextResponse.json(
+        { message: 'ยังไม่ได้บันทึก Channel access token' },
+        { status: 409 }
+      );
+    }
+    const { data: school } = await supabaseAdmin
+      .from('schools')
+      .select('name')
+      .eq('id', access.caller.schoolId)
+      .maybeSingle();
+    try {
+      const response = await fetch('https://api.line.me/v2/bot/message/push', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${decryptLineCredential(
+            integration.channel_access_token_encrypted
+          )}`,
+        },
+        body: JSON.stringify({
+          to: access.guardian.line_user_id,
+          messages: [
+            {
+              type: 'text',
+              text: `สวัสดีคุณ ${access.guardian.full_name}\nเชื่อมต่อ LINE กับ ${
+                school?.name ?? 'โรงเรียน'
+              } เรียบร้อยแล้ว\nข้อความนี้เป็นการทดสอบการแจ้งเตือนจากระบบ`,
+            },
+          ],
+        }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        return NextResponse.json(
+          { message: result?.message ?? 'LINE ไม่สามารถส่งข้อความได้' },
+          { status: 502 }
+        );
+      }
+      return NextResponse.json({ success: true });
+    } catch {
+      return NextResponse.json(
+        { message: 'ไม่สามารถเชื่อมต่อ LINE Messaging API ได้' },
+        { status: 502 }
+      );
+    }
   }
 
   const code = randomBytes(4).toString('hex').toUpperCase();
@@ -83,17 +174,20 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
 
   const message = `LINK ${code}`;
+  const normalizedBasicId = integration.oa_basic_id
+    ? `@${integration.oa_basic_id.replace(/^@+/, '')}`
+    : null;
   return NextResponse.json({
     code,
     expiresAt,
     message,
-    addFriendUrl: integration.oa_basic_id
-      ? `https://line.me/R/ti/p/${encodeURIComponent(integration.oa_basic_id)}`
+    addFriendUrl: normalizedBasicId
+      ? `https://line.me/R/ti/p/${encodeURIComponent(normalizedBasicId)}`
       : null,
-    lineChatUrl: integration.oa_basic_id
-      ? `https://line.me/R/oaMessage/${encodeURIComponent(
-          integration.oa_basic_id
-        )}/?${encodeURIComponent(message)}`
+    lineChatUrl: normalizedBasicId
+      ? `https://line.me/R/oaMessage/${encodeURIComponent(normalizedBasicId)}/?${encodeURIComponent(
+          message
+        )}`
       : null,
   });
 }

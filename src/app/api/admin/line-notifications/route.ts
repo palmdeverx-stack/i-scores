@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     supabaseAdmin
       .from('school_line_integrations')
       .select(
-        'channel_id, channel_secret_encrypted, channel_access_token_encrypted, oa_basic_id, is_enabled, notify_absent, notify_leave, notify_late, notify_class_absent, updated_at'
+        'channel_id, channel_secret_encrypted, channel_access_token_encrypted, oa_basic_id, webhook_url, is_enabled, notify_absent, notify_leave, notify_late, notify_class_absent, updated_at'
       )
       .eq('school_id', caller.schoolId)
       .maybeSingle(),
@@ -83,7 +83,9 @@ export async function GET(request: Request) {
       limit: subscription?.max_line_notifications ?? 0,
       linkedGuardians: linkedGuardians ?? 0,
     },
-    webhookUrl: `${new URL(request.url).origin}/api/line/webhook/${caller.schoolId}`,
+    webhookUrl:
+      integration?.webhook_url ??
+      `${new URL(request.url).origin}/api/line/webhook/${caller.schoolId}`,
     recentDeliveries: recentDeliveries ?? [],
   });
 }
@@ -95,10 +97,20 @@ export async function PATCH(request: Request) {
   }
   const body = await request.json().catch(() => null);
   const channelId = typeof body?.channelId === 'string' ? body.channelId.trim() : '';
-  const oaBasicId = typeof body?.oaBasicId === 'string' ? body.oaBasicId.trim() : '';
+  const rawOaBasicId = typeof body?.oaBasicId === 'string' ? body.oaBasicId.trim() : '';
+  const oaBasicId = rawOaBasicId ? `@${rawOaBasicId.replace(/^@+/, '')}` : '';
+  const webhookUrl = typeof body?.webhookUrl === 'string' ? body.webhookUrl.trim() : '';
   const channelSecret = typeof body?.channelSecret === 'string' ? body.channelSecret.trim() : '';
   const accessToken = typeof body?.accessToken === 'string' ? body.accessToken.trim() : '';
   const isEnabled = body?.isEnabled === true;
+
+  let parsedWebhookUrl: URL | null = null;
+  try {
+    parsedWebhookUrl = webhookUrl ? new URL(webhookUrl) : null;
+  } catch {
+    parsedWebhookUrl = null;
+  }
+  const expectedWebhookPath = `/api/line/webhook/${caller.schoolId}`;
 
   if (
     !channelId ||
@@ -106,6 +118,10 @@ export async function PATCH(request: Request) {
     oaBasicId.length > 100 ||
     channelSecret.length > 500 ||
     accessToken.length > 2000 ||
+    !parsedWebhookUrl ||
+    parsedWebhookUrl.protocol !== 'https:' ||
+    parsedWebhookUrl.pathname.replace(/\/+$/, '') !== expectedWebhookPath ||
+    Boolean(parsedWebhookUrl.search || parsedWebhookUrl.hash) ||
     ['notifyAbsent', 'notifyLeave', 'notifyLate', 'notifyClassAbsent'].some(
       (key) => typeof body?.[key] !== 'boolean'
     )
@@ -133,6 +149,7 @@ export async function PATCH(request: Request) {
     school_id: caller.schoolId,
     channel_id: channelId,
     oa_basic_id: oaBasicId || null,
+    webhook_url: `${parsedWebhookUrl.origin}${expectedWebhookPath}`,
     is_enabled: isEnabled,
     notify_absent: body.notifyAbsent,
     notify_leave: body.notifyLeave,

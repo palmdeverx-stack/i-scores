@@ -33,6 +33,8 @@ import {
   createStudentGuardian,
   updateStudentGuardian,
   deleteStudentGuardian,
+  getGuardianLineStatus,
+  sendGuardianLineHello,
   createGuardianLineInvitation,
 } from '../student-guardian-actions';
 
@@ -122,6 +124,15 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
       setLineInvitation(null);
     },
   });
+  const lineStatusQuery = useQuery({
+    queryKey: ['guardian-line-status', lineTarget?.id],
+    queryFn: () => getGuardianLineStatus(lineTarget!.id),
+    enabled: Boolean(lineTarget && (lineInvitation || lineTarget.line_linked_at)),
+    refetchInterval: (statusQuery) => (statusQuery.state.data?.linked ? false : 2000),
+  });
+  const helloLineMutation = useMutation({
+    mutationFn: (guardianId: string) => sendGuardianLineHello(guardianId),
+  });
 
   useEffect(() => {
     const payload = lineInvitation?.lineChatUrl;
@@ -147,9 +158,18 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
     };
   }, [lineInvitation?.lineChatUrl]);
 
+  useEffect(() => {
+    if (lineStatusQuery.data?.linked && student?.id) {
+      void queryClient.invalidateQueries({
+        queryKey: ['student-guardians', assignmentScope ?? 'admin', student.id],
+      });
+    }
+  }, [assignmentScope, lineStatusQuery.data?.linked, queryClient, student?.id]);
+
   const studentName = student
     ? `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() || student.username
     : '';
+  const lineConnected = Boolean(lineTarget?.line_linked_at || lineStatusQuery.data?.linked);
 
   const openCreate = () => {
     setEditing(null);
@@ -194,6 +214,16 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           {isError && <Alert severity="error">ไม่สามารถโหลดข้อมูลผู้ปกครองได้</Alert>}
+          {helloLineMutation.isSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              ส่งข้อความสวัสดีไปยัง LINE ผู้ปกครองแล้ว
+            </Alert>
+          )}
+          {helloLineMutation.error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {helloLineMutation.error.message}
+            </Alert>
+          )}
           {isLoading && <Typography sx={{ py: 4, textAlign: 'center' }}>กำลังโหลด...</Typography>}
           {!isLoading && !isError && !data.length && (
             <Box sx={{ py: 5, textAlign: 'center' }}>
@@ -247,7 +277,15 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                         หมายเหตุ {guardian.notes}
                       </Typography>
                     )}
-                    <Box sx={{ gap: 1, mt: 1.25, display: 'flex', alignItems: 'center' }}>
+                    <Box
+                      sx={{
+                        gap: 1,
+                        mt: 1.25,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                      }}
+                    >
                       <Chip
                         size="small"
                         color={guardian.line_linked_at ? 'success' : 'default'}
@@ -278,6 +316,21 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                       >
                         {guardian.line_linked_at ? 'ยกเลิกการเชื่อม' : 'สร้างรหัสเชื่อม'}
                       </Button>
+                      {guardian.line_linked_at && (
+                        <Button
+                          size="small"
+                          color="success"
+                          variant="outlined"
+                          loading={
+                            helloLineMutation.isPending &&
+                            helloLineMutation.variables === guardian.id
+                          }
+                          startIcon={<Iconify icon="solar:chat-round-dots-bold" />}
+                          onClick={() => helloLineMutation.mutate(guardian.id)}
+                        >
+                          ส่งสวัสดี
+                        </Button>
+                      )}
                     </Box>
                   </Box>
                   <IconButton aria-label="แก้ไขข้อมูลผู้ปกครอง" onClick={() => openEdit(guardian)}>
@@ -422,9 +475,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>
-          {lineTarget?.line_linked_at ? 'ยกเลิกการเชื่อม LINE?' : 'เชื่อม LINE ผู้ปกครอง'}
-        </DialogTitle>
+        <DialogTitle>{lineConnected ? 'เชื่อม LINE สำเร็จ' : 'เชื่อม LINE ผู้ปกครอง'}</DialogTitle>
         <DialogContent>
           {lineInviteMutation.isPending && (
             <Typography sx={{ py: 3, textAlign: 'center' }}>กำลังสร้างรหัส...</Typography>
@@ -434,10 +485,19 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
               {lineInviteMutation.error?.message ?? unlinkLineMutation.error?.message}
             </Alert>
           )}
-          {lineTarget?.line_linked_at ? (
-            <Typography>
-              เมื่อตัดการเชื่อม {lineTarget.full_name} จะไม่ได้รับการแจ้งเตือนผ่าน LINE
-            </Typography>
+          {lineConnected ? (
+            <Box>
+              <Alert severity="success">
+                เชื่อม LINE
+                {lineStatusQuery.data?.displayName
+                  ? ` (${lineStatusQuery.data.displayName})`
+                  : ''}{' '}
+                เรียบร้อยแล้ว
+              </Alert>
+              <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
+                ผู้ปกครองจะได้รับแจ้งเตือน ขาด ลา สาย และไม่เข้าเรียนรายคาบตามการตั้งค่าโรงเรียน
+              </Typography>
+            </Box>
           ) : (
             lineInvitation && (
               <Box sx={{ textAlign: 'center' }}>
@@ -535,7 +595,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
           >
             ปิด
           </Button>
-          {lineTarget?.line_linked_at && (
+          {lineConnected && lineTarget && (
             <Button
               color="error"
               variant="contained"

@@ -51,6 +51,7 @@ export type LineNotificationSettings = {
 export type LineNotificationSettingsInput = {
   channelId: string;
   oaBasicId: string;
+  webhookUrl: string;
   channelSecret: string;
   accessToken: string;
   isEnabled: boolean;
