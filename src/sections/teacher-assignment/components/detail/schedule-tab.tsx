@@ -84,18 +84,20 @@ export const ScheduleTab = memo(function ScheduleTab({ teacherAssignmentId }: Pr
 
   return (
     <>
-      <Card variant="outlined" sx={{ overflow: 'hidden', borderRadius: 3 }}>
+      <Card variant="outlined" sx={{ overflow: 'hidden', borderRadius: { xs: 2, sm: 3 } }}>
         <Box
           sx={{
-            p: { xs: 2, sm: 2.5 },
-            gap: 2,
+            p: { xs: 1.5, sm: 2.5 },
+            gap: { xs: 1, sm: 2 },
             display: 'flex',
-            alignItems: { xs: 'stretch', sm: 'center' },
-            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: 'center',
+            flexDirection: 'row',
           }}
         >
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography variant="h6">ตารางเวลาสอน</Typography>
+            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
+              ตารางเวลาสอน
+            </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               กำหนดวันและเวลาที่สอนรายวิชานี้ในแต่ละสัปดาห์
             </Typography>
@@ -104,8 +106,16 @@ export const ScheduleTab = memo(function ScheduleTab({ teacherAssignmentId }: Pr
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
             onClick={openCreateDialog}
+            aria-label="เพิ่มคาบสอน"
+            sx={{
+              minWidth: { xs: 40, sm: 64 },
+              px: { xs: 1, sm: 2 },
+              '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+            }}
           >
-            เพิ่มคาบสอน
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              เพิ่มคาบสอน
+            </Box>
           </Button>
         </Box>
 
@@ -116,7 +126,79 @@ export const ScheduleTab = memo(function ScheduleTab({ teacherAssignmentId }: Pr
         )}
 
         <Divider />
-        <TableContainer>
+        <Box
+          sx={{
+            p: 1,
+            gap: 0.75,
+            display: { xs: 'flex', sm: 'none' },
+            flexDirection: 'column',
+          }}
+        >
+          {isLoading && (
+            <Typography sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
+              กำลังโหลด...
+            </Typography>
+          )}
+          {!isLoading && !schedules?.length && (
+            <Typography sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
+              ยังไม่มีคาบสอน
+            </Typography>
+          )}
+          {schedules?.map((slot) => (
+            <Box
+              key={slot.id}
+              sx={{
+                p: 1,
+                gap: 1,
+                display: 'grid',
+                border: '1px solid',
+                borderRadius: 1.5,
+                alignItems: 'center',
+                borderColor: 'divider',
+                gridTemplateColumns: '44px minmax(0, 1fr) auto',
+              }}
+            >
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  display: 'grid',
+                  borderRadius: 1.25,
+                  placeItems: 'center',
+                  color: 'primary.main',
+                  bgcolor: 'primary.lighter',
+                }}
+              >
+                <Iconify icon="solar:clock-circle-bold" width={20} />
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="subtitle2">วัน{DAY_LABELS[slot.day_of_week]}</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  {slot.start_time.slice(0, 5)}–{slot.end_time.slice(0, 5)} น.
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex' }}>
+                <IconButton
+                  size="small"
+                  color="primary"
+                  onClick={() => openEditDialog(slot)}
+                  aria-label={`แก้ไขคาบสอนวัน${DAY_LABELS[slot.day_of_week]}`}
+                >
+                  <Iconify icon="solar:pen-bold" width={18} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => setDeletingSchedule(slot)}
+                  aria-label={`ลบคาบสอนวัน${DAY_LABELS[slot.day_of_week]}`}
+                >
+                  <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                </IconButton>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+        <TableContainer sx={{ display: { xs: 'none', sm: 'block' } }}>
           <Table sx={{ minWidth: 560 }}>
             <TableHead>
               <TableRow>

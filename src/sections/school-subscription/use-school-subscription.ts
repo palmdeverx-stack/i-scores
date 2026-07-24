@@ -82,6 +82,7 @@ const ROUTE_FEATURES: Record<
   student: [
     ['/student/assignments', 'student.assignments'],
     ['/student/attendance', 'student.attendance'],
+    ['/student/timetable', 'student.subjects'],
     ['/student/subjects', 'student.subjects'],
     ['/student/qr', 'student.qr'],
   ],

@@ -26,9 +26,10 @@ const CATEGORY_LABEL = {
 
 type Props = {
   teacherAssignmentId: string;
+  compactOnMobile?: boolean;
 };
 
-export function ScoreReportExportButton({ teacherAssignmentId }: Props) {
+export function ScoreReportExportButton({ teacherAssignmentId, compactOnMobile = false }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [exporting, setExporting] = useState<'csv' | 'excel' | null>(null);
 
@@ -58,9 +59,16 @@ export function ScoreReportExportButton({ teacherAssignmentId }: Props) {
         loading={exporting !== null}
         onClick={(event) => setAnchorEl(event.currentTarget)}
         startIcon={<Iconify icon="solar:download-bold" />}
-        sx={{ flexShrink: 0 }}
+        sx={{
+          minWidth: { xs: compactOnMobile ? 0 : 64, sm: 64 },
+          px: { xs: compactOnMobile ? 1 : 2, sm: 2 },
+          flexShrink: 0,
+          '& .MuiButton-startIcon': { mr: { xs: compactOnMobile ? 0 : 1, sm: 1 } },
+          '& .desktop-label': { display: { xs: 'none', sm: 'inline' } },
+        }}
+        aria-label="ส่งออกคะแนน"
       >
-        ส่งออกคะแนน
+        <span className={compactOnMobile ? 'desktop-label' : undefined}>ส่งออกคะแนน</span>
       </Button>
       <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(null)}>
         <MenuItem onClick={() => handleExport('csv')}>

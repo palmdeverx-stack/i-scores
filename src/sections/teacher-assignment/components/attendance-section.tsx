@@ -161,24 +161,37 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
   };
 
   return (
-    <Card variant="outlined" sx={{ overflow: 'hidden' }}>
-      <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
+    <Card variant="outlined" sx={{ overflow: 'hidden', borderRadius: { xs: 2, sm: 1 } }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
         <Box
           sx={{
-            gap: 2,
+            gap: { xs: 1.25, sm: 2 },
             display: 'flex',
             alignItems: { xs: 'stretch', md: 'center' },
             flexDirection: { xs: 'column', md: 'row' },
             justifyContent: 'space-between',
           }}
         >
-          <Box>
-            <Typography variant="h6">เช็คชื่อนักเรียน</Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
+              เช็คชื่อนักเรียน
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ display: { xs: 'none', sm: 'block' }, color: 'text.secondary' }}
+            >
               แตะสถานะเพียงครั้งเดียว ระบบจะเก็บการแก้ไขไว้จนกว่าจะกดบันทึก
             </Typography>
           </Box>
-          <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+          <Box
+            sx={{
+              gap: 0.75,
+              width: { xs: 1, md: 'auto' },
+              display: { xs: 'grid', sm: 'flex' },
+              flexWrap: 'wrap',
+              gridTemplateColumns: { xs: '40px minmax(0, 1fr)', sm: 'none' },
+            }}
+          >
             {user?.role === 'teacher' && (
               <>
                 {subscriptionQuery.data?.subscription.enabled_features.includes(
@@ -188,6 +201,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
                     variant="contained"
                     onClick={() => setScanDialogOpen(true)}
                     startIcon={<Iconify icon="solar:camera-add-bold" />}
+                    sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
                   >
                     สแกน QR เข้าเรียน
                   </Button>
@@ -197,8 +211,17 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
                   href={paths.teacher.assignmentAttendanceHistory(teacherAssignmentId)}
                   variant="outlined"
                   startIcon={<Iconify icon="solar:calendar-date-bold" />}
+                  aria-label="ประวัติการเข้าเรียน"
+                  sx={{
+                    gridColumn: { xs: 1, sm: 'auto' },
+                    minWidth: { xs: 40, sm: 64 },
+                    px: { xs: 1, sm: 2 },
+                    '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+                  }}
                 >
-                  ประวัติการเข้าเรียน
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    ประวัติการเข้าเรียน
+                  </Box>
                 </Button>
               </>
             )}
@@ -214,39 +237,49 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
               format="DD/MM/YYYY"
               disableFuture
               slotProps={{
-                textField: { size: 'small' },
+                textField: { size: 'small', fullWidth: true },
               }}
-              sx={{ minWidth: { sm: 190 } }}
+              sx={{ minWidth: { xs: 0, sm: 190 } }}
             />
           </Box>
         </Box>
 
         <Box
           sx={{
-            gap: 1,
-            mt: 2.5,
+            gap: { xs: 0.5, sm: 1 },
+            mt: { xs: 1.5, sm: 2.5 },
             display: 'grid',
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
           }}
         >
           {STATUS_OPTIONS.map((option) => (
             <Box
               key={option.value}
               sx={{
-                gap: 1,
-                p: 1.25,
+                gap: { xs: 0.25, sm: 1 },
+                p: { xs: 0.5, sm: 1.25 },
                 display: 'flex',
                 borderRadius: 1.5,
                 alignItems: 'center',
+                flexDirection: { xs: 'column', sm: 'row' },
                 color: `${option.color}.dark`,
                 bgcolor: `${option.color}.lighter`,
               }}
             >
-              <Iconify icon={option.icon} width={20} />
-              <Typography variant="body2" sx={{ flex: 1, fontWeight: 600 }}>
+              <Iconify icon={option.icon} width={18} />
+              <Typography
+                variant="body2"
+                sx={{
+                  flex: { sm: 1 },
+                  fontSize: { xs: '0.68rem', sm: '0.875rem' },
+                  fontWeight: 600,
+                }}
+              >
                 {option.label}
               </Typography>
-              <Typography variant="h6">{summary[option.value]}</Typography>
+              <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.125rem' } }}>
+                {summary[option.value]}
+              </Typography>
             </Box>
           ))}
         </Box>
@@ -257,10 +290,10 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
       <Box
         sx={{
           gap: 1.5,
-          p: { xs: 2, sm: 2.5 },
+          p: { xs: 1.5, sm: 2.5 },
           display: 'flex',
           alignItems: { xs: 'stretch', sm: 'center' },
-          flexDirection: { xs: 'column', sm: 'row' },
+          flexDirection: 'row',
           justifyContent: 'space-between',
           bgcolor: 'background.neutral',
         }}
@@ -282,7 +315,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
               ),
             },
           }}
-          sx={{ width: { xs: 1, sm: 340 } }}
+          sx={{ minWidth: 0, width: { xs: 1, sm: 340 } }}
         />
         <Button
           color="success"
@@ -290,8 +323,17 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
           startIcon={<Iconify icon="solar:check-circle-bold" />}
           disabled={!data?.rows.length}
           onClick={markEveryonePresent}
+          aria-label="ทำเครื่องหมายว่ามาทั้งหมด"
+          sx={{
+            minWidth: { xs: 40, sm: 64 },
+            px: { xs: 1, sm: 2 },
+            flexShrink: 0,
+            '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+          }}
         >
-          มาทั้งหมด
+          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+            มาทั้งหมด
+          </Box>
         </Button>
       </Box>
 
@@ -319,7 +361,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
         </Alert>
       )}
 
-      <Box sx={{ p: { xs: 1.5, sm: 2.5 }, gap: 1.25, display: 'grid' }}>
+      <Box sx={{ p: { xs: 1, sm: 2.5 }, gap: { xs: 0.75, sm: 1.25 }, display: 'grid' }}>
         {isLoading &&
           [1, 2, 3, 4, 5].map((item) => <Skeleton key={item} variant="rounded" height={112} />)}
 
@@ -339,7 +381,11 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
           const edit = edits[row.student.id] ?? { status: 'present', note: '' };
 
           return (
-            <Card key={row.student.id} variant="outlined" sx={{ p: { xs: 1.5, sm: 2 } }}>
+            <Card
+              key={row.student.id}
+              variant="outlined"
+              sx={{ p: { xs: 1.25, sm: 2 }, borderRadius: { xs: 1.5, sm: 1 } }}
+            >
               <Box
                 sx={{
                   gap: 2,
@@ -434,7 +480,10 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
         sx={{
           gap: 2,
           p: 2,
-          bottom: 0,
+          bottom: {
+            xs: 'calc(var(--dashboard-bottom-nav-height, 66px) + max(env(safe-area-inset-bottom), 0px))',
+            sm: 0,
+          },
           zIndex: 2,
           display: 'flex',
           position: 'sticky',

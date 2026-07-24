@@ -104,22 +104,30 @@ export function AttendanceScanStartView() {
     lateAfterMinutes <= durationMinutes;
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography component="h1" variant="h3">
+    <Container maxWidth={false} sx={{ px: { xs: 1.5, sm: 3 }, pb: { xs: 3, sm: 5 } }}>
+      <Box sx={{ mb: { xs: 2, sm: 4 } }}>
+        <Typography
+          component="h1"
+          variant="h3"
+          sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' } }}
+        >
           สแกน QR เช็คชื่อ
         </Typography>
-        <Typography sx={{ mt: 1, color: 'text.secondary' }}>
+        <Typography variant="body2" sx={{ mt: { xs: 0.25, sm: 1 }, color: 'text.secondary' }}>
           เลือกว่ากำลังเช็คชื่ออะไร จากนั้นใช้ QR ประจำตัวนักเรียนอันเดิมสแกนได้ทันที
         </Typography>
       </Box>
 
       <Box
         sx={{
-          gap: 2,
-          mb: 3,
+          gap: { xs: 0.75, sm: 2 },
+          mb: { xs: 2, sm: 3 },
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+          gridTemplateColumns: {
+            xs: 'repeat(3, minmax(0, 1fr))',
+            sm: '1fr',
+            md: 'repeat(3, minmax(0, 1fr))',
+          },
         }}
       >
         {SESSION_OPTIONS.map((option) => {
@@ -134,13 +142,15 @@ export function AttendanceScanStartView() {
                 createMutation.reset();
               }}
               sx={{
-                p: 2.5,
-                gap: 1.5,
+                p: { xs: 0.75, sm: 2.5 },
+                gap: { xs: 0.5, sm: 1.5 },
                 display: 'flex',
                 cursor: 'pointer',
                 borderRadius: 2,
-                textAlign: 'left',
+                textAlign: { xs: 'center', sm: 'left' },
                 font: 'inherit',
+                alignItems: { xs: 'center', sm: 'flex-start' },
+                flexDirection: { xs: 'column', sm: 'row' },
                 color: 'text.primary',
                 bgcolor: selected ? 'primary.lighter' : 'background.paper',
                 border: '1px solid',
@@ -149,8 +159,8 @@ export function AttendanceScanStartView() {
             >
               <Box
                 sx={{
-                  width: 44,
-                  height: 44,
+                  width: { xs: 34, sm: 44 },
+                  height: { xs: 34, sm: 44 },
                   display: 'grid',
                   flexShrink: 0,
                   borderRadius: 1.5,
@@ -159,11 +169,19 @@ export function AttendanceScanStartView() {
                   bgcolor: selected ? 'primary.main' : 'primary.lighter',
                 }}
               >
-                <Iconify icon={option.icon} width={25} />
+                <Iconify icon={option.icon} width={21} />
               </Box>
-              <Box>
-                <Typography variant="subtitle1">{option.title}</Typography>
-                <Typography variant="body2" sx={{ mt: 0.25, color: 'text.secondary' }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{ fontSize: { xs: '0.7rem', sm: '1rem' }, lineHeight: { xs: 1.2, sm: 1.5 } }}
+                >
+                  {option.title}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ mt: 0.25, display: { xs: 'none', sm: 'block' }, color: 'text.secondary' }}
+                >
                   {option.description}
                 </Typography>
               </Box>
@@ -178,14 +196,19 @@ export function AttendanceScanStartView() {
         </Alert>
       )}
 
-      <Card variant="outlined" sx={{ p: { xs: 2.5, md: 3 } }}>
-        <Typography variant="h6">ตั้งค่ารอบเช็คชื่อ</Typography>
+      <Card
+        variant="outlined"
+        sx={{ p: { xs: 1.25, sm: 2.5, md: 3 }, borderRadius: { xs: 2, sm: 1 } }}
+      >
+        <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
+          ตั้งค่ารอบเช็คชื่อ
+        </Typography>
         <Box
           sx={{
-            gap: 2,
-            mt: 2.5,
+            gap: { xs: 1.25, sm: 2 },
+            mt: { xs: 1.25, sm: 2.5 },
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
           }}
         >
           <DatePicker
@@ -196,6 +219,7 @@ export function AttendanceScanStartView() {
             }}
             format="DD/MM/YYYY"
             slotProps={{ textField: { size: 'small' } }}
+            sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
           />
 
           {sessionType === 'class_period' ? (
@@ -205,6 +229,7 @@ export function AttendanceScanStartView() {
               label="วิชาและห้องเรียน"
               value={teacherAssignmentId}
               onChange={(event) => setTeacherAssignmentId(event.target.value)}
+              sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
             >
               {(assignmentsQuery.data ?? []).map((assignment) => (
                 <MenuItem key={assignment.id} value={assignment.id}>
@@ -220,6 +245,7 @@ export function AttendanceScanStartView() {
               label="ชั้นเรียน"
               value={classroomId}
               onChange={(event) => setClassroomId(event.target.value)}
+              sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
             >
               {(homeroomQuery.data?.classrooms ?? []).map((classroom) => (
                 <MenuItem key={classroom.id} value={classroom.id}>
@@ -237,12 +263,13 @@ export function AttendanceScanStartView() {
               onChange={(event) => setPeriodLabel(event.target.value)}
               placeholder="เช่น คาบที่ 1"
               slotProps={{ htmlInput: { maxLength: 100 } }}
+              sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
             />
           )}
           <TextField
             size="small"
             type="number"
-            label="เริ่มนับว่าสายหลัง (นาที)"
+            label="นับว่าสายหลัง (นาที)"
             value={lateAfterMinutes}
             onChange={(event) => setLateAfterMinutes(Number(event.target.value))}
             slotProps={{ htmlInput: { min: 0, max: durationMinutes } }}
@@ -250,14 +277,14 @@ export function AttendanceScanStartView() {
           <TextField
             size="small"
             type="number"
-            label="เปิดรับสแกนทั้งหมด (นาที)"
+            label="ระยะเวลาสแกน (นาที)"
             value={durationMinutes}
             onChange={(event) => setDurationMinutes(Number(event.target.value))}
             slotProps={{ htmlInput: { min: 5, max: 480 } }}
           />
         </Box>
 
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ mt: { xs: 1.5, sm: 3 }, display: 'flex', justifyContent: 'flex-end' }}>
           <Button
             size="large"
             variant="contained"
@@ -265,6 +292,7 @@ export function AttendanceScanStartView() {
             loading={createMutation.isPending}
             onClick={() => createMutation.mutate()}
             startIcon={<Iconify icon="solar:camera-add-bold" />}
+            sx={{ width: { xs: 1, sm: 'auto' }, minHeight: { xs: 48, sm: 42 } }}
           >
             เปิดกล้องสแกน
           </Button>

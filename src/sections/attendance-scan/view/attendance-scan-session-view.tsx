@@ -179,39 +179,56 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
   const isOpen = session.status === 'open' && dayjs().isBefore(dayjs(session.closes_at));
 
   return (
-    <Container maxWidth="xl" sx={{ pb: 5 }}>
+    <Container maxWidth="xl" sx={{ px: { xs: 1.5, sm: 3 }, pb: { xs: 3, sm: 5 } }}>
       <Box
         sx={{
-          mb: 3,
-          gap: 2,
-          display: 'flex',
+          mb: { xs: 2, sm: 3 },
+          gap: { xs: 1, sm: 2 },
+          display: { xs: 'grid', md: 'flex' },
           alignItems: { xs: 'flex-start', md: 'center' },
           flexDirection: { xs: 'column', md: 'row' },
+          gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', md: 'none' },
           justifyContent: 'space-between',
         }}
       >
-        <Box>
+        <Box sx={{ minWidth: 0 }}>
           <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Typography component="h1" variant="h3">
+            <Typography
+              component="h1"
+              variant="h3"
+              sx={{ fontSize: { xs: '1.35rem', sm: '2rem', md: '2.5rem' } }}
+            >
               {contextTitle}
             </Typography>
             <Label color={isOpen ? 'success' : 'default'}>
               {isOpen ? 'กำลังเปิดรับสแกน' : 'ปิดรอบแล้ว'}
             </Label>
           </Box>
-          <Typography sx={{ mt: 1, color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ mt: { xs: 0.5, sm: 1 }, color: 'text.secondary' }}>
             {session.classroom.name} · วันที่ {dayjs(session.session_date).format('DD/MM/YYYY')} ·
             สายหลัง {dayjs(session.late_after).format('HH:mm')} น.
           </Typography>
         </Box>
-        <Box sx={{ gap: 1, display: 'flex' }}>
+        <Box sx={{ gap: 0.5, display: 'flex' }}>
           <Button
             component={RouterLink}
             href={paths.teacher.attendanceScan}
             color="inherit"
             variant="outlined"
+            aria-label="กลับไปเลือกรอบ"
+            sx={{
+              minWidth: { xs: 40, sm: 64 },
+              px: { xs: 1, sm: 2 },
+            }}
           >
-            กลับไปเลือกรอบ
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              กลับไปเลือกรอบ
+            </Box>
+            <Iconify
+              icon="solar:reply-bold"
+              width={18}
+              sx={{ display: { xs: 'block', sm: 'none' } }}
+            />
           </Button>
           {isOpen && (
             <Button
@@ -220,8 +237,16 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
               loading={closeMutation.isPending}
               onClick={() => closeMutation.mutate()}
               startIcon={<Iconify icon="solar:stop-circle-bold" />}
+              aria-label="ปิดรอบ"
+              sx={{
+                minWidth: { xs: 40, sm: 64 },
+                px: { xs: 1, sm: 2 },
+                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+              }}
             >
-              ปิดรอบ
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                ปิดรอบ
+              </Box>
             </Button>
           )}
         </Box>
@@ -235,19 +260,19 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
 
       <Box
         sx={{
-          gap: 3,
+          gap: { xs: 1.5, sm: 3 },
           display: 'grid',
           alignItems: 'start',
           gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.4fr) minmax(340px, 0.6fr)' },
         }}
       >
-        <Card variant="outlined" sx={{ overflow: 'hidden' }}>
+        <Card variant="outlined" sx={{ overflow: 'hidden', borderRadius: { xs: 2, sm: 1 } }}>
           <Box
             sx={{
               position: 'relative',
               bgcolor: 'grey.900',
               overflow: 'hidden',
-              aspectRatio: { xs: '4 / 5', sm: '16 / 10' },
+              aspectRatio: { xs: '1 / 1', sm: '16 / 10' },
             }}
           >
             {isOpen ? (
@@ -285,7 +310,7 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
                     textShadow: '0 1px 3px rgba(0,0,0,.8)',
                   }}
                 >
-                  วาง QR นักเรียนให้อยู่ในกรอบ ระบบจะบันทึกอัตโนมัติ
+                  วาง QR ให้อยู่ในกรอบ
                 </Typography>
               </>
             ) : (
@@ -307,7 +332,7 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
             )}
           </Box>
 
-          <Box sx={{ p: 2.5, bgcolor: '#fff' }}>
+          <Box sx={{ p: { xs: 1.25, sm: 2.5 }, bgcolor: '#fff' }}>
             {cameraError && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 {cameraError}
@@ -332,7 +357,7 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
                 <TextField
                   fullWidth
                   size="small"
-                  label="กรอกข้อมูล QR กรณีกล้องใช้ไม่ได้"
+                  label="กรอก QR กรณีกล้องใช้ไม่ได้"
                   value={manualPayload}
                   onChange={(event) => setManualPayload(event.target.value)}
                   onKeyDown={(event) => {
@@ -351,9 +376,11 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
           </Box>
         </Card>
 
-        <Card variant="outlined">
-          <Box sx={{ p: 2.5 }}>
-            <Typography variant="h6">สแกนแล้ว {events.length} คน</Typography>
+        <Card variant="outlined" sx={{ borderRadius: { xs: 2, sm: 1 } }}>
+          <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
+              สแกนแล้ว {events.length} คน
+            </Typography>
             <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
               รายการล่าสุดจะแสดงอยู่ด้านบน
             </Typography>
@@ -374,8 +401,8 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
                 <Box
                   key={event.id}
                   sx={{
-                    p: 2,
-                    gap: 1.5,
+                    p: { xs: 1.25, sm: 2 },
+                    gap: { xs: 1, sm: 1.5 },
                     display: 'flex',
                     alignItems: 'center',
                     borderBottom: '1px solid',

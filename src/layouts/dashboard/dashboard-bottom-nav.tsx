@@ -1,6 +1,7 @@
 'use client';
 
-import type { NavMainProps } from '../types';
+import type { Breakpoint } from '@mui/material/styles';
+import type { NavSectionProps, NavItemDataProps } from 'src/components/nav-section';
 
 import Paper from '@mui/material/Paper';
 import Portal from '@mui/material/Portal';
@@ -10,26 +11,32 @@ import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { useTranslate } from 'src/locales';
-
 // ----------------------------------------------------------------------
 
-export function StudentBottomNav({ data }: NavMainProps) {
-  const { t } = useTranslate();
-  const pathname = usePathname();
-  const currentPath = [...data]
-    .sort((a, b) => b.path.length - a.path.length)
-    .find((item) =>
-      item.path === '/'
-        ? pathname === '/'
-        : pathname === item.path || pathname.startsWith(`${item.path}/`)
-    )?.path;
+type Props = {
+  data: NavSectionProps['data'];
+  layoutQuery?: Breakpoint;
+};
 
+export function DashboardBottomNav({ data, layoutQuery = 'sm' }: Props) {
+  const pathname = usePathname();
+  const items = data
+    .flatMap((group) => group.items)
+    .filter(
+      (item): item is NavItemDataProps & { path: string } =>
+        !!item.path && item.path !== '#' && item.path !== '/teacher'
+    )
+    .slice(0, 5);
+  const currentPath = [...items]
+    .sort((a, b) => b.path.length - a.path.length)
+    .find(
+      (item) => pathname === item.path || (item.deepMatch && pathname.startsWith(`${item.path}/`))
+    )?.path;
   return (
     <Portal>
       <Paper
         component="nav"
-        aria-label={t('navigation.studentMenu')}
+        aria-label="เมนูหลักสำหรับครู"
         elevation={12}
         sx={{
           insetInline: 0,
@@ -37,7 +44,7 @@ export function StudentBottomNav({ data }: NavMainProps) {
           width: '100%',
           maxWidth: '100vw',
           zIndex: (theme) => theme.zIndex.modal,
-          display: { xs: 'block', md: 'none' },
+          display: { xs: 'block', [layoutQuery]: 'none' },
           position: 'fixed',
           overflow: 'hidden',
           borderTop: '1px solid',
@@ -56,27 +63,30 @@ export function StudentBottomNav({ data }: NavMainProps) {
           showLabels
           value={currentPath ?? false}
           sx={{
-            height: 'var(--student-bottom-nav-height, 66px)',
+            height: 'var(--dashboard-bottom-nav-height, 66px)',
             bgcolor: 'background.paper',
             '& .MuiBottomNavigationAction-root': {
-              px: 0.5,
+              px: 0.25,
               minWidth: 0,
               color: 'text.secondary',
             },
             '& .Mui-selected': { color: 'primary.main' },
             '& .MuiBottomNavigationAction-label': {
               mt: 0.25,
-              fontSize: '0.68rem',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              fontSize: '0.64rem',
               lineHeight: 1.15,
               whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis',
             },
             '& .MuiBottomNavigationAction-label.Mui-selected': {
-              fontSize: '0.72rem',
+              fontSize: '0.68rem',
               fontWeight: 700,
             },
           }}
         >
-          {data.map((item) => (
+          {items.map((item) => (
             <BottomNavigationAction
               key={item.path}
               component={RouterLink}

@@ -165,17 +165,20 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
         }}
       >
         <Box>
-          <Typography variant="h5">เช็คชื่อเข้าแถว</Typography>
+          <Typography variant="h5" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
+            เช็คชื่อเข้าแถว
+          </Typography>
           <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
             {classroomName} · บันทึกแยกช่วงเช้าและเย็นในแต่ละวัน
           </Typography>
         </Box>
         <Box
           sx={{
-            gap: 1.5,
-            display: 'flex',
+            gap: { xs: 1, sm: 1.5 },
+            display: { xs: 'grid', sm: 'flex' },
             width: { xs: 1, sm: 'auto' },
             flexDirection: { xs: 'column', sm: 'row' },
+            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'none' },
           }}
         >
           <DatePicker
@@ -208,19 +211,30 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
 
       <Box
         sx={{
-          gap: { xs: 1.5, sm: 3 },
-          py: 2,
-          display: 'flex',
+          gap: { xs: 0.75, sm: 3 },
+          py: { xs: 1.5, sm: 2 },
+          display: { xs: 'grid', sm: 'flex' },
           flexWrap: 'wrap',
           alignItems: 'center',
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'none' },
         }}
       >
         {STATUS_OPTIONS.map((option) => (
-          <Box key={option.value} sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
+          <Box
+            key={option.value}
+            sx={{
+              gap: { xs: 0.75, sm: 1 },
+              p: { xs: 0.75, sm: 0 },
+              display: 'flex',
+              borderRadius: { xs: 1.25, sm: 0 },
+              alignItems: 'center',
+              bgcolor: { xs: 'background.neutral', sm: 'transparent' },
+            }}
+          >
             <Box
               sx={{
-                width: 30,
-                height: 30,
+                width: { xs: 26, sm: 30 },
+                height: { xs: 26, sm: 30 },
                 display: 'grid',
                 borderRadius: '50%',
                 placeItems: 'center',
@@ -246,7 +260,7 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
           py: 2,
           display: 'flex',
           alignItems: { xs: 'stretch', sm: 'center' },
-          flexDirection: { xs: 'column', sm: 'row' },
+          flexDirection: { xs: 'row', sm: 'row' },
           justifyContent: 'space-between',
         }}
       >
@@ -264,7 +278,7 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
               ),
             },
           }}
-          sx={{ width: { xs: 1, sm: 340 } }}
+          sx={{ minWidth: 0, width: { xs: 1, sm: 340 } }}
         />
         <Button
           color="success"
@@ -272,8 +286,18 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
           disabled={!data?.rows.length}
           onClick={markEveryonePresent}
           startIcon={<Iconify icon="solar:check-circle-bold" />}
+          aria-label="ทำเครื่องหมายว่ามาทั้งหมด"
+          sx={{
+            flexShrink: 0,
+            minWidth: { xs: 42, sm: 64 },
+            px: { xs: 1, sm: 2 },
+            whiteSpace: 'nowrap',
+            '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+          }}
         >
-          มาทั้งหมด
+          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+            มาทั้งหมด
+          </Box>
         </Button>
       </Box>
 
@@ -301,7 +325,99 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
         </Alert>
       )}
 
-      <TableContainer>
+      <Box
+        sx={{
+          gap: 1,
+          display: { xs: 'flex', sm: 'none' },
+          flexDirection: 'column',
+        }}
+      >
+        {isLoading &&
+          [1, 2, 3].map((item) => (
+            <Skeleton key={item} variant="rounded" height={170} sx={{ borderRadius: 2 }} />
+          ))}
+
+        {!isLoading && !filteredRows.length && !isError && (
+          <Box sx={{ py: 5, textAlign: 'center' }}>
+            <Iconify icon="solar:user-rounded-bold" width={38} sx={{ color: 'text.disabled' }} />
+            <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+              {search ? 'ไม่พบนักเรียนจากคำค้นหา' : 'ยังไม่มีนักเรียนในห้องนี้'}
+            </Typography>
+          </Box>
+        )}
+
+        {filteredRows.map((row) => {
+          const name =
+            `${row.student.first_name ?? ''} ${row.student.last_name ?? ''}`.trim() ||
+            row.student.username;
+          const edit = edits[row.student.id] ?? { status: 'present', note: '' };
+
+          return (
+            <Box
+              key={row.student.id}
+              sx={{
+                p: 1.25,
+                border: '1px solid',
+                borderRadius: 1.75,
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+              }}
+            >
+              <Box sx={{ gap: 1, mb: 1.25, display: 'flex', alignItems: 'center' }}>
+                <Avatar src={row.student.avatar_url ?? undefined} sx={{ width: 40, height: 40 }}>
+                  {name.charAt(0)}
+                </Avatar>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography variant="subtitle2" noWrap>
+                    {name}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
+                    {row.student.student_code ?? '-'} · เลขที่ {row.studentNumber ?? '-'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <ToggleButtonGroup
+                exclusive
+                fullWidth
+                size="small"
+                value={edit.status}
+                onChange={(_event, status: HomeroomAttendanceStatus | null) => {
+                  if (status) updateStatus(row, status);
+                }}
+                sx={{ mb: 1 }}
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <ToggleButton
+                    key={option.value}
+                    value={option.value}
+                    color={option.color}
+                    sx={{ minWidth: 0, px: 0.5, fontSize: '0.75rem' }}
+                  >
+                    {option.label}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="หมายเหตุ (ถ้ามี)"
+                value={edit.note}
+                onChange={(event) =>
+                  setEdits((current) => ({
+                    ...current,
+                    [row.student.id]: { ...edit, note: event.target.value },
+                  }))
+                }
+                slotProps={{ htmlInput: { maxLength: 500 } }}
+              />
+            </Box>
+          );
+        })}
+      </Box>
+
+      <TableContainer sx={{ display: { xs: 'none', sm: 'block' } }}>
         <Table sx={{ minWidth: 920 }}>
           <TableHead>
             <TableRow>
@@ -409,13 +525,23 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
 
       <Box
         sx={{
-          pt: 2,
+          pt: { xs: 1.5, sm: 2 },
+          mt: { xs: 1, sm: 0 },
+          pb: { xs: 1, sm: 0 },
+          px: { xs: 1, sm: 0 },
           gap: 1.5,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-end',
           borderTop: '1px solid',
           borderColor: 'divider',
+          bgcolor: 'background.paper',
+          position: { xs: 'sticky', sm: 'static' },
+          bottom: {
+            xs: 'calc(var(--dashboard-bottom-nav-height, 66px) + max(env(safe-area-inset-bottom), 0px))',
+            sm: 'auto',
+          },
+          zIndex: { xs: 2, sm: 'auto' },
         }}
       >
         <Typography variant="body2" sx={{ mr: 'auto', color: 'text.secondary' }}>

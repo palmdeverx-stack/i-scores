@@ -17,13 +17,14 @@ import { RouterLink } from 'src/routes/components';
 import { CONFIG } from 'src/global-config';
 import { useTranslate } from 'src/locales';
 
-import { Logo } from 'src/components/logo';
 import {
   RiHome5Line,
   RiUser3Line,
   RiBookOpenLine,
   RiFileList3Line,
 } from 'src/components/remix-icon';
+
+import { MainSchoolLogo, useMainSchoolBrand } from './school-brand';
 
 // ----------------------------------------------------------------------
 
@@ -103,6 +104,7 @@ export function HomeFooter({ sx, ...other }: FooterProps) {
 
 function BrandSummary() {
   const { t } = useTranslate();
+  const { school } = useMainSchoolBrand();
 
   return (
     <Box sx={{ maxWidth: 390 }}>
@@ -114,10 +116,10 @@ function BrandSummary() {
           justifyContent: { xs: 'center', md: 'flex-start' },
         }}
       >
-        <Logo />
+        <MainSchoolLogo size={48} />
         <Box>
           <Typography variant="subtitle1" sx={{ lineHeight: 1.2 }}>
-            eKru
+            {school?.name ?? 'eKru'}
           </Typography>
           <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
             {t('brand.tagline')}
@@ -208,23 +210,5 @@ function FooterBottom() {
         </Typography>
       </Box>
     </>
-  );
-}
-
-function FooterDecoration() {
-  return (
-    <Box
-      aria-hidden="true"
-      sx={(theme) => ({
-        top: -90,
-        right: -60,
-        width: 220,
-        height: 220,
-        borderRadius: '50%',
-        position: 'absolute',
-        pointerEvents: 'none',
-        bgcolor: varAlpha(theme.vars.palette.primary.mainChannel, 0.08),
-      })}
-    />
   );
 }

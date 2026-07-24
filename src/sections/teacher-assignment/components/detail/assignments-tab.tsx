@@ -53,18 +53,20 @@ export const AssignmentsTab = memo(function AssignmentsTab({
           ไม่สามารถโหลดรายการงานได้
         </Alert>
       )}
-      <Card variant="outlined">
+      <Card variant="outlined" sx={{ borderRadius: { xs: 2, sm: 1 } }}>
         <Box
           sx={{
-            p: 2.5,
-            gap: 2,
+            p: { xs: 1.5, sm: 2.5 },
+            gap: { xs: 1, sm: 2 },
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
           <Box>
-            <Typography variant="h6">งาน</Typography>
+            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
+              งาน
+            </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               สร้างงานและเข้าสู่สมุดคะแนนของแต่ละงาน
             </Typography>
@@ -74,12 +76,79 @@ export const AssignmentsTab = memo(function AssignmentsTab({
             href={assignmentNewPath}
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
+            aria-label="สร้างงาน"
+            sx={{
+              minWidth: { xs: 40, sm: 64 },
+              px: { xs: 1, sm: 2 },
+              '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+            }}
           >
-            สร้างงาน
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              สร้างงาน
+            </Box>
           </Button>
         </Box>
         <Divider />
-        <TableContainer>
+        <Box
+          sx={{
+            p: 1,
+            gap: 0.75,
+            display: { xs: 'flex', sm: 'none' },
+            flexDirection: 'column',
+          }}
+        >
+          {isLoading && (
+            <Typography sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
+              กำลังโหลด...
+            </Typography>
+          )}
+          {!isLoading && !workAssignments?.length && (
+            <Typography sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
+              ยังไม่มีงาน
+            </Typography>
+          )}
+          {workAssignments?.map((assignment) => (
+            <Box
+              key={assignment.id}
+              component={RouterLink}
+              href={gradebookPath(assignment.id)}
+              sx={{
+                p: 1.25,
+                gap: 1,
+                display: 'grid',
+                color: 'text.primary',
+                border: '1px solid',
+                borderRadius: 1.5,
+                alignItems: 'center',
+                borderColor: 'divider',
+                textDecoration: 'none',
+                gridTemplateColumns: 'minmax(0, 1fr) auto',
+              }}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="subtitle2" noWrap>
+                  {assignment.title}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ display: 'block', color: 'text.secondary' }}
+                  noWrap
+                >
+                  {assignment.full_score} คะแนน ·{' '}
+                  {assignment.due_at
+                    ? `ส่ง ${fDateTime(assignment.due_at, 'DD/MM/YYYY HH:mm')}`
+                    : 'ไม่กำหนดส่ง'}
+                </Typography>
+              </Box>
+              <Iconify
+                icon="eva:arrow-ios-forward-fill"
+                width={20}
+                sx={{ color: 'text.disabled' }}
+              />
+            </Box>
+          ))}
+        </Box>
+        <TableContainer sx={{ display: { xs: 'none', sm: 'block' } }}>
           <Table>
             <TableHead>
               <TableRow>

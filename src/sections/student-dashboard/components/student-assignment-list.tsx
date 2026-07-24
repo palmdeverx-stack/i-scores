@@ -9,7 +9,6 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
-import TablePagination from '@mui/material/TablePagination';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -120,7 +119,7 @@ export function StudentAssignmentList({ assignments, generatedAt }: Props) {
         />
       )}
 
-      {!!filtered.length && (
+      {/* {!!filtered.length && (
         <TablePagination
           component="div"
           count={filtered.length}
@@ -136,7 +135,7 @@ export function StudentAssignmentList({ assignments, generatedAt }: Props) {
           }}
           sx={{ mt: 1, borderTop: '1px solid', borderColor: 'divider' }}
         />
-      )}
+      )} */}
     </>
   );
 }

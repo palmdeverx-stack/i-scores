@@ -14,11 +14,10 @@ import { usePathname } from 'src/routes/hooks';
 
 import { languageOptions, useTranslatedMainNav } from 'src/locales';
 
-import { Logo } from 'src/components/logo';
-
 import { NavMobile } from './nav/mobile';
 import { NavDesktop } from './nav/desktop';
 import { Footer, HomeFooter } from './footer';
+import { MainSchoolLogo } from './school-brand';
 import { MenuButton } from '../components/menu-button';
 import { navData as mainNavData } from '../nav-config-main';
 import { SignInButton } from '../components/sign-in-button';
@@ -86,7 +85,7 @@ export function MainLayout({
           )}
 
           {/** @slot Logo */}
-          <Logo />
+          <MainSchoolLogo />
         </>
       ),
       rightArea: (
@@ -134,7 +133,15 @@ export function MainLayout({
         {...slotProps?.header}
         slots={{ ...headerSlots, ...slotProps?.header?.slots }}
         slotProps={slotProps?.header?.slotProps}
-        sx={slotProps?.header?.sx}
+        sx={[
+          (theme) => ({
+            '--color': theme.vars.palette.text.primary,
+            color: 'text.primary',
+            bgcolor: 'common.white',
+            borderBottom: `1px solid ${theme.vars.palette.divider}`,
+          }),
+          ...(Array.isArray(slotProps?.header?.sx) ? slotProps.header.sx : [slotProps?.header?.sx]),
+        ]}
       />
     );
   };
@@ -153,7 +160,11 @@ export function MainLayout({
       sx={[
         ...(Array.isArray(slotProps?.main?.sx) ? slotProps.main.sx : [slotProps?.main?.sx]),
         mobileBottom && {
-          pb: { xs: 'calc(66px + env(safe-area-inset-bottom))', md: 0 },
+          '--student-bottom-nav-height': '66px',
+          pb: {
+            xs: 'calc(var(--student-bottom-nav-height) + max(env(safe-area-inset-bottom), 0px) + 12px)',
+            md: 0,
+          },
         },
       ]}
     >

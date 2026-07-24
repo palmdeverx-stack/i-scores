@@ -101,7 +101,7 @@ export const ScoresTab = memo(function ScoresTab({
     <>
       <Card
         sx={{
-          mb: 3,
+          mb: { xs: 2, sm: 3 },
           overflow: 'hidden',
           border: (theme) => `1px solid ${theme.vars.palette.divider}`,
           boxShadow: (theme) =>
@@ -110,8 +110,8 @@ export const ScoresTab = memo(function ScoresTab({
       >
         <Box
           sx={{
-            p: { xs: 2.5, sm: 3 },
-            gap: 2,
+            p: { xs: 1.5, sm: 3 },
+            gap: { xs: 0.75, sm: 2 },
             display: 'flex',
             alignItems: { xs: 'flex-start', sm: 'center' },
             flexDirection: { xs: 'column', sm: 'row' },
@@ -119,11 +119,11 @@ export const ScoresTab = memo(function ScoresTab({
             bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.06),
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', gap: { xs: 0.75, sm: 1.5 }, alignItems: 'center' }}>
             <Box
               sx={{
-                width: 48,
-                height: 48,
+                width: { xs: 36, sm: 48 },
+                height: { xs: 36, sm: 48 },
                 display: 'grid',
                 flexShrink: 0,
                 borderRadius: 1.5,
@@ -132,16 +132,21 @@ export const ScoresTab = memo(function ScoresTab({
                 bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.14),
               }}
             >
-              <Iconify icon="solar:chart-square-outline" width={28} />
+              <Iconify icon="solar:chart-square-outline" width={22} />
             </Box>
             <Box>
-              <Typography variant="h5">จัดการคะแนน</Typography>
-              <Typography variant="body2" sx={{ mt: 0.25, color: 'text.secondary' }}>
+              <Typography variant="h5" sx={{ fontSize: { xs: '0.95rem', sm: '1.5rem' } }}>
+                จัดการคะแนน
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ mt: 0.25, display: { xs: 'none', sm: 'block' }, color: 'text.secondary' }}
+              >
                 เลือกประเภทคะแนน แล้วเพิ่มรายการหรือกรอกคะแนนนักเรียนได้ทันที
               </Typography>
             </Box>
           </Box>
-          <Box sx={{ gap: 1, display: 'flex', width: { xs: 1, sm: 'auto' } }}>
+          <Box sx={{ gap: { xs: 0.5, sm: 1 }, display: 'flex', width: { xs: 1, sm: 'auto' } }}>
             <Summary label="รายการทั้งหมด" value={`${assignments?.length ?? 0} รายการ`} />
             <Summary label="คะแนนเต็มรวม" value={`${totalFullScore} คะแนน`} />
           </Box>
@@ -151,10 +156,13 @@ export const ScoresTab = memo(function ScoresTab({
           role="tablist"
           aria-label="ประเภทคะแนน"
           sx={{
-            p: 2,
-            gap: 1,
-            display: 'grid',
-            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(5, 1fr)' },
+            p: { xs: 0.75, sm: 2 },
+            gap: { xs: 0.75, sm: 1 },
+            display: { xs: 'flex', sm: 'grid' },
+            overflowX: { xs: 'auto', sm: 'visible' },
+            gridTemplateColumns: { sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(5, 1fr)' },
+            scrollbarWidth: 'none',
+            '&::-webkit-scrollbar': { display: 'none' },
           }}
         >
           {SCORE_CATEGORY_ORDER.map((category) => {
@@ -168,9 +176,10 @@ export const ScoresTab = memo(function ScoresTab({
                 aria-selected={selected}
                 onClick={() => setSelectedCategory(category)}
                 sx={{
-                  p: 1.5,
+                  p: { xs: 0.75, sm: 1.5 },
                   gap: 1,
-                  minWidth: 0,
+                  minWidth: { xs: 108, sm: 0 },
+                  flex: { xs: '0 0 108px', sm: 'initial' },
                   borderRadius: 1.5,
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -182,17 +191,21 @@ export const ScoresTab = memo(function ScoresTab({
                     `1px solid ${selected ? theme.vars.palette.primary.main : theme.vars.palette.divider}`,
                   bgcolor: selected ? 'primary.main' : 'background.paper',
                   '&:hover': { bgcolor: selected ? 'primary.dark' : 'action.hover' },
-                  '&:last-of-type': { gridColumn: { xs: '1 / -1', md: 'auto' } },
+                  '&:last-of-type': { gridColumn: { sm: '1 / -1', md: 'auto' } },
                 }}
               >
-                <Iconify icon={SCORE_CATEGORY_ICON[category]} width={24} />
+                <Iconify icon={SCORE_CATEGORY_ICON[category]} width={18} />
                 <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                   <Typography variant="subtitle2" noWrap>
                     {ASSIGNMENT_CATEGORY_META[category].label}
                   </Typography>
                   <Typography
                     variant="caption"
-                    sx={{ color: selected ? 'inherit' : 'text.secondary', opacity: 0.8 }}
+                    sx={{
+                      color: selected ? 'inherit' : 'text.secondary',
+                      opacity: 0.8,
+                      fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                    }}
                   >
                     {categoryCounts[category]} รายการ
                   </Typography>
@@ -242,18 +255,27 @@ function Summary({ label, value }: { label: string; value: string }) {
   return (
     <Box
       sx={{
-        px: 2,
-        py: 1,
+        px: { xs: 1, sm: 2 },
+        py: { xs: 0.5, sm: 1 },
         flex: { xs: 1, sm: 'none' },
         borderRadius: 1.5,
         bgcolor: 'background.paper',
         border: (theme) => `1px solid ${theme.vars.palette.divider}`,
       }}
     >
-      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+      <Typography
+        variant="caption"
+        sx={{
+          display: 'block',
+          color: 'text.secondary',
+          fontSize: { xs: '0.65rem', sm: '0.75rem' },
+        }}
+      >
         {label}
       </Typography>
-      <Typography variant="h6">{value}</Typography>
+      <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.125rem' } }}>
+        {value}
+      </Typography>
     </Box>
   );
 }
@@ -287,22 +309,25 @@ function ScoreCategorySection({
     <Card variant="outlined" sx={{ overflow: 'hidden' }}>
       <Box
         sx={{
-          p: 2.5,
-          gap: 2,
+          p: { xs: 1.5, sm: 2.5 },
+          gap: { xs: 1, sm: 2 },
           display: 'flex',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: 'center',
+          flexDirection: 'row',
           justifyContent: 'space-between',
         }}
       >
         <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
-          <Iconify icon={SCORE_CATEGORY_ICON[category]} width={34} color="primary.main" />
+          <Iconify icon={SCORE_CATEGORY_ICON[category]} width={28} color="primary.main" />
           <Box>
             <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
               <Typography variant="h6">{meta.sectionTitle}</Typography>
               <Label color="primary">{items.length} รายการ</Label>
             </Box>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            <Typography
+              variant="body2"
+              sx={{ display: { xs: 'none', sm: 'block' }, color: 'text.secondary' }}
+            >
               {meta.description}
             </Typography>
           </Box>
@@ -314,21 +339,113 @@ function ScoreCategorySection({
               href={createPath}
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
+              aria-label={category === 'quiz' ? meta.createHeading : `เพิ่ม${meta.label}`}
+              sx={{
+                minWidth: { xs: 40, sm: 64 },
+                px: { xs: 1, sm: 2 },
+                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+              }}
             >
-              {category === 'quiz' ? meta.createHeading : `เพิ่ม${meta.label}`}
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                {category === 'quiz' ? meta.createHeading : `เพิ่ม${meta.label}`}
+              </Box>
             </Button>
           ) : (
             <Button
               variant="contained"
               startIcon={<Iconify icon="solar:pen-bold" />}
               onClick={() => onQuickCreate(category)}
+              aria-label={meta.singleton ? 'กรอกคะแนน' : 'เพิ่มรายการคะแนน'}
+              sx={{
+                minWidth: { xs: 40, sm: 64 },
+                px: { xs: 1, sm: 2 },
+                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+              }}
             >
-              {meta.singleton ? 'กรอกคะแนน' : 'เพิ่มรายการคะแนน'}
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                {meta.singleton ? 'กรอกคะแนน' : 'เพิ่มรายการคะแนน'}
+              </Box>
             </Button>
           ))}
       </Box>
       <Divider />
-      <TableContainer>
+      <Box
+        sx={{
+          p: 1,
+          gap: 0.75,
+          display: { xs: 'flex', sm: 'none' },
+          flexDirection: 'column',
+        }}
+      >
+        {loading && <Skeleton variant="rounded" height={74} />}
+        {!loading && !items.length && (
+          <Typography sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
+            ยังไม่มี{meta.sectionTitle}
+          </Typography>
+        )}
+        {items.map((item) => (
+          <Box
+            key={item.id}
+            sx={{
+              p: 1,
+              gap: 1,
+              display: 'grid',
+              border: '1px solid',
+              borderRadius: 1.5,
+              alignItems: 'center',
+              borderColor: 'divider',
+              gridTemplateColumns: 'minmax(0, 1fr) auto',
+            }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="subtitle2" noWrap>
+                {item.title}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ display: 'block', color: 'text.secondary' }}
+                noWrap
+              >
+                {item.full_score} คะแนน
+                {hasDueDate &&
+                  ` · ${item.due_at ? fDateTime(item.due_at, 'DD/MM/YYYY HH:mm') : 'ไม่กำหนดส่ง'}`}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex' }}>
+              <IconButton
+                component={RouterLink}
+                href={gradebookPath(item.id)}
+                size="small"
+                color="primary"
+                aria-label={
+                  category === 'quiz' ? `ดูผลคะแนน ${item.title}` : `กรอกคะแนน ${item.title}`
+                }
+              >
+                <Iconify icon="solar:cup-star-bold" width={18} />
+              </IconButton>
+              {category !== 'quiz' && (
+                <IconButton
+                  size="small"
+                  color="primary"
+                  aria-label={`แก้ไข ${item.title}`}
+                  onClick={() => onEdit(item)}
+                >
+                  <Iconify icon="solar:settings-bold" width={18} />
+                </IconButton>
+              )}
+              <IconButton
+                size="small"
+                color="error"
+                aria-label={`ลบ ${item.title}`}
+                onClick={() => onDelete(item)}
+              >
+                <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+              </IconButton>
+            </Box>
+          </Box>
+        ))}
+      </Box>
+      <TableContainer sx={{ display: { xs: 'none', sm: 'block' } }}>
         <Table sx={{ minWidth: 760 }}>
           <TableHead>
             <TableRow>

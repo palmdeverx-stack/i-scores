@@ -17,7 +17,14 @@ import { useTranslate } from 'src/locales';
 
 import { Label } from 'src/components/label';
 import { CustomPopover } from 'src/components/custom-popover';
-import { RiTeamLine, RiUser3Line } from 'src/components/remix-icon';
+import {
+  RiTeamLine,
+  RiGuideLine,
+  RiHome5Line,
+  RiUser3Line,
+  RiQrCodeLine,
+  RiShieldKeyholeLine,
+} from 'src/components/remix-icon';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -54,6 +61,33 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
       href: paths.student.classroom,
       icon: <RiTeamLine />,
     },
+    {
+      label: 'QR ของฉัน',
+      href: paths.student.qr,
+      icon: <RiQrCodeLine />,
+    },
+  ];
+  const teacherMenu = [
+    {
+      label: 'หน้าหลักครู',
+      href: paths.teacher.root,
+      icon: <RiHome5Line />,
+    },
+    {
+      label: 'โปรไฟล์ของฉัน',
+      href: paths.teacher.profile,
+      icon: <RiUser3Line />,
+    },
+    {
+      label: 'วิธีใช้งาน',
+      href: paths.teacher.guide,
+      icon: <RiGuideLine />,
+    },
+    {
+      label: 'เปลี่ยนรหัสผ่าน',
+      href: paths.auth.jwt.changePassword,
+      icon: <RiShieldKeyholeLine />,
+    },
   ];
   const menuData: NonNullable<AccountPopoverProps['data']> =
     user?.role === 'student'
@@ -63,7 +97,9 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
             (option) => !studentMenu.some((studentOption) => studentOption.href === option.href)
           ),
         ]
-      : data;
+      : user?.role === 'teacher'
+        ? teacherMenu
+        : data;
 
   const renderMenuActions = () => (
     <CustomPopover

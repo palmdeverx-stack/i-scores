@@ -3,7 +3,6 @@
 import Box from '@mui/material/Box';
 
 import { SubjectCard } from '../components/subject-card';
-import { StudentWeeklyTimetable } from '../components/student-weekly-timetable';
 import {
   HeroStat,
   EmptyCard,
@@ -13,8 +12,6 @@ import {
   StudentPageScaffold,
   useStudentSubjectsDashboard,
 } from './student-dashboard-shared';
-
-// ----------------------------------------------------------------------
 
 export function StudentSubjectsView() {
   const { data, isLoading, isError, refetch } = useStudentSubjectsDashboard();
@@ -42,35 +39,31 @@ export function StudentSubjectsView() {
         </HeroStats>
       }
     >
-      <StudentWeeklyTimetable schedules={data.schedules} />
+      <SectionHeading
+        icon="solar:notebook-bold-duotone"
+        title="วิชาที่ต้องเรียน"
+        subtitle={`${data.subjects.length} รายวิชาตามห้องเรียนและภาคเรียนของคุณ`}
+      />
 
-      <Box sx={{ mt: { xs: 3, md: 5 } }}>
-        <SectionHeading
-          icon="solar:notebook-bold-duotone"
-          title="วิชาที่ต้องเรียน"
-          subtitle={`${data.subjects.length} รายวิชาตามห้องเรียนและภาคเรียนของคุณ`}
-        />
-
-        {data.subjects.length ? (
-          <Box
-            sx={{
-              gap: { xs: 1.5, sm: 2, lg: 2.5 },
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: 'minmax(0, 1fr)',
-                md: 'repeat(2, minmax(0, 1fr))',
-                xl: 'repeat(3, minmax(0, 1fr))',
-              },
-            }}
-          >
-            {data.subjects.map((item) => (
-              <SubjectCard key={item.id} item={item} />
-            ))}
-          </Box>
-        ) : (
-          <EmptyCard text="ยังไม่มีรายวิชาที่เปิดสอนสำหรับห้องเรียนของคุณ" />
-        )}
-      </Box>
+      {data.subjects.length ? (
+        <Box
+          sx={{
+            gap: { xs: 1.5, sm: 2, lg: 2.5 },
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr)',
+              md: 'repeat(3, minmax(0, 1fr))',
+              xl: 'repeat(3, minmax(0, 1fr))',
+            },
+          }}
+        >
+          {data.subjects.map((item) => (
+            <SubjectCard key={item.id} item={item} />
+          ))}
+        </Box>
+      ) : (
+        <EmptyCard text="ยังไม่มีรายวิชาที่เปิดสอนสำหรับห้องเรียนของคุณ" />
+      )}
     </StudentPageScaffold>
   );
 }

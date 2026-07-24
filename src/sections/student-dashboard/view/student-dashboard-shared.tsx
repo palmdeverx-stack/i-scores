@@ -32,7 +32,12 @@ import {
 
 // ----------------------------------------------------------------------
 
-export type StudentDashboardSection = 'home' | 'classroom' | 'subjects' | 'assignments';
+export type StudentDashboardSection =
+  | 'home'
+  | 'classroom'
+  | 'subjects'
+  | 'timetable'
+  | 'assignments';
 
 // ----------------------------------------------------------------------
 
@@ -136,6 +141,7 @@ export function StudentPageScaffold({
     home: 'หน้าหลักนักเรียน',
     classroom: 'ห้องเรียนของฉัน',
     subjects: 'วิชาเรียนของฉัน',
+    timetable: 'ตารางเรียนของฉัน',
     assignments: 'งานที่ต้องส่ง',
   }[section];
 
@@ -143,7 +149,7 @@ export function StudentPageScaffold({
     <Container
       component="main"
       maxWidth="lg"
-      sx={{ minHeight: 'calc(100vh - 100px)', pb: { xs: 2, sm: 3 } }}
+      sx={{ minHeight: 'calc(100vh - 100px)', pb: { xs: 2, sm: 3 }, pt: 3 }}
     >
       <Box
         component="section"

@@ -64,6 +64,19 @@ const STATUS_LABEL = {
   dismissed: 'พ้นสภาพ',
 } as const;
 
+function StudentMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <Box sx={{ minWidth: 0, textAlign: 'center' }}>
+      <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+        {label}
+      </Typography>
+      <Typography variant="caption" sx={{ display: 'block', fontWeight: 700 }} noWrap>
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
 export function TeacherStudentsView() {
   const { user } = useAuthContext();
   const subscriptionQuery = useSchoolSubscription(user?.school_id);
@@ -169,33 +182,65 @@ export function TeacherStudentsView() {
   };
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ px: { xs: 1.5, sm: 3 }, pb: { xs: 3, sm: 5 } }}>
       <Box
         sx={{
-          mb: 4,
-          gap: 2,
-          display: 'flex',
+          mb: { xs: 2.5, sm: 4 },
+          gap: { xs: 1.5, sm: 2 },
+          display: { xs: 'grid', sm: 'flex' },
           alignItems: { xs: 'flex-start', sm: 'center' },
           flexDirection: { xs: 'column', sm: 'row' },
+          gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', sm: 'none' },
           justifyContent: 'space-between',
         }}
       >
-        <Box>
-          <Typography component="h1" variant="h3">
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            component="h1"
+            variant="h3"
+            sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' } }}
+          >
             นักเรียนของฉัน
           </Typography>
-          <Typography sx={{ mt: 1, color: 'text.secondary' }}>
+          <Typography
+            variant="body2"
+            sx={{
+              mt: { xs: 0.25, sm: 1 },
+              color: 'text.secondary',
+              fontSize: { xs: '0.78rem', sm: '0.875rem' },
+            }}
+          >
             รายชื่อนักเรียนในชั้นที่คุณเป็นครูประจำชั้น
           </Typography>
         </Box>
-        <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+        <Box
+          sx={{
+            gap: 1,
+            mt: { xs: 0.25, sm: 0 },
+            width: 'auto',
+            display: { xs: 'grid', sm: 'flex' },
+            flexWrap: 'wrap',
+            justifyContent: { xs: 'end', sm: 'initial' },
+            gridTemplateColumns: { xs: '44px', sm: 'none' },
+          }}
+        >
           <Button
             component={RouterLink}
             href={paths.teacher.attendanceHistory}
             variant="outlined"
             startIcon={<Iconify icon="solar:calendar-date-bold" />}
+            aria-label="ประวัติการเข้าแถว"
+            sx={{
+              minWidth: { xs: 44, sm: 64 },
+              minHeight: { xs: 44, sm: 'auto' },
+              gridColumn: { xs: 1, sm: 'auto' },
+              gridRow: { xs: 1, sm: 'auto' },
+              '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+            }}
           >
-            ประวัติการเข้าแถว
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              ประวัติการเข้าแถว
+            </Box>
           </Button>
           {canUseQr && (
             <Button
@@ -203,8 +248,17 @@ export function TeacherStudentsView() {
               href={paths.teacher.attendanceScan}
               variant="outlined"
               startIcon={<Iconify icon="solar:camera-add-bold" />}
+              aria-label="สแกน QR"
+              sx={{
+                display: { xs: 'none', sm: 'inline-flex' },
+                minWidth: { xs: 44, sm: 64 },
+                minHeight: { xs: 44, sm: 'auto' },
+                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+              }}
             >
-              สแกน QR
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                สแกน QR
+              </Box>
             </Button>
           )}
           {section === 'students' && (
@@ -217,8 +271,19 @@ export function TeacherStudentsView() {
                 setAddDialogOpen(true);
               }}
               startIcon={<Iconify icon="solar:user-plus-bold" />}
+              sx={{
+                display: { xs: 'none', sm: 'inline-flex' },
+                minHeight: { xs: 44, sm: 'auto' },
+                gridColumn: { xs: 1, sm: 'auto' },
+                gridRow: { xs: 1, sm: 'auto' },
+              }}
             >
-              เพิ่มนักเรียนเข้าชั้น
+              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                เพิ่มนักเรียน
+              </Box>
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                เพิ่มนักเรียนเข้าชั้น
+              </Box>
             </Button>
           )}
         </Box>
@@ -248,8 +313,8 @@ export function TeacherStudentsView() {
         <>
           <Box
             sx={{
-              mb: 3,
-              gap: 2,
+              mb: { xs: 2, sm: 3 },
+              gap: { xs: 1.25, sm: 2 },
               display: 'flex',
               alignItems: { xs: 'stretch', sm: 'center' },
               flexDirection: { xs: 'column', sm: 'row' },
@@ -284,6 +349,7 @@ export function TeacherStudentsView() {
               sx={{
                 p: 0.5,
                 gap: 0.5,
+                width: { xs: 1, sm: 'auto' },
                 display: 'flex',
                 borderRadius: 1.5,
                 bgcolor: 'background.neutral',
@@ -295,9 +361,19 @@ export function TeacherStudentsView() {
                 color={section === 'students' ? 'primary' : 'inherit'}
                 onClick={() => setSection('students')}
                 startIcon={<Iconify icon="solar:users-group-rounded-bold" />}
-                sx={{ whiteSpace: 'nowrap' }}
+                sx={{
+                  flex: 1,
+                  px: { xs: 1, sm: 2 },
+                  fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                  whiteSpace: 'nowrap',
+                }}
               >
-                รายชื่อนักเรียน ({roster.length})
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                  รายชื่อ ({roster.length})
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  รายชื่อนักเรียน ({roster.length})
+                </Box>
               </Button>
               <Button
                 size="small"
@@ -305,19 +381,29 @@ export function TeacherStudentsView() {
                 color={section === 'attendance' ? 'primary' : 'inherit'}
                 onClick={() => setSection('attendance')}
                 startIcon={<Iconify icon="solar:check-circle-bold" />}
-                sx={{ whiteSpace: 'nowrap' }}
+                sx={{
+                  flex: 1,
+                  px: { xs: 1, sm: 2 },
+                  fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                  whiteSpace: 'nowrap',
+                }}
               >
-                เช็คชื่อเข้าแถว
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                  เช็คชื่อ
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  เช็คชื่อเข้าแถว
+                </Box>
               </Button>
             </Box>
           </Box>
 
           {section === 'students' && (
-            <Card variant="outlined">
+            <Card variant="outlined" sx={{ borderRadius: { xs: 2, sm: 2.5 } }}>
               <Box
                 sx={{
-                  p: 2.5,
-                  gap: 2,
+                  p: { xs: 1.25, sm: 2.5 },
+                  gap: { xs: 1, sm: 2 },
                   display: 'flex',
                   alignItems: { xs: 'stretch', sm: 'center' },
                   flexDirection: { xs: 'column', sm: 'row' },
@@ -326,8 +412,10 @@ export function TeacherStudentsView() {
                   justifyContent: 'space-between',
                 }}
               >
-                <Box>
-                  <Typography variant="h6">{selectedClassroom?.name}</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
+                    {selectedClassroom?.name}
+                  </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     {filteredRoster.length} คน
                   </Typography>
@@ -350,7 +438,134 @@ export function TeacherStudentsView() {
                 />
               </Box>
 
-              <TableContainer>
+              <Box
+                sx={{
+                  p: 1,
+                  gap: 1,
+                  display: { xs: 'flex', sm: 'none' },
+                  flexDirection: 'column',
+                }}
+              >
+                {isLoading && (
+                  <Typography sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
+                    กำลังโหลด...
+                  </Typography>
+                )}
+
+                {!isLoading && !filteredRoster.length && (
+                  <Box sx={{ py: 5, textAlign: 'center' }}>
+                    <Iconify
+                      icon="solar:users-group-rounded-bold"
+                      width={38}
+                      sx={{ mb: 1, color: 'text.disabled' }}
+                    />
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {search ? 'ไม่พบนักเรียนจากคำค้นหา' : 'ยังไม่มีนักเรียนในชั้นนี้'}
+                    </Typography>
+                  </Box>
+                )}
+
+                {filteredRoster.map((row) => {
+                  const name =
+                    `${row.student.first_name ?? ''} ${row.student.last_name ?? ''}`.trim() ||
+                    row.student.username;
+                  const status = row.student.student_status ?? 'studying';
+
+                  return (
+                    <Box
+                      key={row.id}
+                      sx={{
+                        p: 1.25,
+                        border: '1px solid',
+                        borderRadius: 1.75,
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper',
+                      }}
+                    >
+                      <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
+                        <Avatar
+                          src={row.student.avatar_url ?? undefined}
+                          sx={{ width: 42, height: 42 }}
+                        >
+                          {name.charAt(0).toUpperCase()}
+                        </Avatar>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                          <Typography variant="subtitle2" noWrap>
+                            {name}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
+                            {row.student.nickname ? `ชื่อเล่น ${row.student.nickname} · ` : ''}@
+                            {row.student.username}
+                          </Typography>
+                        </Box>
+                        <Label variant="soft" color={status === 'studying' ? 'success' : 'warning'}>
+                          {STATUS_LABEL[status]}
+                        </Label>
+                      </Box>
+
+                      <Box
+                        sx={{
+                          my: 1,
+                          py: 0.75,
+                          px: 1,
+                          gap: 1,
+                          display: 'grid',
+                          borderRadius: 1.25,
+                          bgcolor: 'background.neutral',
+                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                        }}
+                      >
+                        <StudentMeta label="รหัส" value={row.student.student_code ?? '-'} />
+                        <StudentMeta label="เลขที่" value={row.student_number ?? '-'} />
+                      </Box>
+
+                      <Box
+                        sx={{
+                          gap: 0.5,
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                        }}
+                      >
+                        {canUseQr && (
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            disabled={!row.student.is_active || status !== 'studying'}
+                            onClick={() => setQrRow(row)}
+                            aria-label={`ดู QR ของ ${name}`}
+                            sx={{ bgcolor: 'primary.lighter' }}
+                          >
+                            <Iconify icon="solar:user-id-bold" width={18} />
+                          </IconButton>
+                        )}
+                        <IconButton
+                          size="small"
+                          color="inherit"
+                          onClick={() => openEdit(row)}
+                          aria-label={`แก้ไขเลขที่ของ ${name}`}
+                          sx={{ bgcolor: 'background.neutral' }}
+                        >
+                          <Iconify icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => {
+                            deleteMutation.reset();
+                            setDeletingRow(row);
+                          }}
+                          aria-label={`นำ ${name} ออกจากชั้น`}
+                          sx={{ bgcolor: 'error.lighter' }}
+                        >
+                          <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
+
+              <TableContainer sx={{ display: { xs: 'none', sm: 'block' } }}>
                 <Table sx={{ minWidth: 900 }}>
                   <TableHead>
                     <TableRow>

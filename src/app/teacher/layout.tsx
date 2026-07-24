@@ -47,6 +47,7 @@ export default function Layout({ children }: Props) {
               nav: {
                 data: navData,
                 headerIdentity: <SchoolHeaderIdentity />,
+                mobileBottom: true,
               },
               header: {
                 sx: {

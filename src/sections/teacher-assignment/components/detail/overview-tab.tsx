@@ -47,12 +47,12 @@ export const OverviewTab = memo(function OverviewTab({
     : '-';
 
   return (
-    <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ gap: { xs: 1.5, sm: 3 }, display: 'flex', flexDirection: 'column' }}>
       <Box
         sx={{
-          gap: 2,
+          gap: { xs: 0.75, sm: 2 },
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
         }}
       >
         <OverviewCard
@@ -83,21 +83,30 @@ export const OverviewTab = memo(function OverviewTab({
 
       <Box
         sx={{
-          gap: 3,
+          gap: { xs: 1.5, sm: 3 },
           display: 'grid',
           alignItems: 'start',
           gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
         }}
       >
         <Card variant="outlined">
-          <Box sx={{ p: 2.5 }}>
-            <Typography variant="h6">ข้อมูลการสอน</Typography>
+          <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
+              ข้อมูลการสอน
+            </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               รายละเอียดสำคัญของรายวิชานี้
             </Typography>
           </Box>
           <Divider />
-          <Box sx={{ p: 2.5, gap: 2, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }}>
+          <Box
+            sx={{
+              p: { xs: 1.5, sm: 2.5 },
+              gap: { xs: 1.25, sm: 2 },
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+            }}
+          >
             <InfoItem label="ครูผู้สอน" value={teacherName} />
             <InfoItem label="ห้องเรียน" value={roster?.classroomName ?? '-'} />
             <InfoItem label="ภาคเรียน" value={roster?.semesterName ?? '-'} />
@@ -108,14 +117,16 @@ export const OverviewTab = memo(function OverviewTab({
         <Card variant="outlined">
           <Box
             sx={{
-              p: 2.5,
+              p: { xs: 1.5, sm: 2.5 },
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
             }}
           >
             <Box>
-              <Typography variant="h6">ตารางสอนใกล้เคียง</Typography>
+              <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
+                ตารางสอนใกล้เคียง
+              </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 คาบเรียนประจำสัปดาห์
               </Typography>
@@ -125,7 +136,14 @@ export const OverviewTab = memo(function OverviewTab({
             </Button>
           </Box>
           <Divider />
-          <Box sx={{ p: 2.5, gap: 1.25, display: 'flex', flexDirection: 'column' }}>
+          <Box
+            sx={{
+              p: { xs: 1.5, sm: 2.5 },
+              gap: 1.25,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             {schedulesLoading && <Skeleton height={76} />}
             {!schedulesLoading && !schedules?.length && (
               <Typography
@@ -176,12 +194,19 @@ type OverviewCardProps = {
 
 function OverviewCard({ label, value, suffix, icon, color, bgcolor }: OverviewCardProps) {
   return (
-    <Card variant="outlined" sx={{ p: 2.5 }}>
-      <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+    <Card variant="outlined" sx={{ p: { xs: 0.75, sm: 2.5 }, borderRadius: { xs: 1.5, sm: 1 } }}>
+      <Box
+        sx={{
+          gap: { xs: 0.5, sm: 1.5 },
+          display: 'flex',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexDirection: { xs: 'column', sm: 'row' },
+        }}
+      >
         <Box
           sx={{
-            width: 46,
-            height: 46,
+            width: { xs: 30, sm: 46 },
+            height: { xs: 30, sm: 46 },
             flexShrink: 0,
             display: 'grid',
             borderRadius: 1.75,
@@ -190,17 +215,27 @@ function OverviewCard({ label, value, suffix, icon, color, bgcolor }: OverviewCa
             bgcolor,
           }}
         >
-          <Iconify icon={icon} width={25} />
+          <Iconify icon={icon} width={20} />
         </Box>
         <Box>
-          <Typography variant="h4">
+          <Typography variant="h4" sx={{ fontSize: { xs: '0.95rem', sm: '2rem' } }}>
             {value === null ? (
               <Skeleton width={44} />
             ) : (
               `${value.toLocaleString('th-TH')} ${suffix}`
             )}
           </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              display: 'block',
+              overflow: 'hidden',
+              color: 'text.secondary',
+              fontSize: { xs: '0.62rem', sm: '0.75rem' },
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {label}
           </Typography>
         </Box>

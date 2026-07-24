@@ -35,6 +35,7 @@ type Props = { assignment: StudentAssignmentItem; generatedAt: string };
 
 export function StudentAssignmentCard({ assignment, generatedAt }: Props) {
   const status = STATUS_CONFIG[assignment.status];
+  const isQuiz = assignment.category === 'quiz';
   const overdue =
     !!assignment.due_at &&
     new Date(assignment.due_at).getTime() < new Date(generatedAt).getTime() &&
@@ -60,18 +61,22 @@ export function StudentAssignmentCard({ assignment, generatedAt }: Props) {
           flexShrink: 0,
           borderRadius: 1.5,
           placeItems: 'center',
-          color: status.color === 'error' ? 'error.main' : 'primary.main',
-          bgcolor: status.color === 'error' ? 'error.lighter' : 'primary.lighter',
+          color: isQuiz ? 'secondary.dark' : 'primary.main',
+          bgcolor: isQuiz ? 'secondary.lighter' : 'primary.lighter',
         }}
       >
         <Iconify
-          icon={status.color === 'error' ? 'solar:danger-triangle-bold' : 'solar:check-circle-bold'}
+          icon={isQuiz ? 'solar:bill-list-bold-duotone' : 'solar:notes-bold-duotone'}
+          width={26}
         />
       </Box>
 
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
           <Typography variant="subtitle1">{assignment.title}</Typography>
+          <Label variant="soft" color={isQuiz ? 'secondary' : 'primary'}>
+            {isQuiz ? 'แบบทดสอบ' : 'งาน'}
+          </Label>
           <Label variant="soft" color={status.color}>
             {status.label}
           </Label>

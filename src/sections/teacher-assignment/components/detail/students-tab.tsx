@@ -49,15 +49,95 @@ export const StudentsTab = memo(function StudentsTab({ teacherAssignmentId }: Pr
           ไม่สามารถโหลดรายชื่อนักเรียนได้
         </Alert>
       )}
-      <Card variant="outlined">
-        <Box sx={{ p: 2.5 }}>
-          <Typography variant="h6">รายชื่อนักเรียน</Typography>
+      <Card variant="outlined" sx={{ borderRadius: { xs: 2, sm: 1 } }}>
+        <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+          <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}>
+            รายชื่อนักเรียน
+          </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             กดดูรายละเอียดเพื่อตรวจคะแนนและสถานะการส่งงานรายคน
           </Typography>
         </Box>
         <Divider />
-        <TableContainer>
+        <Box
+          sx={{
+            p: 1,
+            gap: 0.75,
+            display: { xs: 'flex', sm: 'none' },
+            flexDirection: 'column',
+          }}
+        >
+          {isLoading && (
+            <Typography sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
+              กำลังโหลด...
+            </Typography>
+          )}
+          {!isLoading && !roster?.roster.length && (
+            <Typography sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
+              ยังไม่มีนักเรียนในห้องนี้
+            </Typography>
+          )}
+          {roster?.roster.map((row) => {
+            const studentName =
+              `${row.student.first_name ?? ''} ${row.student.last_name ?? ''}`.trim() ||
+              row.student.username;
+
+            return (
+              <Box
+                key={row.id}
+                sx={{
+                  p: 1,
+                  gap: 1,
+                  display: 'grid',
+                  border: '1px solid',
+                  borderRadius: 1.5,
+                  alignItems: 'center',
+                  borderColor: 'divider',
+                  gridTemplateColumns: '40px minmax(0, 1fr) auto',
+                }}
+              >
+                <Avatar
+                  src={row.student.avatar_url ?? undefined}
+                  sx={{ width: 40, height: 40, color: 'primary.main', bgcolor: 'primary.lighter' }}
+                >
+                  {studentName.charAt(0)}
+                </Avatar>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="subtitle2" noWrap>
+                    {studentName}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ display: 'block', color: 'text.secondary' }}
+                    noWrap
+                  >
+                    เลขที่ {row.student_number ?? '-'} · @{row.student.username}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex' }}>
+                  <Button
+                    size="small"
+                    color="inherit"
+                    onClick={() => setGuardianStudent(row.student)}
+                    aria-label={`ข้อมูลผู้ปกครองของ ${studentName}`}
+                    sx={{ minWidth: 36, px: 0.75 }}
+                  >
+                    <Iconify icon="solar:users-group-rounded-bold" width={18} />
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => setSelectedStudentId(row.student.id)}
+                    aria-label={`ดูผลการเรียนของ ${studentName}`}
+                    sx={{ minWidth: 36, px: 0.75 }}
+                  >
+                    <Iconify icon="solar:chart-square-outline" width={18} />
+                  </Button>
+                </Box>
+              </Box>
+            );
+          })}
+        </Box>
+        <TableContainer sx={{ display: { xs: 'none', sm: 'block' } }}>
           <Table>
             <TableHead>
               <TableRow>

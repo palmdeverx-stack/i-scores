@@ -77,15 +77,24 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
         href={backPath}
         color="inherit"
         startIcon={<Iconify icon="solar:reply-bold" />}
-        sx={{ mb: 2 }}
+        aria-label="กลับหน้าครูประจำวิชา"
+        sx={{
+          mb: { xs: 1, sm: 2 },
+          minWidth: { xs: 40, sm: 64 },
+          px: { xs: 1, sm: 2 },
+          '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+        }}
       >
-        กลับหน้าครูประจำวิชา
+        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+          กลับหน้าครูประจำวิชา
+        </Box>
       </Button>
 
       <Card
         sx={{
-          mb: 3,
-          p: 2,
+          mb: { xs: 2, sm: 3 },
+          p: { xs: 1.25, sm: 2 },
+          borderRadius: { xs: 2.5, sm: 2 },
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
@@ -106,25 +115,40 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
         <Box
           sx={{
             zIndex: 1,
-            gap: 2.5,
-            display: 'flex',
+            gap: { xs: 1.25, sm: 2.5 },
+            display: { xs: 'grid', sm: 'flex' },
             position: 'relative',
             alignItems: { xs: 'flex-start' },
             flexDirection: { xs: 'column', sm: 'row' },
+            gridTemplateAreas: { xs: '"image info" "actions actions"', sm: 'none' },
+            gridTemplateColumns: { xs: '64px minmax(0, 1fr)', sm: 'none' },
           }}
         >
           <Avatar
             src={roster?.subjectImageUrl ?? undefined}
             variant="rounded"
-            sx={{ width: 140, height: 140, color: 'primary.darker', bgcolor: 'common.white' }}
+            sx={{
+              width: { xs: 64, sm: 140 },
+              height: { xs: 64, sm: 140 },
+              gridArea: { xs: 'image', sm: 'auto' },
+              color: 'primary.darker',
+              bgcolor: 'common.white',
+            }}
           >
-            <Iconify icon="solar:notes-bold-duotone" width={36} />
+            <Iconify icon="solar:notes-bold-duotone" width={30} />
           </Avatar>
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography variant="overline" sx={{ opacity: 0.72 }}>
+          <Box sx={{ minWidth: 0, flex: 1, gridArea: { xs: 'info', sm: 'auto' } }}>
+            <Typography
+              variant="overline"
+              sx={{ opacity: 0.72, fontSize: { xs: '0.6rem', sm: '0.75rem' } }}
+            >
               รายละเอียดการสอน
             </Typography>
-            <Typography component="h1" variant="h3">
+            <Typography
+              component="h1"
+              variant="h3"
+              sx={{ fontSize: { xs: '1.15rem', sm: '2rem', md: '2.5rem' } }}
+            >
               {isLoading ? (
                 <Skeleton width={240} />
               ) : (
@@ -133,16 +157,16 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
             </Typography>
             <Box
               sx={{
-                gap: 1.5,
-                mt: 1,
+                gap: { xs: 0.5, sm: 1.5 },
+                mt: { xs: 0.25, sm: 1 },
                 display: 'flex',
                 flexWrap: 'wrap',
                 color: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.78),
               }}
             >
-              <Typography variant="body1">ห้อง {roster?.classroomName ?? '-'}</Typography>
-              <Typography variant="body1">•</Typography>
-              <Typography variant="body2">
+              <Typography variant="body2">ห้อง {roster?.classroomName ?? '-'}</Typography>
+              <Typography variant="body2">•</Typography>
+              <Typography variant="body2" noWrap>
                 ปีการศึกษา {roster?.semesterName}/{roster?.academicYear ?? '-'}
               </Typography>
             </Box>
@@ -158,7 +182,8 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
                 }
                 label={statusLabel}
                 sx={(theme) => ({
-                  mt: 1.5,
+                  mt: { xs: 0.75, sm: 1.5 },
+                  maxWidth: 1,
                   color: 'common.white',
                   fontWeight: 700,
                   bgcolor: activeSchedule
@@ -169,23 +194,39 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
               />
             )}
           </Box>
-          <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
-            <ScoreReportExportButton teacherAssignmentId={teacherAssignmentId} />
+          <Box
+            sx={{
+              gap: 0.75,
+              width: { xs: 1, sm: 'auto' },
+              display: { xs: 'grid', sm: 'flex' },
+              flexWrap: 'wrap',
+              gridArea: { xs: 'actions', sm: 'auto' },
+              gridTemplateColumns: { xs: '40px 40px minmax(0, 1fr)', sm: 'none' },
+            }}
+          >
+            <ScoreReportExportButton teacherAssignmentId={teacherAssignmentId} compactOnMobile />
             <Button
               variant="outlined"
               disabled={!roster?.subjectId}
               onClick={() => setImageDialogOpen(true)}
+              startIcon={<Iconify icon="solar:pen-bold" />}
+              aria-label="จัดการรูปวิชา"
               sx={(theme) => ({
+                minWidth: { xs: 40, sm: 64 },
+                px: { xs: 1, sm: 2 },
                 flexShrink: 0,
                 color: 'common.white',
                 borderColor: varAlpha(theme.vars.palette.common.whiteChannel, 0.4),
+                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
                 '&:hover': {
                   borderColor: 'common.white',
                   bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.08),
                 },
               })}
             >
-              จัดการรูปวิชา
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                จัดการรูปวิชา
+              </Box>
             </Button>
             <Button
               component={RouterLink}
@@ -193,7 +234,7 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
               variant="contained"
               color="secondary"
               startIcon={<Iconify icon="mingcute:add-line" />}
-              sx={{ flexShrink: 0, color: 'primary.darker' }}
+              sx={{ minWidth: 0, flexShrink: 0, color: 'primary.darker' }}
             >
               สร้างงาน
             </Button>

@@ -24,8 +24,11 @@ import { VerticalDivider } from './content';
 import { NavVertical } from './nav-vertical';
 import { NavHorizontal } from './nav-horizontal';
 import { _account } from '../nav-config-account';
+import { MainSchoolLogo } from '../main/school-brand';
 import { MenuButton } from '../components/menu-button';
+import { DashboardBottomNav } from './dashboard-bottom-nav';
 import { AccountDrawer } from '../components/account-drawer';
+import { AccountPopover } from '../components/account-popover';
 import { LanguagePopover } from '../components/language-popover';
 import { navData as dashboardNavData } from '../nav-config-dashboard';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
@@ -44,6 +47,7 @@ export type DashboardLayoutProps = LayoutBaseProps & {
     nav?: {
       data?: NavSectionProps['data'];
       headerIdentity?: React.ReactNode;
+      mobileBottom?: boolean;
     };
     main?: MainSectionProps;
   };
@@ -71,6 +75,7 @@ export function DashboardLayout({
   const rawNavData = slotProps?.nav?.data ?? dashboardNavData;
   const navData = useTranslatedNavSections(rawNavData);
   const headerIdentity = slotProps?.nav?.headerIdentity;
+  const mobileBottom = slotProps?.nav?.mobileBottom ?? false;
 
   const isNavMini = settings.state.navLayout === 'mini';
   const isNavHorizontal = settings.state.navLayout === 'horizontal';
@@ -120,17 +125,27 @@ export function DashboardLayout({
       leftArea: (
         <>
           {/** @slot Nav mobile */}
-          <MenuButton
-            onClick={onOpen}
-            sx={{ mr: 1, ml: -1, [theme.breakpoints.up(mobileNavQuery)]: { display: 'none' } }}
-          />
-          <NavMobile
-            data={navData}
-            open={open}
-            onClose={onClose}
-            cssVars={navVars.section}
-            checkPermissions={canDisplayItemByRole}
-          />
+          {!mobileBottom && (
+            <MenuButton
+              onClick={onOpen}
+              sx={{ mr: 1, ml: -1, [theme.breakpoints.up(mobileNavQuery)]: { display: 'none' } }}
+            />
+          )}
+          {!mobileBottom && (
+            <NavMobile
+              data={navData}
+              open={open}
+              onClose={onClose}
+              cssVars={navVars.section}
+              checkPermissions={canDisplayItemByRole}
+            />
+          )}
+
+          {mobileBottom && (
+            <Box sx={{ display: { xs: 'flex', [mobileNavQuery]: 'none' } }}>
+              <MainSchoolLogo />
+            </Box>
+          )}
 
           {/** @slot Logo */}
           {(isNavHorizontal || tabletHorizontalNav) && (
@@ -186,7 +201,17 @@ export function DashboardLayout({
           {/* <SettingsButton /> */}
 
           {/** @slot Account drawer */}
-          <AccountDrawer data={_account} />
+          {mobileBottom && (
+            <AccountPopover sx={{ display: { xs: 'inline-flex', [mobileNavQuery]: 'none' } }} />
+          )}
+          <AccountDrawer
+            data={_account}
+            sx={
+              mobileBottom
+                ? { display: { xs: 'none', [mobileNavQuery]: 'inline-flex' } }
+                : undefined
+            }
+          />
         </Box>
       ),
     };
@@ -224,7 +249,23 @@ export function DashboardLayout({
 
   const renderFooter = () => null;
 
-  const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
+  const renderMain = () => (
+    <MainSection
+      {...slotProps?.main}
+      sx={[
+        ...(Array.isArray(slotProps?.main?.sx) ? slotProps.main.sx : [slotProps?.main?.sx]),
+        mobileBottom && {
+          '--dashboard-bottom-nav-height': '66px',
+          pb: {
+            xs: 'calc(var(--dashboard-bottom-nav-height) + max(env(safe-area-inset-bottom), 0px) + 12px)',
+            [mobileNavQuery]: 0,
+          },
+        },
+      ]}
+    >
+      {children}
+    </MainSection>
+  );
 
   return (
     <LayoutSection
@@ -260,6 +301,7 @@ export function DashboardLayout({
       ]}
     >
       {renderMain()}
+      {mobileBottom && <DashboardBottomNav data={navData} layoutQuery={mobileNavQuery} />}
     </LayoutSection>
   );
 }

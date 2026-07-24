@@ -69,8 +69,7 @@ export function StudentQuizView({ assignmentId }: Props) {
       new Date(quiz.attempt.started_at).getTime() + quiz.settings.time_limit_minutes * 60_000;
     return Math.max(0, Math.ceil((end - now) / 1000));
   }, [now, quiz]);
-  const hasActiveTimer =
-    quiz?.attempt?.status === 'in_progress' && remainingSeconds !== null;
+  const hasActiveTimer = quiz?.attempt?.status === 'in_progress' && remainingSeconds !== null;
 
   useEffect(() => {
     if (!hasActiveTimer) return undefined;
@@ -123,7 +122,7 @@ export function StudentQuizView({ assignmentId }: Props) {
   const showScore = result?.showScore ?? quiz.settings.show_score_after_submit;
 
   return (
-    <Container maxWidth="md" sx={{ pb: 6 }}>
+    <Container maxWidth="lg" sx={{ pb: 6 }}>
       <Button
         component={RouterLink}
         href={paths.student.assignments}

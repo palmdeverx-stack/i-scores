@@ -72,7 +72,7 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
   const openSchedule = useCallback(() => setTab('schedule'), []);
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ px: { xs: 1.5, sm: 3 }, pb: { xs: 3, sm: 5 } }}>
       <TeacherAssignmentDetailHeader teacherAssignmentId={teacherAssignmentId} />
       <TeacherAssignmentDetailTabs
         value={tab}
@@ -109,8 +109,8 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
 
 function TabLoading() {
   return (
-    <Card variant="outlined" sx={{ p: 3 }}>
-      <Skeleton variant="rounded" height={220} />
+    <Card variant="outlined" sx={{ p: { xs: 1.5, sm: 3 }, borderRadius: { xs: 2, sm: 1 } }}>
+      <Skeleton variant="rounded" height={220} sx={{ height: { xs: 160, sm: 220 } }} />
     </Card>
   );
 }

@@ -119,11 +119,12 @@ export function TeacherDashboardView() {
   }).format(new Date());
 
   return (
-    <Container maxWidth="xl" sx={{ pb: 5 }}>
+    <Container maxWidth="xl" sx={{ px: { xs: 1.5, sm: 3 }, pb: { xs: 3, sm: 5 } }}>
       <Card
         sx={{
-          mb: 3,
+          mb: { xs: 2, sm: 3 },
           p: { xs: 2, sm: 3 },
+          borderRadius: { xs: 2.5, sm: 3 },
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',
@@ -143,7 +144,7 @@ export function TeacherDashboardView() {
       >
         <Box
           sx={{
-            gap: 3,
+            gap: { xs: 2, sm: 3 },
             zIndex: 1,
             display: 'flex',
             flexWrap: 'wrap',
@@ -162,18 +163,23 @@ export function TeacherDashboardView() {
             >
               แดชบอร์ดครู
             </Typography>
-            <Typography component="h1" variant="h3" sx={{ mt: 0.25 }}>
+            <Typography
+              component="h1"
+              variant="h3"
+              sx={{ mt: 0.25, fontSize: { xs: '1.65rem', sm: '2rem', md: '2.5rem' } }}
+            >
               สวัสดี ครู{teacherName}
             </Typography>
             <Typography
+              variant="body2"
               sx={(theme) => ({
-                mt: 1,
+                mt: 0.75,
                 color: varAlpha(theme.vars.palette.common.whiteChannel, 0.8),
               })}
             >
               {todayText}
             </Typography>
-            <Box sx={{ gap: 1, mt: 2, display: 'flex', flexWrap: 'wrap' }}>
+            <Box sx={{ gap: 0.75, mt: 1.5, display: 'flex', flexWrap: 'wrap' }}>
               <Chip
                 size="small"
                 label={data.school?.name ?? 'ยังไม่มีข้อมูลโรงเรียน'}
@@ -193,14 +199,21 @@ export function TeacherDashboardView() {
             </Box>
           </Box>
 
-          <Box sx={{ gap: 1.5, display: 'flex', flexWrap: 'wrap' }}>
+          <Box
+            sx={{
+              gap: 1,
+              width: { xs: 1, sm: 'auto' },
+              display: 'grid',
+              gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(2, auto)' },
+            }}
+          >
             <Button
               component={RouterLink}
               href={paths.teacher.timetable}
               variant="contained"
               color="inherit"
               startIcon={<Iconify icon="solar:calendar-date-bold" />}
-              sx={{ color: 'primary.darker', bgcolor: 'common.white' }}
+              sx={{ minHeight: 44, color: 'primary.darker', bgcolor: 'common.white' }}
             >
               ตารางสอน
             </Button>
@@ -211,6 +224,7 @@ export function TeacherDashboardView() {
               color="inherit"
               startIcon={<Iconify icon="solar:notebook-bold-duotone" />}
               sx={(theme) => ({
+                minHeight: 44,
                 borderColor: varAlpha(theme.vars.palette.common.whiteChannel, 0.5),
                 '&:hover': {
                   borderColor: 'common.white',
@@ -233,7 +247,17 @@ export function TeacherDashboardView() {
               ไปตรวจงาน
             </Button>
           }
-          sx={{ mb: 3 }}
+          sx={{
+            mb: { xs: 2, sm: 3 },
+            alignItems: 'flex-start',
+            '& .MuiAlert-action': {
+              mt: { xs: 1, sm: -0.5 },
+              ml: { xs: 0, sm: 2 },
+              width: { xs: 1, sm: 'auto' },
+              justifyContent: { xs: 'flex-end', sm: 'initial' },
+            },
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+          }}
         >
           มีงานของนักเรียนรอตรวจและบันทึกคะแนน {data.summary.waiting_to_grade} รายการ
         </Alert>
@@ -241,8 +265,8 @@ export function TeacherDashboardView() {
 
       <Box
         sx={{
-          gap: 2,
-          mb: 3,
+          gap: { xs: 1.25, sm: 2 },
+          mb: { xs: 2, sm: 3 },
           display: 'grid',
           gridTemplateColumns: {
             xs: 'repeat(2, minmax(0, 1fr))',
@@ -252,22 +276,40 @@ export function TeacherDashboardView() {
         }}
       >
         {summaryCards.map((item) => (
-          <Card key={item.key} variant="outlined" sx={{ p: 2.5 }}>
-            <Box sx={{ gap: 1.75, display: 'flex', alignItems: 'center' }}>
+          <Card
+            key={item.key}
+            variant="outlined"
+            sx={{ p: { xs: 1.5, sm: 2.5 }, borderRadius: { xs: 2, sm: 2.5 } }}
+          >
+            <Box sx={{ gap: { xs: 1, sm: 1.75 }, display: 'flex', alignItems: 'center' }}>
               <Avatar
                 variant="rounded"
-                sx={{ width: 50, height: 50, color: item.color, bgcolor: item.bgcolor }}
+                sx={{
+                  width: { xs: 40, sm: 50 },
+                  height: { xs: 40, sm: 50 },
+                  color: item.color,
+                  bgcolor: item.bgcolor,
+                }}
               >
-                <Iconify icon={item.icon} width={27} />
+                <Iconify icon={item.icon} width={24} />
               </Avatar>
               <Box sx={{ minWidth: 0 }}>
-                <Typography variant="h4">
+                <Typography variant="h4" sx={{ fontSize: { xs: '1.35rem', sm: '2rem' } }}>
                   {data.summary[item.key].toLocaleString('th-TH')}{' '}
                   <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
                     {item.suffix}
                   </Typography>
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    overflow: 'hidden',
+                    color: 'text.secondary',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
                   {item.label}
                 </Typography>
               </Box>
@@ -278,13 +320,13 @@ export function TeacherDashboardView() {
 
       <Box
         sx={{
-          gap: 3,
+          gap: { xs: 2, sm: 3 },
           display: 'grid',
           alignItems: 'start',
           gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.55fr) minmax(300px, 0.8fr)' },
         }}
       >
-        <Box sx={{ gap: 3, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ gap: { xs: 2, sm: 3 }, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <TodaySchedule schedules={data.today_schedules} />
           <RecentAssignments
             assignments={recentQuery.data?.recent_assignments}
@@ -292,7 +334,7 @@ export function TeacherDashboardView() {
           />
         </Box>
 
-        <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ gap: 3, display: { xs: 'none', sm: 'flex' }, flexDirection: 'column' }}>
           <WorkloadSummary data={data} />
         </Box>
       </Box>
@@ -314,20 +356,55 @@ function SectionHeader({
   href?: string;
 }) {
   return (
-    <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'center' }}>
-      <Avatar variant="rounded" sx={{ mr: 1.5, color: 'primary.main', bgcolor: 'primary.lighter' }}>
-        <Iconify icon={icon} width={22} />
+    <Box sx={{ mb: { xs: 1.25, sm: 2.5 }, display: 'flex', alignItems: 'center' }}>
+      <Avatar
+        variant="rounded"
+        sx={{
+          mr: { xs: 0.75, sm: 1.5 },
+          width: { xs: 34, sm: 40 },
+          height: { xs: 34, sm: 40 },
+          color: 'primary.main',
+          bgcolor: 'primary.lighter',
+        }}
+      >
+        <Iconify
+          icon={icon}
+          width={22}
+          sx={{ width: { xs: 20, sm: 22 }, height: { xs: 20, sm: 22 } }}
+        />
       </Avatar>
       <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography component="h2" variant="h6">
+        <Typography
+          component="h2"
+          variant="h6"
+          sx={{ fontSize: { xs: '0.95rem', sm: '1.125rem' } }}
+        >
           {title}
         </Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+        <Typography
+          variant="body2"
+          sx={{
+            overflow: 'hidden',
+            color: 'text.secondary',
+            fontSize: { xs: '0.7rem', sm: '0.875rem' },
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+          }}
+        >
           {description}
         </Typography>
       </Box>
       {href && (
-        <Button component={RouterLink} href={href} size="small">
+        <Button
+          component={RouterLink}
+          href={href}
+          size="small"
+          sx={{
+            minWidth: 'auto',
+            px: { xs: 0.75, sm: 1 },
+            fontSize: { xs: '0.72rem', sm: '0.8125rem' },
+          }}
+        >
           ดูทั้งหมด
         </Button>
       )}
@@ -345,7 +422,7 @@ function TodaySchedule({ schedules }: { schedules: TeacherDashboardSummary['toda
   const nowMinutes = timeToMinutes(bangkokTime);
 
   return (
-    <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3 } }}>
+    <Card variant="outlined" sx={{ p: { xs: 1.5, sm: 3 }, borderRadius: { xs: 2, sm: 2.5 } }}>
       <SectionHeader
         title="ตารางสอนวันนี้"
         description={schedules.length ? `${schedules.length} คาบเรียนวันนี้` : 'วันนี้ไม่มีคาบสอน'}
@@ -354,7 +431,7 @@ function TodaySchedule({ schedules }: { schedules: TeacherDashboardSummary['toda
       />
 
       {schedules.length ? (
-        <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ gap: { xs: 1, sm: 1.5 }, display: 'flex', flexDirection: 'column' }}>
           {schedules.map((slot) => {
             const start = timeToMinutes(slot.start_time);
             const end = timeToMinutes(slot.end_time);
@@ -367,8 +444,8 @@ function TodaySchedule({ schedules }: { schedules: TeacherDashboardSummary['toda
                 component={RouterLink}
                 href={paths.teacher.assignmentDetail(slot.teacher_assignment_id)}
                 sx={{
-                  gap: 2,
-                  p: 2,
+                  gap: { xs: 1.25, sm: 2 },
+                  p: { xs: 1.5, sm: 2 },
                   display: 'grid',
                   borderRadius: 2,
                   color: 'text.primary',
@@ -377,13 +454,17 @@ function TodaySchedule({ schedules }: { schedules: TeacherDashboardSummary['toda
                   border: '1px solid',
                   borderColor: isTeaching ? 'primary.light' : 'transparent',
                   gridTemplateColumns: {
-                    xs: '72px minmax(0, 1fr)',
+                    xs: '62px minmax(0, 1fr)',
                     sm: '92px minmax(0, 1fr) auto',
+                  },
+                  gridTemplateAreas: {
+                    xs: '"time detail" "time status"',
+                    sm: '"time detail status"',
                   },
                   '&:hover': { borderColor: 'primary.main' },
                 }}
               >
-                <Box>
+                <Box sx={{ gridArea: 'time' }}>
                   <Typography
                     variant="subtitle2"
                     sx={{ color: isTeaching ? 'primary.main' : 'text.primary' }}
@@ -394,7 +475,7 @@ function TodaySchedule({ schedules }: { schedules: TeacherDashboardSummary['toda
                     ถึง {formatTime(slot.end_time)}
                   </Typography>
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, gridArea: 'detail' }}>
                   <Typography variant="subtitle2" noWrap>
                     {slot.subject?.code ? `${slot.subject.code} · ` : ''}
                     {slot.subject?.name ?? 'ไม่ระบุรายวิชา'}
@@ -408,7 +489,11 @@ function TodaySchedule({ schedules }: { schedules: TeacherDashboardSummary['toda
                   variant="soft"
                   color={isTeaching ? 'success' : isFinished ? 'default' : 'info'}
                   label={isTeaching ? 'กำลังสอน' : isFinished ? 'สอนแล้ว' : 'คาบถัดไป'}
-                  sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+                  sx={{
+                    gridArea: 'status',
+                    justifySelf: { xs: 'start', sm: 'end' },
+                    alignSelf: 'center',
+                  }}
                 />
               </Box>
             );
@@ -432,7 +517,7 @@ function RecentAssignments({
   isLoading: boolean;
 }) {
   return (
-    <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3 } }}>
+    <Card variant="outlined" sx={{ p: { xs: 1.25, sm: 3 }, borderRadius: { xs: 2, sm: 2.5 } }}>
       <SectionHeader
         title="งานที่มอบหมายล่าสุด"
         description="ติดตามการส่งงานและสถานะการตรวจคะแนน"
@@ -441,13 +526,13 @@ function RecentAssignments({
       />
 
       {isLoading ? (
-        <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ gap: { xs: 0.75, sm: 1.5 }, display: 'flex', flexDirection: 'column' }}>
           {Array.from({ length: 3 }, (_, index) => (
             <Skeleton key={index} variant="rounded" height={72} sx={{ borderRadius: 2 }} />
           ))}
         </Box>
       ) : assignments?.length ? (
-        <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ gap: { xs: 0.75, sm: 1.5 }, display: 'flex', flexDirection: 'column' }}>
           {assignments.map((assignment) => {
             const submittedPercent = assignment.student_count
               ? Math.min((assignment.submitted_count / assignment.student_count) * 100, 100)
@@ -457,26 +542,40 @@ function RecentAssignments({
               <Box
                 key={assignment.id}
                 sx={{
-                  gap: 2,
-                  p: 2,
+                  gap: { xs: 1, sm: 2 },
+                  p: { xs: 1.25, sm: 2 },
                   display: 'grid',
-                  borderRadius: 2,
+                  borderRadius: { xs: 1.5, sm: 2 },
                   bgcolor: 'background.neutral',
                   gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) 180px auto' },
                   alignItems: 'center',
                 }}
               >
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="subtitle2" noWrap>
+                  <Typography
+                    variant="subtitle2"
+                    noWrap
+                    sx={{ fontSize: { xs: '0.9rem', sm: '0.875rem' } }}
+                  >
                     {assignment.title}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                    noWrap
+                  >
                     {assignment.subject?.name ?? 'ไม่ระบุรายวิชา'} · ห้อง{' '}
                     {assignment.classroom?.name ?? '-'} · {assignment.full_score} คะแนน
                   </Typography>
                 </Box>
                 <Box>
-                  <Box sx={{ mb: 0.5, display: 'flex', justifyContent: 'space-between' }}>
+                  <Box
+                    sx={{
+                      mb: { xs: 0.25, sm: 0.5 },
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                    }}
+                  >
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                       ส่งแล้ว
                     </Typography>
@@ -488,7 +587,7 @@ function RecentAssignments({
                     variant="determinate"
                     value={submittedPercent}
                     color={submittedPercent >= 100 ? 'success' : 'primary'}
-                    sx={{ height: 7, borderRadius: 7 }}
+                    sx={{ height: { xs: 5, sm: 7 }, borderRadius: 7 }}
                   />
                 </Box>
                 <Button
@@ -497,6 +596,17 @@ function RecentAssignments({
                   size="small"
                   variant="outlined"
                   startIcon={<Iconify icon="solar:file-check-bold-duotone" />}
+                  sx={(theme) => ({
+                    [theme.breakpoints.down('sm')]: {
+                      py: 0.5,
+                      px: 1.5,
+                      width: 'auto',
+                      minWidth: 116,
+                      minHeight: 38,
+                      fontSize: '0.8rem',
+                      justifySelf: 'end',
+                    },
+                  })}
                 >
                   ตรวจงาน
                 </Button>
@@ -570,7 +680,7 @@ function WorkloadRow({
 
 function EmptyState({ icon, text }: { icon: IconifyName; text: string }) {
   return (
-    <Box sx={{ py: 5, textAlign: 'center' }}>
+    <Box sx={{ py: { xs: 3.5, sm: 5 }, textAlign: 'center' }}>
       <Iconify icon={icon} width={42} sx={{ mb: 1, color: 'text.disabled' }} />
       <Typography variant="body2" sx={{ color: 'text.secondary' }}>
         {text}
@@ -581,18 +691,27 @@ function EmptyState({ icon, text }: { icon: IconifyName; text: string }) {
 
 function TeacherDashboardSkeleton() {
   return (
-    <Container maxWidth="xl" aria-label="กำลังโหลดแดชบอร์ดครู" sx={{ pb: 5 }}>
-      <Skeleton variant="rounded" height={220} sx={{ mb: 3, borderRadius: 3 }} />
+    <Container
+      maxWidth="xl"
+      aria-label="กำลังโหลดแดชบอร์ดครู"
+      sx={{ px: { xs: 1.5, sm: 3 }, pb: 5 }}
+    >
+      <Skeleton variant="rounded" height={220} sx={{ mb: { xs: 2, sm: 3 }, borderRadius: 3 }} />
       <Box
         sx={{
-          gap: 2,
-          mb: 3,
+          gap: { xs: 1.25, sm: 2 },
+          mb: { xs: 2, sm: 3 },
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
         }}
       >
         {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} variant="rounded" height={104} sx={{ borderRadius: 2 }} />
+          <Skeleton
+            key={index}
+            variant="rounded"
+            height={104}
+            sx={{ height: { xs: 80, sm: 104 }, borderRadius: 2 }}
+          />
         ))}
       </Box>
       <Box sx={{ gap: 3, display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.55fr 0.8fr' } }}>

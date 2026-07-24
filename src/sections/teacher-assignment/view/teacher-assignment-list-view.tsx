@@ -247,8 +247,8 @@ export function TeacherAssignmentListView() {
         sx={{
           mb: 4,
           gap: 2,
-          display: 'grid',
-          gridTemplateColumns: { xs: 'repeat(4, 1fr)', md: 'repeat(4, 1fr)' },
+          display: { xs: 'none', sm: 'grid' },
+          gridTemplateColumns: 'repeat(4, 1fr)',
         }}
       >
         {summaryItems.map((item) => (

@@ -13,6 +13,9 @@ import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 import LinearProgress from '@mui/material/LinearProgress';
 
+import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
+
 import { Iconify } from 'src/components/iconify';
 
 import { displayName, isSubmitted } from '../view/student-dashboard-shared';
@@ -30,8 +33,30 @@ export function SubjectCard({ item }: Props) {
 
   return (
     <Card
+      component={RouterLink}
+      href={paths.student.subjectDetails(item.id)}
+      aria-label={`ดูรายละเอียดวิชา ${item.subject.name}`}
       variant="outlined"
-      sx={{ height: 1, overflow: 'hidden', borderRadius: { xs: 2.5, sm: 3 }, position: 'relative' }}
+      sx={{
+        height: 1,
+        color: 'inherit',
+        overflow: 'hidden',
+        position: 'relative',
+        textDecoration: 'none',
+        borderRadius: { xs: 2.5, sm: 3 },
+        transition: (theme) =>
+          theme.transitions.create(['transform', 'box-shadow', 'border-color']),
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          borderColor: 'primary.main',
+          boxShadow: (theme) => theme.vars.customShadows.z8,
+        },
+        '&:focus-visible': {
+          outline: '3px solid',
+          outlineColor: 'primary.main',
+          outlineOffset: 2,
+        },
+      }}
     >
       <Box
         sx={{

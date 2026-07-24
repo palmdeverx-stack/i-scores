@@ -115,38 +115,50 @@ export function TimetableView() {
   const today = new Date().getDay() || 7;
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ px: { xs: 1.5, sm: 3 }, pb: { xs: 3, sm: 5 } }}>
       <Box
         sx={{
-          p: { xs: 2.5, md: 4 },
-          mb: 3,
-          gap: 3,
+          p: { xs: 1.5, sm: 2.5, md: 4 },
+          mb: { xs: 2, sm: 3 },
+          gap: { xs: 2, sm: 3 },
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderRadius: 3,
+          borderRadius: { xs: 2.5, sm: 3 },
           color: 'common.white',
           background: (theme) =>
             `linear-gradient(135deg, ${theme.vars.palette.primary.darker} 0%, ${theme.vars.palette.primary.main} 62%, ${theme.vars.palette.primary.light} 100%)`,
         }}
       >
         <Box>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-            <Iconify icon="solar:calendar-date-bold" width={28} />
-            <Typography component="h1" variant="h3">
+          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: { xs: 0.5, sm: 1 } }}>
+            <Iconify icon="solar:calendar-date-bold" width={24} />
+            <Typography
+              component="h1"
+              variant="h3"
+              sx={{ fontSize: { xs: '1.4rem', sm: '2rem', md: '2.5rem' } }}
+            >
               ตารางสอนของฉัน
             </Typography>
           </Stack>
           <Typography
+            variant="body2"
             sx={(theme) => ({
               color: varAlpha(theme.vars.palette.common.whiteChannel, 0.78),
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
             })}
           >
             ดูคาบสอนรายสัปดาห์และกดที่รายวิชาเพื่อดูรายละเอียด
           </Typography>
           {!!timetable.terms.length && (
-            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 2 }}>
+            <Stack
+              direction="row"
+              spacing={0.75}
+              useFlexGap
+              flexWrap="wrap"
+              sx={{ mt: { xs: 1, sm: 2 } }}
+            >
               {timetable.terms.map((term) => (
                 <Chip
                   key={term}
@@ -163,7 +175,11 @@ export function TimetableView() {
         </Box>
 
         {!isLoading && !!schedules.length && (
-          <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }}>
+          <Stack
+            direction="row"
+            spacing={{ xs: 0.75, sm: 1.5 }}
+            sx={{ width: { xs: 1, sm: 'auto' } }}
+          >
             <SummaryStat label="คาบ/สัปดาห์" value={schedules.length} />
             <SummaryStat label="วันสอน" value={timetable.teachingDays} />
             <SummaryStat
@@ -205,7 +221,136 @@ export function TimetableView() {
       )}
 
       {!isLoading && !!schedules.length && (
-        <Card variant="outlined" sx={{ overflow: 'hidden', borderRadius: 3 }}>
+        <Box sx={{ gap: 1.25, display: { xs: 'flex', sm: 'none' }, flexDirection: 'column' }}>
+          <Box sx={{ px: 0.25, display: 'flex', alignItems: 'flex-end' }}>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="h6" sx={{ fontSize: '1rem' }}>
+                ตารางรายสัปดาห์
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {schedules.length} คาบ · กดเพื่อดูรายละเอียด
+              </Typography>
+            </Box>
+            <Chip
+              size="small"
+              variant="soft"
+              color="primary"
+              icon={<Iconify icon="solar:clock-circle-bold" />}
+              label={`${formatMinutes(timetable.startMinute)}–${formatMinutes(
+                timetable.startMinute + timetable.totalHours * 60
+              )}`}
+            />
+          </Box>
+
+          {timetable.visibleDays
+            .filter((day) => (timetable.slotsByDay.get(day.value) ?? []).length > 0)
+            .map((day) => {
+              const daySlots = [...(timetable.slotsByDay.get(day.value) ?? [])].sort((a, b) =>
+                a.start_time.localeCompare(b.start_time)
+              );
+              const isToday = day.value === today;
+
+              return (
+                <Card
+                  key={day.value}
+                  variant="outlined"
+                  sx={{
+                    p: 1.25,
+                    borderRadius: 2,
+                    borderColor: isToday ? 'primary.main' : 'divider',
+                    bgcolor: isToday ? 'primary.lighter' : 'background.paper',
+                  }}
+                >
+                  <Box sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ flex: 1, color: isToday ? 'primary.darker' : 'text.primary' }}
+                    >
+                      {day.label}
+                    </Typography>
+                    {isToday && <Chip size="small" color="primary" variant="soft" label="วันนี้" />}
+                    <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                      {daySlots.length} คาบ
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ gap: 0.75, display: 'flex', flexDirection: 'column' }}>
+                    {daySlots.map((slot) => {
+                      const color = getSlotColor(slot.teacher_assignment.id);
+                      const subject = slot.teacher_assignment.subject;
+                      const classroom = slot.teacher_assignment.classroom;
+
+                      return (
+                        <Box
+                          key={slot.id}
+                          component={RouterLink}
+                          href={paths.teacher.assignmentDetail(slot.teacher_assignment.id)}
+                          sx={{
+                            p: 1,
+                            gap: 1,
+                            display: 'grid',
+                            color: 'text.primary',
+                            border: '1px solid',
+                            borderRadius: 1.5,
+                            alignItems: 'center',
+                            textDecoration: 'none',
+                            bgcolor: 'background.paper',
+                            borderColor: `${color}.light`,
+                            gridTemplateColumns: '72px minmax(0, 1fr) 24px',
+                            '&:active': { bgcolor: `${color}.lighter` },
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              py: 0.75,
+                              textAlign: 'center',
+                              borderRadius: 1.25,
+                              color: `${color}.darker`,
+                              bgcolor: `${color}.lighter`,
+                            }}
+                          >
+                            <Typography variant="subtitle2" sx={{ fontSize: '0.78rem' }}>
+                              {slot.start_time.slice(0, 5)}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{ display: 'block', color: 'inherit', fontSize: '0.65rem' }}
+                            >
+                              {slot.end_time.slice(0, 5)}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="subtitle2" noWrap>
+                              {subject?.name ?? 'ไม่ระบุรายวิชา'}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{ display: 'block', color: 'text.secondary' }}
+                              noWrap
+                            >
+                              {subject?.code && `${subject.code} · `}ห้อง {classroom?.name ?? '-'}
+                            </Typography>
+                          </Box>
+                          <Iconify
+                            icon="eva:arrow-ios-forward-fill"
+                            width={20}
+                            sx={{ color: 'text.disabled' }}
+                          />
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Card>
+              );
+            })}
+        </Box>
+      )}
+
+      {!isLoading && !!schedules.length && (
+        <Card
+          variant="outlined"
+          sx={{ display: { xs: 'none', sm: 'block' }, overflow: 'hidden', borderRadius: 3 }}
+        >
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
             spacing={1}
@@ -497,19 +642,25 @@ function SummaryStat({ label, value }: { label: string; value: string | number }
   return (
     <Box
       sx={{
-        px: { xs: 1.5, sm: 2 },
-        py: 1.25,
-        minWidth: { xs: 84, sm: 104 },
+        px: { xs: 0.75, sm: 2 },
+        py: { xs: 0.75, sm: 1.25 },
+        flex: { xs: 1, sm: 'initial' },
+        minWidth: { xs: 0, sm: 104 },
         textAlign: 'center',
         borderRadius: 2,
         bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.14),
         border: (theme) => `1px solid ${varAlpha(theme.vars.palette.common.whiteChannel, 0.18)}`,
       }}
     >
-      <Typography variant="h5">{value}</Typography>
+      <Typography variant="h5" sx={{ fontSize: { xs: '1rem', sm: '1.5rem' } }}>
+        {value}
+      </Typography>
       <Typography
         variant="caption"
-        sx={(theme) => ({ color: varAlpha(theme.vars.palette.common.whiteChannel, 0.72) })}
+        sx={(theme) => ({
+          color: varAlpha(theme.vars.palette.common.whiteChannel, 0.72),
+          fontSize: { xs: '0.62rem', sm: '0.75rem' },
+        })}
       >
         {label}
       </Typography>
@@ -519,12 +670,19 @@ function SummaryStat({ label, value }: { label: string; value: string | number }
 
 function TimetableSkeleton() {
   return (
-    <Card variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-      <Skeleton width={180} height={32} />
-      <Skeleton sx={{ mt: 2 }} height={58} />
-      {Array.from({ length: 5 }, (_, index) => (
-        <Skeleton key={index} sx={{ mt: 0.5 }} height={ROW_HEIGHT} />
-      ))}
-    </Card>
+    <>
+      <Box sx={{ gap: 1, display: { xs: 'flex', sm: 'none' }, flexDirection: 'column' }}>
+        {Array.from({ length: 3 }, (_, index) => (
+          <Skeleton key={index} variant="rounded" height={150} sx={{ borderRadius: 2 }} />
+        ))}
+      </Box>
+      <Card variant="outlined" sx={{ p: 3, display: { xs: 'none', sm: 'block' }, borderRadius: 3 }}>
+        <Skeleton width={180} height={32} />
+        <Skeleton sx={{ mt: 2 }} height={58} />
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton key={index} sx={{ mt: 0.5 }} height={ROW_HEIGHT} />
+        ))}
+      </Card>
+    </>
   );
 }
