@@ -84,6 +84,19 @@ export type CreateAssignmentParams = {
   dueAt?: string | null;
   category?: AssignmentCategory;
   files?: File[];
+  quiz?: {
+    timeLimitMinutes: number | null;
+    shuffleQuestions: boolean;
+    shuffleOptions: boolean;
+    showScoreAfterSubmit: boolean;
+    questions: Array<{
+      prompt: string;
+      points: number;
+      selectionMode: 'single' | 'multiple';
+      correctOptionIndexes: number[];
+      options: string[];
+    }>;
+  };
 };
 
 export type UpdateAssignmentParams = {
@@ -117,6 +130,7 @@ export async function createAssignment(
   formData.append('fullScore', String(params.fullScore ?? 100));
   formData.append('dueAt', params.dueAt ?? '');
   formData.append('category', params.category ?? 'assignment');
+  if (params.quiz) formData.append('quiz', JSON.stringify(params.quiz));
   params.files?.forEach((file) => formData.append('files', file));
 
   const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/assignments`, {

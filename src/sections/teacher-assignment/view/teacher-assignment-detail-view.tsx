@@ -1,6 +1,5 @@
 'use client';
 
-import type { AssignmentCategory } from 'src/sections/assignment/assignment-actions';
 import type { TeacherAssignmentTab } from '../components/detail/teacher-assignment-detail-types';
 
 import dynamic from 'next/dynamic';
@@ -12,8 +11,7 @@ import Skeleton from '@mui/material/Skeleton';
 import Container from '@mui/material/Container';
 
 import { paths } from 'src/routes/paths';
-
-import { useAuthContext } from 'src/auth/hooks';
+import { usePathname } from 'src/routes/hooks';
 
 import { TEACHER_ASSIGNMENT_TABS } from '../components/detail/teacher-assignment-detail-types';
 import { TeacherAssignmentDetailTabs } from '../components/detail/teacher-assignment-detail-tabs';
@@ -49,12 +47,15 @@ type Props = {
 };
 
 export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
-  const { user } = useAuthContext();
+  const pathname = usePathname();
   const [tab, setTab] = useState<TeacherAssignmentTab>('overview');
-  const isTeacher = user?.role === 'teacher';
+  const isTeacher = pathname.startsWith(paths.teacher.assignments);
   const assignmentNewPath = isTeacher
     ? paths.teacher.assignmentNew(teacherAssignmentId)
     : paths.admin.teacherAssignment.assignmentNew(teacherAssignmentId);
+  const quizNewPath = isTeacher
+    ? paths.teacher.quizNew(teacherAssignmentId)
+    : paths.admin.teacherAssignment.quizNew(teacherAssignmentId);
 
   useEffect(() => {
     const initialTab = new URLSearchParams(window.location.search).get('tab');
@@ -67,10 +68,6 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
     (assignmentId: string) =>
       isTeacher ? paths.teacher.gradebook(assignmentId) : paths.admin.gradebook(assignmentId),
     [isTeacher]
-  );
-  const scoreCategoryNewPath = useCallback(
-    (category: AssignmentCategory) => `${assignmentNewPath}?category=${category}&returnTab=scores`,
-    [assignmentNewPath]
   );
   const openSchedule = useCallback(() => setTab('schedule'), []);
 
@@ -100,7 +97,8 @@ export function TeacherAssignmentDetailView({ teacherAssignmentId }: Props) {
           <ScoresTab
             teacherAssignmentId={teacherAssignmentId}
             gradebookPath={gradebookPath}
-            scoreCategoryNewPath={scoreCategoryNewPath}
+            assignmentNewPath={`${assignmentNewPath}?returnTab=scores`}
+            quizNewPath={`${quizNewPath}?returnTab=scores`}
           />
         )}
         {tab === 'schedule' && <ScheduleTab teacherAssignmentId={teacherAssignmentId} />}

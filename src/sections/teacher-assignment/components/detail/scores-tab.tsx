@@ -54,13 +54,15 @@ const SCORE_CATEGORY_ICON = {
 type Props = {
   teacherAssignmentId: string;
   gradebookPath: (assignmentId: string) => string;
-  scoreCategoryNewPath: (category: AssignmentCategory) => string;
+  assignmentNewPath: string;
+  quizNewPath: string;
 };
 
 export const ScoresTab = memo(function ScoresTab({
   teacherAssignmentId,
   gradebookPath,
-  scoreCategoryNewPath,
+  assignmentNewPath,
+  quizNewPath,
 }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<AssignmentCategory>('assignment');
   const [scoreItemAction, setScoreItemAction] = useState<{
@@ -206,7 +208,7 @@ export const ScoresTab = memo(function ScoresTab({
         items={categoryItems}
         loading={isLoading}
         gradebookPath={gradebookPath}
-        createPath={scoreCategoryNewPath(selectedCategory)}
+        createPath={selectedCategory === 'quiz' ? quizNewPath : assignmentNewPath}
         onQuickCreate={setQuickCategory}
         onEdit={(assignment) => setScoreItemAction({ mode: 'edit', assignment })}
         onDelete={(assignment) => setScoreItemAction({ mode: 'delete', assignment })}
@@ -279,7 +281,7 @@ function ScoreCategorySection({
 }: ScoreCategorySectionProps) {
   const meta = ASSIGNMENT_CATEGORY_META[category];
   const canCreate = !meta.singleton || items.length === 0;
-  const hasDueDate = category === 'assignment';
+  const hasDueDate = category === 'assignment' || category === 'quiz';
 
   return (
     <Card variant="outlined" sx={{ overflow: 'hidden' }}>
@@ -306,14 +308,14 @@ function ScoreCategorySection({
           </Box>
         </Box>
         {canCreate &&
-          (category === 'assignment' ? (
+          (category === 'assignment' || category === 'quiz' ? (
             <Button
               component={RouterLink}
               href={createPath}
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
             >
-              เพิ่ม{meta.label}
+              {category === 'quiz' ? meta.createHeading : `เพิ่ม${meta.label}`}
             </Button>
           ) : (
             <Button
@@ -379,16 +381,18 @@ function ScoreCategorySection({
                       size="small"
                       variant="outlined"
                     >
-                      กรอกคะแนน
+                      {category === 'quiz' ? 'ดูผลคะแนน' : 'กรอกคะแนน'}
                     </Button>
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      aria-label={`แก้ไข ${item.title}`}
-                      onClick={() => onEdit(item)}
-                    >
-                      <Iconify icon="solar:settings-bold" />
-                    </IconButton>
+                    {category !== 'quiz' && (
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        aria-label={`แก้ไข ${item.title}`}
+                        onClick={() => onEdit(item)}
+                      >
+                        <Iconify icon="solar:settings-bold" />
+                      </IconButton>
+                    )}
                     <IconButton
                       size="small"
                       color="error"

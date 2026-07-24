@@ -99,6 +99,7 @@ export const paths = {
     classroom: `${ROOTS.STUDENT}/classroom`,
     subjects: `${ROOTS.STUDENT}/subjects`,
     assignments: `${ROOTS.STUDENT}/assignments`,
+    quiz: (assignmentId: string) => `${ROOTS.STUDENT}/assignments/${assignmentId}/quiz`,
     attendance: `${ROOTS.STUDENT}/attendance`,
     qr: `${ROOTS.STUDENT}/qr`,
   },
@@ -117,6 +118,7 @@ export const paths = {
       `${ROOTS.TEACHER}/assignments/${id}/attendance-history`,
     assignmentDetail: (id: string) => `${ROOTS.TEACHER}/assignments/${id}`,
     assignmentNew: (id: string) => `${ROOTS.TEACHER}/assignments/${id}/new`,
+    quizNew: (id: string) => `${ROOTS.TEACHER}/assignments/${id}/quiz/new`,
     gradebook: (assignmentId: string) => `${ROOTS.TEACHER}/gradebook/${assignmentId}`,
     subjectNew: `${ROOTS.TEACHER}/subject/new`,
     classroomNew: `${ROOTS.TEACHER}/classroom/new`,
@@ -170,6 +172,7 @@ export const paths = {
       new: `${ROOTS.ADMIN}/teacher-assignment/new`,
       detail: (id: string) => `${ROOTS.ADMIN}/teacher-assignment/${id}`,
       assignmentNew: (id: string) => `${ROOTS.ADMIN}/teacher-assignment/${id}/new`,
+      quizNew: (id: string) => `${ROOTS.ADMIN}/teacher-assignment/${id}/quiz/new`,
     },
     gradebook: (assignmentId: string) => `${ROOTS.ADMIN}/gradebook/${assignmentId}`,
     enrollment: {

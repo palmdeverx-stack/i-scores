@@ -1,7 +1,5 @@
 'use client';
 
-import type { AssignmentCategory } from '../assignment-actions';
-
 import * as z from 'zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -74,11 +72,10 @@ const MAX_FILES = 8;
 
 type Props = {
   teacherAssignmentId: string;
-  category?: AssignmentCategory;
   returnTab?: string;
 };
 
-export function AssignmentCreateView({ teacherAssignmentId, category, returnTab }: Props) {
+export function AssignmentCreateView({ teacherAssignmentId, returnTab }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuthContext();
@@ -86,7 +83,7 @@ export function AssignmentCreateView({ teacherAssignmentId, category, returnTab 
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState('');
 
-  const resolvedCategory = category ?? 'assignment';
+  const resolvedCategory = 'assignment';
   const meta = ASSIGNMENT_CATEGORY_META[resolvedCategory];
 
   const detailPath = isTeacher
@@ -144,7 +141,6 @@ export function AssignmentCreateView({ teacherAssignmentId, category, returnTab 
     ? `${roster.teacher.first_name ?? ''} ${roster.teacher.last_name ?? ''}`.trim() ||
       roster.teacher.username
     : '-';
-
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
       <Button
@@ -160,7 +156,7 @@ export function AssignmentCreateView({ teacherAssignmentId, category, returnTab 
       <Card
         sx={{
           mb: 3,
-          p: { xs: 2.5, sm: 4 },
+          p: { xs: 3 },
           color: 'common.white',
           overflow: 'hidden',
           position: 'relative',

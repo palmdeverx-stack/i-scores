@@ -64,6 +64,7 @@ export type StudentSubject = {
     feedback: string | null;
     status: SubmissionStatus;
     updated_at: string | null;
+    is_interactive_quiz: boolean;
     attachments: Array<{
       id: string;
       file_name: string;

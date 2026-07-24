@@ -116,7 +116,7 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
           <Avatar
             src={roster?.subjectImageUrl ?? undefined}
             variant="rounded"
-            sx={{ width: 120, height: 120, color: 'primary.darker', bgcolor: 'common.white' }}
+            sx={{ width: 140, height: 140, color: 'primary.darker', bgcolor: 'common.white' }}
           >
             <Iconify icon="solar:notes-bold-duotone" width={36} />
           </Avatar>
@@ -134,7 +134,7 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
             <Box
               sx={{
                 gap: 1.5,
-                mt: 1.25,
+                mt: 1,
                 display: 'flex',
                 flexWrap: 'wrap',
                 color: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.78),

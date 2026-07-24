@@ -6,7 +6,11 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+
+import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
@@ -149,6 +153,24 @@ export function StudentAssignmentCard({ assignment, generatedAt }: Props) {
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           คะแนน
         </Typography>
+        {assignment.is_interactive_quiz && (
+          <Button
+            component={RouterLink}
+            href={paths.student.quiz(assignment.id)}
+            size="small"
+            variant={isSubmitted(assignment.status) ? 'outlined' : 'contained'}
+            startIcon={
+              <Iconify
+                icon={
+                  isSubmitted(assignment.status) ? 'solar:eye-bold' : 'solar:play-circle-bold'
+                }
+              />
+            }
+            sx={{ mt: 1, whiteSpace: 'nowrap' }}
+          >
+            {isSubmitted(assignment.status) ? 'ดูผล' : 'ทำแบบทดสอบ'}
+          </Button>
+        )}
       </Box>
     </Card>
   );

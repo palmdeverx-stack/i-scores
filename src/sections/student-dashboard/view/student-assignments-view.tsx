@@ -24,7 +24,11 @@ export function StudentAssignmentsView() {
     const assignments =
       data?.subjects.flatMap((item) =>
         item.assignments
-          .filter((assignment) => assignment.category === 'assignment')
+          .filter(
+            (assignment) =>
+              assignment.category === 'assignment' ||
+              (assignment.category === 'quiz' && assignment.is_interactive_quiz)
+          )
           .map((assignment) => ({ ...assignment, subject: item.subject }))
       ) ?? [];
     const submitted = assignments.filter((assignment) => isSubmitted(assignment.status)).length;
@@ -74,8 +78,8 @@ export function StudentAssignmentsView() {
         <Grid size={{ xs: 12, md: 9 }}>
           <SectionHeading
             icon="solar:list-bold"
-            title="การส่งงาน"
-            subtitle="ค้นหา กรองสถานะ และติดตามคะแนนของแต่ละรายวิชา"
+            title="งานและแบบทดสอบ"
+            subtitle="ค้นหา ติดตามการส่งงาน และเข้าสู่แบบทดสอบของแต่ละรายวิชา"
           />
           <StudentAssignmentList
             assignments={overview.assignments}
