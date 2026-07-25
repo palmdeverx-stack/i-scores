@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { hasTimetableCapability } from 'src/lib/schedule-access';
 
 // ----------------------------------------------------------------------
 
@@ -104,7 +105,10 @@ export async function POST(request: Request) {
   }
 
   const { teacherId, subjectId, classroomId, semesterId } = await request.json();
-  const resolvedTeacherId = caller.role === 'teacher' ? caller.sub : teacherId;
+  const canAssignOtherTeachers =
+    caller.role === 'school_admin' ||
+    (caller.role === 'teacher' && (await hasTimetableCapability(caller.sub, caller.schoolId)));
+  const resolvedTeacherId = canAssignOtherTeachers ? teacherId : caller.sub;
 
   if (!resolvedTeacherId || !subjectId || !classroomId || !semesterId) {
     return NextResponse.json({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, { status: 400 });

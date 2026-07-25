@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
   const { data: assignmentRows, error: assignmentError } = await supabaseAdmin
     .from('assignments')
-    .select('id, teacher_assignment_id, title, full_score, created_at')
+    .select('id, teacher_assignment_id, title, full_score, category, created_at')
     .in('teacher_assignment_id', teachingIds)
     .order('created_at', { ascending: false })
     .limit(RECENT_LIMIT);
@@ -60,7 +60,10 @@ export async function GET(request: Request) {
 
   const [enrollmentsResult, scoresResult] = await Promise.all([
     classroomIds.length
-      ? supabaseAdmin.from('enrollments').select('student_id, classroom_id').in('classroom_id', classroomIds)
+      ? supabaseAdmin
+          .from('enrollments')
+          .select('student_id, classroom_id')
+          .in('classroom_id', classroomIds)
       : Promise.resolve({ data: [], error: null }),
     assignmentIds.length
       ? supabaseAdmin

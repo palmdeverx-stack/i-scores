@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { seedDefaultDepartments } from 'src/lib/default-departments';
 
 // ----------------------------------------------------------------------
 
@@ -98,6 +99,8 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  await seedDefaultDepartments(school.id);
 
   return NextResponse.json({ school }, { status: 201 });
 }

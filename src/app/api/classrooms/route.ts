@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canManageViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
@@ -73,10 +74,11 @@ export async function POST(request: Request) {
     semesterId,
   } = await request.json();
 
-  const requestedTeacherIds =
-    caller.role === 'teacher'
-      ? [caller.sub]
-      : Array.from(new Set(Array.isArray(teacherIds) ? teacherIds.filter(Boolean) : []));
+  const isAdminLike = await canManageViaPermission(caller, 'classrooms.manage');
+
+  const requestedTeacherIds = isAdminLike
+    ? Array.from(new Set(Array.isArray(teacherIds) ? teacherIds.filter(Boolean) : []))
+    : [caller.sub];
 
   if (!name || !academicYearId || requestedTeacherIds.length === 0) {
     return NextResponse.json(
@@ -85,7 +87,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (caller.role === 'teacher' && (!subjectId || !semesterId)) {
+  if (!isAdminLike && (!subjectId || !semesterId)) {
     return NextResponse.json(
       { message: 'กรุณาเลือกวิชาและภาคเรียน เพื่อผูกห้องนี้เข้ากับคุณ' },
       { status: 400 }
@@ -150,7 +152,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: homeroomError.message }, { status: 500 });
   }
 
-  if (caller.role === 'teacher') {
+  if (!isAdminLike) {
     const { data: subject } = await supabaseAdmin
       .from('subjects')
       .select('id')

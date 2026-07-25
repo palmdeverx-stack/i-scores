@@ -5,6 +5,10 @@ import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { encryptCredential } from 'src/lib/credential-cipher';
 import { checkSchoolSeatLimit } from 'src/lib/school-subscription';
+import {
+  hasDepartmentPermission,
+  getDepartmentGrantedPermissions,
+} from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
@@ -17,38 +21,70 @@ async function getManagedUser(id: string) {
   return supabaseAdmin.from('app_users').select(USER_SELECT).eq('id', id).maybeSingle();
 }
 
-function canManage(
-  caller: { role: string; schoolId: string | null },
+const TARGET_PERMISSION: Record<string, 'staff.manage' | 'students.manage'> = {
+  teacher: 'staff.manage',
+  student: 'students.manage',
+};
+
+async function canView(
+  caller: { role: string; sub: string; schoolId: string | null },
   target: { role: string; school_id: string | null }
-) {
+): Promise<boolean> {
   if (caller.role === 'master_admin') return target.role === 'school_admin';
-  return (
-    caller.role === 'school_admin' &&
-    caller.schoolId === target.school_id &&
-    (target.role === 'teacher' || target.role === 'student')
-  );
+  if (caller.role === 'school_admin') {
+    return (
+      caller.schoolId === target.school_id &&
+      (target.role === 'teacher' || target.role === 'student')
+    );
+  }
+  if (caller.role !== 'teacher' || !caller.schoolId || caller.schoolId !== target.school_id) {
+    return false;
+  }
+  const permissionKey = TARGET_PERMISSION[target.role];
+  if (!permissionKey) return false;
+  const granted = await getDepartmentGrantedPermissions(caller.sub, caller.schoolId);
+  return granted.includes(permissionKey);
+}
+
+async function canManage(
+  caller: { role: string; sub: string; schoolId: string | null },
+  target: { role: string; school_id: string | null }
+): Promise<boolean> {
+  if (caller.role === 'master_admin') return target.role === 'school_admin';
+  if (caller.role === 'school_admin') {
+    return (
+      caller.schoolId === target.school_id &&
+      (target.role === 'teacher' || target.role === 'student')
+    );
+  }
+  if (caller.role !== 'teacher' || !caller.schoolId || caller.schoolId !== target.school_id) {
+    return false;
+  }
+  const permissionKey = TARGET_PERMISSION[target.role];
+  if (!permissionKey) return false;
+  return hasDepartmentPermission(caller.sub, caller.schoolId, permissionKey);
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['master_admin', 'school_admin']);
+  const caller = requireRole(request, ['master_admin', 'school_admin', 'teacher']);
   if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
   const { id } = await params;
   const { data: user, error } = await getManagedUser(id);
-  if (error || !user || !canManage(caller, user)) {
-    return NextResponse.json({ message: 'ไม่พบบัญชีหรือไม่มีสิทธิ์จัดการ' }, { status: 404 });
+  if (error || !user || !(await canView(caller, user))) {
+    return NextResponse.json({ message: 'ไม่พบบัญชีหรือไม่มีสิทธิ์เข้าถึง' }, { status: 404 });
   }
 
   return NextResponse.json({ user });
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['master_admin', 'school_admin']);
+  const caller = requireRole(request, ['master_admin', 'school_admin', 'teacher']);
   if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
   const { id } = await params;
   const { data: target } = await getManagedUser(id);
-  if (!target || !canManage(caller, target)) {
+  if (!target || !(await canManage(caller, target))) {
     return NextResponse.json({ message: 'ไม่พบบัญชีหรือไม่มีสิทธิ์จัดการ' }, { status: 404 });
   }
 
@@ -175,12 +211,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['master_admin', 'school_admin']);
+  const caller = requireRole(request, ['master_admin', 'school_admin', 'teacher']);
   if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
   const { id } = await params;
   const { data: target } = await getManagedUser(id);
-  if (!target || !canManage(caller, target)) {
+  if (!target || !(await canManage(caller, target))) {
     return NextResponse.json({ message: 'ไม่พบบัญชีหรือไม่มีสิทธิ์จัดการ' }, { status: 404 });
   }
 

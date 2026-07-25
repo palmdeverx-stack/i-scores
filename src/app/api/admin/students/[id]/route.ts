@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { encryptCredential } from 'src/lib/credential-cipher';
+import { canViewViaPermission, canManageViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
@@ -23,8 +24,8 @@ async function loadStudent(id: string, schoolId: string) {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['school_admin']);
-  if (!caller?.schoolId) {
+  const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (!caller?.schoolId || !(await canViewViaPermission(caller, 'students.manage'))) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
@@ -38,8 +39,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['school_admin']);
-  if (!caller?.schoolId) {
+  const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (!caller?.schoolId || !(await canManageViaPermission(caller, 'students.manage'))) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 

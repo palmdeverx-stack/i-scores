@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canManageViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
@@ -20,8 +21,8 @@ async function getOwnedStudent(id: string, schoolId: string) {
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['school_admin']);
-  if (!caller?.schoolId) {
+  const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (!caller?.schoolId || !(await canManageViaPermission(caller, 'students.manage'))) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 

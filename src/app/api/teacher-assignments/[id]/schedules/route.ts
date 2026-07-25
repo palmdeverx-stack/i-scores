@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { loadTeacherAssignment, canAccessTeacherAssignment } from 'src/lib/teacher-assignment-access';
+import { canManageAssignmentSchedule } from 'src/lib/schedule-access';
+import { loadTeacherAssignment } from 'src/lib/teacher-assignment-access';
 
 // ----------------------------------------------------------------------
 
@@ -20,7 +21,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   const { id } = await params;
   const teacherAssignment = await loadTeacherAssignment(id);
 
-  if (!canAccessTeacherAssignment(caller, teacherAssignment)) {
+  if (!(await canManageAssignmentSchedule(caller, teacherAssignment))) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
@@ -48,7 +49,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { id } = await params;
   const teacherAssignment = await loadTeacherAssignment(id);
 
-  if (!canAccessTeacherAssignment(caller, teacherAssignment)) {
+  if (!(await canManageAssignmentSchedule(caller, teacherAssignment))) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
@@ -104,6 +105,34 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json(
       {
         message: `เวลานี้ครูมีคาบสอน "${conflictAssignment.subject?.name ?? ''}" ห้อง ${conflictAssignment.classroom?.name ?? ''} อยู่แล้ว (วัน${DAY_LABEL[dayOfWeek]} ${conflict.start_time}-${conflict.end_time})`,
+      },
+      { status: 409 }
+    );
+  }
+
+  // A classroom can't host two different subjects at once either — check every
+  // schedule slot across other assignments tied to this same classroom.
+  const { data: classroomSchedules } = await supabaseAdmin
+    .from('teaching_schedules')
+    .select(
+      'day_of_week, start_time, end_time, teacher_assignment:teacher_assignments!inner(classroom_id, subject:subjects(name))'
+    )
+    .eq('day_of_week', dayOfWeek)
+    .eq('teacher_assignment.classroom_id', teacherAssignment!.classroom_id)
+    .neq('teacher_assignment_id', id);
+
+  const classroomConflict = classroomSchedules?.find(
+    (slot) => start < toMinutes(slot.end_time) && end > toMinutes(slot.start_time)
+  );
+
+  if (classroomConflict) {
+    const conflictAssignment = classroomConflict.teacher_assignment as unknown as {
+      subject: { name: string } | null;
+    };
+
+    return NextResponse.json(
+      {
+        message: `เวลานี้ห้องเรียนมีคาบวิชา "${conflictAssignment.subject?.name ?? ''}" อยู่แล้ว (วัน${DAY_LABEL[dayOfWeek]} ${classroomConflict.start_time}-${classroomConflict.end_time})`,
       },
       { status: 409 }
     );

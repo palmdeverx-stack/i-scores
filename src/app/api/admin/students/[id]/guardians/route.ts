@@ -3,14 +3,19 @@ import { NextResponse } from 'next/server';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { parseGuardianBody, GUARDIAN_PUBLIC_FIELDS } from 'src/lib/student-guardian';
+import { canViewViaPermission, canManageViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-async function authorize(request: Request, studentId: string) {
-  const caller = requireRole(request, ['school_admin']);
-  if (!caller?.schoolId) return null;
+async function authorize(
+  request: Request,
+  studentId: string,
+  check: typeof canViewViaPermission
+) {
+  const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (!caller?.schoolId || !(await check(caller, 'students.manage'))) return null;
   const { data } = await supabaseAdmin
     .from('app_users')
     .select('id')
@@ -23,7 +28,7 @@ async function authorize(request: Request, studentId: string) {
 
 export async function GET(request: Request, { params }: RouteParams) {
   const { id } = await params;
-  const caller = await authorize(request, id);
+  const caller = await authorize(request, id, canViewViaPermission);
   if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
   const { data, error } = await supabaseAdmin
@@ -39,7 +44,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function POST(request: Request, { params }: RouteParams) {
   const { id } = await params;
-  const caller = await authorize(request, id);
+  const caller = await authorize(request, id, canManageViaPermission);
   if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
   const parsed = parseGuardianBody(await request.json().catch(() => null));

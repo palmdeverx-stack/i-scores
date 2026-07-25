@@ -128,3 +128,22 @@ export async function uploadSchoolLogo(id: string, file: File): Promise<SchoolPr
 
   return json.school;
 }
+
+export type SchoolTeacherRoster = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  department_name: string | null;
+  role_in_department: 'head' | 'member' | null;
+  homeroom_classrooms: { name: string; grade_level: string | null }[];
+};
+
+export async function listSchoolTeachers(id: string): Promise<SchoolTeacherRoster[]> {
+  const response = await fetch(`/api/schools/${id}/teachers`, { headers: authHeader() });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to load teacher roster');
+
+  return json.teachers;
+}

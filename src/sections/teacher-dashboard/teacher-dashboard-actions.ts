@@ -47,6 +47,7 @@ export type TeacherDashboardRecentAssignments = {
     teacher_assignment_id: string;
     title: string;
     full_score: number;
+    category: 'assignment' | 'quiz' | 'midterm' | 'final' | 'other';
     created_at: string;
     subject: Subject;
     classroom: Classroom;
@@ -77,5 +78,12 @@ export function getTeacherDashboardRecentAssignments() {
   return fetchJson<TeacherDashboardRecentAssignments>(
     '/api/teacher/dashboard/recent-assignments',
     'ไม่สามารถโหลดงานที่มอบหมายล่าสุดได้'
+  );
+}
+
+export function getTeacherDashboardSummaryFor(teacherId: string) {
+  return fetchJson<TeacherDashboardSummary>(
+    `/api/teachers/${teacherId}/dashboard-summary`,
+    'ไม่สามารถโหลดข้อมูลการสอนของครูคนนี้ได้'
   );
 }

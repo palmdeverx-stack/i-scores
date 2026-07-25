@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { schoolHasFeature } from 'src/lib/school-subscription';
+import { canManageViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
@@ -43,8 +44,10 @@ export async function POST(request: Request) {
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
+  const isAdminLike = await canManageViaPermission(caller, 'subjects.manage');
   if (
     caller.role === 'teacher' &&
+    !isAdminLike &&
     !(await schoolHasFeature(caller.schoolId, 'teacher.manage_subjects'))
   ) {
     return NextResponse.json(

@@ -9,12 +9,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
+import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
+import TableRow from '@mui/material/TableRow';
 import Skeleton from '@mui/material/Skeleton';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
+import TableContainer from '@mui/material/TableContainer';
 
 import { Iconify } from 'src/components/iconify';
 import { UploadAvatar } from 'src/components/upload';
@@ -22,7 +29,7 @@ import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from 'src/auth/hooks';
 
-import { getSchool, updateSchool, uploadSchoolLogo } from '../school-actions';
+import { getSchool, updateSchool, uploadSchoolLogo, listSchoolTeachers } from '../school-actions';
 
 // ----------------------------------------------------------------------
 
@@ -55,6 +62,12 @@ export function SchoolProfileView() {
   } = useQuery({
     queryKey: ['school', schoolId],
     queryFn: () => getSchool(schoolId),
+    enabled: !!schoolId,
+  });
+
+  const teachersQuery = useQuery({
+    queryKey: ['school-teachers', schoolId],
+    queryFn: () => listSchoolTeachers(schoolId),
     enabled: !!schoolId,
   });
 
@@ -363,6 +376,107 @@ export function SchoolProfileView() {
           </Box>
         </Card>
       </Box>
+
+      <Card variant="outlined" sx={{ mt: 3 }}>
+        <Box sx={{ px: { xs: 2.5, sm: 3 }, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography component="h2" variant="h6">
+            รายชื่อครู
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+            {teachersQuery.isLoading
+              ? 'กำลังโหลด...'
+              : `${teachersQuery.data?.length ?? 0} คน — ตำแหน่ง ฝ่าย และครูประจำชั้นของแต่ละคน`}
+          </Typography>
+        </Box>
+
+        {teachersQuery.isError && (
+          <Alert severity="error" sx={{ m: 2.5 }}>
+            ไม่สามารถโหลดรายชื่อครูได้
+          </Alert>
+        )}
+
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>ครู</TableCell>
+                <TableCell>ฝ่าย</TableCell>
+                <TableCell>ตำแหน่ง</TableCell>
+                <TableCell>ครูประจำชั้น</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {teachersQuery.isLoading && (
+                <TableRow>
+                  <TableCell colSpan={4}>กำลังโหลด...</TableCell>
+                </TableRow>
+              )}
+              {!teachersQuery.isLoading && !teachersQuery.data?.length && (
+                <TableRow>
+                  <TableCell colSpan={4} sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}>
+                    ยังไม่มีครูในโรงเรียนนี้
+                  </TableCell>
+                </TableRow>
+              )}
+              {teachersQuery.data?.map((teacher) => (
+                <TableRow key={teacher.id} hover>
+                  <TableCell>
+                    <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+                      <Avatar src={teacher.avatar_url ?? undefined}>
+                        {teacher.first_name?.charAt(0) ?? '?'}
+                      </Avatar>
+                      <Typography variant="subtitle2">
+                        {`${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim()}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    {teacher.department_name ?? (
+                      <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+                        ไม่มีฝ่าย
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {teacher.role_in_department ? (
+                      <Chip
+                        size="small"
+                        variant="soft"
+                        color={teacher.role_in_department === 'head' ? 'primary' : 'default'}
+                        label={teacher.role_in_department === 'head' ? 'หัวหน้าฝ่าย' : 'สมาชิกฝ่าย'}
+                      />
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {teacher.homeroom_classrooms.length ? (
+                      <Box sx={{ gap: 0.5, display: 'flex', flexWrap: 'wrap' }}>
+                        {teacher.homeroom_classrooms.map((classroom) => (
+                          <Chip
+                            key={classroom.name}
+                            size="small"
+                            variant="soft"
+                            label={
+                              classroom.grade_level
+                                ? `${classroom.grade_level} ${classroom.name}`
+                                : classroom.name
+                            }
+                          />
+                        ))}
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+                        ไม่ได้เป็นครูประจำชั้น
+                      </Typography>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
     </Container>
   );
 }

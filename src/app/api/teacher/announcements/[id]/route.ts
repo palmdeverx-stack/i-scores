@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canManageViaPermission } from 'src/lib/department-permission-access';
 import {
   removeAnnouncementImage,
   replaceAnnouncementImage,
@@ -16,23 +17,25 @@ const PRIORITIES = ['normal', 'important', 'urgent'];
 
 async function getOwnedAnnouncement(
   id: string,
-  caller: { role: string; sub: string; schoolId: string }
+  schoolId: string,
+  teacherId: string,
+  isAdminLike: boolean
 ) {
   let query = supabaseAdmin
     .from('school_announcements')
     .select('id, image_url')
     .eq('id', id)
-    .eq('school_id', caller.schoolId);
-  if (caller.role === 'teacher') query = query.eq('created_by', caller.sub);
+    .eq('school_id', schoolId);
+  if (!isAdminLike) query = query.eq('created_by', teacherId);
   return query.maybeSingle();
 }
 
-async function getAllowedClassroomIds(caller: { role: string; sub: string; schoolId: string }) {
-  if (caller.role === 'school_admin') {
+async function getAllowedClassroomIds(schoolId: string, teacherId: string, isAdminLike: boolean) {
+  if (isAdminLike) {
     const { data, error } = await supabaseAdmin
       .from('classrooms')
       .select('id')
-      .eq('school_id', caller.schoolId);
+      .eq('school_id', schoolId);
     if (error) throw new Error(error.message);
     return new Set((data ?? []).map((classroom) => classroom.id));
   }
@@ -40,8 +43,8 @@ async function getAllowedClassroomIds(caller: { role: string; sub: string; schoo
   const { data, error } = await supabaseAdmin
     .from('classroom_homeroom_teachers')
     .select('classroom:classrooms!inner(id, school_id)')
-    .eq('teacher_id', caller.sub)
-    .eq('classrooms.school_id', caller.schoolId);
+    .eq('teacher_id', teacherId)
+    .eq('classrooms.school_id', schoolId);
   if (error) throw new Error(error.message);
 
   return new Set(
@@ -55,12 +58,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
+  const isAdminLike = await canManageViaPermission(caller, 'announcements.manage');
   const { id } = await params;
-  const { data: owned } = await getOwnedAnnouncement(id, {
-    role: caller.role,
-    sub: caller.sub,
-    schoolId: caller.schoolId,
-  });
+  const { data: owned } = await getOwnedAnnouncement(id, caller.schoolId, caller.sub, isAdminLike);
   if (!owned)
     return NextResponse.json({ message: 'ไม่พบประกาศหรือไม่มีสิทธิ์แก้ไข' }, { status: 404 });
 
@@ -121,18 +121,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   try {
-    const allowedIds = await getAllowedClassroomIds({
-      role: caller.role,
-      sub: caller.sub,
-      schoolId: caller.schoolId,
-    });
+    const allowedIds = await getAllowedClassroomIds(caller.schoolId, caller.sub, isAdminLike);
     if (classroomIds.some((classroomId) => !allowedIds.has(classroomId))) {
       return NextResponse.json(
         {
-          message:
-            caller.role === 'teacher'
-              ? 'เลือกได้เฉพาะห้องที่คุณเป็นครูประจำชั้น'
-              : 'พบห้องเรียนที่ไม่ได้อยู่ในโรงเรียนนี้',
+          message: isAdminLike
+            ? 'พบห้องเรียนที่ไม่ได้อยู่ในโรงเรียนนี้'
+            : 'เลือกได้เฉพาะห้องที่คุณเป็นครูประจำชั้น',
         },
         { status: 403 }
       );
@@ -213,12 +208,9 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
+  const isAdminLike = await canManageViaPermission(caller, 'announcements.manage');
   const { id } = await params;
-  const { data: owned } = await getOwnedAnnouncement(id, {
-    role: caller.role,
-    sub: caller.sub,
-    schoolId: caller.schoolId,
-  });
+  const { data: owned } = await getOwnedAnnouncement(id, caller.schoolId, caller.sub, isAdminLike);
   if (!owned)
     return NextResponse.json({ message: 'ไม่พบประกาศหรือไม่มีสิทธิ์ลบ' }, { status: 404 });
 

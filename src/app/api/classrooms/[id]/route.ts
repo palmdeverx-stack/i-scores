@@ -2,15 +2,18 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canManageViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['school_admin']);
+  const caller = requireRole(request, ['school_admin', 'teacher']);
 
-  if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  if (!caller || !(await canManageViaPermission(caller, 'classrooms.manage'))) {
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  }
 
   const { id } = await params;
   const { name, nameEn, gradeLevel, gradeLevelEn, academicYearId, teacherIds } =
@@ -92,9 +95,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['school_admin']);
+  const caller = requireRole(request, ['school_admin', 'teacher']);
 
-  if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  if (!caller || !(await canManageViaPermission(caller, 'classrooms.manage'))) {
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  }
 
   const { id } = await params;
   const { data, error } = await supabaseAdmin

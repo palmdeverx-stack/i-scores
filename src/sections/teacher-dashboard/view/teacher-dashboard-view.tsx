@@ -1,10 +1,6 @@
 'use client';
 
-import type { IconifyName } from 'src/components/iconify/register-icons';
-import type {
-  TeacherDashboardSummary,
-  TeacherDashboardRecentAssignments,
-} from '../teacher-dashboard-actions';
+import type { TeacherDashboardSummary } from '../teacher-dashboard-actions';
 
 import { varAlpha } from 'minimal-shared/utils';
 import { useQuery } from '@tanstack/react-query';
@@ -18,13 +14,20 @@ import Button from '@mui/material/Button';
 import Skeleton from '@mui/material/Skeleton';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import LinearProgress from '@mui/material/LinearProgress';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
+import {
+  RiMore2Line,
+  RiBriefcaseLine,
+  RiFileCheckLine,
+  RiPresentationLine,
+  RiCalendarScheduleLine,
+} from 'src/components/remix-icon';
 
+import { RecentAssignments } from '../components/recent-assignments';
 import {
   getTeacherDashboardSummary,
   getTeacherDashboardRecentAssignments,
@@ -347,12 +350,10 @@ export function TeacherDashboardView() {
 function SectionHeader({
   title,
   description,
-  icon,
   href,
 }: {
   title: string;
   description: string;
-  icon: IconifyName;
   href?: string;
 }) {
   return (
@@ -367,11 +368,7 @@ function SectionHeader({
           bgcolor: 'primary.lighter',
         }}
       >
-        <Iconify
-          icon={icon}
-          width={22}
-          sx={{ width: { xs: 20, sm: 22 }, height: { xs: 20, sm: 22 } }}
-        />
+        <RiCalendarScheduleLine size={22} />
       </Avatar>
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Typography
@@ -426,7 +423,6 @@ function TodaySchedule({ schedules }: { schedules: TeacherDashboardSummary['toda
       <SectionHeader
         title="ตารางสอนวันนี้"
         description={schedules.length ? `${schedules.length} คาบเรียนวันนี้` : 'วันนี้ไม่มีคาบสอน'}
-        icon="solar:calendar-date-bold"
         href={paths.teacher.timetable}
       />
 
@@ -500,122 +496,7 @@ function TodaySchedule({ schedules }: { schedules: TeacherDashboardSummary['toda
           })}
         </Box>
       ) : (
-        <EmptyState
-          icon="solar:calendar-date-bold"
-          text="วันนี้ไม่มีคาบสอน พักผ่อนให้เต็มที่นะครับ"
-        />
-      )}
-    </Card>
-  );
-}
-
-function RecentAssignments({
-  assignments,
-  isLoading,
-}: {
-  assignments: TeacherDashboardRecentAssignments['recent_assignments'] | undefined;
-  isLoading: boolean;
-}) {
-  return (
-    <Card variant="outlined" sx={{ p: { xs: 1.25, sm: 3 }, borderRadius: { xs: 2, sm: 2.5 } }}>
-      <SectionHeader
-        title="งานที่มอบหมายล่าสุด"
-        description="ติดตามการส่งงานและสถานะการตรวจคะแนน"
-        icon="solar:list-bold"
-        href={paths.teacher.assignments}
-      />
-
-      {isLoading ? (
-        <Box sx={{ gap: { xs: 0.75, sm: 1.5 }, display: 'flex', flexDirection: 'column' }}>
-          {Array.from({ length: 3 }, (_, index) => (
-            <Skeleton key={index} variant="rounded" height={72} sx={{ borderRadius: 2 }} />
-          ))}
-        </Box>
-      ) : assignments?.length ? (
-        <Box sx={{ gap: { xs: 0.75, sm: 1.5 }, display: 'flex', flexDirection: 'column' }}>
-          {assignments.map((assignment) => {
-            const submittedPercent = assignment.student_count
-              ? Math.min((assignment.submitted_count / assignment.student_count) * 100, 100)
-              : 0;
-
-            return (
-              <Box
-                key={assignment.id}
-                sx={{
-                  gap: { xs: 1, sm: 2 },
-                  p: { xs: 1.25, sm: 2 },
-                  display: 'grid',
-                  borderRadius: { xs: 1.5, sm: 2 },
-                  bgcolor: 'background.neutral',
-                  gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) 180px auto' },
-                  alignItems: 'center',
-                }}
-              >
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography
-                    variant="subtitle2"
-                    noWrap
-                    sx={{ fontSize: { xs: '0.9rem', sm: '0.875rem' } }}
-                  >
-                    {assignment.title}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                    noWrap
-                  >
-                    {assignment.subject?.name ?? 'ไม่ระบุรายวิชา'} · ห้อง{' '}
-                    {assignment.classroom?.name ?? '-'} · {assignment.full_score} คะแนน
-                  </Typography>
-                </Box>
-                <Box>
-                  <Box
-                    sx={{
-                      mb: { xs: 0.25, sm: 0.5 },
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      ส่งแล้ว
-                    </Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                      {assignment.submitted_count}/{assignment.student_count}
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={submittedPercent}
-                    color={submittedPercent >= 100 ? 'success' : 'primary'}
-                    sx={{ height: { xs: 5, sm: 7 }, borderRadius: 7 }}
-                  />
-                </Box>
-                <Button
-                  component={RouterLink}
-                  href={paths.teacher.gradebook(assignment.id)}
-                  size="small"
-                  variant="outlined"
-                  startIcon={<Iconify icon="solar:file-check-bold-duotone" />}
-                  sx={(theme) => ({
-                    [theme.breakpoints.down('sm')]: {
-                      py: 0.5,
-                      px: 1.5,
-                      width: 'auto',
-                      minWidth: 116,
-                      minHeight: 38,
-                      fontSize: '0.8rem',
-                      justifySelf: 'end',
-                    },
-                  })}
-                >
-                  ตรวจงาน
-                </Button>
-              </Box>
-            );
-          })}
-        </Box>
-      ) : (
-        <EmptyState icon="solar:list-bold" text="ยังไม่มีงานที่มอบหมายในรายวิชาของคุณ" />
+        <EmptyState text="วันนี้ไม่มีคาบสอน พักผ่อนให้เต็มที่นะครับ" />
       )}
     </Card>
   );
@@ -623,21 +504,50 @@ function RecentAssignments({
 
 function WorkloadSummary({ data }: { data: TeacherDashboardSummary }) {
   return (
-    <Card variant="outlined" sx={{ p: 3 }}>
-      <Typography component="h2" variant="h6">
-        ภาระงานโดยรวม
-      </Typography>
-      <Typography variant="body2" sx={{ mb: 2.5, color: 'text.secondary' }}>
-        ภาพรวมรายการที่คุณรับผิดชอบ
-      </Typography>
-      <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
-        <WorkloadRow label="รายการสอน" value={data.summary.teaching_assignments} suffix="รายการ" />
-        <WorkloadRow label="คาบสอนวันนี้" value={data.today_schedules.length} suffix="คาบ" />
+    <Card variant="outlined" sx={{ p: 2.25, borderRadius: 2.5 }}>
+      <Box sx={{ gap: 1, mb: 2, display: 'flex', alignItems: 'center' }}>
+        <Avatar
+          variant="rounded"
+          sx={{ width: 38, height: 38, color: 'primary.main', bgcolor: 'primary.lighter' }}
+        >
+          <RiBriefcaseLine size={20} />
+        </Avatar>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography component="h2" variant="h6">
+            ภาระงานโดยรวม
+          </Typography>
+          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+            ภาพรวมรายการที่คุณรับผิดชอบ
+          </Typography>
+        </Box>
+      </Box>
+      <Box sx={{ gap: 1, display: 'flex', flexDirection: 'column' }}>
+        <WorkloadRow
+          label="รายการสอน"
+          description="รายวิชาและห้องที่รับผิดชอบ"
+          value={data.summary.teaching_assignments}
+          suffix="รายการ"
+          icon={RiPresentationLine}
+          href={paths.teacher.assignments}
+          color="primary"
+        />
+        <WorkloadRow
+          label="คาบสอนวันนี้"
+          description="ตารางเรียนประจำวันนี้"
+          value={data.today_schedules.length}
+          suffix="คาบ"
+          icon={RiCalendarScheduleLine}
+          href={paths.teacher.timetable}
+          color="info"
+        />
         <WorkloadRow
           label="งานรอตรวจ"
+          description="งานที่รอบันทึกคะแนน"
           value={data.summary.waiting_to_grade}
           suffix="รายการ"
-          alert
+          icon={RiFileCheckLine}
+          href={paths.teacher.assignments}
+          color={data.summary.waiting_to_grade > 0 ? 'warning' : 'success'}
         />
       </Box>
     </Card>
@@ -646,42 +556,80 @@ function WorkloadSummary({ data }: { data: TeacherDashboardSummary }) {
 
 function WorkloadRow({
   label,
+  description,
   value,
   suffix,
-  alert = false,
+  icon: WorkloadIcon,
+  href,
+  color,
 }: {
   label: string;
+  description: string;
   value: number;
   suffix: string;
-  alert?: boolean;
+  icon: React.ElementType;
+  href: string;
+  color: 'primary' | 'info' | 'warning' | 'success';
 }) {
   return (
     <Box
+      component={RouterLink}
+      href={href}
       sx={{
-        p: 2,
-        display: 'flex',
+        gap: 1,
+        p: 1.25,
+        display: 'grid',
         borderRadius: 2,
         alignItems: 'center',
-        bgcolor: alert && value > 0 ? 'warning.lighter' : 'background.neutral',
+        color: 'text.primary',
+        textDecoration: 'none',
+        bgcolor: 'background.neutral',
+        gridTemplateColumns: '40px minmax(0, 1fr) auto 24px',
+        transition: (theme) =>
+          theme.transitions.create(['transform', 'background-color'], {
+            duration: theme.transitions.duration.shorter,
+          }),
+        '&:hover': {
+          transform: 'translateY(-1px)',
+          bgcolor: `${color}.lighter`,
+        },
       }}
     >
-      <Typography variant="body2" sx={{ flex: 1, color: 'text.secondary' }}>
-        {label}
-      </Typography>
-      <Typography
-        variant="subtitle1"
-        sx={{ color: alert && value > 0 ? 'warning.dark' : 'text.primary' }}
+      <Avatar
+        variant="rounded"
+        sx={{ width: 40, height: 40, color: `${color}.main`, bgcolor: `${color}.lighter` }}
       >
-        {value.toLocaleString('th-TH')} {suffix}
-      </Typography>
+        <WorkloadIcon size={21} />
+      </Avatar>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="subtitle2" noWrap>
+          {label}
+        </Typography>
+        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }} noWrap>
+          {description}
+        </Typography>
+      </Box>
+      <Box sx={{ textAlign: 'right' }}>
+        <Typography variant="subtitle1" sx={{ color: `${color}.dark` }}>
+          {value.toLocaleString('th-TH')}
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {suffix}
+        </Typography>
+      </Box>
+      <Box sx={{ color: 'text.disabled' }}>
+        <RiMore2Line size={20} />
+      </Box>
     </Box>
   );
 }
 
-function EmptyState({ icon, text }: { icon: IconifyName; text: string }) {
+function EmptyState({ text }: { text: string }) {
   return (
     <Box sx={{ py: { xs: 3.5, sm: 5 }, textAlign: 'center' }}>
-      <Iconify icon={icon} width={42} sx={{ mb: 1, color: 'text.disabled' }} />
+      <Box sx={{ mb: 1, color: 'text.disabled' }}>
+        <RiCalendarScheduleLine size={42} />
+      </Box>
       <Typography variant="body2" sx={{ color: 'text.secondary' }}>
         {text}
       </Typography>

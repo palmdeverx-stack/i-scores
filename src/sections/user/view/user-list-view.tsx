@@ -27,6 +27,9 @@ import DialogContent from '@mui/material/DialogContent';
 import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 
+import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
+
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
@@ -326,6 +329,18 @@ export function UserListView() {
                   </TableCell>
                   <TableCell align="right">
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      {user.role === 'teacher' && (
+                        <Tooltip title="ดูข้อมูลการสอน">
+                          <IconButton
+                            size="small"
+                            component={RouterLink}
+                            href={paths.admin.user.teaching(user.id)}
+                            aria-label={`ดูข้อมูลการสอนของ ${user.username}`}
+                          >
+                            <Iconify icon="solar:notebook-bold-duotone" width={18} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       <Tooltip title="แก้ไขบัญชี">
                         <IconButton
                           size="small"

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canManageViaPermission } from 'src/lib/department-permission-access';
 import { parseGuardianBody, GUARDIAN_PUBLIC_FIELDS } from 'src/lib/student-guardian';
 
 // ----------------------------------------------------------------------
@@ -9,8 +10,8 @@ import { parseGuardianBody, GUARDIAN_PUBLIC_FIELDS } from 'src/lib/student-guard
 type RouteParams = { params: Promise<{ id: string; guardianId: string }> };
 
 async function authorize(request: Request, studentId: string) {
-  const caller = requireRole(request, ['school_admin']);
-  if (!caller?.schoolId) return null;
+  const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (!caller?.schoolId || !(await canManageViaPermission(caller, 'students.manage'))) return null;
   const { data } = await supabaseAdmin
     .from('app_users')
     .select('id')

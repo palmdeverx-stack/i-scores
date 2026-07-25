@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canManageAssignmentSchedule } from 'src/lib/schedule-access';
 import {
   loadTeacherAssignment,
   canAccessTeacherAssignment,
@@ -129,7 +130,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   const { id } = await params;
   const current = await loadTeacherAssignment(id);
 
-  if (!canAccessTeacherAssignment(caller, current)) {
+  if (!(await canManageAssignmentSchedule(caller, current))) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์ลบรายการสอนนี้' }, { status: 403 });
   }
 

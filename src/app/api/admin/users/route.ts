@@ -6,6 +6,10 @@ import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { generatePassword } from 'src/lib/generate-password';
 import { decryptCredential, encryptCredential } from 'src/lib/credential-cipher';
 import { schoolHasFeature, checkSchoolSeatLimit } from 'src/lib/school-subscription';
+import {
+  getDepartmentGrantedPermissions,
+  getEffectiveDepartmentPermissions,
+} from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
@@ -21,10 +25,28 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const role = searchParams.get('role');
 
+  // View-level (department-granted) decides who can browse the list at all;
+  // effective (personally-delegated) decides who sees decrypted passwords.
+  const viewPermissions =
+    caller.role === 'teacher' && caller.schoolId
+      ? await getDepartmentGrantedPermissions(caller.sub, caller.schoolId)
+      : [];
+  const managePermissions =
+    caller.role === 'teacher' && caller.schoolId
+      ? await getEffectiveDepartmentPermissions(caller.sub, caller.schoolId)
+      : [];
+
   // Teachers may only look up students (e.g. to enroll them into a classroom) —
-  // they can't browse the staff directory.
+  // they can't browse the staff directory, unless their department has been
+  // delegated staff management or schedule-management (the latter needs the
+  // teacher list to assign subjects to other teachers).
   if (caller.role === 'teacher' && role !== 'student') {
-    return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+    const canBrowseTeachers =
+      role === 'teacher' &&
+      (viewPermissions.includes('staff.manage') || viewPermissions.includes('schedule.manage'));
+    if (!canBrowseTeachers) {
+      return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+    }
   }
 
   let query = supabaseAdmin
@@ -88,10 +110,11 @@ export async function GET(request: Request) {
       line_notifications_enabled_count:
         guardianSummary.get(user.id)?.notificationsEnabledCount ?? 0,
     }),
-    ...(caller.role === 'school_admin' &&
-      (user.role === 'student' || user.role === 'teacher') && {
-        login_password: decryptCredential(passwordCiphertext ?? null),
-      }),
+    ...((caller.role === 'school_admin' ||
+      (user.role === 'teacher' && managePermissions.includes('staff.manage')) ||
+      (user.role === 'student' && managePermissions.includes('students.manage'))) && {
+      login_password: decryptCredential(passwordCiphertext ?? null),
+    }),
   }));
 
   return NextResponse.json({ users });
@@ -164,6 +187,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'กรุณากรอกรหัสผ่าน' }, { status: 400 });
   }
 
+  const permissions =
+    caller.role === 'teacher' && caller.schoolId
+      ? await getEffectiveDepartmentPermissions(caller.sub, caller.schoolId)
+      : [];
+  const hasStaffManage = permissions.includes('staff.manage');
+  const hasStudentsManage = permissions.includes('students.manage');
+  const isDelegatedAdmin = caller.role === 'teacher' && (hasStaffManage || hasStudentsManage);
+
   let targetSchoolId: string;
 
   if (caller.role === 'master_admin') {
@@ -174,12 +205,17 @@ export async function POST(request: Request) {
       );
     }
     targetSchoolId = schoolId;
-  } else if (caller.role === 'school_admin') {
+  } else if (caller.role === 'school_admin' || (caller.role === 'teacher' && hasStaffManage)) {
     if (!SCHOOL_ADMIN_CREATABLE_ROLES.includes(role)) {
       return NextResponse.json(
-        { message: 'ผู้ดูแลโรงเรียนสร้างได้เฉพาะบัญชีครูหรือนักเรียน' },
+        { message: 'สร้างได้เฉพาะบัญชีครูหรือนักเรียน' },
         { status: 400 }
       );
+    }
+    targetSchoolId = caller.schoolId!;
+  } else if (caller.role === 'teacher' && hasStudentsManage) {
+    if (role !== 'student') {
+      return NextResponse.json({ message: 'สร้างได้เฉพาะบัญชีนักเรียน' }, { status: 403 });
     }
     targetSchoolId = caller.schoolId!;
   } else {
@@ -192,8 +228,9 @@ export async function POST(request: Request) {
     targetSchoolId = caller.schoolId;
   }
 
-  const requiredFeature =
-    caller.role === 'teacher'
+  const requiredFeature = isDelegatedAdmin
+    ? null
+    : caller.role === 'teacher'
       ? 'teacher.manage_enrollments'
       : role === 'teacher'
         ? 'admin.staff'

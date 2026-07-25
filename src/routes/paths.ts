@@ -127,6 +127,9 @@ export const paths = {
     classroomNew: `${ROOTS.TEACHER}/classroom/new`,
     enrollmentNew: `${ROOTS.TEACHER}/enrollment/new`,
     timetable: `${ROOTS.TEACHER}/timetable`,
+    department: `${ROOTS.TEACHER}/department`,
+    departmentMember: (id: string) => `${ROOTS.TEACHER}/department/member/${id}`,
+    scheduleBuilder: `${ROOTS.TEACHER}/schedule-builder`,
   },
   // MASTER ADMIN
   master: {
@@ -154,6 +157,12 @@ export const paths = {
     user: {
       root: `${ROOTS.ADMIN}/user`,
       new: `${ROOTS.ADMIN}/user/new`,
+      teaching: (id: string) => `${ROOTS.ADMIN}/user/${id}/teaching`,
+    },
+    department: {
+      root: `${ROOTS.ADMIN}/department`,
+      detail: (id: string) => `${ROOTS.ADMIN}/department/${id}`,
+      permissions: `${ROOTS.ADMIN}/department-permissions`,
     },
     student: {
       root: `${ROOTS.ADMIN}/student`,
@@ -178,6 +187,7 @@ export const paths = {
       quizNew: (id: string) => `${ROOTS.ADMIN}/teacher-assignment/${id}/quiz/new`,
     },
     gradebook: (assignmentId: string) => `${ROOTS.ADMIN}/gradebook/${assignmentId}`,
+    scheduleBuilder: `${ROOTS.ADMIN}/schedule-builder`,
     enrollment: {
       root: `${ROOTS.ADMIN}/enrollment`,
       new: `${ROOTS.ADMIN}/enrollment/new`,

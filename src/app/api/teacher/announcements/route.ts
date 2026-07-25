@@ -3,6 +3,7 @@ import { after, NextResponse } from 'next/server';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { replaceAnnouncementImage, validateAnnouncementImage } from 'src/lib/announcement-image';
+import { canViewViaPermission, canManageViaPermission } from 'src/lib/department-permission-access';
 import {
   queueAnnouncementNotifications,
   processPendingLineNotifications,
@@ -88,6 +89,8 @@ export async function GET(request: Request) {
   }
 
   try {
+    const isAdminLike = await canViewViaPermission(caller, 'announcements.manage');
+
     const announcementQuery = supabaseAdmin
       .from('school_announcements')
       .select(
@@ -97,16 +100,15 @@ export async function GET(request: Request) {
       )
       .eq('school_id', caller.schoolId)
       .order('created_at', { ascending: false });
-    const announcements =
-      caller.role === 'teacher'
-        ? announcementQuery.eq('created_by', caller.sub)
-        : announcementQuery;
+    const announcements = isAdminLike
+      ? announcementQuery
+      : announcementQuery.eq('created_by', caller.sub);
 
     const [{ data, error }, classrooms] = await Promise.all([
       announcements,
-      caller.role === 'teacher'
-        ? getTeacherClassrooms(caller.sub, caller.schoolId)
-        : getSchoolClassrooms(caller.schoolId),
+      isAdminLike
+        ? getSchoolClassrooms(caller.schoolId)
+        : getTeacherClassrooms(caller.sub, caller.schoolId),
     ]);
 
     if (error) throw new Error(error.message);
@@ -152,18 +154,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const classrooms =
-      caller.role === 'teacher'
-        ? await getTeacherClassrooms(caller.sub, caller.schoolId)
-        : await getSchoolClassrooms(caller.schoolId);
+    const isAdminLike = await canManageViaPermission(caller, 'announcements.manage');
+    const classrooms = isAdminLike
+      ? await getSchoolClassrooms(caller.schoolId)
+      : await getTeacherClassrooms(caller.sub, caller.schoolId);
     const allowedIds = new Set(classrooms.map((item) => item.id));
     if (values.classroomIds.some((id) => !allowedIds.has(id))) {
       return NextResponse.json(
         {
-          message:
-            caller.role === 'teacher'
-              ? 'เลือกได้เฉพาะห้องที่คุณเป็นครูประจำชั้น'
-              : 'พบห้องเรียนที่ไม่ได้อยู่ในโรงเรียนนี้',
+          message: isAdminLike
+            ? 'พบห้องเรียนที่ไม่ได้อยู่ในโรงเรียนนี้'
+            : 'เลือกได้เฉพาะห้องที่คุณเป็นครูประจำชั้น',
         },
         { status: 403 }
       );
