@@ -17,7 +17,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 
 import { toast } from 'src/components/snackbar';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { createDepartmentAnnouncement } from '../teacher-department-actions';
@@ -68,7 +68,7 @@ export function DepartmentAnnouncementFormDialog({ open, onClose }: Props) {
               </Typography>
             </Box>
             <IconButton onClick={onClose} disabled={createMutation.isPending} aria-label="ปิดหน้าต่าง">
-              <Iconify icon="mingcute:close-line" />
+              <RemixIcon icon="mingcute:close-line" />
             </IconButton>
           </Box>
         </DialogTitle>

@@ -19,7 +19,7 @@ import Typography from '@mui/material/Typography';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getTimetable } from '../timetable-actions';
 
@@ -133,7 +133,7 @@ export function TimetableView() {
       >
         <Box>
           <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: { xs: 0.5, sm: 1 } }}>
-            <Iconify icon="solar:calendar-date-bold" width={24} />
+            <RemixIcon icon="solar:calendar-date-bold" width={24} />
             <Typography
               component="h1"
               variant="h3"
@@ -213,7 +213,7 @@ export function TimetableView() {
       {!isLoading && !schedules.length && !isError && (
         <Alert
           severity="info"
-          icon={<Iconify icon="solar:calendar-date-bold" />}
+          icon={<RemixIcon icon="solar:calendar-date-bold" />}
           sx={{ py: 2, borderRadius: 2 }}
         >
           ยังไม่มีการกำหนดตารางเวลาสอน — ไปที่หน้ารายวิชาที่สอนเพื่อเพิ่มคาบสอน
@@ -235,7 +235,7 @@ export function TimetableView() {
               size="small"
               variant="soft"
               color="primary"
-              icon={<Iconify icon="solar:clock-circle-bold" />}
+              icon={<RemixIcon icon="solar:clock-circle-bold" />}
               label={`${formatMinutes(timetable.startMinute)}–${formatMinutes(
                 timetable.startMinute + timetable.totalHours * 60
               )}`}
@@ -331,7 +331,7 @@ export function TimetableView() {
                               {subject?.code && `${subject.code} · `}ห้อง {classroom?.name ?? '-'}
                             </Typography>
                           </Box>
-                          <Iconify
+                          <RemixIcon
                             icon="eva:arrow-ios-forward-fill"
                             width={20}
                             sx={{ color: 'text.disabled' }}

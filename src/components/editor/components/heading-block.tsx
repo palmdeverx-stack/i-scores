@@ -9,7 +9,7 @@ import Menu from '@mui/material/Menu';
 import { listClasses } from '@mui/material/List';
 import ButtonBase, { buttonBaseClasses } from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
+import { RemixIcon } from '../../remix-icon';
 import { ToolbarItem } from './toolbar-item';
 
 // ----------------------------------------------------------------------
@@ -79,7 +79,7 @@ export function HeadingBlock({ editor, isActive }: HeadingBlock) {
         })}
       >
         {selectedOption?.label ?? 'Paragraph'}
-        <Iconify
+        <RemixIcon
           width={16}
           icon={open ? 'eva:arrow-ios-upward-fill' : 'eva:arrow-ios-downward-fill'}
         />

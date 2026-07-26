@@ -9,7 +9,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 
 import { CONFIG } from 'src/global-config';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ export function FaqsCategory() {
           }),
         ]}
       >
-        <Button startIcon={<Iconify icon="solar:list-bold" />} onClick={navOpen.onTrue}>
+        <Button startIcon={<RemixIcon icon="solar:list-bold" />} onClick={navOpen.onTrue}>
           Categories
         </Button>
       </Box>

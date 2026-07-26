@@ -10,7 +10,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { StudentAssignmentCard } from './student-assignment-card';
 import { EmptyCard, isSubmitted } from '../view/student-dashboard-shared';
@@ -94,7 +94,7 @@ export function StudentAssignmentList({ assignments, generatedAt }: Props) {
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <Iconify icon="eva:search-fill" />
+                  <RemixIcon icon="eva:search-fill" />
                 </InputAdornment>
               ),
             },

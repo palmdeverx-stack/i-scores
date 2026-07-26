@@ -19,7 +19,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getMyHomeroomStudents } from 'src/sections/teacher-students/teacher-students-actions';
 import { listTeacherAssignments } from 'src/sections/teacher-assignment/teacher-assignment-actions';
@@ -169,7 +169,7 @@ export function AttendanceScanStartView() {
                   bgcolor: selected ? 'primary.main' : 'primary.lighter',
                 }}
               >
-                <Iconify icon={option.icon} width={21} />
+                <RemixIcon icon={option.icon} width={21} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography
@@ -291,7 +291,7 @@ export function AttendanceScanStartView() {
             disabled={!canCreate}
             loading={createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            startIcon={<Iconify icon="solar:camera-add-bold" />}
+            startIcon={<RemixIcon icon="solar:camera-add-bold" />}
             sx={{ width: { xs: 1, sm: 'auto' }, minHeight: { xs: 48, sm: 42 } }}
           >
             เปิดกล้องสแกน

@@ -10,7 +10,7 @@ import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 
 import { toast } from 'src/components/snackbar';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getScoreReport } from '../../score-report-actions';
 
@@ -58,7 +58,7 @@ export function ScoreReportExportButton({ teacherAssignmentId, compactOnMobile =
         variant="outlined"
         loading={exporting !== null}
         onClick={(event) => setAnchorEl(event.currentTarget)}
-        startIcon={<Iconify icon="solar:download-bold" />}
+        startIcon={<RemixIcon icon="solar:download-bold" />}
         sx={{
           minWidth: { xs: compactOnMobile ? 0 : 64, sm: 64 },
           px: { xs: compactOnMobile ? 1 : 2, sm: 2 },
@@ -73,13 +73,13 @@ export function ScoreReportExportButton({ teacherAssignmentId, compactOnMobile =
       <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(null)}>
         <MenuItem onClick={() => handleExport('csv')}>
           <ListItemIcon>
-            <Iconify icon="solar:file-text-bold" />
+            <RemixIcon icon="solar:file-text-bold" />
           </ListItemIcon>
           CSV (.csv)
         </MenuItem>
         <MenuItem onClick={() => handleExport('excel')}>
           <ListItemIcon>
-            <Iconify icon="solar:file-bold-duotone" />
+            <RemixIcon icon="solar:file-bold-duotone" />
           </ListItemIcon>
           Excel (.xls)
         </MenuItem>

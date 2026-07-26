@@ -37,7 +37,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -170,7 +170,7 @@ export function HomeroomAttendanceHistoryView() {
             href={paths.teacher.students}
             color="inherit"
             size="small"
-            startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+            startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
             sx={{ mb: 1, ml: -1 }}
           >
             นักเรียนของฉัน
@@ -188,7 +188,7 @@ export function HomeroomAttendanceHistoryView() {
             disabled={!validDateRange || exporting !== null}
             loading={exporting === 'csv'}
             onClick={() => handleExport('csv')}
-            startIcon={<Iconify icon="solar:download-bold" />}
+            startIcon={<RemixIcon icon="solar:download-bold" />}
           >
             CSV
           </Button>
@@ -198,7 +198,7 @@ export function HomeroomAttendanceHistoryView() {
             disabled={!validDateRange || exporting !== null}
             loading={exporting === 'excel'}
             onClick={() => handleExport('excel')}
-            startIcon={<Iconify icon="solar:file-text-bold" />}
+            startIcon={<RemixIcon icon="solar:file-text-bold" />}
           >
             Excel
           </Button>
@@ -345,7 +345,7 @@ export function HomeroomAttendanceHistoryView() {
             size="small"
             color="inherit"
             onClick={resetFilters}
-            startIcon={<Iconify icon="solar:restart-bold" />}
+            startIcon={<RemixIcon icon="solar:restart-bold" />}
           >
             ล้างตัวกรอง
           </Button>
@@ -400,7 +400,7 @@ export function HomeroomAttendanceHistoryView() {
               {!historyQuery.isLoading && !historyQuery.data?.records.length && (
                 <TableRow>
                   <TableCell colSpan={6} sx={{ py: 8, textAlign: 'center' }}>
-                    <Iconify
+                    <RemixIcon
                       icon="solar:calendar-date-bold"
                       width={42}
                       sx={{ color: 'text.disabled' }}

@@ -35,7 +35,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { DEPARTMENT_PERMISSIONS } from 'src/lib/department-permissions-config';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import {
@@ -143,14 +143,14 @@ export function DepartmentListView() {
             component={RouterLink}
             href={paths.admin.department.permissions}
             variant="outlined"
-            startIcon={<Iconify icon="solar:shield-keyhole-bold-duotone" />}
+            startIcon={<RemixIcon icon="solar:shield-keyhole-bold-duotone" />}
           >
             จัดการสิทธิ์เข้าใช้งาน
           </Button>
           <Button
             variant="contained"
             onClick={openCreateDialog}
-            startIcon={<Iconify icon="mingcute:add-line" />}
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
           >
             เพิ่มฝ่าย
           </Button>
@@ -296,7 +296,7 @@ export function DepartmentListView() {
                             onClick={() => openEditDialog(department)}
                             aria-label={`แก้ไขฝ่าย ${department.name}`}
                           >
-                            <Iconify icon="solar:pen-bold" width={18} />
+                            <RemixIcon icon="solar:pen-bold" width={18} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="ลบ">
@@ -309,7 +309,7 @@ export function DepartmentListView() {
                             }}
                             aria-label={`ลบฝ่าย ${department.name}`}
                           >
-                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                            <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                           </IconButton>
                         </Tooltip>
                       </Box>
@@ -341,7 +341,7 @@ export function DepartmentListView() {
                 disabled={saveMutation.isPending}
                 aria-label="ปิดหน้าต่าง"
               >
-                <Iconify icon="mingcute:close-line" />
+                <RemixIcon icon="mingcute:close-line" />
               </IconButton>
             </Box>
           </DialogTitle>

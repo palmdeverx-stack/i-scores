@@ -15,7 +15,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { updateAssignment, deleteAssignment } from 'src/sections/assignment/assignment-actions';
 
@@ -77,7 +77,7 @@ export function ScoreItemActionsDialog({
 
           {isDelete ? (
             <>
-              <Alert severity="warning" icon={<Iconify icon="solar:danger-triangle-bold" />}>
+              <Alert severity="warning" icon={<RemixIcon icon="solar:danger-triangle-bold" />}>
                 การลบ “{assignment.title}” จะลบคะแนนและความคิดเห็นของนักเรียนในรายการนี้ทั้งหมด
               </Alert>
               <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
@@ -125,7 +125,7 @@ export function ScoreItemActionsDialog({
           loading={mutation.isPending}
           disabled={!isDelete && isInvalid}
           startIcon={
-            <Iconify icon={isDelete ? 'solar:trash-bin-trash-bold' : 'solar:check-circle-bold'} />
+            <RemixIcon icon={isDelete ? 'solar:trash-bin-trash-bold' : 'solar:check-circle-bold'} />
           }
           onClick={() => mutation.mutate()}
         >

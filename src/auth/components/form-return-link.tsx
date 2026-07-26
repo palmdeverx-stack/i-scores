@@ -4,7 +4,7 @@ import Link from '@mui/material/Link';
 
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ export function FormReturnLink({ sx, href, label, icon, children, ...other }: Fo
       ]}
       {...other}
     >
-      {icon || <Iconify width={16} icon="eva:arrow-ios-back-fill" />}
+      {icon || <RemixIcon width={16} icon="eva:arrow-ios-back-fill" />}
       {label || 'Return to sign in'}
       {children}
     </Link>

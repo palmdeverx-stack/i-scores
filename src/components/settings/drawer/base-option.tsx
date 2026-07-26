@@ -7,7 +7,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
+import { RemixIcon } from '../../remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ export function BaseOption({
             title={tooltip}
             slotProps={{ tooltip: { sx: { maxWidth: 240, mr: 0.5 } } }}
           >
-            <Iconify
+            <RemixIcon
               width={16}
               icon="eva:info-outline"
               sx={{ cursor: 'pointer', color: 'text.disabled' }}

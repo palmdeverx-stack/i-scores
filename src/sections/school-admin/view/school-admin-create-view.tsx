@@ -18,7 +18,7 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { createUser } from 'src/sections/user/user-actions';
@@ -83,7 +83,7 @@ export function SchoolAdminCreateView() {
         component={RouterLink}
         href={paths.master.schoolAdmin.root}
         color="inherit"
-        startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+        startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
         sx={{ mb: 2 }}
       >
         กลับไปหน้ารายการ
@@ -118,7 +118,7 @@ export function SchoolAdminCreateView() {
                   bgcolor: 'primary.lighter',
                 }}
               >
-                <Iconify icon="solar:user-plus-bold" width={24} />
+                <RemixIcon icon="solar:user-plus-bold" width={24} />
               </Box>
               <Box>
                 <Typography variant="h6">ข้อมูลบัญชีผู้ดูแล</Typography>
@@ -203,7 +203,7 @@ export function SchoolAdminCreateView() {
                     size="large"
                     loading={createMutation.isPending}
                     disabled={!schools.length}
-                    startIcon={<Iconify icon="solar:user-plus-bold" />}
+                    startIcon={<RemixIcon icon="solar:user-plus-bold" />}
                   >
                     สร้างบัญชีผู้ดูแล
                   </Button>
@@ -225,12 +225,12 @@ export function SchoolAdminCreateView() {
               'รายวิชา การลงทะเบียน และคะแนน',
             ].map((label) => (
               <Box key={label} sx={{ gap: 1, mb: 1.5, display: 'flex', alignItems: 'center' }}>
-                <Iconify icon="solar:check-circle-bold" width={19} sx={{ color: 'success.main' }} />
+                <RemixIcon icon="solar:check-circle-bold" width={19} sx={{ color: 'success.main' }} />
                 <Typography variant="body2">{label}</Typography>
               </Box>
             ))}
           </Card>
-          <Alert severity="info" icon={<Iconify icon="solar:shield-check-bold" />}>
+          <Alert severity="info" icon={<RemixIcon icon="solar:shield-check-bold" />}>
             บัญชีผู้ดูแลไม่สามารถเข้าถึงข้อมูลของโรงเรียนอื่นได้
           </Alert>
         </Box>

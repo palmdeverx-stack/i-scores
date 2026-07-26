@@ -23,9 +23,9 @@ import {
   RiHome5Line,
   RiUser3Line,
   RiQrCodeLine,
-  RiBookOpenLine,
-  RiFileList3Line,
-  RiShieldCheckLine,
+  RiContractLine,
+  RiFileTextLine,
+  RiShieldUserLine,
   RiShieldKeyholeLine,
 } from 'src/components/remix-icon';
 
@@ -89,17 +89,17 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
     {
       label: 'นโยบายความเป็นส่วนตัว',
       href: paths.legal.privacyPolicy,
-      icon: <RiShieldCheckLine />,
+      icon: <RiShieldUserLine />,
     },
     {
       label: 'ข้อกำหนดการใช้บริการ',
       href: paths.legal.termsOfService,
-      icon: <RiFileList3Line />,
+      icon: <RiFileTextLine />,
     },
     {
       label: 'ข้อตกลงการให้บริการ',
       href: paths.legal.serviceAgreement,
-      icon: <RiBookOpenLine />,
+      icon: <RiContractLine />,
     },
     {
       label: 'เปลี่ยนรหัสผ่าน',

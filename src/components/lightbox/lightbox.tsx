@@ -7,8 +7,8 @@ import ReactLightbox, { useLightboxState } from 'yet-another-react-lightbox';
 
 import Box from '@mui/material/Box';
 
-import { Iconify } from '../iconify';
 import { getPlugins } from './utils';
+import { RemixIcon } from '../remix-icon';
 import { lightboxClasses } from './classes';
 
 // ----------------------------------------------------------------------
@@ -56,15 +56,15 @@ export function Lightbox({
         ],
       }}
       render={{
-        iconClose: () => <Iconify width={24} icon="carbon:close" />,
-        iconZoomIn: () => <Iconify width={24} icon="carbon:zoom-in" />,
-        iconZoomOut: () => <Iconify width={24} icon="carbon:zoom-out" />,
-        iconSlideshowPlay: () => <Iconify width={24} icon="carbon:play" />,
-        iconSlideshowPause: () => <Iconify width={24} icon="carbon:pause" />,
-        iconPrev: () => <Iconify width={32} icon="carbon:chevron-left" />,
-        iconNext: () => <Iconify width={32} icon="carbon:chevron-right" />,
-        iconExitFullscreen: () => <Iconify width={24} icon="carbon:center-to-fit" />,
-        iconEnterFullscreen: () => <Iconify width={24} icon="carbon:fit-to-screen" />,
+        iconClose: () => <RemixIcon width={24} icon="carbon:close" />,
+        iconZoomIn: () => <RemixIcon width={24} icon="carbon:zoom-in" />,
+        iconZoomOut: () => <RemixIcon width={24} icon="carbon:zoom-out" />,
+        iconSlideshowPlay: () => <RemixIcon width={24} icon="carbon:play" />,
+        iconSlideshowPause: () => <RemixIcon width={24} icon="carbon:pause" />,
+        iconPrev: () => <RemixIcon width={32} icon="carbon:chevron-left" />,
+        iconNext: () => <RemixIcon width={32} icon="carbon:chevron-right" />,
+        iconExitFullscreen: () => <RemixIcon width={24} icon="carbon:center-to-fit" />,
+        iconEnterFullscreen: () => <RemixIcon width={24} icon="carbon:fit-to-screen" />,
       }}
       className={mergeClasses([lightboxClasses.root, className])}
       {...other}

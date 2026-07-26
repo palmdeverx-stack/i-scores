@@ -14,7 +14,7 @@ import { inputBaseClasses } from '@mui/material/InputBase';
 
 import { countries } from 'src/assets/data/countries';
 
-import { Iconify } from '../iconify';
+import { RemixIcon } from '../remix-icon';
 import { CountryListPopover } from './list-popover';
 
 // ----------------------------------------------------------------------
@@ -115,7 +115,7 @@ export function PhoneInput({
           endAdornment: normalizedValue && (
             <InputAdornment position="end">
               <IconButton size="small" edge="end" onClick={handleClearInput}>
-                <Iconify width={16} icon="mingcute:close-line" />
+                <RemixIcon width={16} icon="mingcute:close-line" />
               </IconButton>
             </InputAdornment>
           ),

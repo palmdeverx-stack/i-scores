@@ -17,7 +17,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { getTeachingScheduleStatus } from 'src/utils/teaching-schedule';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -76,7 +76,7 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
         component={RouterLink}
         href={backPath}
         color="inherit"
-        startIcon={<Iconify icon="solar:reply-bold" />}
+        startIcon={<RemixIcon icon="solar:reply-bold" />}
         aria-label="กลับหน้าครูประจำวิชา"
         sx={{
           mb: { xs: 1, sm: 2 },
@@ -135,7 +135,7 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
               bgcolor: 'common.white',
             }}
           >
-            <Iconify icon="solar:notes-bold-duotone" width={30} />
+            <RemixIcon icon="solar:notes-bold-duotone" width={30} />
           </Avatar>
           <Box sx={{ minWidth: 0, flex: 1, gridArea: { xs: 'info', sm: 'auto' } }}>
             <Typography
@@ -176,7 +176,7 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
               <Chip
                 size="small"
                 icon={
-                  <Iconify
+                  <RemixIcon
                     icon={activeSchedule ? 'solar:play-circle-bold' : 'solar:clock-circle-bold'}
                   />
                 }
@@ -209,7 +209,7 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
               variant="outlined"
               disabled={!roster?.subjectId}
               onClick={() => setImageDialogOpen(true)}
-              startIcon={<Iconify icon="solar:pen-bold" />}
+              startIcon={<RemixIcon icon="solar:pen-bold" />}
               aria-label="จัดการรูปวิชา"
               sx={(theme) => ({
                 minWidth: { xs: 40, sm: 64 },
@@ -233,7 +233,7 @@ export const TeacherAssignmentDetailHeader = memo(function TeacherAssignmentDeta
               href={assignmentNewPath}
               variant="contained"
               color="secondary"
-              startIcon={<Iconify icon="mingcute:add-line" />}
+              startIcon={<RemixIcon icon="mingcute:add-line" />}
               sx={{ minWidth: 0, flexShrink: 0, color: 'primary.darker' }}
             >
               สร้างงาน

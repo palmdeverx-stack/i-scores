@@ -32,7 +32,7 @@ import TableContainer from '@mui/material/TableContainer';
 
 import { today, fIsBetween } from 'src/utils/format-time';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { listUsers } from 'src/sections/user/user-actions';
@@ -200,7 +200,7 @@ export function ClassroomListView() {
         <Button
           variant="contained"
           onClick={openCreateDialog}
-          startIcon={<Iconify icon="mingcute:add-line" />}
+          startIcon={<RemixIcon icon="mingcute:add-line" />}
         >
           เพิ่มห้องเรียน
         </Button>
@@ -294,7 +294,7 @@ export function ClassroomListView() {
                         onClick={() => openEditDialog(classroom)}
                         aria-label={`แก้ไขห้อง ${classroom.name}`}
                       >
-                        <Iconify icon="solar:pen-bold" width={18} />
+                        <RemixIcon icon="solar:pen-bold" width={18} />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="ลบ">
@@ -307,7 +307,7 @@ export function ClassroomListView() {
                         }}
                         aria-label={`ลบห้อง ${classroom.name}`}
                       >
-                        <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                       </IconButton>
                     </Tooltip>
                   </TableCell>
@@ -339,7 +339,7 @@ export function ClassroomListView() {
                 disabled={saveMutation.isPending}
                 aria-label="ปิดหน้าต่าง"
               >
-                <Iconify icon="mingcute:close-line" />
+                <RemixIcon icon="mingcute:close-line" />
               </IconButton>
             </Box>
           </DialogTitle>

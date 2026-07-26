@@ -35,7 +35,7 @@ import { RouterLink } from 'src/routes/components';
 import { SCHOOL_FEATURES, SUBSCRIPTION_STATUS_LABEL } from 'src/lib/school-subscription-config';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listSubscriptionPlans } from 'src/sections/subscription-plan/subscription-plan-actions';
 
@@ -196,7 +196,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
         component={RouterLink}
         href={paths.master.school.root}
         color="inherit"
-        startIcon={<Iconify icon="solar:reply-bold" />}
+        startIcon={<RemixIcon icon="solar:reply-bold" />}
         sx={{ mb: 2 }}
       >
         กลับหน้ารายชื่อโรงเรียน
@@ -240,7 +240,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
           disabled={!validDates || !hasFeatures}
           loading={updateMutation.isPending}
           onClick={() => updateMutation.mutate(form)}
-          startIcon={<Iconify icon="solar:check-circle-bold" />}
+          startIcon={<RemixIcon icon="solar:check-circle-bold" />}
         >
           บันทึกแพ็กเกจ
         </Button>

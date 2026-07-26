@@ -31,7 +31,7 @@ import {
 
 import { ExportIcon, FilterIcon, ViewColumnsIcon } from 'src/theme/core/components/mui-x-data-grid';
 
-import { Iconify } from '../iconify';
+import { RemixIcon } from '../remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -213,13 +213,13 @@ export function CustomToolbarQuickFilter({
                   input: {
                     startAdornment: (
                       <InputAdornment position="start">
-                        <Iconify icon="eva:search-fill" />
+                        <RemixIcon icon="eva:search-fill" />
                       </InputAdornment>
                     ),
                     endAdornment: state.value ? (
                       <InputAdornment position="end">
                         <QuickFilterClear edge="end" size="small" aria-label="Clear search">
-                          <Iconify icon="mingcute:close-line" width={16} />
+                          <RemixIcon icon="mingcute:close-line" width={16} />
                         </QuickFilterClear>
                       </InputAdornment>
                     ) : null,

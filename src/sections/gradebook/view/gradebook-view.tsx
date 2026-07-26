@@ -25,7 +25,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -125,7 +125,7 @@ export function GradebookView({ assignmentId }: Props) {
         component={RouterLink}
         href={assignmentDetailPath}
         color="inherit"
-        startIcon={<Iconify icon="solar:reply-bold" />}
+        startIcon={<RemixIcon icon="solar:reply-bold" />}
         sx={{ mb: 2 }}
       >
         กลับหน้ารายวิชา
@@ -280,7 +280,7 @@ export function GradebookView({ assignmentId }: Props) {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Iconify icon="eva:search-fill" />
+                    <RemixIcon icon="eva:search-fill" />
                   </InputAdornment>
                 ),
               },
@@ -329,7 +329,7 @@ export function GradebookView({ assignmentId }: Props) {
         </Box>
       ) : !isError ? (
         <Card variant="outlined" sx={{ py: 7, px: 3, textAlign: 'center' }}>
-          <Iconify icon="solar:user-rounded-bold" width={48} sx={{ color: 'text.disabled' }} />
+          <RemixIcon icon="solar:user-rounded-bold" width={48} sx={{ color: 'text.disabled' }} />
           <Typography variant="h6" sx={{ mt: 1.5 }}>
             ไม่พบนักเรียน
           </Typography>
@@ -378,7 +378,7 @@ function SummaryCard({
     <Card variant="outlined" sx={{ p: { xs: 1.75, sm: 2.25 } }}>
       <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
         <Avatar variant="rounded" sx={{ color: `${color}.main`, bgcolor: `${color}.lighter` }}>
-          <Iconify icon={icon} width={22} />
+          <RemixIcon icon={icon} width={22} />
         </Avatar>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h5">{loading ? <Skeleton width={36} /> : value}</Typography>
@@ -521,7 +521,7 @@ function GradeEntry({ row, assignmentId, fullScore, onSaved }: GradeEntryProps) 
           variant={dirty ? 'contained' : 'outlined'}
           loading={saveMutation.isPending}
           disabled={!dirty || scoreError}
-          startIcon={<Iconify icon="solar:check-circle-bold" />}
+          startIcon={<RemixIcon icon="solar:check-circle-bold" />}
           onClick={() => saveMutation.mutate()}
           sx={{ minHeight: 40 }}
         >

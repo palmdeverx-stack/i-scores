@@ -17,7 +17,7 @@ import DialogContent from '@mui/material/DialogContent';
 
 import { useRouter } from 'src/routes/hooks';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import {
   createAssignment,
@@ -113,7 +113,7 @@ export function QuickScoreDialog({
           />
         </Box>
 
-        <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" />} sx={{ mt: 2.5 }}>
+        <Alert severity="info" icon={<RemixIcon icon="solar:info-circle-bold" />} sx={{ mt: 2.5 }}>
           รายการนี้ใช้สำหรับบันทึกคะแนน ไม่สร้างงานที่นักเรียนต้องส่ง
         </Alert>
       </DialogContent>
@@ -125,7 +125,7 @@ export function QuickScoreDialog({
           variant="contained"
           loading={createMutation.isPending}
           disabled={titleError || scoreError}
-          startIcon={<Iconify icon="solar:pen-bold" />}
+          startIcon={<RemixIcon icon="solar:pen-bold" />}
           onClick={() => createMutation.mutate()}
         >
           สร้างและกรอกคะแนน

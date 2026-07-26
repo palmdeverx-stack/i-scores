@@ -17,7 +17,7 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { createSchool } from '../school-actions';
@@ -61,7 +61,7 @@ export function SchoolCreateView() {
         component={RouterLink}
         href={paths.master.school.root}
         color="inherit"
-        startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+        startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
         sx={{ mb: 2 }}
       >
         กลับไปหน้ารายการ
@@ -96,7 +96,7 @@ export function SchoolCreateView() {
                   bgcolor: 'primary.lighter',
                 }}
               >
-                <Iconify icon="solar:home-angle-bold-duotone" width={24} />
+                <RemixIcon icon="solar:home-angle-bold-duotone" width={24} />
               </Box>
               <Box>
                 <Typography variant="h6">ข้อมูลโรงเรียน</Typography>
@@ -148,7 +148,7 @@ export function SchoolCreateView() {
                     variant="contained"
                     size="large"
                     loading={createSchoolMutation.isPending}
-                    startIcon={<Iconify icon="solar:file-text-bold" />}
+                    startIcon={<RemixIcon icon="solar:file-text-bold" />}
                   >
                     บันทึกโรงเรียน
                   </Button>
@@ -183,7 +183,7 @@ export function SchoolCreateView() {
                   bgcolor: 'primary.lighter',
                 }}
               >
-                <Iconify icon={item.icon} width={17} />
+                <RemixIcon icon={item.icon} width={17} />
               </Box>
               <Box>
                 <Typography variant="subtitle2">{item.label}</Typography>

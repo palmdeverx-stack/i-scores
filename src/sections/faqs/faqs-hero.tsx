@@ -11,7 +11,7 @@ import { outlinedInputClasses } from '@mui/material/OutlinedInput';
 
 import { CONFIG } from 'src/global-config';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { varFade, AnimateText, MotionContainer, animateTextClasses } from 'src/components/animate';
 
 // ----------------------------------------------------------------------
@@ -66,7 +66,7 @@ export function FaqsHero({ sx, ...other }: BoxProps) {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                      <RemixIcon icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
                     </InputAdornment>
                   ),
                 },

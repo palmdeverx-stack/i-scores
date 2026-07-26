@@ -27,7 +27,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { today } from 'src/utils/format-time';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getAttendance, saveAttendance } from 'src/sections/attendance/attendance-actions';
 import { useSchoolSubscription } from 'src/sections/school-subscription/use-school-subscription';
@@ -200,7 +200,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
                   <Button
                     variant="contained"
                     onClick={() => setScanDialogOpen(true)}
-                    startIcon={<Iconify icon="solar:camera-add-bold" />}
+                    startIcon={<RemixIcon icon="solar:camera-add-bold" />}
                     sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
                   >
                     สแกน QR เข้าเรียน
@@ -210,7 +210,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
                   component={RouterLink}
                   href={paths.teacher.assignmentAttendanceHistory(teacherAssignmentId)}
                   variant="outlined"
-                  startIcon={<Iconify icon="solar:calendar-date-bold" />}
+                  startIcon={<RemixIcon icon="solar:calendar-date-bold" />}
                   aria-label="ประวัติการเข้าเรียน"
                   sx={{
                     gridColumn: { xs: 1, sm: 'auto' },
@@ -266,7 +266,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
                 bgcolor: `${option.color}.lighter`,
               }}
             >
-              <Iconify icon={option.icon} width={18} />
+              <RemixIcon icon={option.icon} width={18} />
               <Typography
                 variant="body2"
                 sx={{
@@ -310,7 +310,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <Iconify icon="eva:search-fill" />
+                  <RemixIcon icon="eva:search-fill" />
                 </InputAdornment>
               ),
             },
@@ -320,7 +320,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
         <Button
           color="success"
           variant="outlined"
-          startIcon={<Iconify icon="solar:check-circle-bold" />}
+          startIcon={<RemixIcon icon="solar:check-circle-bold" />}
           disabled={!data?.rows.length}
           onClick={markEveryonePresent}
           aria-label="ทำเครื่องหมายว่ามาทั้งหมด"
@@ -367,7 +367,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
 
         {!isLoading && !filteredRows.length && !isError && (
           <Box sx={{ py: 6, textAlign: 'center' }}>
-            <Iconify icon="solar:user-rounded-bold" width={44} sx={{ color: 'text.disabled' }} />
+            <RemixIcon icon="solar:user-rounded-bold" width={44} sx={{ color: 'text.disabled' }} />
             <Typography variant="subtitle1" sx={{ mt: 1 }}>
               {search ? 'ไม่พบนักเรียนจากคำค้นหา' : 'ยังไม่มีนักเรียนในห้องนี้'}
             </Typography>
@@ -433,7 +433,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
                       aria-label={option.label}
                       sx={{ gap: 0.5, px: { xs: 0.75, sm: 1 } }}
                     >
-                      <Iconify icon={option.icon} width={17} />
+                      <RemixIcon icon={option.icon} width={17} />
                       {option.label}
                     </ToggleButton>
                   ))}
@@ -504,7 +504,7 @@ export function AttendanceSection({ teacherAssignmentId }: Props) {
         </Typography>
         <Button
           variant="contained"
-          startIcon={<Iconify icon="solar:check-circle-bold" />}
+          startIcon={<RemixIcon icon="solar:check-circle-bold" />}
           loading={saveMutation.isPending}
           disabled={isLoading || !dirtyRows.length}
           onClick={() => saveMutation.mutate()}

@@ -16,7 +16,7 @@ import { outlinedInputClasses } from '@mui/material/OutlinedInput';
 import { _socials } from 'src/_mock';
 import { ComingSoonIllustration } from 'src/assets/illustrations';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -78,10 +78,10 @@ export function ComingSoonView() {
       <Box sx={{ display: 'flex', justifyContent: 'center' }}>
         {_socials.map((social) => (
           <IconButton key={social.label}>
-            {social.value === 'twitter' && <Iconify icon="socials:twitter" />}
-            {social.value === 'facebook' && <Iconify icon="socials:facebook" />}
-            {social.value === 'instagram' && <Iconify icon="socials:instagram" />}
-            {social.value === 'linkedin' && <Iconify icon="socials:linkedin" />}
+            {social.value === 'twitter' && <RemixIcon icon="socials:twitter" />}
+            {social.value === 'facebook' && <RemixIcon icon="socials:facebook" />}
+            {social.value === 'instagram' && <RemixIcon icon="socials:instagram" />}
+            {social.value === 'linkedin' && <RemixIcon icon="socials:linkedin" />}
           </IconButton>
         ))}
       </Box>

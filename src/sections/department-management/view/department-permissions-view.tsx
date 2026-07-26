@@ -28,7 +28,7 @@ import { navData as adminNavData } from 'src/layouts/nav-config-dashboard';
 import { navData as teacherNavData } from 'src/layouts/nav-config-teacher';
 import { DEPARTMENT_PERMISSIONS } from 'src/lib/department-permissions-config';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listDepartments, updateDepartment } from '../department-management-actions';
 
@@ -124,7 +124,7 @@ export function DepartmentPermissionsView() {
           component={RouterLink}
           href={paths.admin.department.root}
           size="small"
-          startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+          startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
         >
           กลับไปหน้ารายการฝ่าย
         </Button>
@@ -252,7 +252,7 @@ export function DepartmentPermissionsView() {
                     <Tooltip title={item.description}>
                       <Box sx={{ gap: 0.5, display: 'inline-flex', alignItems: 'center' }}>
                         {item.label}
-                        <Iconify icon="solar:info-circle-bold" width={14} sx={{ color: 'text.disabled' }} />
+                        <RemixIcon icon="solar:info-circle-bold" width={14} sx={{ color: 'text.disabled' }} />
                       </Box>
                     </Tooltip>
                   </TableCell>

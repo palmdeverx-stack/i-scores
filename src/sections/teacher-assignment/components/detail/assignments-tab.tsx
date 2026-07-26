@@ -21,7 +21,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { fDateTime } from 'src/utils/format-time';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listAssignments } from 'src/sections/assignment/assignment-actions';
 
@@ -75,7 +75,7 @@ export const AssignmentsTab = memo(function AssignmentsTab({
             component={RouterLink}
             href={assignmentNewPath}
             variant="contained"
-            startIcon={<Iconify icon="mingcute:add-line" />}
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
             aria-label="สร้างงาน"
             sx={{
               minWidth: { xs: 40, sm: 64 },
@@ -140,7 +140,7 @@ export const AssignmentsTab = memo(function AssignmentsTab({
                     : 'ไม่กำหนดส่ง'}
                 </Typography>
               </Box>
-              <Iconify
+              <RemixIcon
                 icon="eva:arrow-ios-forward-fill"
                 width={20}
                 sx={{ color: 'text.disabled' }}

@@ -16,7 +16,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { StudentAssignmentList } from '../components/student-assignment-list';
 import {
@@ -60,7 +60,7 @@ export function StudentSubjectDetailView({ teacherAssignmentId }: Props) {
           component={RouterLink}
           href={paths.student.subjects}
           color="inherit"
-          startIcon={<Iconify icon="solar:reply-bold" />}
+          startIcon={<RemixIcon icon="solar:reply-bold" />}
           sx={{ mb: 2 }}
         >
           กลับหน้าวิชาเรียน
@@ -80,7 +80,7 @@ export function StudentSubjectDetailView({ teacherAssignmentId }: Props) {
         component={RouterLink}
         href={paths.student.subjects}
         color="inherit"
-        startIcon={<Iconify icon="solar:reply-bold" />}
+        startIcon={<RemixIcon icon="solar:reply-bold" />}
         sx={{ mb: 2 }}
       >
         กลับหน้าวิชาเรียน
@@ -174,12 +174,12 @@ function SubjectInfo({
   icon,
   text,
 }: {
-  icon: React.ComponentProps<typeof Iconify>['icon'];
+  icon: React.ComponentProps<typeof RemixIcon>['icon'];
   text: string;
 }) {
   return (
     <Stack direction="row" spacing={0.75} alignItems="center">
-      <Iconify icon={icon} width={20} />
+      <RemixIcon icon={icon} width={20} />
       <Typography variant="body2">{text}</Typography>
     </Stack>
   );

@@ -18,7 +18,7 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -181,7 +181,7 @@ export function QuizBuilder({
                     onQuestionsChange(questions.filter((_, index) => index !== questionIndex))
                   }
                 >
-                  <Iconify icon="solar:trash-bin-trash-bold" />
+                  <RemixIcon icon="solar:trash-bin-trash-bold" />
                 </IconButton>
               </Stack>
 
@@ -289,7 +289,7 @@ export function QuizBuilder({
                               });
                             }}
                           >
-                            <Iconify icon="mingcute:close-line" />
+                            <RemixIcon icon="mingcute:close-line" />
                           </IconButton>
                         </Box>
                       </Stack>
@@ -300,7 +300,7 @@ export function QuizBuilder({
                   size="small"
                   color="inherit"
                   disabled={disabled || question.options.length >= 8}
-                  startIcon={<Iconify icon="mingcute:add-line" />}
+                  startIcon={<RemixIcon icon="mingcute:add-line" />}
                   onClick={() =>
                     updateQuestion(questionIndex, { options: [...question.options, ''] })
                   }
@@ -318,7 +318,7 @@ export function QuizBuilder({
         variant="outlined"
         size="large"
         disabled={disabled || questions.length >= 100}
-        startIcon={<Iconify icon="solar:add-circle-bold" />}
+        startIcon={<RemixIcon icon="solar:add-circle-bold" />}
         onClick={() => onQuestionsChange([...questions, createQuizQuestion()])}
         sx={{ alignSelf: 'flex-start' }}
       >

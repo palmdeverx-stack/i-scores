@@ -19,7 +19,7 @@ import TableHead from '@mui/material/TableHead';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { StudentGuardiansDialog } from 'src/sections/student-guardian/components/student-guardians-dialog';
 
@@ -122,7 +122,7 @@ export const StudentsTab = memo(function StudentsTab({ teacherAssignmentId }: Pr
                     aria-label={`ข้อมูลผู้ปกครองของ ${studentName}`}
                     sx={{ minWidth: 36, px: 0.75 }}
                   >
-                    <Iconify icon="solar:users-group-rounded-bold" width={18} />
+                    <RemixIcon icon="solar:users-group-rounded-bold" width={18} />
                   </Button>
                   <Button
                     size="small"
@@ -130,7 +130,7 @@ export const StudentsTab = memo(function StudentsTab({ teacherAssignmentId }: Pr
                     aria-label={`ดูผลการเรียนของ ${studentName}`}
                     sx={{ minWidth: 36, px: 0.75 }}
                   >
-                    <Iconify icon="solar:chart-square-outline" width={18} />
+                    <RemixIcon icon="solar:chart-square-outline" width={18} />
                   </Button>
                 </Box>
               </Box>
@@ -197,7 +197,7 @@ export const StudentsTab = memo(function StudentsTab({ teacherAssignmentId }: Pr
                       <Button
                         size="small"
                         color="inherit"
-                        startIcon={<Iconify icon="solar:users-group-rounded-bold" />}
+                        startIcon={<RemixIcon icon="solar:users-group-rounded-bold" />}
                         onClick={() => setGuardianStudent(row.student)}
                       >
                         ข้อมูลผู้ปกครอง

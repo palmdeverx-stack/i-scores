@@ -27,7 +27,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { listSemesters, listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
@@ -119,7 +119,7 @@ export function SubjectListView() {
         <Button
           variant="contained"
           onClick={openCreateDialog}
-          startIcon={<Iconify icon="mingcute:add-line" />}
+          startIcon={<RemixIcon icon="mingcute:add-line" />}
         >
           เพิ่มรายวิชา
         </Button>
@@ -251,7 +251,7 @@ export function SubjectListView() {
                         alt={`รูปวิชา ${subject.name}`}
                         sx={{ width: 56, height: 44, bgcolor: 'background.neutral' }}
                       >
-                        <Iconify icon="solar:gallery-wide-bold" width={24} />
+                        <RemixIcon icon="solar:gallery-wide-bold" width={24} />
                       </Avatar>
                       <Box sx={{ minWidth: 0 }}>
                         <Box sx={{ display: 'flex' }}>
@@ -299,7 +299,7 @@ export function SubjectListView() {
                         onClick={() => openEditDialog(subject)}
                         aria-label={`แก้ไขวิชา ${subject.name}`}
                       >
-                        <Iconify icon="solar:pen-bold" width={18} />
+                        <RemixIcon icon="solar:pen-bold" width={18} />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="ลบ">
@@ -312,7 +312,7 @@ export function SubjectListView() {
                         }}
                         aria-label={`ลบวิชา ${subject.name}`}
                       >
-                        <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                       </IconButton>
                     </Tooltip>
                   </TableCell>

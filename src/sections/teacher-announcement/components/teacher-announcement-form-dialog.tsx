@@ -30,7 +30,7 @@ import FormHelperText from '@mui/material/FormHelperText';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { toast } from 'src/components/snackbar';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import {
@@ -229,7 +229,7 @@ export function TeacherAnnouncementFormDialog({
               </Typography>
             </Box>
             <IconButton onClick={onClose} disabled={pending} aria-label="ปิดหน้าต่าง">
-              <Iconify icon="mingcute:close-line" />
+              <RemixIcon icon="mingcute:close-line" />
             </IconButton>
           </Box>
         </DialogTitle>
@@ -280,7 +280,7 @@ export function TeacherAnnouncementFormDialog({
                     bgcolor: 'action.hover',
                   }}
                 >
-                  <Iconify icon="solar:gallery-add-bold" width={30} />
+                  <RemixIcon icon="solar:gallery-add-bold" width={30} />
                 </Box>
               )}
               <Box sx={{ flex: 1 }}>

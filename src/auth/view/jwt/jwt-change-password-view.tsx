@@ -14,7 +14,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 
 import { useRouter } from 'src/routes/hooks';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from '../../hooks';
@@ -101,7 +101,7 @@ export function JwtChangePasswordView() {
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton onClick={showPassword.onToggle} edge="end">
-                      <Iconify
+                      <RemixIcon
                         icon={showPassword.value ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
                       />
                     </IconButton>

@@ -3,7 +3,7 @@ import type { BoxProps } from '@mui/material/Box';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -33,13 +33,13 @@ export function FormSocials({
       {...other}
     >
       <IconButton color="inherit" onClick={signInWithGoogle}>
-        <Iconify width={22} icon="socials:google" />
+        <RemixIcon width={22} icon="socials:google" />
       </IconButton>
       <IconButton color="inherit" onClick={singInWithGithub}>
-        <Iconify width={22} icon="socials:github" />
+        <RemixIcon width={22} icon="socials:github" />
       </IconButton>
       <IconButton color="inherit" onClick={signInWithTwitter}>
-        <Iconify width={22} icon="socials:twitter" />
+        <RemixIcon width={22} icon="socials:twitter" />
       </IconButton>
     </Box>
   );

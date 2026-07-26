@@ -8,7 +8,7 @@ import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getEnrolledStudentsForExport } from '../admin-dashboard-actions';
 
@@ -74,7 +74,7 @@ export function EnrolledStudentsExportButtons() {
           loading={exporting === 'csv'}
           disabled={exporting !== null}
           onClick={() => void handleExport('csv')}
-          startIcon={<Iconify icon="solar:file-text-bold" />}
+          startIcon={<RemixIcon icon="solar:file-text-bold" />}
         >
           Export CSV
         </Button>
@@ -84,7 +84,7 @@ export function EnrolledStudentsExportButtons() {
           loading={exporting === 'excel'}
           disabled={exporting !== null}
           onClick={() => void handleExport('excel')}
-          startIcon={<Iconify icon="solar:chart-square-outline" />}
+          startIcon={<RemixIcon icon="solar:chart-square-outline" />}
         >
           Export Excel
         </Button>

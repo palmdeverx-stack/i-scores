@@ -1,6 +1,6 @@
 'use client';
 
-import type { IconifyName } from 'src/components/iconify/register-icons';
+import type { RemixIconName } from 'src/components/remix-icon/icon-map';
 import type { AttendanceStatus, StudentAttendanceRecord } from '../attendance-actions';
 
 import { useMemo, useState } from 'react';
@@ -21,7 +21,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import LinearProgress from '@mui/material/LinearProgress';
 import TablePagination from '@mui/material/TablePagination';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getMyAttendance } from '../attendance-actions';
 
@@ -34,7 +34,7 @@ const STATUS_CONFIG: Record<
   {
     label: string;
     color: 'success' | 'warning' | 'error' | 'info';
-    icon: IconifyName;
+    icon: RemixIconName;
   }
 > = {
   present: {
@@ -170,7 +170,7 @@ export function StudentAttendanceView() {
         >
           <Box sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={1} alignItems="center">
-              <Iconify icon="solar:calendar-date-bold" width={24} />
+              <RemixIcon icon="solar:calendar-date-bold" width={24} />
               <Typography variant="overline" sx={{ opacity: 0.8, letterSpacing: 1 }}>
                 การเข้าเรียนของฉัน
               </Typography>
@@ -253,7 +253,7 @@ export function StudentAttendanceView() {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Iconify icon="eva:search-fill" />
+                      <RemixIcon icon="eva:search-fill" />
                     </InputAdornment>
                   ),
                 },
@@ -299,7 +299,7 @@ export function StudentAttendanceView() {
               borderColor: 'divider',
             }}
           >
-            <Iconify icon="solar:calendar-date-bold" width={42} sx={{ color: 'text.disabled' }} />
+            <RemixIcon icon="solar:calendar-date-bold" width={42} sx={{ color: 'text.disabled' }} />
             <Typography variant="subtitle2" sx={{ mt: 1 }}>
               {records.length ? 'ไม่พบรายการตามตัวกรอง' : 'ยังไม่มีข้อมูลการเช็คชื่อ'}
             </Typography>
@@ -350,7 +350,7 @@ function AttendanceSummaryCard({ status, value }: { status: AttendanceStatus; va
             bgcolor: `${config.color}.lighter`,
           }}
         >
-          <Iconify icon={config.icon} width={22} />
+          <RemixIcon icon={config.icon} width={22} />
         </Box>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h5" sx={{ lineHeight: 1.1 }}>
@@ -423,7 +423,7 @@ function AttendanceRecord({ record }: { record: StudentAttendanceRecord }) {
 
       <Chip
         size="small"
-        icon={<Iconify icon={config.icon} />}
+        icon={<RemixIcon icon={config.icon} />}
         label={config.label}
         color={config.color}
         variant="outlined"

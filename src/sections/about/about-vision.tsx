@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography';
 import { CONFIG } from 'src/global-config';
 
 import { Image } from 'src/components/image';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { varFade, MotionViewport } from 'src/components/animate';
 
 // ----------------------------------------------------------------------
@@ -106,7 +106,7 @@ export function AboutVision({ sx, ...other }: BoxProps) {
           {renderLogos()}
 
           <Fab sx={{ position: 'absolute', zIndex: 9 }}>
-            <Iconify icon="solar:play-broken" width={24} />
+            <RemixIcon icon="solar:play-broken" width={24} />
           </Fab>
         </Box>
 

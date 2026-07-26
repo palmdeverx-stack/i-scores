@@ -20,7 +20,7 @@ import {
   DensityComfortableIcon,
 } from 'src/theme/core/components/mui-x-data-grid';
 
-import { Iconify } from '../iconify';
+import { RemixIcon } from '../remix-icon';
 import { ToolbarButtonBase } from './toolbar-core';
 
 // ----------------------------------------------------------------------
@@ -120,7 +120,7 @@ export function CustomToolbarSettingsButton({
           aria-expanded={open ? 'true' : undefined}
           onClick={onOpen}
           label={label}
-          icon={<Iconify icon="solar:settings-bold" />}
+          icon={<RemixIcon icon="solar:settings-bold" />}
           showLabel={showLabel}
         />
       </Tooltip>

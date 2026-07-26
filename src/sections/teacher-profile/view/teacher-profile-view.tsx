@@ -28,8 +28,8 @@ import {
   PROFILE_IMAGE_SOURCE_LIMIT_BYTES,
 } from 'src/utils/resize-profile-image';
 
-import { Iconify } from 'src/components/iconify';
 import { UploadAvatar } from 'src/components/upload';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from 'src/auth/hooks';
@@ -360,7 +360,7 @@ export function TeacherProfileView() {
                     loading={mutation.isPending}
                     disabled={!methods.formState.isDirty}
                     loadingIndicator="กำลังบันทึก..."
-                    startIcon={<Iconify icon="solar:check-circle-bold" />}
+                    startIcon={<RemixIcon icon="solar:check-circle-bold" />}
                     sx={{ width: { xs: 1, sm: 'auto' }, minWidth: 210 }}
                   >
                     บันทึกการเปลี่ยนแปลง
@@ -422,7 +422,7 @@ export function TeacherProfileView() {
                           bgcolor: isTeachingNow ? 'success.lighter' : 'primary.lighter',
                         }}
                       >
-                        <Iconify icon="solar:notebook-bold-duotone" />
+                        <RemixIcon icon="solar:notebook-bold-duotone" />
                       </Avatar>
                       <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography variant="subtitle2" noWrap>
@@ -517,7 +517,7 @@ export function TeacherProfileView() {
                 variant="text"
                 loading={deleteAvatarMutation.isPending}
                 disabled={isPreparingAvatar || avatarMutation.isPending || Boolean(avatarFile)}
-                startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+                startIcon={<RemixIcon icon="solar:trash-bin-trash-bold" />}
                 onClick={() => deleteAvatarMutation.mutate()}
                 sx={{ mt: 2 }}
               >
@@ -557,7 +557,7 @@ export function TeacherProfileView() {
           <Card variant="outlined" sx={{ p: 3 }}>
             <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
               <Avatar variant="rounded" sx={{ color: 'primary.main', bgcolor: 'primary.lighter' }}>
-                <Iconify icon="solar:shield-keyhole-bold-duotone" />
+                <RemixIcon icon="solar:shield-keyhole-bold-duotone" />
               </Avatar>
               <Box>
                 <Typography component="h2" variant="subtitle1">
@@ -573,7 +573,7 @@ export function TeacherProfileView() {
               component={RouterLink}
               href={paths.auth.jwt.changePassword}
               variant="outlined"
-              startIcon={<Iconify icon="ic:round-vpn-key" />}
+              startIcon={<RemixIcon icon="ic:round-vpn-key" />}
               sx={{ mt: 2.5 }}
             >
               เปลี่ยนรหัสผ่าน
@@ -601,7 +601,7 @@ function SummaryFact({ icon, label, value }: SummaryFactProps) {
   return (
     <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
       <Avatar variant="rounded" sx={{ color: 'primary.main', bgcolor: 'primary.lighter' }}>
-        <Iconify icon={icon} width={21} />
+        <RemixIcon icon={icon} width={21} />
       </Avatar>
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>

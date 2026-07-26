@@ -10,8 +10,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { UploadIllustration } from 'src/assets/illustrations';
 
-import { Iconify } from '../../iconify';
 import { uploadClasses } from '../classes';
+import { RemixIcon } from '../../remix-icon';
 import { RejectedFiles } from '../components/rejected-files';
 import { MultiFilePreview } from '../components/multi-file-preview';
 import { SingleFilePreview } from '../components/single-file-preview';
@@ -100,7 +100,7 @@ export function Upload({
                 size="small"
                 variant="contained"
                 onClick={onUpload}
-                startIcon={<Iconify icon="eva:cloud-upload-fill" />}
+                startIcon={<RemixIcon icon="eva:cloud-upload-fill" />}
                 loading={loading && multiple}
                 loadingPosition="start"
               >
@@ -129,7 +129,7 @@ export function Upload({
 
       {isSingleFileSelected && (
         <DeleteButton size="small" onClick={onDelete}>
-          <Iconify icon="mingcute:close-line" width={16} />
+          <RemixIcon icon="mingcute:close-line" width={16} />
         </DeleteButton>
       )}
 

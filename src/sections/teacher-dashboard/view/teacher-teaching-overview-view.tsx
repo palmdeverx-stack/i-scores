@@ -16,7 +16,7 @@ import Typography from '@mui/material/Typography';
 
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getTeacherDashboardSummaryFor } from '../teacher-dashboard-actions';
 
@@ -63,7 +63,7 @@ export function TeacherTeachingOverviewView({ teacherId, backHref }: Props) {
           component={RouterLink}
           href={backHref}
           size="small"
-          startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+          startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
         >
           กลับ
         </Button>
@@ -111,7 +111,7 @@ export function TeacherTeachingOverviewView({ teacherId, backHref }: Props) {
                     variant="rounded"
                     sx={{ width: 40, height: 40, color: 'primary.main', bgcolor: 'primary.lighter' }}
                   >
-                    <Iconify icon={item.icon} width={22} />
+                    <RemixIcon icon={item.icon} width={22} />
                   </Avatar>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography variant="h5">{data.summary[item.key].toLocaleString('th-TH')}</Typography>

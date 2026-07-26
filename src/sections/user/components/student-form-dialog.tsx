@@ -28,8 +28,8 @@ import {
   PROFILE_IMAGE_SOURCE_LIMIT_BYTES,
 } from 'src/utils/resize-profile-image';
 
-import { Iconify } from 'src/components/iconify';
 import { UploadAvatar } from 'src/components/upload';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { generatePassword } from './create-user-dialog';
@@ -226,7 +226,7 @@ export function StudentFormDialog({ open, student = null, onClose, onSaved }: Pr
               disabled={saveMutation.isPending || isPreparingAvatar}
               aria-label="ปิดหน้าต่าง"
             >
-              <Iconify icon="mingcute:close-line" />
+              <RemixIcon icon="mingcute:close-line" />
             </IconButton>
           </Box>
         </DialogTitle>
@@ -346,7 +346,7 @@ export function StudentFormDialog({ open, student = null, onClose, onSaved }: Pr
                               edge="end"
                               onClick={() => setShowPassword((value) => !value)}
                             >
-                              <Iconify
+                              <RemixIcon
                                 icon={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
                               />
                             </IconButton>
@@ -358,7 +358,7 @@ export function StudentFormDialog({ open, student = null, onClose, onSaved }: Pr
                   <Button
                     size="small"
                     color="inherit"
-                    startIcon={<Iconify icon="solar:restart-bold" />}
+                    startIcon={<RemixIcon icon="solar:restart-bold" />}
                     onClick={() => {
                       setValue('password', generatePassword(), {
                         shouldDirty: true,

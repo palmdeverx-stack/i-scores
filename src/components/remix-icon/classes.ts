@@ -2,6 +2,6 @@ import { createClasses } from 'src/theme/create-classes';
 
 // ----------------------------------------------------------------------
 
-export const iconifyClasses = {
-  root: createClasses('iconify__root'),
+export const remixIconClasses = {
+  root: createClasses('remix-icon__root'),
 };

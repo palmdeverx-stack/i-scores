@@ -19,7 +19,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { listUsers } from 'src/sections/user/user-actions';
@@ -187,7 +187,7 @@ export function TeacherAssignmentFormDialog({ open, editingRow, onClose }: Props
             </Box>
             <Box>
               <IconButton onClick={handleClose} disabled={savePending} aria-label="ปิดหน้าต่าง">
-                <Iconify icon="mingcute:close-line" />
+                <RemixIcon icon="mingcute:close-line" />
               </IconButton>
             </Box>
           </Box>

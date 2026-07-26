@@ -4,7 +4,7 @@ import Link from '@mui/material/Link';
 
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify, iconifyClasses } from '../iconify';
+import { RemixIcon, remixIconClasses } from '../remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ export function BackLink({ sx, label, ...other }: BackLinkProps) {
       sx={[
         (theme) => ({
           verticalAlign: 'middle',
-          [`& .${iconifyClasses.root}`]: {
+          [`& .${remixIconClasses.root}`]: {
             verticalAlign: 'inherit',
             transform: 'translateY(-2px)',
             ml: {
@@ -34,7 +34,7 @@ export function BackLink({ sx, label, ...other }: BackLinkProps) {
             }),
           },
           '&:hover': {
-            [`& .${iconifyClasses.root}`]: {
+            [`& .${remixIconClasses.root}`]: {
               opacity: 0.48,
             },
           },
@@ -43,7 +43,7 @@ export function BackLink({ sx, label, ...other }: BackLinkProps) {
       ]}
       {...other}
     >
-      <Iconify width={18} icon="eva:arrow-ios-back-fill" />
+      <RemixIcon width={18} icon="eva:arrow-ios-back-fill" />
       {label}
     </Link>
   );

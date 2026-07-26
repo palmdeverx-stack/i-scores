@@ -12,9 +12,9 @@ import Drawer, { drawerClasses } from '@mui/material/Drawer';
 
 import { usePathname } from 'src/routes/hooks';
 
-import { Iconify } from '../../iconify';
 import { Nav, NavUl } from '../components';
 import { Scrollbar } from '../../scrollbar';
+import { RemixIcon } from '../../remix-icon';
 import { NavListDrawer } from './nav-list-drawer';
 import { NavListCollapse } from './nav-list-collapse';
 import { megaMenuVars, megaMenuClasses } from '../styles';
@@ -60,7 +60,7 @@ export function MegaMenuMobile({
       })
     ) : (
       <IconButton onClick={drawerOpen.onTrue}>
-        <Iconify icon="custom:menu-duotone" width={24} />
+        <RemixIcon icon="custom:menu-duotone" width={24} />
       </IconButton>
     );
 

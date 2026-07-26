@@ -32,10 +32,10 @@ import TableContainer from '@mui/material/TableContainer';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
-import { listUsers, updateSchoolAdmin, deleteSchoolAdmin } from 'src/sections/user/user-actions';
 import { listSchools } from 'src/sections/school/school-actions';
+import { listUsers, updateSchoolAdmin, deleteSchoolAdmin } from 'src/sections/user/user-actions';
 
 // ----------------------------------------------------------------------
 
@@ -142,7 +142,7 @@ export function SchoolAdminListView() {
           component={RouterLink}
           href={paths.master.schoolAdmin.new}
           variant="contained"
-          startIcon={<Iconify icon="solar:user-plus-bold" />}
+          startIcon={<RemixIcon icon="solar:user-plus-bold" />}
         >
           เพิ่มผู้ดูแลโรงเรียน
         </Button>
@@ -221,7 +221,7 @@ export function SchoolAdminListView() {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Iconify icon="eva:search-fill" />
+                    <RemixIcon icon="eva:search-fill" />
                   </InputAdornment>
                 ),
               },
@@ -255,7 +255,7 @@ export function SchoolAdminListView() {
               {!isLoading && !filteredAdmins.length && (
                 <TableRow>
                   <TableCell colSpan={6} sx={{ py: 8, textAlign: 'center' }}>
-                    <Iconify
+                    <RemixIcon
                       icon="solar:inbox-in-bold"
                       width={36}
                       sx={{ color: 'text.disabled' }}
@@ -337,7 +337,7 @@ export function SchoolAdminListView() {
                             onClick={() => openEditDialog(admin)}
                             aria-label={`แก้ไข ${fullName}`}
                           >
-                            <Iconify icon="solar:pen-bold" width={18} />
+                            <RemixIcon icon="solar:pen-bold" width={18} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="ลบผู้ดูแล">
@@ -350,7 +350,7 @@ export function SchoolAdminListView() {
                             }}
                             aria-label={`ลบ ${fullName}`}
                           >
-                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                            <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                           </IconButton>
                         </Tooltip>
                       </Box>
@@ -537,7 +537,7 @@ function SummaryCard({
           bgcolor,
         }}
       >
-        <Iconify icon={icon} width={24} />
+        <RemixIcon icon={icon} width={24} />
       </Box>
       <Box>
         <Typography variant="h4">{value.toLocaleString('th-TH')}</Typography>

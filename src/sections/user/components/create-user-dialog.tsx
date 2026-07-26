@@ -19,7 +19,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import InputAdornment from '@mui/material/InputAdornment';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { createUser, updateStaffUser } from '../user-actions';
@@ -161,7 +161,7 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
                 disabled={createMutation.isPending}
                 aria-label="ปิดหน้าต่าง"
               >
-                <Iconify icon="mingcute:close-line" />
+                <RemixIcon icon="mingcute:close-line" />
               </IconButton>
             </Box>
           </Box>
@@ -186,7 +186,7 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
                 borderColor: 'divider',
               }}
             >
-              <Iconify
+              <RemixIcon
                 icon={isStudentMode ? 'solar:user-rounded-bold' : 'solar:users-group-rounded-bold'}
                 width={26}
               />
@@ -245,7 +245,7 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
                             onClick={() => setShowPassword((value) => !value)}
                             aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
                           >
-                            <Iconify
+                            <RemixIcon
                               icon={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
                             />
                           </IconButton>
@@ -257,7 +257,7 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
                 <Button
                   size="small"
                   color="inherit"
-                  startIcon={<Iconify icon="solar:restart-bold" />}
+                  startIcon={<RemixIcon icon="solar:restart-bold" />}
                   onClick={() => {
                     setValue('password', generatePassword(), {
                       shouldDirty: true,

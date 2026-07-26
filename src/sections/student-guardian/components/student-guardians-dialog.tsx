@@ -24,7 +24,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { GuardianFormDialog } from './guardian-form-dialog';
 import { GuardianLineDialog } from './guardian-line-dialog';
@@ -259,7 +259,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                 bgcolor: 'primary.lighter',
               }}
             >
-              <Iconify icon="solar:users-group-rounded-bold" width={26} />
+              <RemixIcon icon="solar:users-group-rounded-bold" width={26} />
             </Avatar>
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -273,7 +273,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
               </Typography>
             </Box>
             <IconButton aria-label="ปิดหน้าข้อมูลผู้ปกครอง" onClick={onClose}>
-              <Iconify icon="mingcute:close-line" />
+              <RemixIcon icon="mingcute:close-line" />
             </IconButton>
           </Box>
         </DialogTitle>
@@ -352,7 +352,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                   bgcolor: 'background.paper',
                 }}
               >
-                <Iconify icon="solar:users-group-rounded-bold" width={30} />
+                <RemixIcon icon="solar:users-group-rounded-bold" width={30} />
               </Avatar>
               <Typography variant="subtitle1" sx={{ mt: 1 }}>
                 ยังไม่มีข้อมูลผู้ปกครอง
@@ -410,7 +410,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                             size="small"
                             color="primary"
                             variant="soft"
-                            icon={<Iconify icon="eva:star-fill" />}
+                            icon={<RemixIcon icon="eva:star-fill" />}
                             label="ผู้ติดต่อหลัก"
                           />
                         )}
@@ -426,18 +426,18 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                         }}
                       >
                         <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center' }}>
-                          <Iconify icon="solar:phone-bold" width={16} />
+                          <RemixIcon icon="solar:phone-bold" width={16} />
                           <Typography variant="body2">{guardian.phone}</Typography>
                         </Box>
                         {guardian.email && (
                           <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center' }}>
-                            <Iconify icon="solar:letter-bold" width={16} />
+                            <RemixIcon icon="solar:letter-bold" width={16} />
                             <Typography variant="body2">{guardian.email}</Typography>
                           </Box>
                         )}
                         {guardian.occupation && (
                           <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center' }}>
-                            <Iconify icon="solar:case-minimalistic-bold" width={16} />
+                            <RemixIcon icon="solar:case-minimalistic-bold" width={16} />
                             <Typography variant="body2">{guardian.occupation}</Typography>
                           </Box>
                         )}
@@ -458,7 +458,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                           aria-label="แก้ไขข้อมูลผู้ปกครอง"
                           onClick={() => openEdit(guardian)}
                         >
-                          <Iconify icon="solar:pen-bold" width={19} />
+                          <RemixIcon icon="solar:pen-bold" width={19} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="ลบ">
@@ -468,7 +468,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                           aria-label="ลบข้อมูลผู้ปกครอง"
                           onClick={() => setDeleteTarget(guardian)}
                         >
-                          <Iconify icon="solar:trash-bin-trash-bold" width={19} />
+                          <RemixIcon icon="solar:trash-bin-trash-bold" width={19} />
                         </IconButton>
                       </Tooltip>
                     </Box>
@@ -492,7 +492,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                         color: guardian.line_linked_at ? 'success.dark' : 'text.secondary',
                       }}
                     >
-                      <Iconify
+                      <RemixIcon
                         icon={
                           guardian.line_linked_at
                             ? 'solar:check-circle-bold'
@@ -512,7 +512,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                         size="small"
                         color={guardian.line_linked_at ? 'inherit' : 'success'}
                         variant={guardian.line_linked_at ? 'text' : 'contained'}
-                        startIcon={<Iconify icon="eva:link-2-fill" />}
+                        startIcon={<RemixIcon icon="eva:link-2-fill" />}
                         onClick={() => openLineDialog(guardian)}
                       >
                         {guardian.line_linked_at ? 'จัดการการเชื่อม' : 'เชื่อม LINE'}
@@ -527,7 +527,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                               profileLineMutation.isPending &&
                               profileLineMutation.variables === guardian.id
                             }
-                            startIcon={<Iconify icon="solar:user-id-bold" />}
+                            startIcon={<RemixIcon icon="solar:user-id-bold" />}
                             onClick={() => profileLineMutation.mutate(guardian.id)}
                           >
                             ส่งโปรไฟล์
@@ -540,7 +540,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
                               helloLineMutation.isPending &&
                               helloLineMutation.variables === guardian.id
                             }
-                            startIcon={<Iconify icon="solar:chat-round-dots-bold" />}
+                            startIcon={<RemixIcon icon="solar:chat-round-dots-bold" />}
                             onClick={() => helloLineMutation.mutate(guardian.id)}
                           >
                             ส่งสวัสดี
@@ -567,7 +567,7 @@ export function StudentGuardiansDialog({ open, student, teacherAssignmentId, onC
           </Button>
           <Button
             variant="contained"
-            startIcon={<Iconify icon="mingcute:add-line" />}
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
             onClick={openCreate}
           >
             เพิ่มผู้ปกครอง

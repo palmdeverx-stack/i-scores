@@ -21,7 +21,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { today, fIsBetween } from 'src/utils/format-time';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { listSubjects } from 'src/sections/subject/subject-actions';
@@ -150,7 +150,7 @@ export function ClassroomCreateView() {
             href={backPath}
             color="inherit"
             size="small"
-            startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+            startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
             sx={{ mb: 1.5, color: 'text.secondary' }}
           >
             กลับไปหน้าชั้นเรียน
@@ -175,7 +175,7 @@ export function ClassroomCreateView() {
             bgcolor: 'primary.lighter',
           }}
         >
-          <Iconify icon="solar:users-group-rounded-bold-duotone" width={36} />
+          <RemixIcon icon="solar:users-group-rounded-bold-duotone" width={36} />
         </Box>
       </Box>
 
@@ -360,7 +360,7 @@ export function ClassroomCreateView() {
                     variant="contained"
                     loading={createMutation.isPending}
                     loadingIndicator="กำลังสร้าง..."
-                    startIcon={<Iconify icon="mingcute:add-line" />}
+                    startIcon={<RemixIcon icon="mingcute:add-line" />}
                     sx={{ minWidth: 180, width: { xs: 1, sm: 'auto' } }}
                   >
                     สร้างห้องเรียน
@@ -392,7 +392,7 @@ export function ClassroomCreateView() {
               bgcolor: 'primary.lighter',
             }}
           >
-            <Iconify icon="solar:info-circle-bold" width={26} />
+            <RemixIcon icon="solar:info-circle-bold" width={26} />
           </Box>
           <Typography variant="h6" sx={{ mb: 1 }}>
             หลังสร้างห้องแล้วทำอะไรต่อ?

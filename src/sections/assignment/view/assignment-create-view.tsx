@@ -23,7 +23,7 @@ import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { Upload } from 'src/components/upload';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { getRoster } from 'src/sections/teacher-assignment/teacher-assignment-actions';
@@ -147,7 +147,7 @@ export function AssignmentCreateView({ teacherAssignmentId, returnTab }: Props) 
         component={RouterLink}
         href={successPath}
         color="inherit"
-        startIcon={<Iconify icon="solar:reply-bold" />}
+        startIcon={<RemixIcon icon="solar:reply-bold" />}
         sx={{ mb: 2 }}
       >
         กลับหน้ารายวิชา
@@ -188,7 +188,7 @@ export function AssignmentCreateView({ teacherAssignmentId, returnTab }: Props) 
               bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.16),
             })}
           >
-            <Iconify icon="solar:notes-bold-duotone" width={34} />
+            <RemixIcon icon="solar:notes-bold-duotone" width={34} />
           </Box>
           <Box>
             <Typography variant="overline" sx={{ opacity: 0.78 }}>
@@ -289,7 +289,7 @@ export function AssignmentCreateView({ teacherAssignmentId, returnTab }: Props) 
                   }}
                   placeholder={
                     <Box sx={{ py: 3, textAlign: 'center' }}>
-                      <Iconify
+                      <RemixIcon
                         icon="eva:cloud-upload-fill"
                         width={48}
                         sx={{ color: 'primary.main' }}
@@ -309,7 +309,7 @@ export function AssignmentCreateView({ teacherAssignmentId, returnTab }: Props) 
                   <Button
                     size="small"
                     color="inherit"
-                    startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+                    startIcon={<RemixIcon icon="solar:trash-bin-trash-bold" />}
                     onClick={() => {
                       setFiles([]);
                       setFileError('');
@@ -343,7 +343,7 @@ export function AssignmentCreateView({ teacherAssignmentId, returnTab }: Props) 
                   variant="contained"
                   size="large"
                   loading={createMutation.isPending}
-                  startIcon={<Iconify icon="solar:check-circle-bold" />}
+                  startIcon={<RemixIcon icon="solar:check-circle-bold" />}
                   sx={{ minWidth: 180 }}
                 >
                   {meta.createHeading}
@@ -387,13 +387,13 @@ export function AssignmentCreateView({ teacherAssignmentId, returnTab }: Props) 
             )}
           </Card>
 
-          <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" />}>
+          <Alert severity="info" icon={<RemixIcon icon="solar:info-circle-bold" />}>
             หลังสร้างงาน ระบบจะเพิ่มงานให้นักเรียนทุกคนในห้องนี้โดยอัตโนมัติ
           </Alert>
 
           {!!files.length && (
             <Chip
-              icon={<Iconify icon="solar:file-text-bold" />}
+              icon={<RemixIcon icon="solar:file-text-bold" />}
               label={`เลือกแล้ว ${files.length} ไฟล์`}
               color="primary"
               variant="soft"
@@ -421,7 +421,7 @@ function ContextRow({
 }) {
   return (
     <Box sx={{ gap: 1.25, display: 'flex', alignItems: 'flex-start' }}>
-      <Iconify icon={icon} width={21} sx={{ mt: 0.25, color: 'primary.main' }} />
+      <RemixIcon icon={icon} width={21} sx={{ mt: 0.25, color: 'primary.main' }} />
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
           {label}

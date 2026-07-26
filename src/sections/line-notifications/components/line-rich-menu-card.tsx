@@ -16,7 +16,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { LineRichMenuDeleteDialog } from './line-rich-menu-delete-dialog';
 import {
@@ -418,7 +418,7 @@ export function LineRichMenuCard({ hasAccessToken }: Props) {
                   color: 'text.secondary',
                 }}
               >
-                <Iconify icon="solar:gallery-wide-bold" width={36} />
+                <RemixIcon icon="solar:gallery-wide-bold" width={36} />
                 <Typography variant="body2">ตัวอย่างพื้นที่กด {actions.length} ช่อง</Typography>
               </Box>
             )}
@@ -432,7 +432,7 @@ export function LineRichMenuCard({ hasAccessToken }: Props) {
             component="label"
             variant="outlined"
             disabled={!hasAccessToken || createMutation.isPending}
-            startIcon={<Iconify icon="solar:gallery-add-bold" />}
+            startIcon={<RemixIcon icon="solar:gallery-add-bold" />}
             sx={{ mt: 1.25 }}
           >
             เลือกรูป Rich Menu
@@ -506,7 +506,7 @@ export function LineRichMenuCard({ hasAccessToken }: Props) {
             <Button
               color="error"
               variant="outlined"
-              startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+              startIcon={<RemixIcon icon="solar:trash-bin-trash-bold" />}
               onClick={() => setDeleteOpen(true)}
             >
               ยกเลิก Rich Menu
@@ -522,7 +522,7 @@ export function LineRichMenuCard({ hasAccessToken }: Props) {
               !chatBarText.trim() ||
               actions.some((action) => !action.label.trim() || !action.value.trim())
             }
-            startIcon={<Iconify icon="solar:check-circle-bold" />}
+            startIcon={<RemixIcon icon="solar:check-circle-bold" />}
             onClick={create}
           >
             {current ? 'สร้างและใช้เมนูใหม่' : 'สร้างและเชื่อม Rich Menu'}

@@ -31,7 +31,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { useAuthContext } from 'src/auth/hooks';
@@ -154,7 +154,7 @@ export function UserListView() {
         <Button
           variant="contained"
           onClick={() => setDialogOpen(true)}
-          startIcon={<Iconify icon="solar:user-plus-bold" />}
+          startIcon={<RemixIcon icon="solar:user-plus-bold" />}
         >
           เพิ่มครู/บุคลากร
         </Button>
@@ -215,7 +215,7 @@ export function UserListView() {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Iconify icon="eva:search-fill" />
+                    <RemixIcon icon="eva:search-fill" />
                   </InputAdornment>
                 ),
               },
@@ -285,7 +285,7 @@ export function UserListView() {
                             onClick={() => copyPassword(user.id, user.login_password!)}
                             aria-label={`คัดลอกรหัสผ่านของ ${user.username}`}
                           >
-                            <Iconify
+                            <RemixIcon
                               icon={
                                 copiedUserId === user.id
                                   ? 'solar:check-circle-bold'
@@ -345,7 +345,7 @@ export function UserListView() {
                             }
                             aria-label={`ดูข้อมูลการสอนของ ${user.username}`}
                           >
-                            <Iconify icon="solar:notebook-bold-duotone" width={18} />
+                            <RemixIcon icon="solar:notebook-bold-duotone" width={18} />
                           </IconButton>
                         </Tooltip>
                       )}
@@ -355,7 +355,7 @@ export function UserListView() {
                           onClick={() => setEditingUser(user)}
                           aria-label={`แก้ไข ${user.username}`}
                         >
-                          <Iconify icon="solar:pen-bold" width={18} />
+                          <RemixIcon icon="solar:pen-bold" width={18} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="ลบบัญชี">
@@ -368,7 +368,7 @@ export function UserListView() {
                           }}
                           aria-label={`ลบ ${user.username}`}
                         >
-                          <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>
                       </Tooltip>
                     </Box>

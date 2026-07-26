@@ -16,7 +16,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import {
   sendGuardianLineMessage,
@@ -75,7 +75,7 @@ export function GuardianLineMessageDialog({ studentId, studentName, onClose }: P
             </Typography>
           </Box>
           <IconButton onClick={onClose} aria-label="ปิดหน้าต่าง">
-            <Iconify icon="mingcute:close-line" />
+            <RemixIcon icon="mingcute:close-line" />
           </IconButton>
         </Box>
       </DialogTitle>
@@ -163,7 +163,7 @@ export function GuardianLineMessageDialog({ studentId, studentName, onClose }: P
           <Button
             variant="contained"
             color="success"
-            startIcon={<Iconify icon="solar:chat-round-dots-bold" />}
+            startIcon={<RemixIcon icon="solar:chat-round-dots-bold" />}
             disabled={!text.trim() || !guardianId}
             loading={sendMutation.isPending}
             onClick={() => sendMutation.mutate()}

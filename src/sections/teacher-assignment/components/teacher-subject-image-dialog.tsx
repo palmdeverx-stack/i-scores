@@ -2,7 +2,6 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -12,7 +11,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 
 import { Upload } from 'src/components/upload';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { uploadSubjectImage, removeSubjectImage } from 'src/sections/subject/subject-actions';
 
@@ -112,7 +111,7 @@ export function TeacherSubjectImageDialog({
             color="error"
             loading={removeMutation.isPending}
             disabled={uploadMutation.isPending}
-            startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+            startIcon={<RemixIcon icon="solar:trash-bin-trash-bold" />}
             onClick={() => removeMutation.mutate()}
             sx={{ mr: 'auto' }}
           >

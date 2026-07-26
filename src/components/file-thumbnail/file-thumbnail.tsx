@@ -6,7 +6,7 @@ import { mergeClasses } from 'minimal-shared/utils';
 
 import Tooltip from '@mui/material/Tooltip';
 
-import { Iconify } from '../iconify';
+import { RemixIcon } from '../remix-icon';
 import { fileThumbnailClasses } from './classes';
 import { getFileMeta, getFileIcon } from './utils';
 import { useFilePreview } from './use-file-preview';
@@ -63,7 +63,7 @@ export function FileThumbnail({
           className={fileThumbnailClasses.removeBtn}
           {...slotProps?.removeBtn}
         >
-          <Iconify icon="mingcute:close-line" width={12} />
+          <RemixIcon icon="mingcute:close-line" width={12} />
         </RemoveButton>
       )}
 
@@ -73,7 +73,7 @@ export function FileThumbnail({
           className={fileThumbnailClasses.downloadBtn}
           {...slotProps?.downloadBtn}
         >
-          <Iconify width={24} icon="eva:cloud-download-fill" />
+          <RemixIcon width={24} icon="eva:cloud-download-fill" />
         </DownloadButton>
       )}
     </>

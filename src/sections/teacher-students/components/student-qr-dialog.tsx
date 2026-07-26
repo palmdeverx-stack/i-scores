@@ -15,7 +15,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { issueStudentQr } from '../student-qr-actions';
 
@@ -207,7 +207,7 @@ export function StudentQrDialog({ open, student, classroomName, academicYear, on
           color="warning"
           disabled={issueMutation.isPending}
           onClick={regenerate}
-          startIcon={<Iconify icon="solar:restart-bold" />}
+          startIcon={<RemixIcon icon="solar:restart-bold" />}
         >
           ออก QR ใหม่
         </Button>
@@ -220,7 +220,7 @@ export function StudentQrDialog({ open, student, classroomName, academicYear, on
             disabled={!qrImage}
             loading={downloadPending}
             onClick={() => void downloadQr()}
-            startIcon={<Iconify icon="solar:download-bold" />}
+            startIcon={<RemixIcon icon="solar:download-bold" />}
           >
             ดาวน์โหลด
           </Button>

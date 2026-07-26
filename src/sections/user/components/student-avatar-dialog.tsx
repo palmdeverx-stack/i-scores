@@ -20,8 +20,8 @@ import {
   PROFILE_IMAGE_SOURCE_LIMIT_BYTES,
 } from 'src/utils/resize-profile-image';
 
-import { Iconify } from 'src/components/iconify';
 import { UploadAvatar } from 'src/components/upload';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { uploadStudentAvatar, deleteStudentAvatar } from '../user-actions';
 
@@ -145,7 +145,7 @@ export function StudentAvatarDialog({ student, onClose }: Props) {
             color="error"
             loading={deleteMutation.isPending}
             disabled={uploadMutation.isPending}
-            startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+            startIcon={<RemixIcon icon="solar:trash-bin-trash-bold" />}
             onClick={() => deleteMutation.mutate()}
             sx={{ mr: 'auto' }}
           >

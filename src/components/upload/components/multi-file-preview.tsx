@@ -9,8 +9,8 @@ import ListItemText from '@mui/material/ListItemText';
 
 import { fData } from 'src/utils/format-number';
 
-import { Iconify } from '../../iconify';
 import { uploadClasses } from '../classes';
+import { RemixIcon } from '../../remix-icon';
 import { getFileMeta, FileThumbnail, useFilesPreview } from '../../file-thumbnail';
 
 // ----------------------------------------------------------------------
@@ -88,7 +88,7 @@ export function MultiFilePreview({
 
           {onRemove && (
             <IconButton size="small" onClick={() => onRemove(file)}>
-              <Iconify width={16} icon="mingcute:close-line" />
+              <RemixIcon width={16} icon="mingcute:close-line" />
             </IconButton>
           )}
         </PreviewItem>

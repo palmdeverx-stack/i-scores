@@ -19,7 +19,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { supabase } from 'src/lib/supabase';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from '../../hooks';
@@ -106,7 +106,7 @@ export function SupabaseSignInView() {
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton onClick={showPassword.onToggle} edge="end">
-                    <Iconify
+                    <RemixIcon
                       icon={showPassword.value ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
                     />
                   </IconButton>

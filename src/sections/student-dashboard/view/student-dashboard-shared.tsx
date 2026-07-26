@@ -1,6 +1,6 @@
 'use client';
 
-import type { IconifyName } from 'src/components/iconify/register-icons';
+import type { RemixIconName } from 'src/components/remix-icon/icon-map';
 import type {
   StudentPerson,
   SubmissionStatus,
@@ -21,7 +21,7 @@ import Typography from '@mui/material/Typography';
 
 import { fIsBetween, today as getTodayDate } from 'src/utils/format-time';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import {
   getStudentHomeDashboard,
@@ -276,7 +276,7 @@ export function HeroStat({
   label,
   value,
 }: {
-  icon: IconifyName;
+  icon: RemixIconName;
   label: string;
   value: number | string;
 }) {
@@ -299,7 +299,7 @@ export function HeroStat({
         spacing={{ xs: 0.5, sm: 1 }}
         alignItems={{ xs: 'flex-start', sm: 'center' }}
       >
-        <Iconify icon={icon} width={22} aria-hidden />
+        <RemixIcon icon={icon} width={22} aria-hidden />
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h5" sx={{ lineHeight: 1, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             {value}
@@ -327,7 +327,7 @@ export function SectionHeading({
   subtitle,
   compact = false,
 }: {
-  icon: IconifyName;
+  icon: RemixIconName;
   title: string;
   subtitle: string;
   compact?: boolean;
@@ -346,7 +346,7 @@ export function SectionHeading({
           bgcolor: 'primary.lighter',
         }}
       >
-        <Iconify icon={icon} width={22} />
+        <RemixIcon icon={icon} width={22} />
       </Box>
       <Box>
         <Typography component="h2" variant={compact ? 'h6' : 'h5'} sx={{ lineHeight: 1.3 }}>
@@ -373,7 +373,7 @@ export function EmptyCard({ text, compact = false }: { text: string; compact?: b
         borderColor: 'divider',
       }}
     >
-      <Iconify icon="solar:notebook-bold-duotone" width={32} sx={{ mb: 1, opacity: 0.5 }} />
+      <RemixIcon icon="solar:notebook-bold-duotone" width={32} sx={{ mb: 1, opacity: 0.5 }} />
       <Typography variant="body2">{text}</Typography>
     </Box>
   );

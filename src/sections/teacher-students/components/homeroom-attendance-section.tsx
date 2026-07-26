@@ -30,7 +30,7 @@ import TableContainer from '@mui/material/TableContainer';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getHomeroomAttendance, saveHomeroomAttendance } from '../homeroom-attendance-actions';
 
@@ -242,7 +242,7 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
                 bgcolor: `${option.color}.lighter`,
               }}
             >
-              <Iconify icon={option.icon} width={17} />
+              <RemixIcon icon={option.icon} width={17} />
             </Box>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {option.label}
@@ -273,7 +273,7 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <Iconify icon="eva:search-fill" />
+                  <RemixIcon icon="eva:search-fill" />
                 </InputAdornment>
               ),
             },
@@ -285,7 +285,7 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
           variant="text"
           disabled={!data?.rows.length}
           onClick={markEveryonePresent}
-          startIcon={<Iconify icon="solar:check-circle-bold" />}
+          startIcon={<RemixIcon icon="solar:check-circle-bold" />}
           aria-label="ทำเครื่องหมายว่ามาทั้งหมด"
           sx={{
             flexShrink: 0,
@@ -339,7 +339,7 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
 
         {!isLoading && !filteredRows.length && !isError && (
           <Box sx={{ py: 5, textAlign: 'center' }}>
-            <Iconify icon="solar:user-rounded-bold" width={38} sx={{ color: 'text.disabled' }} />
+            <RemixIcon icon="solar:user-rounded-bold" width={38} sx={{ color: 'text.disabled' }} />
             <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
               {search ? 'ไม่พบนักเรียนจากคำค้นหา' : 'ยังไม่มีนักเรียนในห้องนี้'}
             </Typography>
@@ -439,7 +439,7 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
             {!isLoading && !filteredRows.length && !isError && (
               <TableRow>
                 <TableCell colSpan={4} sx={{ py: 7, textAlign: 'center' }}>
-                  <Iconify
+                  <RemixIcon
                     icon="solar:user-rounded-bold"
                     width={40}
                     sx={{ color: 'text.disabled' }}
@@ -552,7 +552,7 @@ export function HomeroomAttendanceSection({ classroomId, classroomName }: Props)
           loading={saveMutation.isPending}
           disabled={!dirtyRows.length}
           onClick={() => saveMutation.mutate()}
-          startIcon={<Iconify icon="solar:check-circle-bold" />}
+          startIcon={<RemixIcon icon="solar:check-circle-bold" />}
         >
           บันทึก
         </Button>

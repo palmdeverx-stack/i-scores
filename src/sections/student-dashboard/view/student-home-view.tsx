@@ -13,7 +13,7 @@ import Avatar from '@mui/material/Avatar';
 import Typography from '@mui/material/Typography';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import {
   HeroStat,
@@ -245,7 +245,7 @@ function RankingList({
                 fontWeight: 800,
               }}
             >
-              {index < 3 ? <Iconify icon="solar:cup-star-bold" width={19} aria-hidden /> : row.rank}
+              {index < 3 ? <RemixIcon icon="solar:cup-star-bold" width={19} aria-hidden /> : row.rank}
             </Box>
             <Avatar
               sx={{
@@ -279,7 +279,7 @@ function RankingList({
       </Stack>
 
       {currentStudent && !visibleRanking.some((row) => row.is_current_student) && (
-        <Alert severity="info" icon={<Iconify icon="solar:cup-star-bold" />} sx={{ mt: 2 }}>
+        <Alert severity="info" icon={<RemixIcon icon="solar:cup-star-bold" />} sx={{ mt: 2 }}>
           อันดับของคุณคือ #{currentStudent.rank} · {currentStudent.percentage.toFixed(1)}%
         </Alert>
       )}
@@ -361,7 +361,7 @@ function AnnouncementsSection({
                     <Label
                       variant="outlined"
                       color="default"
-                      startIcon={<Iconify icon={type.icon} />}
+                      startIcon={<RemixIcon icon={type.icon} />}
                     >
                       {type.label}
                     </Label>

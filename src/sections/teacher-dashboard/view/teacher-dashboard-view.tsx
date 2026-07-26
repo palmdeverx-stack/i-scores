@@ -18,8 +18,7 @@ import Typography from '@mui/material/Typography';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
-import {
+import { RemixIcon ,
   RiMore2Line,
   RiBriefcaseLine,
   RiFileCheckLine,
@@ -215,7 +214,7 @@ export function TeacherDashboardView() {
               href={paths.teacher.timetable}
               variant="contained"
               color="inherit"
-              startIcon={<Iconify icon="solar:calendar-date-bold" />}
+              startIcon={<RemixIcon icon="solar:calendar-date-bold" />}
               sx={{ minHeight: 44, color: 'primary.darker', bgcolor: 'common.white' }}
             >
               ตารางสอน
@@ -225,7 +224,7 @@ export function TeacherDashboardView() {
               href={paths.teacher.assignments}
               variant="outlined"
               color="inherit"
-              startIcon={<Iconify icon="solar:notebook-bold-duotone" />}
+              startIcon={<RemixIcon icon="solar:notebook-bold-duotone" />}
               sx={(theme) => ({
                 minHeight: 44,
                 borderColor: varAlpha(theme.vars.palette.common.whiteChannel, 0.5),
@@ -244,7 +243,7 @@ export function TeacherDashboardView() {
       {data.summary.waiting_to_grade > 0 && (
         <Alert
           severity="warning"
-          icon={<Iconify icon="solar:file-check-bold-duotone" />}
+          icon={<RemixIcon icon="solar:file-check-bold-duotone" />}
           action={
             <Button component={RouterLink} href={paths.teacher.assignments} color="inherit">
               ไปตรวจงาน
@@ -294,7 +293,7 @@ export function TeacherDashboardView() {
                   bgcolor: item.bgcolor,
                 }}
               >
-                <Iconify icon={item.icon} width={24} />
+                <RemixIcon icon={item.icon} width={24} />
               </Avatar>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h4" sx={{ fontSize: { xs: '1.35rem', sm: '2rem' } }}>

@@ -21,7 +21,7 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { getRoster } from 'src/sections/teacher-assignment/teacher-assignment-actions';
@@ -165,7 +165,7 @@ export function QuizCreateView({ teacherAssignmentId, returnTab }: Props) {
         component={RouterLink}
         href={successPath}
         color="inherit"
-        startIcon={<Iconify icon="solar:reply-bold" />}
+        startIcon={<RemixIcon icon="solar:reply-bold" />}
         sx={{ mb: 2 }}
       >
         กลับหน้ารายวิชา
@@ -208,7 +208,7 @@ export function QuizCreateView({ teacherAssignmentId, returnTab }: Props) {
               bgcolor: 'rgba(255,255,255,0.16)',
             }}
           >
-            <Iconify icon="solar:bill-list-bold-duotone" width={36} />
+            <RemixIcon icon="solar:bill-list-bold-duotone" width={36} />
           </Box>
           <Box sx={{ flex: 1 }}>
             <Typography variant="overline" sx={{ opacity: 0.8 }}>
@@ -351,7 +351,7 @@ export function QuizCreateView({ teacherAssignmentId, returnTab }: Props) {
                   size="large"
                   variant="contained"
                   loading={createMutation.isPending}
-                  startIcon={<Iconify icon="solar:check-circle-bold" />}
+                  startIcon={<RemixIcon icon="solar:check-circle-bold" />}
                   sx={{ minWidth: 210 }}
                 >
                   สร้างและเปิดให้นักเรียนทำ
@@ -417,7 +417,7 @@ export function QuizCreateView({ teacherAssignmentId, returnTab }: Props) {
               )}
             </Card>
 
-            <Alert severity="info" icon={<Iconify icon="solar:shield-check-bold" />}>
+            <Alert severity="info" icon={<RemixIcon icon="solar:shield-check-bold" />}>
               คำตอบที่ถูกจะไม่ถูกส่งไปยังนักเรียนก่อนทำแบบทดสอบ
             </Alert>
           </Stack>
@@ -454,7 +454,7 @@ function SummaryRow({
           bgcolor: 'primary.lighter',
         }}
       >
-        <Iconify icon={icon} width={19} />
+        <RemixIcon icon={icon} width={19} />
       </Box>
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Typography variant="caption" color="text.secondary">

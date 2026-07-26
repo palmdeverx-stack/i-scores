@@ -12,7 +12,7 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { loginGuardianPortal } from '../guardian-profile-actions';
 
@@ -73,7 +73,7 @@ export function GuardianPortalLogin({ onAuthenticated }: Props) {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Iconify icon="solar:user-id-bold" />
+                    <RemixIcon icon="solar:user-id-bold" />
                   </InputAdornment>
                 ),
               },

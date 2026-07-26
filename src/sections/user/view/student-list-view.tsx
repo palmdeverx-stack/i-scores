@@ -29,8 +29,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
-import { RiLineFill, RiLineLine } from 'src/components/remix-icon';
+import { RemixIcon , RiLineFill, RiLineLine } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { StudentGuardiansDialog } from 'src/sections/student-guardian/components/student-guardians-dialog';
@@ -140,7 +139,7 @@ export function StudentListView() {
         <Button
           variant="contained"
           onClick={() => setDialogOpen(true)}
-          startIcon={<Iconify icon="solar:user-plus-bold" />}
+          startIcon={<RemixIcon icon="solar:user-plus-bold" />}
         >
           เพิ่มนักเรียน
         </Button>
@@ -201,7 +200,7 @@ export function StudentListView() {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Iconify icon="eva:search-fill" />
+                    <RemixIcon icon="eva:search-fill" />
                   </InputAdornment>
                 ),
               },
@@ -307,7 +306,7 @@ export function StudentListView() {
                             onClick={() => copyPassword(student.id, student.login_password!)}
                             aria-label={`คัดลอกรหัสผ่านของ ${student.username}`}
                           >
-                            <Iconify
+                            <RemixIcon
                               icon={
                                 copiedUserId === student.id
                                   ? 'solar:check-circle-bold'
@@ -407,7 +406,7 @@ export function StudentListView() {
                       <Button
                         size="small"
                         variant="outlined"
-                        startIcon={<Iconify icon="solar:users-group-rounded-bold" />}
+                        startIcon={<RemixIcon icon="solar:users-group-rounded-bold" />}
                         onClick={() => setGuardianStudent(student)}
                       >
                         ผู้ปกครอง
@@ -419,7 +418,7 @@ export function StudentListView() {
                           onClick={() => setEditingStudent(student)}
                           aria-label={`แก้ไขข้อมูล ${student.first_name ?? student.username}`}
                         >
-                          <Iconify icon="solar:pen-bold" width={18} />
+                          <RemixIcon icon="solar:pen-bold" width={18} />
                         </IconButton>
                       </Tooltip>
 
@@ -433,7 +432,7 @@ export function StudentListView() {
                           }}
                           aria-label={`ลบ ${student.first_name ?? student.username}`}
                         >
-                          <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>
                       </Tooltip>
                     </Box>

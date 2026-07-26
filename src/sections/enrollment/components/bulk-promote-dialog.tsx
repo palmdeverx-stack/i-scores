@@ -27,7 +27,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listClassrooms } from 'src/sections/classroom/classroom-actions';
 import { listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
@@ -173,7 +173,7 @@ export function BulkPromoteDialog({ open, onClose, initialClassroomId }: Props) 
             </Typography>
           </Box>
           <IconButton onClick={handleClose} disabled={mutation.isPending} aria-label="ปิดหน้าต่าง">
-            <Iconify icon="mingcute:close-line" />
+            <RemixIcon icon="mingcute:close-line" />
           </IconButton>
         </Box>
       </DialogTitle>

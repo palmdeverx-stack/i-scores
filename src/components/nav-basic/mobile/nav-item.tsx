@@ -9,8 +9,8 @@ import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
 import { createNavItem } from '../utils';
+import { RemixIcon } from '../../remix-icon';
 import { navItemStyles, navBasicClasses } from '../styles';
 
 // ----------------------------------------------------------------------
@@ -234,6 +234,6 @@ const ItemInfo = styled('span', { shouldForwardProp })<StyledState>(() => ({
 /**
  * @slot arrow
  */
-const ItemArrow = styled(Iconify, { shouldForwardProp })<StyledState>(({ theme }) => ({
+const ItemArrow = styled(RemixIcon, { shouldForwardProp })<StyledState>(({ theme }) => ({
   ...navItemStyles.arrow(theme),
 }));

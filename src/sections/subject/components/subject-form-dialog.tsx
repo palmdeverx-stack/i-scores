@@ -20,7 +20,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 
 import { Upload } from 'src/components/upload';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { listSemesters, listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
@@ -221,7 +221,7 @@ export function SubjectFormDialog({
               disabled={saveMutation.isPending}
               aria-label="ปิดหน้าต่าง"
             >
-              <Iconify icon="mingcute:close-line" />
+              <RemixIcon icon="mingcute:close-line" />
             </IconButton>
           </Box>
         </DialogTitle>

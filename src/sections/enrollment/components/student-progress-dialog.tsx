@@ -25,7 +25,7 @@ import DialogContent from '@mui/material/DialogContent';
 import LinearProgress from '@mui/material/LinearProgress';
 import TableContainer from '@mui/material/TableContainer';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { ProgressSummary } from './progress-summary';
 import { getEnrollmentProgress } from '../enrollment-actions';
@@ -81,7 +81,7 @@ export function StudentProgressDialog({ enrollmentId, onClose }: Props) {
             </Typography>
           </Box>
           <IconButton onClick={onClose} aria-label="ปิดข้อมูลการเรียน">
-            <Iconify icon="mingcute:close-line" />
+            <RemixIcon icon="mingcute:close-line" />
           </IconButton>
         </Box>
       </DialogTitle>
@@ -219,7 +219,7 @@ export function StudentProgressDialog({ enrollmentId, onClose }: Props) {
                       src={course.subject.image_url ?? undefined}
                       sx={{ width: 48, height: 48, bgcolor: 'common.white' }}
                     >
-                      <Iconify icon="solar:gallery-wide-bold" width={23} />
+                      <RemixIcon icon="solar:gallery-wide-bold" width={23} />
                     </Avatar>
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                       <Typography variant="subtitle1">

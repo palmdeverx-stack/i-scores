@@ -7,7 +7,7 @@ import { useBackToTop } from 'minimal-shared/hooks';
 
 import Fab from '@mui/material/Fab';
 
-import { Iconify } from '../iconify';
+import { RemixIcon } from '../remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ export function BackToTopButton({
       ]}
       {...other}
     >
-      <Iconify width={24} icon="solar:double-alt-arrow-up-bold-duotone" />
+      <RemixIcon width={24} icon="solar:double-alt-arrow-up-bold-duotone" />
     </Fab>
   );
 }

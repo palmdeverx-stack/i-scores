@@ -10,7 +10,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -118,7 +118,7 @@ export function GuardianLineDialog({
                   <Button
                     color="success"
                     variant="contained"
-                    startIcon={<Iconify icon="solar:download-bold" />}
+                    startIcon={<RemixIcon icon="solar:download-bold" />}
                     onClick={downloadQr}
                   >
                     ดาวน์โหลด QR

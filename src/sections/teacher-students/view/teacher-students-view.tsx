@@ -34,7 +34,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listUsers } from 'src/sections/user/user-actions';
 import { useSchoolSubscription } from 'src/sections/school-subscription/use-school-subscription';
@@ -240,7 +240,7 @@ export function TeacherStudentsView() {
             component={RouterLink}
             href={paths.teacher.attendanceHistory}
             variant="outlined"
-            startIcon={<Iconify icon="solar:calendar-date-bold" />}
+            startIcon={<RemixIcon icon="solar:calendar-date-bold" />}
             aria-label="ประวัติการเข้าแถว"
             sx={{
               minWidth: { xs: 44, sm: 64 },
@@ -259,7 +259,7 @@ export function TeacherStudentsView() {
               component={RouterLink}
               href={paths.teacher.attendanceScan}
               variant="outlined"
-              startIcon={<Iconify icon="solar:camera-add-bold" />}
+              startIcon={<RemixIcon icon="solar:camera-add-bold" />}
               aria-label="สแกน QR"
               sx={{
                 display: { xs: 'none', sm: 'inline-flex' },
@@ -282,7 +282,7 @@ export function TeacherStudentsView() {
                 setSelectedStudents([]);
                 setAddDialogOpen(true);
               }}
-              startIcon={<Iconify icon="solar:user-plus-bold" />}
+              startIcon={<RemixIcon icon="solar:user-plus-bold" />}
               sx={{
                 display: { xs: 'none', sm: 'inline-flex' },
                 minHeight: { xs: 44, sm: 'auto' },
@@ -372,7 +372,7 @@ export function TeacherStudentsView() {
                 variant={section === 'students' ? 'contained' : 'text'}
                 color={section === 'students' ? 'primary' : 'inherit'}
                 onClick={() => setSection('students')}
-                startIcon={<Iconify icon="solar:users-group-rounded-bold" />}
+                startIcon={<RemixIcon icon="solar:users-group-rounded-bold" />}
                 sx={{
                   flex: 1,
                   px: { xs: 1, sm: 2 },
@@ -392,7 +392,7 @@ export function TeacherStudentsView() {
                 variant={section === 'attendance' ? 'contained' : 'text'}
                 color={section === 'attendance' ? 'primary' : 'inherit'}
                 onClick={() => setSection('attendance')}
-                startIcon={<Iconify icon="solar:check-circle-bold" />}
+                startIcon={<RemixIcon icon="solar:check-circle-bold" />}
                 sx={{
                   flex: 1,
                   px: { xs: 1, sm: 2 },
@@ -442,7 +442,7 @@ export function TeacherStudentsView() {
                     input: {
                       startAdornment: (
                         <InputAdornment position="start">
-                          <Iconify icon="eva:search-fill" />
+                          <RemixIcon icon="eva:search-fill" />
                         </InputAdornment>
                       ),
                     },
@@ -466,7 +466,7 @@ export function TeacherStudentsView() {
 
                 {!isLoading && !filteredRoster.length && (
                   <Box sx={{ py: 5, textAlign: 'center' }}>
-                    <Iconify
+                    <RemixIcon
                       icon="solar:users-group-rounded-bold"
                       width={38}
                       sx={{ mb: 1, color: 'text.disabled' }}
@@ -547,7 +547,7 @@ export function TeacherStudentsView() {
                             aria-label={`ดู QR ของ ${name}`}
                             sx={{ bgcolor: 'primary.lighter' }}
                           >
-                            <Iconify icon="solar:user-id-bold" width={18} />
+                            <RemixIcon icon="solar:user-id-bold" width={18} />
                           </IconButton>
                         )}
                         {canSendLine && (
@@ -558,7 +558,7 @@ export function TeacherStudentsView() {
                             aria-label={`ส่งข้อความ LINE ถึงผู้ปกครองของ ${name}`}
                             sx={{ bgcolor: 'success.lighter' }}
                           >
-                            <Iconify icon="solar:chat-round-dots-bold" width={18} />
+                            <RemixIcon icon="solar:chat-round-dots-bold" width={18} />
                           </IconButton>
                         )}
                         <IconButton
@@ -568,7 +568,7 @@ export function TeacherStudentsView() {
                           aria-label={`แก้ไขเลขที่ของ ${name}`}
                           sx={{ bgcolor: 'background.neutral' }}
                         >
-                          <Iconify icon="solar:pen-bold" width={18} />
+                          <RemixIcon icon="solar:pen-bold" width={18} />
                         </IconButton>
                         <IconButton
                           size="small"
@@ -580,7 +580,7 @@ export function TeacherStudentsView() {
                           aria-label={`นำ ${name} ออกจากชั้น`}
                           sx={{ bgcolor: 'error.lighter' }}
                         >
-                          <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>
                       </Box>
                     </Box>
@@ -658,7 +658,7 @@ export function TeacherStudentsView() {
                                 onClick={() => setQrRow(row)}
                                 aria-label={`ดู QR ของ ${name}`}
                               >
-                                <Iconify icon="solar:user-id-bold" width={18} />
+                                <RemixIcon icon="solar:user-id-bold" width={18} />
                               </IconButton>
                             )}
                             {canSendLine && (
@@ -668,7 +668,7 @@ export function TeacherStudentsView() {
                                 onClick={() => setLineMessageRow(row)}
                                 aria-label={`ส่งข้อความ LINE ถึงผู้ปกครองของ ${name}`}
                               >
-                                <Iconify icon="solar:chat-round-dots-bold" width={18} />
+                                <RemixIcon icon="solar:chat-round-dots-bold" width={18} />
                               </IconButton>
                             )}
                             <IconButton
@@ -676,7 +676,7 @@ export function TeacherStudentsView() {
                               onClick={() => openEdit(row)}
                               aria-label={`แก้ไขเลขที่ของ ${name}`}
                             >
-                              <Iconify icon="solar:pen-bold" width={18} />
+                              <RemixIcon icon="solar:pen-bold" width={18} />
                             </IconButton>
                             <IconButton
                               size="small"
@@ -687,7 +687,7 @@ export function TeacherStudentsView() {
                               }}
                               aria-label={`นำ ${name} ออกจากชั้น`}
                             >
-                              <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                              <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                             </IconButton>
                           </TableCell>
                         </TableRow>

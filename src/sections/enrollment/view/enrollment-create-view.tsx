@@ -21,7 +21,7 @@ import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { Form } from 'src/components/hook-form';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listUsers } from 'src/sections/user/user-actions';
 import { listClassrooms } from 'src/sections/classroom/classroom-actions';
@@ -124,7 +124,7 @@ export function EnrollmentCreateView() {
             href={backPath}
             color="inherit"
             size="small"
-            startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+            startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
             sx={{ mb: 1.5, color: 'text.secondary' }}
           >
             กลับไปหน้าชั้นเรียน
@@ -149,7 +149,7 @@ export function EnrollmentCreateView() {
             bgcolor: 'primary.lighter',
           }}
         >
-          <Iconify icon="solar:user-plus-bold" width={34} />
+          <RemixIcon icon="solar:user-plus-bold" width={34} />
         </Box>
       </Box>
 
@@ -244,7 +244,7 @@ export function EnrollmentCreateView() {
                     <Button
                       variant="outlined"
                       disabled={!selectedClassroom}
-                      startIcon={<Iconify icon="solar:user-plus-bold" />}
+                      startIcon={<RemixIcon icon="solar:user-plus-bold" />}
                       onClick={() => setStudentDialogOpen(true)}
                       sx={{ flexShrink: 0 }}
                     >
@@ -338,7 +338,7 @@ export function EnrollmentCreateView() {
                     variant="contained"
                     loading={createMutation.isPending}
                     loadingIndicator="กำลังเพิ่ม..."
-                    startIcon={<Iconify icon="solar:user-plus-bold" />}
+                    startIcon={<RemixIcon icon="solar:user-plus-bold" />}
                     sx={{ minWidth: 210, width: { xs: 1, sm: 'auto' } }}
                   >
                     เพิ่มนักเรียน {selectedStudents.length || ''} คนเข้าห้อง
@@ -367,7 +367,7 @@ export function EnrollmentCreateView() {
               </Typography>
               <Typography variant="h6">สรุปการเพิ่มนักเรียน</Typography>
             </Box>
-            <Iconify icon="solar:file-check-bold-duotone" width={32} />
+            <RemixIcon icon="solar:file-check-bold-duotone" width={32} />
           </Box>
 
           <SummaryRow
@@ -382,7 +382,7 @@ export function EnrollmentCreateView() {
             value={selectedClassroom?.name ?? 'ยังไม่ได้เลือก'}
             ready={!!selectedClassroom}
           />
-          <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" />} sx={{ mt: 2.5 }}>
+          <Alert severity="info" icon={<RemixIcon icon="solar:info-circle-bold" />} sx={{ mt: 2.5 }}>
             ระบบจะแสดงเฉพาะนักเรียนที่ยังไม่มีห้องในปีการศึกษานี้ และสามารถกำหนดเลขที่ภายหลังได้
           </Alert>
         </Card>
@@ -463,7 +463,7 @@ function SummaryRow({ icon, label, value, ready }: SummaryRowProps) {
           bgcolor: ready ? 'primary.lighter' : 'action.hover',
         }}
       >
-        <Iconify icon={icon} width={21} />
+        <RemixIcon icon={icon} width={21} />
       </Box>
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>

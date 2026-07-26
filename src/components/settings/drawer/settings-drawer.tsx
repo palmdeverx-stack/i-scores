@@ -19,9 +19,9 @@ import { primaryColorPresets } from 'src/theme/with-settings';
 
 import { Label } from '../../label';
 import { settingIcons } from './icons';
-import { Iconify } from '../../iconify';
 import { BaseOption } from './base-option';
 import { Scrollbar } from '../../scrollbar';
+import { RemixIcon } from '../../remix-icon';
 import { SmallBlock, LargeBlock } from './styles';
 import { PresetsOptions } from './presets-options';
 import { FullScreenButton } from './fullscreen-button';
@@ -78,14 +78,14 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
       <Tooltip title="Reset all">
         <IconButton onClick={handleReset}>
           <Badge color="error" variant="dot" invisible={!settings.canReset}>
-            <Iconify icon="solar:restart-bold" />
+            <RemixIcon icon="solar:restart-bold" />
           </Badge>
         </IconButton>
       </Tooltip>
 
       <Tooltip title="Close">
         <IconButton onClick={settings.onCloseDrawer}>
-          <Iconify icon="mingcute:close-line" />
+          <RemixIcon icon="mingcute:close-line" />
         </IconButton>
       </Tooltip>
     </Box>

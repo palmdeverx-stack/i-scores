@@ -37,7 +37,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { DEPARTMENT_PERMISSIONS } from 'src/lib/department-permissions-config';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import {
@@ -142,7 +142,7 @@ export function DepartmentDetailView({ departmentId }: Props) {
           component={RouterLink}
           href={paths.admin.department.root}
           size="small"
-          startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+          startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
         >
           กลับไปหน้ารายการฝ่าย
         </Button>
@@ -170,7 +170,7 @@ export function DepartmentDetailView({ departmentId }: Props) {
         <Button
           variant="contained"
           onClick={openAddDialog}
-          startIcon={<Iconify icon="mingcute:add-line" />}
+          startIcon={<RemixIcon icon="mingcute:add-line" />}
           disabled={isLoading}
         >
           เพิ่มสมาชิก
@@ -284,7 +284,7 @@ export function DepartmentDetailView({ departmentId }: Props) {
                           }}
                           aria-label={`ถอด ${teacherName(member.teacher)} ออกจากฝ่าย`}
                         >
-                          <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>
                       </Tooltip>
                     </Box>

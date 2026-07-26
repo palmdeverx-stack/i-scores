@@ -21,7 +21,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { today, fIsBetween } from 'src/utils/format-time';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -265,7 +265,7 @@ export function AdminDashboardView() {
             component={RouterLink}
             href={paths.admin.school}
             variant="outlined"
-            startIcon={<Iconify icon="solar:settings-bold" />}
+            startIcon={<RemixIcon icon="solar:settings-bold" />}
           >
             ตั้งค่าโรงเรียน
           </Button>
@@ -354,7 +354,7 @@ export function AdminDashboardView() {
                 bgcolor: (theme) => varAlpha(theme.vars.palette.common.whiteChannel, 0.14),
               }}
             >
-              <Iconify icon="solar:calendar-date-bold" width={25} />
+              <RemixIcon icon="solar:calendar-date-bold" width={25} />
             </Box>
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography variant="caption" sx={{ opacity: 0.72 }}>
@@ -373,7 +373,7 @@ export function AdminDashboardView() {
             </Box>
             <Chip
               size="small"
-              icon={<Iconify icon="solar:check-circle-bold" width={16} />}
+              icon={<RemixIcon icon="solar:check-circle-bold" width={16} />}
               label={activeSemester ? 'กำลังใช้งาน' : 'รอตั้งค่า'}
               sx={(theme) => ({
                 flexShrink: 0,
@@ -432,9 +432,9 @@ export function AdminDashboardView() {
                   bgcolor: stat.bgcolor,
                 }}
               >
-                <Iconify icon={stat.icon} width={24} />
+                <RemixIcon icon={stat.icon} width={24} />
               </Box>
-              <Iconify
+              <RemixIcon
                 icon="eva:diagonal-arrow-right-up-fill"
                 width={20}
                 sx={{ color: 'text.disabled' }}
@@ -482,7 +482,7 @@ export function AdminDashboardView() {
                 component={RouterLink}
                 href={paths.admin.teacherAssignment.root}
                 size="small"
-                endIcon={<Iconify icon="eva:arrow-forward-fill" />}
+                endIcon={<RemixIcon icon="eva:arrow-forward-fill" />}
               >
                 ดูรายการ
               </Button>
@@ -520,7 +520,7 @@ export function AdminDashboardView() {
                         bgcolor: activity.bgcolor,
                       }}
                     >
-                      <Iconify icon={activity.icon} width={22} />
+                      <RemixIcon icon={activity.icon} width={22} />
                     </Box>
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                       <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
@@ -564,7 +564,7 @@ export function AdminDashboardView() {
                     bgcolor: 'action.hover',
                   }}
                 >
-                  <Iconify icon="solar:inbox-in-bold" width={28} />
+                  <RemixIcon icon="solar:inbox-in-bold" width={28} />
                 </Box>
                 <Typography variant="subtitle2">ยังไม่มีกิจกรรมล่าสุด</Typography>
                 <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
@@ -628,7 +628,7 @@ export function AdminDashboardView() {
                       bgcolor: action.bgcolor,
                     }}
                   >
-                    <Iconify icon={action.icon} width={23} />
+                    <RemixIcon icon={action.icon} width={23} />
                   </Box>
                   <Box sx={{ minWidth: 0, flex: 1 }}>
                     <Typography variant="subtitle2">{action.label}</Typography>
@@ -640,7 +640,7 @@ export function AdminDashboardView() {
                       {action.description}
                     </Typography>
                   </Box>
-                  <Iconify
+                  <RemixIcon
                     icon="eva:arrow-ios-forward-fill"
                     width={18}
                     sx={{ color: 'text.disabled' }}
@@ -725,7 +725,7 @@ export function AdminDashboardView() {
                   }}
                 >
                   {item.complete ? (
-                    <Iconify icon="solar:check-circle-bold" width={15} />
+                    <RemixIcon icon="solar:check-circle-bold" width={15} />
                   ) : (
                     <Typography variant="caption">{index + 1}</Typography>
                   )}
@@ -737,7 +737,7 @@ export function AdminDashboardView() {
                   {item.label}
                 </Typography>
                 {!item.complete && (
-                  <Iconify
+                  <RemixIcon
                     icon="eva:arrow-ios-forward-fill"
                     width={17}
                     sx={{ color: 'text.disabled' }}
@@ -761,14 +761,14 @@ export function AdminDashboardView() {
                   href={nextStep.path}
                   fullWidth
                   variant="contained"
-                  endIcon={<Iconify icon="eva:arrow-forward-fill" />}
+                  endIcon={<RemixIcon icon="eva:arrow-forward-fill" />}
                   sx={{ mt: 1.5 }}
                 >
                   ดำเนินการต่อ
                 </Button>
               </>
             ) : (
-              <Alert severity="success" icon={<Iconify icon="solar:verified-check-bold" />}>
+              <Alert severity="success" icon={<RemixIcon icon="solar:verified-check-bold" />}>
                 ระบบพร้อมใช้งานครบทุกส่วนแล้ว
               </Alert>
             )}

@@ -9,9 +9,9 @@ import Typography from '@mui/material/Typography';
 import { RouterLink } from 'src/routes/components';
 
 import { NavUl } from './nav-elements';
-import { Iconify } from '../../iconify';
 import { NavSubList } from './nav-sub-list';
 import { megaMenuClasses } from '../styles';
+import { RemixIcon } from '../../remix-icon';
 import { NavCarousel } from './nav-carousel';
 
 // ----------------------------------------------------------------------
@@ -60,7 +60,7 @@ export function NavDropdownContent({
             ...slotProps?.moreLink,
           }}
         >
-          {data.moreLink.title} <Iconify width={16} icon="eva:arrow-ios-forward-fill" />
+          {data.moreLink.title} <RemixIcon width={16} icon="eva:arrow-ios-forward-fill" />
         </Link>
       )}
 

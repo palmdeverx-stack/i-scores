@@ -18,7 +18,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { EmptyContent } from 'src/components/empty-content';
 
 import { getMyDepartment, listDepartmentAnnouncements } from '../teacher-department-actions';
@@ -116,7 +116,7 @@ export function TeacherDepartmentView() {
               <Button
                 variant="contained"
                 size="small"
-                startIcon={<Iconify icon="mingcute:add-line" />}
+                startIcon={<RemixIcon icon="mingcute:add-line" />}
                 onClick={() => setDialogOpen(true)}
               >
                 สร้างประกาศ
@@ -193,7 +193,7 @@ export function TeacherDepartmentView() {
                       href={paths.teacher.departmentMember(member.teacher.id)}
                       aria-label={`ดูข้อมูลการสอนของ ${memberName(member)}`}
                     >
-                      <Iconify icon="solar:notebook-bold-duotone" width={18} />
+                      <RemixIcon icon="solar:notebook-bold-duotone" width={18} />
                     </IconButton>
                   </Tooltip>
                 )}

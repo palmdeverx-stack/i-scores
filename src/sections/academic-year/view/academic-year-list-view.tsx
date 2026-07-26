@@ -32,7 +32,7 @@ import TableContainer from '@mui/material/TableContainer';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from 'src/auth/hooks';
@@ -176,7 +176,7 @@ export function AcademicYearListView() {
         <Button
           variant="contained"
           onClick={openCreateDialog}
-          startIcon={<Iconify icon="mingcute:add-line" />}
+          startIcon={<RemixIcon icon="mingcute:add-line" />}
         >
           เพิ่มปีการศึกษา
         </Button>
@@ -309,7 +309,7 @@ export function AcademicYearListView() {
                           onClick={() => openEditDialog(year)}
                           aria-label={`แก้ไขปีการศึกษา ${year.year}`}
                         >
-                          <Iconify icon="solar:pen-bold" width={18} />
+                          <RemixIcon icon="solar:pen-bold" width={18} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="ลบ">
@@ -322,7 +322,7 @@ export function AcademicYearListView() {
                           }}
                           aria-label={`ลบปีการศึกษา ${year.year}`}
                         >
-                          <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>
                       </Tooltip>
                     </Box>
@@ -355,7 +355,7 @@ export function AcademicYearListView() {
                 disabled={saveMutation.isPending}
                 aria-label="ปิดหน้าต่าง"
               >
-                <Iconify icon="mingcute:close-line" />
+                <RemixIcon icon="mingcute:close-line" />
               </IconButton>
             </Box>
           </DialogTitle>
@@ -484,7 +484,7 @@ function SummaryCard({ icon, label, value, color }: SummaryCardProps) {
             bgcolor: 'background.neutral',
           }}
         >
-          <Iconify icon={icon} width={25} />
+          <RemixIcon icon={icon} width={25} />
         </Box>
         <Box>
           <Typography variant="h4">{value}</Typography>

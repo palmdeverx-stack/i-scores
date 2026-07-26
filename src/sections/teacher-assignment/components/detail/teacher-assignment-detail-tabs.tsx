@@ -10,7 +10,7 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listAssignments } from 'src/sections/assignment/assignment-actions';
 
@@ -71,7 +71,7 @@ export const TeacherAssignmentDetailTabs = memo(function TeacherAssignmentDetail
         <Tab
           value="overview"
           label="ภาพรวม"
-          icon={<Iconify icon="solar:chart-square-outline" />}
+          icon={<RemixIcon icon="solar:chart-square-outline" />}
           iconPosition="start"
         />
         <Tab
@@ -86,19 +86,19 @@ export const TeacherAssignmentDetailTabs = memo(function TeacherAssignmentDetail
               </Box>
             </>
           }
-          icon={<Iconify icon="solar:users-group-rounded-bold" />}
+          icon={<RemixIcon icon="solar:users-group-rounded-bold" />}
           iconPosition="start"
         />
         <Tab
           value="attendance"
           label="เช็คชื่อ"
-          icon={<Iconify icon="solar:check-circle-bold" />}
+          icon={<RemixIcon icon="solar:check-circle-bold" />}
           iconPosition="start"
         />
         <Tab
           value="assignments"
           label={`งาน (${workCount})`}
-          icon={<Iconify icon="solar:list-bold" />}
+          icon={<RemixIcon icon="solar:list-bold" />}
           iconPosition="start"
         />
         <Tab
@@ -113,7 +113,7 @@ export const TeacherAssignmentDetailTabs = memo(function TeacherAssignmentDetail
               </Box>
             </>
           }
-          icon={<Iconify icon="solar:cup-star-bold" />}
+          icon={<RemixIcon icon="solar:cup-star-bold" />}
           iconPosition="start"
         />
         <Tab
@@ -128,7 +128,7 @@ export const TeacherAssignmentDetailTabs = memo(function TeacherAssignmentDetail
               </Box>
             </>
           }
-          icon={<Iconify icon="solar:calendar-date-bold" />}
+          icon={<RemixIcon icon="solar:calendar-date-bold" />}
           iconPosition="start"
         />
       </Tabs>

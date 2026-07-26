@@ -19,7 +19,7 @@ import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { SubscriptionPlanFormDialog } from '../components/subscription-plan-form-dialog';
 import {
@@ -100,7 +100,7 @@ export function SubscriptionPlanView() {
         <Button
           size="large"
           variant="contained"
-          startIcon={<Iconify icon="mingcute:add-line" />}
+          startIcon={<RemixIcon icon="mingcute:add-line" />}
           onClick={() => {
             saveMutation.reset();
             setEditingPlan(null);
@@ -139,7 +139,7 @@ export function SubscriptionPlanView() {
                 bgcolor: 'primary.lighter',
               }}
             >
-              <Iconify icon={icon} width={24} />
+              <RemixIcon icon={icon} width={24} />
             </Box>
             <Box>
               <Typography variant="h4">{String(value)}</Typography>
@@ -170,7 +170,7 @@ export function SubscriptionPlanView() {
       )}
       {!plansQuery.isLoading && !plansQuery.isError && plans.length === 0 && (
         <Box sx={{ py: 10, textAlign: 'center', borderTop: '1px solid', borderColor: 'divider' }}>
-          <Iconify icon="solar:box-minimalistic-bold" width={56} color="text.disabled" />
+          <RemixIcon icon="solar:box-minimalistic-bold" width={56} color="text.disabled" />
           <Typography variant="h6" sx={{ mt: 2 }}>
             ยังไม่มีแพ็กเกจ
           </Typography>
@@ -263,7 +263,7 @@ export function SubscriptionPlanView() {
                 <Button
                   size="small"
                   color="inherit"
-                  startIcon={<Iconify icon="solar:pen-bold" />}
+                  startIcon={<RemixIcon icon="solar:pen-bold" />}
                   onClick={() => {
                     saveMutation.reset();
                     setEditingPlan(plan);
@@ -275,7 +275,7 @@ export function SubscriptionPlanView() {
                 <Button
                   size="small"
                   color="error"
-                  startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+                  startIcon={<RemixIcon icon="solar:trash-bin-trash-bold" />}
                   onClick={() => {
                     deleteMutation.reset();
                     setDeletingPlan(plan);

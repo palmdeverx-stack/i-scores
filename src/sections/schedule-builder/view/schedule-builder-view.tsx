@@ -21,7 +21,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listUsers } from 'src/sections/user/user-actions';
 import { listSubjects } from 'src/sections/subject/subject-actions';
@@ -265,7 +265,7 @@ export function ScheduleBuilderView() {
       </Card>
 
       {!classroomId || !semesterId ? (
-        <Alert severity="info" icon={<Iconify icon="solar:calendar-date-bold" />}>
+        <Alert severity="info" icon={<RemixIcon icon="solar:calendar-date-bold" />}>
           เลือกปีการศึกษา ภาคเรียน และห้องเรียน เพื่อดูและจัดตารางสอน
         </Alert>
       ) : scheduleQuery.isLoading ? (
@@ -282,7 +282,7 @@ export function ScheduleBuilderView() {
             </Typography>
             <Button
               variant="contained"
-              startIcon={<Iconify icon="mingcute:add-line" />}
+              startIcon={<RemixIcon icon="mingcute:add-line" />}
               onClick={() => setAddDialogOpen(true)}
               disabled={!assignments.length}
             >
@@ -302,7 +302,7 @@ export function ScheduleBuilderView() {
               <Typography variant="subtitle1">วิชาที่สอนในห้องนี้</Typography>
               <Button
                 size="small"
-                startIcon={<Iconify icon="mingcute:add-line" />}
+                startIcon={<RemixIcon icon="mingcute:add-line" />}
                 onClick={() => setAddAssignmentDialogOpen(true)}
               >
                 เพิ่มวิชาที่สอน
@@ -325,7 +325,7 @@ export function ScheduleBuilderView() {
                       onDelete={() => setDeletingAssignment(assignment)}
                       deleteIcon={
                         <Tooltip title="ลบวิชานี้ออกจากห้อง">
-                          <Iconify icon="solar:trash-bin-trash-bold" width={16} />
+                          <RemixIcon icon="solar:trash-bin-trash-bold" width={16} />
                         </Tooltip>
                       }
                     />

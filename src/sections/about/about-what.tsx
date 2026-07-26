@@ -15,7 +15,7 @@ import { fPercent } from 'src/utils/format-number';
 import { CONFIG } from 'src/global-config';
 
 import { Image } from 'src/components/image';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { varFade, MotionViewport } from 'src/components/animate';
 
 // ----------------------------------------------------------------------
@@ -135,7 +135,7 @@ export function AboutWhat({ sx, ...other }: BoxProps) {
               variant="outlined"
               color="inherit"
               size="large"
-              endIcon={<Iconify icon="eva:arrow-ios-forward-fill" />}
+              endIcon={<RemixIcon icon="eva:arrow-ios-forward-fill" />}
             >
               Our work
             </Button>

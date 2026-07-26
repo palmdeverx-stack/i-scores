@@ -20,7 +20,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { today, fIsBetween } from 'src/utils/format-time';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { listSemesters, listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
@@ -116,7 +116,7 @@ export function SubjectCreateView() {
             href={backPath}
             color="inherit"
             size="small"
-            startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+            startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
             sx={{ mb: 1.5, color: 'text.secondary' }}
           >
             กลับไป{isTeacher ? 'หน้าวิชาที่สอน' : 'หน้ารายวิชา'}
@@ -140,7 +140,7 @@ export function SubjectCreateView() {
             bgcolor: 'primary.lighter',
           }}
         >
-          <Iconify icon="solar:notebook-bold-duotone" width={36} />
+          <RemixIcon icon="solar:notebook-bold-duotone" width={36} />
         </Box>
       </Box>
 
@@ -320,7 +320,7 @@ export function SubjectCreateView() {
                     variant="contained"
                     loading={createMutation.isPending}
                     loadingIndicator="กำลังสร้าง..."
-                    startIcon={<Iconify icon="mingcute:add-line" />}
+                    startIcon={<RemixIcon icon="mingcute:add-line" />}
                     sx={{ minWidth: 180, width: { xs: 1, sm: 'auto' } }}
                   >
                     สร้างรายวิชา
@@ -352,7 +352,7 @@ export function SubjectCreateView() {
               bgcolor: 'primary.lighter',
             }}
           >
-            <Iconify icon="solar:info-circle-bold" width={26} />
+            <RemixIcon icon="solar:info-circle-bold" width={26} />
           </Box>
           <Typography variant="h6" sx={{ mb: 1 }}>
             หลังสร้างวิชาแล้วทำอะไรต่อ?

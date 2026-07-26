@@ -13,7 +13,7 @@ import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import Typography from '@mui/material/Typography';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { EmptyCard, displayName, SectionHeading } from '../view/student-dashboard-shared';
 
@@ -46,7 +46,7 @@ export function StudentClassroomSection({ classroom, members, teachers }: Props)
       >
         <Card variant="outlined" sx={{ p: 2.5, borderRadius: 3 }}>
           <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Iconify icon="solar:user-id-bold" sx={{ color: 'primary.main' }} />
+            <RemixIcon icon="solar:user-id-bold" sx={{ color: 'primary.main' }} />
             <Typography variant="h6">ครูที่ปรึกษา</Typography>
           </Box>
           {teachers.length ? (

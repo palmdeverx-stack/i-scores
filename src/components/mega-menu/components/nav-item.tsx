@@ -5,8 +5,8 @@ import { mergeClasses } from 'minimal-shared/utils';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
 import { createNavItem } from '../utils';
+import { RemixIcon } from '../../remix-icon';
 import { navItemStyles, megaMenuClasses } from '../styles';
 
 // ----------------------------------------------------------------------
@@ -148,6 +148,6 @@ const ItemInfo = styled('span', { shouldForwardProp })(() => ({ ...navItemStyles
 /**
  * @slot arrow
  */
-const ItemArrow = styled(Iconify, { shouldForwardProp })(({ theme }) => ({
+const ItemArrow = styled(RemixIcon, { shouldForwardProp })(({ theme }) => ({
   ...navItemStyles.arrow(theme),
 }));

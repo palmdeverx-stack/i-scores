@@ -6,7 +6,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
+import { RemixIcon } from '../../remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -57,13 +57,13 @@ export function LargeBlock({
       <LargeLabel>
         {canReset && (
           <ButtonBase disableRipple onClick={onReset} sx={{ ml: -0.5, mr: 0.5 }}>
-            <Iconify width={14} icon="solar:restart-bold" sx={{ opacity: 0.64 }} />
+            <RemixIcon width={14} icon="solar:restart-bold" sx={{ opacity: 0.64 }} />
           </ButtonBase>
         )}
         {title}
         {tooltip && (
           <Tooltip title={tooltip} placement="right" arrow>
-            <Iconify
+            <RemixIcon
               width={14}
               icon="eva:info-outline"
               sx={{ ml: 0.5, mr: -0.5, opacity: 0.48, cursor: 'pointer' }}
@@ -123,7 +123,7 @@ export function SmallBlock({ label, canReset, onReset, sx, children, ...other }:
   return (
     <SmallBlockRoot sx={sx} {...other}>
       <SmallLabel disableRipple canReset={canReset} onClick={canReset ? onReset : undefined}>
-        {canReset && <Iconify width={14} icon="solar:restart-bold" />}
+        {canReset && <RemixIcon width={14} icon="solar:restart-bold" />}
         {label}
       </SmallLabel>
       {children}

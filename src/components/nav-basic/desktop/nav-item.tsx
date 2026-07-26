@@ -8,8 +8,8 @@ import { mergeClasses } from 'minimal-shared/utils';
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 
-import { Iconify } from '../../iconify';
 import { createNavItem } from '../utils';
+import { RemixIcon } from '../../remix-icon';
 import { navItemStyles, navBasicClasses } from '../styles';
 
 // ----------------------------------------------------------------------
@@ -209,7 +209,7 @@ const ItemInfo = styled('span', { shouldForwardProp })<StyledState>(() => ({
 /**
  * @slot arrow
  */
-const ItemArrow = styled(Iconify, { shouldForwardProp })<StyledState>(({ theme }) => ({
+const ItemArrow = styled(RemixIcon, { shouldForwardProp })<StyledState>(({ theme }) => ({
   ...navItemStyles.arrow(theme),
   variants: [{ props: { variant: 'subItem' }, style: { marginRight: theme.spacing(-0.5) } }],
 }));

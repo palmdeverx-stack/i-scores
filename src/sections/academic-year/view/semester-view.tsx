@@ -32,7 +32,7 @@ import TableContainer from '@mui/material/TableContainer';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from 'src/auth/hooks';
@@ -174,7 +174,7 @@ export function SemesterView({ academicYearId }: Props) {
             href={isTeacher ? paths.teacher.departmentAcademicYear.root : paths.admin.academicYear.root}
             color="inherit"
             size="small"
-            startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+            startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
             sx={{ mb: 1.5, color: 'text.secondary' }}
           >
             กลับไปหน้าปีการศึกษา
@@ -190,7 +190,7 @@ export function SemesterView({ academicYearId }: Props) {
         <Button
           variant="contained"
           onClick={openCreateDialog}
-          startIcon={<Iconify icon="mingcute:add-line" />}
+          startIcon={<RemixIcon icon="mingcute:add-line" />}
         >
           เพิ่มภาคเรียน
         </Button>
@@ -219,7 +219,7 @@ export function SemesterView({ academicYearId }: Props) {
               bgcolor: 'primary.main',
             }}
           >
-            <Iconify icon="solar:calendar-date-bold" width={28} />
+            <RemixIcon icon="solar:calendar-date-bold" width={28} />
           </Box>
           <Box>
             <Typography variant="overline" sx={{ opacity: 0.72 }}>
@@ -346,7 +346,7 @@ export function SemesterView({ academicYearId }: Props) {
                         onClick={() => openEditDialog(semester)}
                         aria-label={`แก้ไข ${semester.name}`}
                       >
-                        <Iconify icon="solar:pen-bold" width={18} />
+                        <RemixIcon icon="solar:pen-bold" width={18} />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="ลบ">
@@ -359,7 +359,7 @@ export function SemesterView({ academicYearId }: Props) {
                         }}
                         aria-label={`ลบ ${semester.name}`}
                       >
-                        <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                       </IconButton>
                     </Tooltip>
                   </TableCell>
@@ -389,7 +389,7 @@ export function SemesterView({ academicYearId }: Props) {
                 disabled={saveMutation.isPending}
                 aria-label="ปิดหน้าต่าง"
               >
-                <Iconify icon="mingcute:close-line" />
+                <RemixIcon icon="mingcute:close-line" />
               </IconButton>
             </Box>
           </DialogTitle>
@@ -523,7 +523,7 @@ function SummaryCard({ icon, label, value }: SummaryCardProps) {
             bgcolor: 'background.neutral',
           }}
         >
-          <Iconify icon={icon} width={25} />
+          <RemixIcon icon={icon} width={25} />
         </Box>
         <Box>
           <Typography variant="h4">{value}</Typography>

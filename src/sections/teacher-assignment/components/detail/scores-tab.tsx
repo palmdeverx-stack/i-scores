@@ -25,7 +25,7 @@ import { RouterLink } from 'src/routes/components';
 import { fDateTime } from 'src/utils/format-time';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import {
   listAssignments,
@@ -132,7 +132,7 @@ export const ScoresTab = memo(function ScoresTab({
                 bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.14),
               }}
             >
-              <Iconify icon="solar:chart-square-outline" width={22} />
+              <RemixIcon icon="solar:chart-square-outline" width={22} />
             </Box>
             <Box>
               <Typography variant="h5" sx={{ fontSize: { xs: '0.95rem', sm: '1.5rem' } }}>
@@ -194,7 +194,7 @@ export const ScoresTab = memo(function ScoresTab({
                   '&:last-of-type': { gridColumn: { sm: '1 / -1', md: 'auto' } },
                 }}
               >
-                <Iconify icon={SCORE_CATEGORY_ICON[category]} width={18} />
+                <RemixIcon icon={SCORE_CATEGORY_ICON[category]} width={18} />
                 <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                   <Typography variant="subtitle2" noWrap>
                     {ASSIGNMENT_CATEGORY_META[category].label}
@@ -318,7 +318,7 @@ function ScoreCategorySection({
         }}
       >
         <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
-          <Iconify icon={SCORE_CATEGORY_ICON[category]} width={28} color="primary.main" />
+          <RemixIcon icon={SCORE_CATEGORY_ICON[category]} width={28} color="primary.main" />
           <Box>
             <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
               <Typography variant="h6">{meta.sectionTitle}</Typography>
@@ -338,7 +338,7 @@ function ScoreCategorySection({
               component={RouterLink}
               href={createPath}
               variant="contained"
-              startIcon={<Iconify icon="mingcute:add-line" />}
+              startIcon={<RemixIcon icon="mingcute:add-line" />}
               aria-label={category === 'quiz' ? meta.createHeading : `เพิ่ม${meta.label}`}
               sx={{
                 minWidth: { xs: 40, sm: 64 },
@@ -353,7 +353,7 @@ function ScoreCategorySection({
           ) : (
             <Button
               variant="contained"
-              startIcon={<Iconify icon="solar:pen-bold" />}
+              startIcon={<RemixIcon icon="solar:pen-bold" />}
               onClick={() => onQuickCreate(category)}
               aria-label={meta.singleton ? 'กรอกคะแนน' : 'เพิ่มรายการคะแนน'}
               sx={{
@@ -421,7 +421,7 @@ function ScoreCategorySection({
                   category === 'quiz' ? `ดูผลคะแนน ${item.title}` : `กรอกคะแนน ${item.title}`
                 }
               >
-                <Iconify icon="solar:cup-star-bold" width={18} />
+                <RemixIcon icon="solar:cup-star-bold" width={18} />
               </IconButton>
               {category !== 'quiz' && (
                 <IconButton
@@ -430,7 +430,7 @@ function ScoreCategorySection({
                   aria-label={`แก้ไข ${item.title}`}
                   onClick={() => onEdit(item)}
                 >
-                  <Iconify icon="solar:settings-bold" width={18} />
+                  <RemixIcon icon="solar:settings-bold" width={18} />
                 </IconButton>
               )}
               <IconButton
@@ -439,7 +439,7 @@ function ScoreCategorySection({
                 aria-label={`ลบ ${item.title}`}
                 onClick={() => onDelete(item)}
               >
-                <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
               </IconButton>
             </Box>
           </Box>
@@ -507,7 +507,7 @@ function ScoreCategorySection({
                         aria-label={`แก้ไข ${item.title}`}
                         onClick={() => onEdit(item)}
                       >
-                        <Iconify icon="solar:settings-bold" />
+                        <RemixIcon icon="solar:settings-bold" />
                       </IconButton>
                     )}
                     <IconButton
@@ -516,7 +516,7 @@ function ScoreCategorySection({
                       aria-label={`ลบ ${item.title}`}
                       onClick={() => onDelete(item)}
                     >
-                      <Iconify icon="solar:trash-bin-trash-bold" />
+                      <RemixIcon icon="solar:trash-bin-trash-bold" />
                     </IconButton>
                   </Box>
                 </TableCell>

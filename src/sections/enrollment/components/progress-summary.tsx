@@ -4,7 +4,7 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Typography from '@mui/material/Typography';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -32,7 +32,7 @@ export function ProgressSummary({ label, value, icon, color, bgcolor }: Props) {
             bgcolor,
           }}
         >
-          <Iconify icon={icon} width={22} />
+          <RemixIcon icon={icon} width={22} />
         </Box>
         <Box>
           <Typography variant="subtitle1">{value}</Typography>

@@ -12,7 +12,7 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getMyStudentQr } from '../student-qr-actions';
 
@@ -135,7 +135,7 @@ export function StudentQrView() {
 
         <Alert
           severity="info"
-          icon={<Iconify icon="solar:user-id-bold" />}
+          icon={<RemixIcon icon="solar:user-id-bold" />}
           sx={{ textAlign: 'left' }}
         >
           แสดง QR นี้ให้ครูสแกน ไม่ต้องส่งภาพให้ผู้อื่น หาก QR สูญหายให้แจ้งครูประจำชั้นเพื่อออกใหม่

@@ -14,8 +14,8 @@ import IconButton from '@mui/material/IconButton';
 import ListItemText from '@mui/material/ListItemText';
 import InputAdornment from '@mui/material/InputAdornment';
 
-import { Iconify } from '../iconify';
 import { FlagIcon } from '../flag-icon';
+import { RemixIcon } from '../remix-icon';
 import { SearchNotFound } from '../search-not-found';
 
 // ----------------------------------------------------------------------
@@ -98,7 +98,7 @@ export function CountryListPopover({
       {renderFlag()}
 
       {!disabled && (
-        <Iconify
+        <RemixIcon
           icon="eva:chevron-down-fill"
           sx={{
             ml: 0.25,
@@ -187,13 +187,13 @@ export function CountryListPopover({
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                  <RemixIcon icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
                 </InputAdornment>
               ),
               endAdornment: searchCountry && (
                 <InputAdornment position="end">
                   <IconButton size="small" edge="end" onClick={() => onSearchCountry('')}>
-                    <Iconify width={16} icon="mingcute:close-line" />
+                    <RemixIcon width={16} icon="mingcute:close-line" />
                   </IconButton>
                 </InputAdornment>
               ),

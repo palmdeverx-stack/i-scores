@@ -1,7 +1,6 @@
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
-import SvgIcon from '@mui/material/SvgIcon';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -63,7 +62,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
             bgcolor: 'background.neutral',
           }}
         >
-          <SvgIcon sx={{ width: 24, height: 24 }}>{renderIcon(notification.type)}</SvgIcon>
+          {renderIcon(notification.type)}
         </Box>
       )}
     </ListItemAvatar>

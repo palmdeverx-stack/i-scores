@@ -2,8 +2,8 @@
 
 import Portal from '@mui/material/Portal';
 
-import { Iconify } from '../iconify';
 import { SnackbarRoot } from './styles';
+import { RemixIcon } from '../remix-icon';
 import { snackbarClasses } from './classes';
 
 // ----------------------------------------------------------------------
@@ -43,12 +43,12 @@ export function Snackbar() {
         }}
         icons={{
           loading: <span className={snackbarClasses.loadingIcon} />,
-          info: <Iconify className={snackbarClasses.iconSvg} icon="solar:info-circle-bold" />,
-          success: <Iconify className={snackbarClasses.iconSvg} icon="solar:check-circle-bold" />,
+          info: <RemixIcon className={snackbarClasses.iconSvg} icon="solar:info-circle-bold" />,
+          success: <RemixIcon className={snackbarClasses.iconSvg} icon="solar:check-circle-bold" />,
           warning: (
-            <Iconify className={snackbarClasses.iconSvg} icon="solar:danger-triangle-bold" />
+            <RemixIcon className={snackbarClasses.iconSvg} icon="solar:danger-triangle-bold" />
           ),
-          error: <Iconify className={snackbarClasses.iconSvg} icon="solar:danger-bold" />,
+          error: <RemixIcon className={snackbarClasses.iconSvg} icon="solar:danger-bold" />,
         }}
       />
     </Portal>

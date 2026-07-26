@@ -22,7 +22,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import {
   scanStudentQr,
@@ -224,7 +224,7 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
               กลับไปเลือกรอบ
             </Box>
-            <Iconify
+            <RemixIcon
               icon="solar:reply-bold"
               width={18}
               sx={{ display: { xs: 'block', sm: 'none' } }}
@@ -236,7 +236,7 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
               variant="contained"
               loading={closeMutation.isPending}
               onClick={() => closeMutation.mutate()}
-              startIcon={<Iconify icon="solar:stop-circle-bold" />}
+              startIcon={<RemixIcon icon="solar:stop-circle-bold" />}
               aria-label="ปิดรอบ"
               sx={{
                 minWidth: { xs: 40, sm: 64 },
@@ -326,7 +326,7 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
                   justifyContent: 'center',
                 }}
               >
-                <Iconify icon="solar:stop-circle-bold" width={56} />
+                <RemixIcon icon="solar:stop-circle-bold" width={56} />
                 <Typography variant="h6">รอบเช็คชื่อสิ้นสุดแล้ว</Typography>
               </Box>
             )}
@@ -389,7 +389,7 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
           <Box sx={{ maxHeight: 620, overflowY: 'auto' }}>
             {!events.length && (
               <Box sx={{ py: 8, px: 2, textAlign: 'center', color: 'text.secondary' }}>
-                <Iconify icon="solar:videocamera-record-bold" width={42} sx={{ mb: 1 }} />
+                <RemixIcon icon="solar:videocamera-record-bold" width={42} sx={{ mb: 1 }} />
                 <Typography variant="body2">ยังไม่มีนักเรียนสแกนในรอบนี้</Typography>
               </Box>
             )}

@@ -18,7 +18,7 @@ import { useRouter } from 'src/routes/hooks';
 import { CONFIG } from 'src/global-config';
 
 import { Image } from 'src/components/image';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from '../../hooks';
@@ -85,7 +85,7 @@ export function JwtSignInView() {
           input: {
             startAdornment: (
               <InputAdornment position="start">
-                <Iconify icon="solar:user-rounded-bold" width={22} />
+                <RemixIcon icon="solar:user-rounded-bold" width={22} />
               </InputAdornment>
             ),
           },
@@ -103,7 +103,7 @@ export function JwtSignInView() {
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <Iconify icon="solar:lock-password-outline" width={22} />
+                  <RemixIcon icon="solar:lock-password-outline" width={22} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -113,7 +113,7 @@ export function JwtSignInView() {
                     edge="end"
                     aria-label={showPassword.value ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
                   >
-                    <Iconify
+                    <RemixIcon
                       icon={showPassword.value ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
                     />
                   </IconButton>

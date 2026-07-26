@@ -18,7 +18,7 @@ import Typography from '@mui/material/Typography';
 import LinearProgress from '@mui/material/LinearProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { LineRichMenuCard } from '../components/line-rich-menu-card';
 import {
@@ -147,7 +147,7 @@ export function LineNotificationSettingsView() {
         <Chip
           color={integration.isEnabled ? 'success' : 'default'}
           icon={
-            <Iconify
+            <RemixIcon
               icon={integration.isEnabled ? 'solar:check-circle-bold' : 'solar:close-circle-bold'}
             />
           }
@@ -215,7 +215,7 @@ export function LineNotificationSettingsView() {
                   <Button
                     size="small"
                     variant="outlined"
-                    startIcon={<Iconify icon="solar:pen-bold" />}
+                    startIcon={<RemixIcon icon="solar:pen-bold" />}
                     onClick={() => setEditingCredentials(true)}
                   >
                     แก้ไขข้อมูลเชื่อมต่อ
@@ -311,7 +311,7 @@ export function LineNotificationSettingsView() {
               <Button
                 color="inherit"
                 startIcon={
-                  <Iconify icon={copied ? 'solar:check-circle-bold' : 'solar:copy-bold'} />
+                  <RemixIcon icon={copied ? 'solar:check-circle-bold' : 'solar:copy-bold'} />
                 }
                 onClick={async () => {
                   await navigator.clipboard.writeText(form.webhookUrl);

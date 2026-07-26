@@ -32,7 +32,7 @@ import TableContainer from '@mui/material/TableContainer';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listSchools, deleteSchool, updateSchool, toggleSchoolActive } from '../school-actions';
 
@@ -142,7 +142,7 @@ export function SchoolListView() {
           component={RouterLink}
           href={paths.master.school.new}
           variant="contained"
-          startIcon={<Iconify icon="mingcute:add-line" />}
+          startIcon={<RemixIcon icon="mingcute:add-line" />}
         >
           เพิ่มโรงเรียน
         </Button>
@@ -233,7 +233,7 @@ export function SchoolListView() {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Iconify icon="eva:search-fill" />
+                    <RemixIcon icon="eva:search-fill" />
                   </InputAdornment>
                 ),
               },
@@ -270,7 +270,7 @@ export function SchoolListView() {
               {!isLoading && !filteredSchools.length && (
                 <TableRow>
                   <TableCell colSpan={9} sx={{ py: 8, textAlign: 'center' }}>
-                    <Iconify
+                    <RemixIcon
                       icon="solar:inbox-in-bold"
                       width={36}
                       sx={{ color: 'text.disabled' }}
@@ -400,7 +400,7 @@ export function SchoolListView() {
                           color="primary"
                           aria-label={`จัดการแพ็กเกจ ${school.name}`}
                         >
-                          <Iconify icon="solar:settings-bold" width={18} />
+                          <RemixIcon icon="solar:settings-bold" width={18} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="แก้ไขโรงเรียน">
@@ -409,7 +409,7 @@ export function SchoolListView() {
                           onClick={() => openEditDialog(school)}
                           aria-label={`แก้ไข ${school.name}`}
                         >
-                          <Iconify icon="solar:pen-bold" width={18} />
+                          <RemixIcon icon="solar:pen-bold" width={18} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="ลบโรงเรียน">
@@ -422,7 +422,7 @@ export function SchoolListView() {
                           }}
                           aria-label={`ลบ ${school.name}`}
                         >
-                          <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>
                       </Tooltip>
                     </Box>
@@ -563,7 +563,7 @@ function SummaryCard({
           bgcolor,
         }}
       >
-        <Iconify icon={icon} width={24} />
+        <RemixIcon icon={icon} width={24} />
       </Box>
       <Box>
         <Typography variant="h4">{value.toLocaleString('th-TH')}</Typography>

@@ -19,7 +19,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { TeacherAnnouncementFormDialog } from '../components/teacher-announcement-form-dialog';
 import {
@@ -102,7 +102,7 @@ export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teac
         <Button
           variant="contained"
           size="large"
-          startIcon={<Iconify icon="mingcute:add-line" />}
+          startIcon={<RemixIcon icon="mingcute:add-line" />}
           onClick={openCreate}
         >
           สร้างประกาศ
@@ -158,7 +158,7 @@ export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teac
                       bgcolor: `${type.color}.lighter`,
                     }}
                   >
-                    <Iconify icon={type.icon} width={26} />
+                    <RemixIcon icon={type.icon} width={26} />
                   </Box>
                   <Box sx={{ minWidth: 0, flex: 1 }}>
                     <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -199,7 +199,7 @@ export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teac
                         <Chip
                           key={target.classroom_id}
                           size="small"
-                          icon={<Iconify icon="solar:users-group-rounded-bold" />}
+                          icon={<RemixIcon icon="solar:users-group-rounded-bold" />}
                           label={target.classroom?.name ?? 'ห้องเรียน'}
                         />
                       ))}
@@ -209,7 +209,7 @@ export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teac
                         variant="caption"
                         sx={{ mt: 1.5, display: 'block', color: 'text.secondary' }}
                       >
-                        <Iconify
+                        <RemixIcon
                           icon="solar:calendar-date-bold"
                           width={16}
                           sx={{ mr: 0.5, verticalAlign: 'text-bottom' }}
@@ -226,14 +226,14 @@ export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teac
                       aria-label={`แก้ไข ${announcement.title}`}
                       onClick={() => openEdit(announcement)}
                     >
-                      <Iconify icon="solar:pen-bold" />
+                      <RemixIcon icon="solar:pen-bold" />
                     </IconButton>
                     <IconButton
                       color="error"
                       aria-label={`ลบ ${announcement.title}`}
                       onClick={() => setDeleting(announcement)}
                     >
-                      <Iconify icon="solar:trash-bin-trash-bold" />
+                      <RemixIcon icon="solar:trash-bin-trash-bold" />
                     </IconButton>
                   </Box>
                 </Box>
@@ -243,7 +243,7 @@ export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teac
         </Box>
       ) : !isError ? (
         <Card variant="outlined" sx={{ py: 8, px: 3, textAlign: 'center' }}>
-          <Iconify icon="solar:bell-off-bold" width={56} sx={{ color: 'text.disabled' }} />
+          <RemixIcon icon="solar:bell-off-bold" width={56} sx={{ color: 'text.disabled' }} />
           <Typography variant="h6" sx={{ mt: 2 }}>
             ยังไม่มีประกาศ
           </Typography>
@@ -252,7 +252,7 @@ export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teac
           </Typography>
           <Button
             variant="contained"
-            startIcon={<Iconify icon="mingcute:add-line" />}
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
             onClick={openCreate}
             sx={{ mt: 2.5 }}
           >

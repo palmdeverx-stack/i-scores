@@ -17,7 +17,7 @@ import Typography from '@mui/material/Typography';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getStudentProfile, type StudentProfile } from '../student-profile-actions';
 
@@ -165,7 +165,7 @@ export function StudentProfileView() {
               <Chip
                 size="small"
                 label={studentStatus.label}
-                icon={<Iconify icon="solar:verified-check-bold" />}
+                icon={<RemixIcon icon="solar:verified-check-bold" />}
                 sx={{
                   fontWeight: 700,
                   color: `${studentStatus.color}.darker`,
@@ -338,7 +338,7 @@ export function StudentProfileView() {
                   borderColor: 'divider',
                 }}
               >
-                <Iconify
+                <RemixIcon
                   icon="solar:users-group-rounded-bold"
                   width={42}
                   sx={{ color: 'text.disabled' }}
@@ -393,7 +393,7 @@ export function StudentProfileView() {
             />
             <Divider sx={{ my: 2.5 }} />
             <Box sx={{ gap: 1, display: 'flex', alignItems: 'flex-start', textAlign: 'left' }}>
-              <Iconify
+              <RemixIcon
                 icon="solar:info-circle-bold"
                 width={18}
                 sx={{ mt: 0.25, color: 'info.main' }}
@@ -418,7 +418,7 @@ export function StudentProfileView() {
                   bgcolor: 'primary.lighter',
                 }}
               >
-                <Iconify icon="solar:shield-keyhole-bold-duotone" width={24} />
+                <RemixIcon icon="solar:shield-keyhole-bold-duotone" width={24} />
               </Box>
               <Box>
                 <Typography component="h2" variant="subtitle1">
@@ -434,7 +434,7 @@ export function StudentProfileView() {
               component={RouterLink}
               href={paths.auth.jwt.changePassword}
               variant="outlined"
-              startIcon={<Iconify icon="ic:round-vpn-key" />}
+              startIcon={<RemixIcon icon="ic:round-vpn-key" />}
               sx={{ mt: 2.5 }}
             >
               เปลี่ยนรหัสผ่าน
@@ -478,7 +478,7 @@ function ProfileSectionHeader({ icon, title, description }: ProfileSectionHeader
           bgcolor: 'primary.lighter',
         }}
       >
-        <Iconify icon={icon} width={24} />
+        <RemixIcon icon={icon} width={24} />
       </Box>
       <Box sx={{ minWidth: 0 }}>
         <Typography component="h2" variant="h6">
@@ -506,7 +506,7 @@ function GuardianCard({ guardian }: { guardian: StudentGuardian }) {
     >
       <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'flex-start' }}>
         <Avatar sx={{ color: 'primary.main', bgcolor: 'primary.lighter' }}>
-          <Iconify icon="solar:user-rounded-bold" />
+          <RemixIcon icon="solar:user-rounded-bold" />
         </Avatar>
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -537,7 +537,7 @@ function GuardianCard({ guardian }: { guardian: StudentGuardian }) {
           href={`tel:${guardian.phone}`}
           color="inherit"
           variant="outlined"
-          startIcon={<Iconify icon="solar:phone-bold" />}
+          startIcon={<RemixIcon icon="solar:phone-bold" />}
           sx={{ justifyContent: 'flex-start' }}
         >
           {guardian.phone}
@@ -548,7 +548,7 @@ function GuardianCard({ guardian }: { guardian: StudentGuardian }) {
             href={`mailto:${guardian.email}`}
             color="inherit"
             variant="outlined"
-            startIcon={<Iconify icon="solar:letter-bold" />}
+            startIcon={<RemixIcon icon="solar:letter-bold" />}
             sx={{ minWidth: 0, justifyContent: 'flex-start', overflowWrap: 'anywhere' }}
           >
             {guardian.email}
@@ -559,7 +559,7 @@ function GuardianCard({ guardian }: { guardian: StudentGuardian }) {
       {(guardian.address || guardian.notes) && <Divider sx={{ my: 2 }} />}
       {guardian.address && (
         <Box sx={{ gap: 1, display: 'flex', alignItems: 'flex-start' }}>
-          <Iconify
+          <RemixIcon
             icon="solar:home-2-outline"
             width={18}
             sx={{ mt: 0.25, color: 'text.secondary' }}
@@ -573,7 +573,7 @@ function GuardianCard({ guardian }: { guardian: StudentGuardian }) {
         <Box
           sx={{ gap: 1, mt: guardian.address ? 1 : 0, display: 'flex', alignItems: 'flex-start' }}
         >
-          <Iconify
+          <RemixIcon
             icon="solar:file-text-bold"
             width={18}
             sx={{ mt: 0.25, color: 'text.secondary' }}

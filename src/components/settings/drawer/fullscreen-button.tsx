@@ -5,7 +5,7 @@ import { useState, useCallback } from 'react';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 
-import { Iconify } from '../../iconify';
+import { RemixIcon } from '../../remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ export function FullScreenButton() {
   return (
     <Tooltip title={fullscreen ? 'Exit' : 'Fullscreen'}>
       <IconButton onClick={handleToggleFullscreen} color={fullscreen ? 'primary' : 'default'}>
-        <Iconify
+        <RemixIcon
           icon={
             fullscreen
               ? 'solar:quit-full-screen-square-outline'

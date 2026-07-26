@@ -23,8 +23,8 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
 
-import { Iconify } from 'src/components/iconify';
 import { UploadAvatar } from 'src/components/upload';
+import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from 'src/auth/hooks';
@@ -192,7 +192,7 @@ export function SchoolProfileView() {
                 sx={{ width: 1, height: 1, objectFit: 'cover' }}
               />
             ) : (
-              <Iconify
+              <RemixIcon
                 icon="solar:users-group-rounded-bold-duotone"
                 width={38}
                 sx={{ color: 'primary.main' }}
@@ -222,7 +222,7 @@ export function SchoolProfileView() {
               <Chip
                 size="small"
                 icon={
-                  <Iconify
+                  <RemixIcon
                     icon={
                       school.is_active ? 'solar:check-circle-bold' : 'solar:forbidden-circle-bold'
                     }
@@ -300,7 +300,7 @@ export function SchoolProfileView() {
             />
           </Box>
 
-          <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" />} sx={{ mt: 3 }}>
+          <Alert severity="info" icon={<RemixIcon icon="solar:info-circle-bold" />} sx={{ mt: 3 }}>
             แนะนำรูปสี่เหลี่ยมจัตุรัส พื้นหลังโปร่งใส เพื่อให้แสดงผลได้สวยในทุกจุด
           </Alert>
         </Card>
@@ -365,7 +365,7 @@ export function SchoolProfileView() {
                     disabled={!isDirty}
                     loading={updateMutation.isPending}
                     loadingIndicator="กำลังบันทึก..."
-                    startIcon={<Iconify icon="solar:check-circle-bold" />}
+                    startIcon={<RemixIcon icon="solar:check-circle-bold" />}
                     sx={{ width: { xs: 1, sm: 'auto' }, minWidth: 210 }}
                   >
                     บันทึกการเปลี่ยนแปลง
@@ -515,7 +515,7 @@ function ReadOnlyInfo({ icon, label, value, description }: ReadOnlyInfoProps) {
           bgcolor: 'primary.lighter',
         }}
       >
-        <Iconify icon={icon} width={22} />
+        <RemixIcon icon={icon} width={22} />
       </Box>
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>

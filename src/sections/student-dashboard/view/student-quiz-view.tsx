@@ -1,6 +1,6 @@
 'use client';
 
-import type { IconifyName } from 'src/components/iconify/register-icons';
+import type { RemixIconName } from 'src/components/remix-icon/icon-map';
 
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,7 +22,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import {
   getStudentQuiz,
@@ -127,7 +127,7 @@ export function StudentQuizView({ assignmentId }: Props) {
         component={RouterLink}
         href={paths.student.assignments}
         color="inherit"
-        startIcon={<Iconify icon="solar:reply-bold" />}
+        startIcon={<RemixIcon icon="solar:reply-bold" />}
         sx={{ mb: 2 }}
       >
         กลับไปรายการงาน
@@ -153,7 +153,7 @@ export function StudentQuizView({ assignmentId }: Props) {
               bgcolor: 'rgba(255,255,255,0.16)',
             }}
           >
-            <Iconify icon="solar:bill-list-bold-duotone" width={34} />
+            <RemixIcon icon="solar:bill-list-bold-duotone" width={34} />
           </Box>
           <Box sx={{ flex: 1 }}>
             <Typography variant="overline" sx={{ opacity: 0.8 }}>
@@ -195,7 +195,7 @@ export function StudentQuizView({ assignmentId }: Props) {
               bgcolor: 'success.lighter',
             }}
           >
-            <Iconify icon="solar:check-circle-bold" width={42} />
+            <RemixIcon icon="solar:check-circle-bold" width={42} />
           </Box>
           <Typography variant="h4">ส่งแบบทดสอบเรียบร้อยแล้ว</Typography>
           {showScore && displayedScore !== null && displayedScore !== undefined ? (
@@ -263,7 +263,7 @@ export function StudentQuizView({ assignmentId }: Props) {
             size="large"
             variant="contained"
             loading={startMutation.isPending}
-            startIcon={<Iconify icon="solar:play-circle-bold" />}
+            startIcon={<RemixIcon icon="solar:play-circle-bold" />}
             onClick={() => startMutation.mutate()}
           >
             เริ่มทำแบบทดสอบ
@@ -295,7 +295,7 @@ export function StudentQuizView({ assignmentId }: Props) {
               {remainingSeconds !== null && (
                 <Label
                   color={remainingSeconds <= 60 ? 'error' : 'warning'}
-                  startIcon={<Iconify icon="solar:clock-circle-bold" />}
+                  startIcon={<RemixIcon icon="solar:clock-circle-bold" />}
                   sx={{ fontSize: 15, px: 1.5, py: 2 }}
                 >
                   {formatTimer(remainingSeconds)}
@@ -399,7 +399,7 @@ export function StudentQuizView({ assignmentId }: Props) {
               color="success"
               loading={submitMutation.isPending}
               disabled={answeredCount !== quiz.questions.length || remainingSeconds === 0}
-              startIcon={<Iconify icon="custom:send-fill" />}
+              startIcon={<RemixIcon icon="custom:send-fill" />}
               onClick={() => submitMutation.mutate()}
             >
               ยืนยันและส่งคำตอบ
@@ -419,10 +419,10 @@ export function StudentQuizView({ assignmentId }: Props) {
   );
 }
 
-function InfoRow({ icon, text }: { icon: IconifyName; text: string }) {
+function InfoRow({ icon, text }: { icon: RemixIconName; text: string }) {
   return (
     <Stack direction="row" spacing={1.25} alignItems="center">
-      <Iconify icon={icon} width={22} sx={{ color: 'primary.main' }} />
+      <RemixIcon icon={icon} width={22} sx={{ color: 'primary.main' }} />
       <Typography>{text}</Typography>
     </Stack>
   );

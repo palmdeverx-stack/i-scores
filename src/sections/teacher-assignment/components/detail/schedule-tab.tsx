@@ -19,7 +19,7 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { ScheduleFormDialog } from './schedule-form-dialog';
 import { DAY_LABELS } from './teacher-assignment-detail-types';
@@ -104,7 +104,7 @@ export const ScheduleTab = memo(function ScheduleTab({ teacherAssignmentId }: Pr
           </Box>
           <Button
             variant="contained"
-            startIcon={<Iconify icon="mingcute:add-line" />}
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
             onClick={openCreateDialog}
             aria-label="เพิ่มคาบสอน"
             sx={{
@@ -169,7 +169,7 @@ export const ScheduleTab = memo(function ScheduleTab({ teacherAssignmentId }: Pr
                   bgcolor: 'primary.lighter',
                 }}
               >
-                <Iconify icon="solar:clock-circle-bold" width={20} />
+                <RemixIcon icon="solar:clock-circle-bold" width={20} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="subtitle2">วัน{DAY_LABELS[slot.day_of_week]}</Typography>
@@ -184,7 +184,7 @@ export const ScheduleTab = memo(function ScheduleTab({ teacherAssignmentId }: Pr
                   onClick={() => openEditDialog(slot)}
                   aria-label={`แก้ไขคาบสอนวัน${DAY_LABELS[slot.day_of_week]}`}
                 >
-                  <Iconify icon="solar:pen-bold" width={18} />
+                  <RemixIcon icon="solar:pen-bold" width={18} />
                 </IconButton>
                 <IconButton
                   size="small"
@@ -192,7 +192,7 @@ export const ScheduleTab = memo(function ScheduleTab({ teacherAssignmentId }: Pr
                   onClick={() => setDeletingSchedule(slot)}
                   aria-label={`ลบคาบสอนวัน${DAY_LABELS[slot.day_of_week]}`}
                 >
-                  <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                  <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                 </IconButton>
               </Box>
             </Box>
@@ -238,7 +238,7 @@ export const ScheduleTab = memo(function ScheduleTab({ teacherAssignmentId }: Pr
                       onClick={() => openEditDialog(slot)}
                       aria-label={`แก้ไขคาบสอนวัน${DAY_LABELS[slot.day_of_week]}`}
                     >
-                      <Iconify icon="solar:pen-bold" width={18} />
+                      <RemixIcon icon="solar:pen-bold" width={18} />
                     </IconButton>
                     <IconButton
                       size="small"
@@ -246,7 +246,7 @@ export const ScheduleTab = memo(function ScheduleTab({ teacherAssignmentId }: Pr
                       onClick={() => setDeletingSchedule(slot)}
                       aria-label={`ลบคาบสอนวัน${DAY_LABELS[slot.day_of_week]}`}
                     >
-                      <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                      <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                     </IconButton>
                   </TableCell>
                 </TableRow>

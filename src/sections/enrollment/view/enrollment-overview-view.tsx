@@ -1,6 +1,6 @@
 'use client';
 
-import type { IconifyName } from 'src/components/iconify/register-icons';
+import type { RemixIconName } from 'src/components/remix-icon/icon-map';
 import type { ClassroomTeacher } from 'src/sections/classroom/classroom-actions';
 
 import { useMemo, useState } from 'react';
@@ -19,7 +19,7 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listClassrooms } from 'src/sections/classroom/classroom-actions';
 
@@ -131,7 +131,7 @@ export function EnrollmentOverviewView() {
         <Button
           variant="outlined"
           onClick={() => setPromoteDialogOpen(true)}
-          startIcon={<Iconify icon="solar:double-alt-arrow-up-bold-duotone" />}
+          startIcon={<RemixIcon icon="solar:double-alt-arrow-up-bold-duotone" />}
         >
           เลื่อนชั้นยกชุด
         </Button>
@@ -219,7 +219,7 @@ export function EnrollmentOverviewView() {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Iconify icon="eva:search-fill" />
+                    <RemixIcon icon="eva:search-fill" />
                   </InputAdornment>
                 ),
               },
@@ -229,7 +229,7 @@ export function EnrollmentOverviewView() {
 
         {!isLoading && !groupedClassrooms.length && (
           <Box sx={{ py: 8, textAlign: 'center', color: 'text.secondary' }}>
-            <Iconify icon="solar:users-group-rounded-bold-duotone" width={48} />
+            <RemixIcon icon="solar:users-group-rounded-bold-duotone" width={48} />
             <Typography sx={{ mt: 1 }}>
               {classrooms.length ? 'ไม่พบชั้นเรียนที่ค้นหา' : 'ยังไม่มีชั้นเรียน'}
             </Typography>
@@ -336,7 +336,7 @@ function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: Cl
             bgcolor: 'primary.lighter',
           }}
         >
-          <Iconify icon="solar:users-group-rounded-bold" width={27} />
+          <RemixIcon icon="solar:users-group-rounded-bold" width={27} />
         </Box>
         <Box sx={{ minWidth: 0, flexGrow: 1 }}>
           <Typography variant="subtitle1" noWrap>
@@ -352,7 +352,7 @@ function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: Cl
             คน
           </Typography>
         </Box>
-        <Iconify icon="eva:arrow-ios-forward-fill" width={18} sx={{ color: 'text.disabled' }} />
+        <RemixIcon icon="eva:arrow-ios-forward-fill" width={18} sx={{ color: 'text.disabled' }} />
       </Box>
 
       <Box
@@ -366,7 +366,7 @@ function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: Cl
           borderColor: 'divider',
         }}
       >
-        <Iconify
+        <RemixIcon
           icon="solar:user-id-bold"
           width={21}
           sx={{
@@ -401,7 +401,7 @@ function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: Cl
 // ----------------------------------------------------------------------
 
 type SummaryCardProps = {
-  icon: IconifyName;
+  icon: RemixIconName;
   label: string;
   value: number;
   color: string;
@@ -424,7 +424,7 @@ function SummaryCard({ icon, label, value, color, bgcolor }: SummaryCardProps) {
             bgcolor,
           }}
         >
-          <Iconify icon={icon} width={25} />
+          <RemixIcon icon={icon} width={25} />
         </Box>
         <Box>
           <Typography variant="h4">{value}</Typography>

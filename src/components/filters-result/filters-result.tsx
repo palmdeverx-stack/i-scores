@@ -6,7 +6,7 @@ import type { Theme, SxProps } from '@mui/material/styles';
 import Button from '@mui/material/Button';
 import { styled } from '@mui/material/styles';
 
-import { Iconify } from '../iconify';
+import { RemixIcon } from '../remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ export function FiltersResult({
         <Button
           color="error"
           onClick={onReset}
-          startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+          startIcon={<RemixIcon icon="solar:trash-bin-trash-bold" />}
         >
           Clear
         </Button>

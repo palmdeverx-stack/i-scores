@@ -23,7 +23,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import {
   scanStudentQr,
@@ -359,7 +359,7 @@ export function AttendanceQrScanDialog({ open, teacherAssignmentId, sessionDate,
                       justifyContent: 'center',
                     }}
                   >
-                    <Iconify icon="solar:stop-circle-bold" width={48} />
+                    <RemixIcon icon="solar:stop-circle-bold" width={48} />
                     <Typography variant="subtitle1">รอบเช็คชื่อสิ้นสุดแล้ว</Typography>
                   </Box>
                 )}
@@ -476,7 +476,7 @@ export function AttendanceQrScanDialog({ open, teacherAssignmentId, sessionDate,
             disabled={!canCreate}
             loading={createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            startIcon={<Iconify icon="solar:camera-add-bold" />}
+            startIcon={<RemixIcon icon="solar:camera-add-bold" />}
           >
             เปิดกล้องสแกน
           </Button>
@@ -491,7 +491,7 @@ export function AttendanceQrScanDialog({ open, teacherAssignmentId, sessionDate,
               controlsRef.current = null;
               closeMutation.mutate();
             }}
-            startIcon={<Iconify icon="solar:stop-circle-bold" />}
+            startIcon={<RemixIcon icon="solar:stop-circle-bold" />}
           >
             ปิดรอบ
           </Button>

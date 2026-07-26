@@ -16,7 +16,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { displayName, isSubmitted } from '../view/student-dashboard-shared';
 
@@ -71,7 +71,7 @@ export function SubjectCard({ item }: Props) {
         }}
       >
         {!item.subject.image_url && (
-          <Iconify
+          <RemixIcon
             icon="solar:notebook-bold-duotone"
             width={56}
             sx={{

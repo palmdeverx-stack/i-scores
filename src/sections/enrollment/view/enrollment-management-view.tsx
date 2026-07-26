@@ -30,7 +30,7 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { listClassrooms } from 'src/sections/classroom/classroom-actions';
@@ -247,7 +247,7 @@ export function EnrollmentManagementView({
               color="inherit"
               size="small"
               onClick={() => router.push(paths.admin.enrollment.root)}
-              startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+              startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
               sx={{ mb: 1.25, color: 'text.secondary' }}
             >
               กลับไปเลือกชั้นเรียน
@@ -273,7 +273,7 @@ export function EnrollmentManagementView({
             <Button
               variant="outlined"
               onClick={() => setPromoteDialogOpen(true)}
-              startIcon={<Iconify icon="solar:double-alt-arrow-up-bold-duotone" />}
+              startIcon={<RemixIcon icon="solar:double-alt-arrow-up-bold-duotone" />}
             >
               เลื่อนชั้นยกชุด
             </Button>
@@ -282,7 +282,7 @@ export function EnrollmentManagementView({
             variant="contained"
             onClick={() => openCreateDialog()}
             disabled={classroomMode && !selectedFilterClassroom}
-            startIcon={<Iconify icon="solar:user-plus-bold" />}
+            startIcon={<RemixIcon icon="solar:user-plus-bold" />}
           >
             {selectedFilterClassroom
               ? `เพิ่มเข้า ${selectedFilterClassroom.name}`
@@ -373,7 +373,7 @@ export function EnrollmentManagementView({
                 size="small"
                 variant="contained"
                 onClick={() => openCreateDialog(selectedFilterClassroom.id)}
-                startIcon={<Iconify icon="solar:user-plus-bold" />}
+                startIcon={<RemixIcon icon="solar:user-plus-bold" />}
               >
                 เพิ่มเข้า {selectedFilterClassroom.name}
               </Button>
@@ -460,7 +460,7 @@ export function EnrollmentManagementView({
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Iconify icon="eva:search-fill" />
+                      <RemixIcon icon="eva:search-fill" />
                     </InputAdornment>
                   ),
                 },
@@ -597,7 +597,7 @@ export function EnrollmentManagementView({
                           size="small"
                           variant="outlined"
                           onClick={() => setProgressEnrollmentId(row.id)}
-                          startIcon={<Iconify icon="solar:list-bold" />}
+                          startIcon={<RemixIcon icon="solar:list-bold" />}
                         >
                           ผลการเรียน
                         </Button>
@@ -606,7 +606,7 @@ export function EnrollmentManagementView({
                           onClick={() => openEditDialog(row)}
                           aria-label={`แก้ไขการลงทะเบียนของ ${studentName}`}
                         >
-                          <Iconify icon="solar:pen-bold" width={18} />
+                          <RemixIcon icon="solar:pen-bold" width={18} />
                         </IconButton>
                         <IconButton
                           size="small"
@@ -617,7 +617,7 @@ export function EnrollmentManagementView({
                           }}
                           aria-label={`ลบการลงทะเบียนของ ${studentName}`}
                         >
-                          <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>
                       </Box>
                     </TableCell>
@@ -745,7 +745,7 @@ function ClassroomFilterCard({
           bgcolor: active ? 'primary.main' : 'primary.lighter',
         }}
       >
-        <Iconify icon="solar:users-group-rounded-bold" width={23} />
+        <RemixIcon icon="solar:users-group-rounded-bold" width={23} />
       </Box>
       <Box sx={{ minWidth: 0, flexGrow: 1 }}>
         <Typography variant="subtitle2" noWrap>
@@ -788,7 +788,7 @@ function SummaryCard({ icon, label, value, color, bgcolor }: SummaryCardProps) {
             bgcolor,
           }}
         >
-          <Iconify icon={icon} width={25} />
+          <RemixIcon icon={icon} width={25} />
         </Box>
         <Box>
           <Typography variant="h4">{value}</Typography>

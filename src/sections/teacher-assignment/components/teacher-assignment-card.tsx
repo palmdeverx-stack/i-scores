@@ -15,7 +15,7 @@ import CardActionArea from '@mui/material/CardActionArea';
 
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { TruncatedTypography } from 'src/components/typography';
 
 // ----------------------------------------------------------------------
@@ -100,7 +100,7 @@ export function TeacherAssignmentCard({ row, detailPath, onEdit, onDelete }: Pro
                     )})`,
                 }}
               >
-                <Iconify icon="solar:notebook-bold-duotone" width={54} />
+                <RemixIcon icon="solar:notebook-bold-duotone" width={54} />
               </Box>
             )}
 
@@ -161,10 +161,10 @@ export function TeacherAssignmentCard({ row, detailPath, onEdit, onDelete }: Pro
               }}
             >
               <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center' }}>
-                <Iconify icon="solar:chart-square-outline" width={20} />
+                <RemixIcon icon="solar:chart-square-outline" width={20} />
                 <Typography variant="subtitle2">เปิดห้องเรียน</Typography>
               </Box>
-              <Iconify icon="eva:arrow-ios-forward-fill" width={22} />
+              <RemixIcon icon="eva:arrow-ios-forward-fill" width={22} />
             </Box>
           </Box>
         </Box>
@@ -193,7 +193,7 @@ export function TeacherAssignmentCard({ row, detailPath, onEdit, onDelete }: Pro
             size="small"
             color="inherit"
             onClick={() => onEdit(row)}
-            startIcon={<Iconify icon="solar:pen-bold" />}
+            startIcon={<RemixIcon icon="solar:pen-bold" />}
           >
             แก้ไข
           </Button>
@@ -201,7 +201,7 @@ export function TeacherAssignmentCard({ row, detailPath, onEdit, onDelete }: Pro
             size="small"
             color="error"
             onClick={() => onDelete(row)}
-            startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+            startIcon={<RemixIcon icon="solar:trash-bin-trash-bold" />}
           >
             ลบ
           </Button>

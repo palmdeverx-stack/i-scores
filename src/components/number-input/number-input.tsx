@@ -10,7 +10,7 @@ import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
 
-import { Iconify } from '../iconify';
+import { RemixIcon } from '../remix-icon';
 import {
   HelperText,
   CaptionText,
@@ -123,7 +123,7 @@ export function NumberInput({
             onClick={handleDecrement}
             {...slotProps?.button}
           >
-            <Iconify width={16} icon="mingcute:minimize-line" />
+            <RemixIcon width={16} icon="mingcute:minimize-line" />
           </CounterButton>
         )}
 
@@ -145,7 +145,7 @@ export function NumberInput({
             onClick={handleIncrement}
             {...slotProps?.button}
           >
-            <Iconify width={16} icon="mingcute:add-line" />
+            <RemixIcon width={16} icon="mingcute:add-line" />
           </CounterButton>
         )}
       </NumberInputRoot>

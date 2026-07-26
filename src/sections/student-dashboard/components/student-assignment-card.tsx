@@ -13,7 +13,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { isSubmitted } from '../view/student-dashboard-shared';
 
@@ -65,7 +65,7 @@ export function StudentAssignmentCard({ assignment, generatedAt }: Props) {
           bgcolor: isQuiz ? 'secondary.lighter' : 'primary.lighter',
         }}
       >
-        <Iconify
+        <RemixIcon
           icon={isQuiz ? 'solar:bill-list-bold-duotone' : 'solar:notes-bold-duotone'}
           width={26}
         />
@@ -97,7 +97,7 @@ export function StudentAssignmentCard({ assignment, generatedAt }: Props) {
               fontWeight: overdue ? 700 : 500,
             }}
           >
-            <Iconify icon="solar:clock-circle-bold" width={16} />
+            <RemixIcon icon="solar:clock-circle-bold" width={16} />
             {overdue ? 'เลยกำหนดส่ง' : 'กำหนดส่ง'} {formatDeadline(assignment.due_at)}
           </Typography>
         )}
@@ -127,7 +127,7 @@ export function StudentAssignmentCard({ assignment, generatedAt }: Props) {
                   bgcolor: 'primary.lighter',
                 }}
               >
-                <Iconify
+                <RemixIcon
                   icon={
                     file.mime_type.startsWith('image/')
                       ? 'solar:gallery-wide-bold'
@@ -165,7 +165,7 @@ export function StudentAssignmentCard({ assignment, generatedAt }: Props) {
             size="small"
             variant={isSubmitted(assignment.status) ? 'outlined' : 'contained'}
             startIcon={
-              <Iconify
+              <RemixIcon
                 icon={
                   isSubmitted(assignment.status) ? 'solar:eye-bold' : 'solar:play-circle-bold'
                 }

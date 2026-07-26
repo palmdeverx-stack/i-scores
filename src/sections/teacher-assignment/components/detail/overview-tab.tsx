@@ -10,7 +10,7 @@ import Divider from '@mui/material/Divider';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listAssignments } from 'src/sections/assignment/assignment-actions';
 
@@ -166,7 +166,7 @@ export const OverviewTab = memo(function OverviewTab({
                     bgcolor: 'primary.lighter',
                   }}
                 >
-                  <Iconify icon="solar:clock-circle-bold" width={20} />
+                  <RemixIcon icon="solar:clock-circle-bold" width={20} />
                 </Box>
                 <Box>
                   <Typography variant="subtitle2">วัน{DAY_LABELS[slot.day_of_week]}</Typography>
@@ -215,7 +215,7 @@ function OverviewCard({ label, value, suffix, icon, color, bgcolor }: OverviewCa
             bgcolor,
           }}
         >
-          <Iconify icon={icon} width={20} />
+          <RemixIcon icon={icon} width={20} />
         </Box>
         <Box>
           <Typography variant="h4" sx={{ fontSize: { xs: '0.95rem', sm: '2rem' } }}>

@@ -28,7 +28,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import TableContainer from '@mui/material/TableContainer';
 
 import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { getStudentBreakdown } from '../teacher-assignment-actions';
 
@@ -139,7 +139,7 @@ export function StudentBreakdownDialog({ teacherAssignmentId, studentId, onClose
             onClick={onClose}
             sx={{ alignSelf: 'flex-start' }}
           >
-            <Iconify icon="mingcute:close-line" />
+            <RemixIcon icon="mingcute:close-line" />
           </IconButton>
         </Box>
       </DialogTitle>
@@ -208,7 +208,7 @@ export function StudentBreakdownDialog({ teacherAssignmentId, studentId, onClose
 
               {!data.rows.length && (
                 <Box sx={{ py: 5, textAlign: 'center' }}>
-                  <Iconify icon="solar:inbox-bold" width={42} sx={{ color: 'text.disabled' }} />
+                  <RemixIcon icon="solar:inbox-bold" width={42} sx={{ color: 'text.disabled' }} />
                   <Typography variant="subtitle2" sx={{ mt: 1 }}>
                     ยังไม่มีรายการคะแนนในวิชานี้
                   </Typography>
@@ -362,7 +362,7 @@ function SummaryCard({ label, value, icon, highlight, fullWidthMobile }: Summary
             varAlpha(theme.vars.palette.primary.mainChannel, highlight ? 0.14 : 0.07),
         }}
       >
-        <Iconify icon={icon} width={22} />
+        <RemixIcon icon={icon} width={22} />
       </Box>
       <Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>

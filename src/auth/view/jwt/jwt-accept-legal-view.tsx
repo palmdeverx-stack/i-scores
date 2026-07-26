@@ -16,8 +16,8 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { useRouter } from 'src/routes/hooks';
 
-import { Iconify } from 'src/components/iconify';
 import { Markdown } from 'src/components/markdown';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
@@ -114,7 +114,7 @@ export function JwtAcceptLegalView({ termsOfService, privacyPolicy }: Props) {
             label="ข้อกำหนดการใช้บริการ"
             icon={
               readTerms ? (
-                <Iconify icon="solar:check-circle-bold" width={16} sx={{ color: 'success.main' }} />
+                <RemixIcon icon="solar:check-circle-bold" width={16} sx={{ color: 'success.main' }} />
               ) : undefined
             }
             iconPosition="end"
@@ -124,7 +124,7 @@ export function JwtAcceptLegalView({ termsOfService, privacyPolicy }: Props) {
             label="นโยบายความเป็นส่วนตัว"
             icon={
               readPrivacy ? (
-                <Iconify icon="solar:check-circle-bold" width={16} sx={{ color: 'success.main' }} />
+                <RemixIcon icon="solar:check-circle-bold" width={16} sx={{ color: 'success.main' }} />
               ) : undefined
             }
             iconPosition="end"

@@ -18,7 +18,7 @@ import Typography from '@mui/material/Typography';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { listUsers } from 'src/sections/user/user-actions';
 import { listSchools } from 'src/sections/school/school-actions';
@@ -92,7 +92,7 @@ export function MasterDashboardView() {
             component={RouterLink}
             href={paths.master.schoolAdmin.new}
             variant="outlined"
-            startIcon={<Iconify icon="solar:user-plus-bold" />}
+            startIcon={<RemixIcon icon="solar:user-plus-bold" />}
           >
             เพิ่มผู้ดูแล
           </Button>
@@ -100,7 +100,7 @@ export function MasterDashboardView() {
             component={RouterLink}
             href={paths.master.school.new}
             variant="contained"
-            startIcon={<Iconify icon="mingcute:add-line" />}
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
           >
             เพิ่มโรงเรียน
           </Button>
@@ -162,7 +162,7 @@ export function MasterDashboardView() {
           <Box>
             <Chip
               size="small"
-              icon={<Iconify icon="solar:shield-check-bold" />}
+              icon={<RemixIcon icon="solar:shield-check-bold" />}
               label="ศูนย์ควบคุมระบบ"
               sx={(theme) => ({
                 mb: 2,
@@ -301,7 +301,7 @@ export function MasterDashboardView() {
           ))}
           {!schools.length && (
             <Box sx={{ px: 3, py: 7, textAlign: 'center' }}>
-              <Iconify icon="solar:inbox-in-bold" width={36} sx={{ color: 'text.disabled' }} />
+              <RemixIcon icon="solar:inbox-in-bold" width={36} sx={{ color: 'text.disabled' }} />
               <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
                 ยังไม่มีโรงเรียนในระบบ
               </Typography>
@@ -333,7 +333,7 @@ export function MasterDashboardView() {
                   bgcolor: 'primary.lighter',
                 }}
               >
-                <Iconify icon={item.icon} width={18} />
+                <RemixIcon icon={item.icon} width={18} />
               </Box>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="subtitle2">{item.label}</Typography>
@@ -403,7 +403,7 @@ function SummaryCard({ icon, label, value, helper, color, bgcolor, href }: Summa
           bgcolor,
         }}
       >
-        <Iconify icon={icon} width={26} />
+        <RemixIcon icon={icon} width={26} />
       </Box>
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="h4">{value.toLocaleString('th-TH')}</Typography>

@@ -5,7 +5,7 @@ import type { Theme, SxProps } from '@mui/material/styles';
 
 import { Marker } from 'react-map-gl/maplibre';
 
-import { Iconify } from '../iconify';
+import { RemixIcon } from '../remix-icon';
 
 // ----------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ export type MapMarkerProps = MarkerProps & {
 export function MapMarker({ sx, ...other }: MapMarkerProps) {
   return (
     <Marker {...other}>
-      <Iconify
+      <RemixIcon
         width={26}
         icon="custom:location-fill"
         sx={[{ color: 'error.main' }, ...(Array.isArray(sx) ? sx : [sx])]}

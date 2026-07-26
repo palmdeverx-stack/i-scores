@@ -25,7 +25,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 
 import { paths } from 'src/routes/paths';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -230,7 +230,7 @@ export function TeacherAssignmentListView() {
           <Button
             variant="contained"
             onClick={openCreateDialog}
-            startIcon={<Iconify icon="mingcute:add-line" />}
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
             sx={{
               flexShrink: 0,
               color: 'primary.darker',
@@ -266,7 +266,7 @@ export function TeacherAssignmentListView() {
                   bgcolor: item.bgcolor,
                 }}
               >
-                <Iconify icon={item.icon} width={25} />
+                <RemixIcon icon={item.icon} width={25} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="h4" sx={{ lineHeight: 1.1 }}>
@@ -319,7 +319,7 @@ export function TeacherAssignmentListView() {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Iconify icon="solar:users-group-rounded-bold" width={20} />
+                    <RemixIcon icon="solar:users-group-rounded-bold" width={20} />
                   </InputAdornment>
                 ),
               },
@@ -343,13 +343,13 @@ export function TeacherAssignmentListView() {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Iconify icon="eva:search-fill" width={21} />
+                    <RemixIcon icon="eva:search-fill" width={21} />
                   </InputAdornment>
                 ),
                 endAdornment: search ? (
                   <InputAdornment position="end">
                     <IconButton size="small" onClick={() => setSearch('')} aria-label="ล้างคำค้นหา">
-                      <Iconify icon="mingcute:close-line" width={19} />
+                      <RemixIcon icon="mingcute:close-line" width={19} />
                     </IconButton>
                   </InputAdornment>
                 ) : null,
@@ -452,7 +452,7 @@ export function TeacherAssignmentListView() {
               bgcolor: 'background.neutral',
             }}
           >
-            <Iconify
+            <RemixIcon
               icon={hasFilters ? 'eva:search-fill' : 'solar:notebook-bold-duotone'}
               width={36}
             />
@@ -477,7 +477,7 @@ export function TeacherAssignmentListView() {
                 variant="contained"
                 sx={{ mt: 2.5 }}
                 onClick={openCreateDialog}
-                startIcon={<Iconify icon="mingcute:add-line" />}
+                startIcon={<RemixIcon icon="mingcute:add-line" />}
               >
                 เพิ่มรายวิชาที่สอน
               </Button>

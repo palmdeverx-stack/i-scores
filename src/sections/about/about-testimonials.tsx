@@ -19,14 +19,14 @@ import { fDate } from 'src/utils/format-time';
 import { _testimonials } from 'src/_mock';
 import { CONFIG } from 'src/global-config';
 
-import { Iconify } from 'src/components/iconify';
+import { RemixIcon } from 'src/components/remix-icon';
 import { varFade, MotionViewport } from 'src/components/animate';
 
 // ----------------------------------------------------------------------
 
 export function AboutTestimonials({ sx, ...other }: BoxProps) {
   const renderLink = () => (
-    <Button color="primary" endIcon={<Iconify icon="eva:arrow-ios-forward-fill" />}>
+    <Button color="primary" endIcon={<RemixIcon icon="eva:arrow-ios-forward-fill" />}>
       Read more
     </Button>
   );
@@ -162,7 +162,7 @@ function TestimonialItem({ testimonial, sx, ...other }: TestimonialItemProps) {
       ]}
       {...other}
     >
-      <Iconify icon="mingcute:quote-left-fill" width={40} sx={{ opacity: 0.48 }} />
+      <RemixIcon icon="mingcute:quote-left-fill" width={40} sx={{ opacity: 0.48 }} />
 
       <Typography variant="body2">{testimonial.content}</Typography>
 

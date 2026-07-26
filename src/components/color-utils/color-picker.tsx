@@ -8,7 +8,7 @@ import { varAlpha, mergeClasses } from 'minimal-shared/utils';
 import ButtonBase from '@mui/material/ButtonBase';
 import { styled, alpha as hexAlpha } from '@mui/material/styles';
 
-import { Iconify } from '../iconify';
+import { RemixIcon } from '../remix-icon';
 import { colorPickerClasses } from './classes';
 
 // ----------------------------------------------------------------------
@@ -160,7 +160,7 @@ const ItemContainer = styled('span', {
   ],
 }));
 
-const ItemIcon = styled(Iconify, {
+const ItemIcon = styled(RemixIcon, {
   shouldForwardProp: (prop: string) => !['color', 'hasSelected', 'sx'].includes(prop),
 })<{ color: string; hasSelected: boolean }>(({ color, theme }) => ({
   width: 0,
