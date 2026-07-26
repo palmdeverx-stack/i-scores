@@ -4,7 +4,12 @@ import { DashboardLayout } from 'src/layouts/dashboard';
 import { navData as masterNavData } from 'src/layouts/nav-config-master';
 
 import { useAuthContext } from 'src/auth/hooks';
-import { AuthGuard, RoleRedirectGuard, MustChangePasswordGuard } from 'src/auth/guard';
+import {
+  AuthGuard,
+  AcceptLegalGuard,
+  RoleRedirectGuard,
+  MustChangePasswordGuard,
+} from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
 
@@ -19,7 +24,11 @@ export default function Layout({ children }: Props) {
     <AuthGuard>
       <RoleRedirectGuard currentRole={user?.role} allowedRoles={['master_admin']}>
         <MustChangePasswordGuard mustChangePassword={user?.must_change_password}>
-          <DashboardLayout slotProps={{ nav: { data: masterNavData } }}>{children}</DashboardLayout>
+          <AcceptLegalGuard acceptedLegalAt={user?.accepted_legal_at}>
+            <DashboardLayout slotProps={{ nav: { data: masterNavData } }}>
+              {children}
+            </DashboardLayout>
+          </AcceptLegalGuard>
         </MustChangePasswordGuard>
       </RoleRedirectGuard>
     </AuthGuard>

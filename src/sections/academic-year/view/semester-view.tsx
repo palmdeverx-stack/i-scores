@@ -35,6 +35,8 @@ import { RouterLink } from 'src/routes/components';
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import {
   listSemesters,
   createSemester,
@@ -68,6 +70,8 @@ type Props = {
 };
 
 export function SemesterView({ academicYearId }: Props) {
+  const { user } = useAuthContext();
+  const isTeacher = user?.role === 'teacher';
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSemester, setEditingSemester] = useState<Semester | null>(null);
@@ -167,7 +171,7 @@ export function SemesterView({ academicYearId }: Props) {
         <Box>
           <Button
             component={RouterLink}
-            href={paths.admin.academicYear.root}
+            href={isTeacher ? paths.teacher.departmentAcademicYear.root : paths.admin.academicYear.root}
             color="inherit"
             size="small"
             startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}

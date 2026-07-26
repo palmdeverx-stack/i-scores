@@ -4,6 +4,8 @@ import { CONFIG } from 'src/global-config';
 
 import { QuizCreateView } from 'src/sections/assignment/view/quiz-create-view';
 
+import { DepartmentPermissionGuard } from 'src/auth/guard';
+
 // ----------------------------------------------------------------------
 
 export const metadata: Metadata = { title: `สร้างแบบทดสอบ - ${CONFIG.appName}` };
@@ -17,5 +19,9 @@ export default async function Page({ params, searchParams }: Props) {
   const { id } = await params;
   const { returnTab } = await searchParams;
 
-  return <QuizCreateView teacherAssignmentId={id} returnTab={returnTab} />;
+  return (
+    <DepartmentPermissionGuard permission="schedule.manage">
+      <QuizCreateView teacherAssignmentId={id} returnTab={returnTab} />
+    </DepartmentPermissionGuard>
+  );
 }

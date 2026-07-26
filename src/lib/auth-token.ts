@@ -57,6 +57,7 @@ type AppUserRow = {
   created_at: string;
   must_change_password?: boolean;
   is_active?: boolean;
+  accepted_legal_at?: string | null;
 };
 
 export function toPublicUser(user: AppUserRow) {
@@ -73,5 +74,6 @@ export function toPublicUser(user: AppUserRow) {
     created_at: user.created_at,
     must_change_password: user.must_change_password ?? false,
     is_active: user.is_active ?? true,
+    accepted_legal_at: user.accepted_legal_at ?? null,
   };
 }

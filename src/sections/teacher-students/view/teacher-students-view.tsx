@@ -56,6 +56,14 @@ const StudentQrDialog = dynamic(
   { ssr: false }
 );
 
+const GuardianLineMessageDialog = dynamic(
+  () =>
+    import('../components/guardian-line-message-dialog').then(
+      (module) => module.GuardianLineMessageDialog
+    ),
+  { ssr: false }
+);
+
 const STATUS_LABEL = {
   studying: 'กำลังศึกษา',
   graduated: 'สำเร็จการศึกษา',
@@ -90,8 +98,12 @@ export function TeacherStudentsView() {
   const [studentNumber, setStudentNumber] = useState('');
   const [deletingRow, setDeletingRow] = useState<HomeroomEnrollment | null>(null);
   const [qrRow, setQrRow] = useState<HomeroomEnrollment | null>(null);
+  const [lineMessageRow, setLineMessageRow] = useState<HomeroomEnrollment | null>(null);
   const canUseQr =
     subscriptionQuery.data?.subscription.enabled_features.includes('teacher.qr_attendance') ??
+    false;
+  const canSendLine =
+    subscriptionQuery.data?.subscription.enabled_features.includes('admin.line_notifications') ??
     false;
 
   const {
@@ -538,6 +550,17 @@ export function TeacherStudentsView() {
                             <Iconify icon="solar:user-id-bold" width={18} />
                           </IconButton>
                         )}
+                        {canSendLine && (
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={() => setLineMessageRow(row)}
+                            aria-label={`ส่งข้อความ LINE ถึงผู้ปกครองของ ${name}`}
+                            sx={{ bgcolor: 'success.lighter' }}
+                          >
+                            <Iconify icon="solar:chat-round-dots-bold" width={18} />
+                          </IconButton>
+                        )}
                         <IconButton
                           size="small"
                           color="inherit"
@@ -638,6 +661,16 @@ export function TeacherStudentsView() {
                                 <Iconify icon="solar:user-id-bold" width={18} />
                               </IconButton>
                             )}
+                            {canSendLine && (
+                              <IconButton
+                                size="small"
+                                color="success"
+                                onClick={() => setLineMessageRow(row)}
+                                aria-label={`ส่งข้อความ LINE ถึงผู้ปกครองของ ${name}`}
+                              >
+                                <Iconify icon="solar:chat-round-dots-bold" width={18} />
+                              </IconButton>
+                            )}
                             <IconButton
                               size="small"
                               onClick={() => openEdit(row)}
@@ -683,6 +716,17 @@ export function TeacherStudentsView() {
           classroomName={selectedClassroom?.name}
           academicYear={selectedClassroom?.academic_years?.year}
           onClose={() => setQrRow(null)}
+        />
+      )}
+
+      {lineMessageRow && (
+        <GuardianLineMessageDialog
+          studentId={lineMessageRow.student.id}
+          studentName={
+            `${lineMessageRow.student.first_name ?? ''} ${lineMessageRow.student.last_name ?? ''}`.trim() ||
+            lineMessageRow.student.username
+          }
+          onClose={() => setLineMessageRow(null)}
         />
       )}
 

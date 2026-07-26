@@ -57,6 +57,7 @@ export function LanguagePopover({
             onClick={() => handleChangeLang(option.value as LangCode)}
           >
             <FlagIcon code={option.countryCode} />
+
             {option.label}
           </MenuItem>
         ))}

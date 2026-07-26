@@ -25,6 +25,11 @@ export const paths = {
   payment: '/payment',
   about: '/about-us',
   contact: '/contact-us',
+  legal: {
+    privacyPolicy: '/privacy-policy',
+    termsOfService: '/terms-of-service',
+    serviceAgreement: '/service-agreement',
+  },
   faqs: '/faqs',
   page403: '/error/403',
   page404: '/error/404',
@@ -60,6 +65,7 @@ export const paths = {
       signIn: `${ROOTS.AUTH}/jwt/sign-in`,
       signUp: `${ROOTS.AUTH}/jwt/sign-up`,
       changePassword: `${ROOTS.AUTH}/jwt/change-password`,
+      acceptLegal: `${ROOTS.AUTH}/jwt/accept-legal`,
     },
     firebase: {
       signIn: `${ROOTS.AUTH}/firebase/sign-in`,
@@ -130,6 +136,22 @@ export const paths = {
     department: `${ROOTS.TEACHER}/department`,
     departmentMember: (id: string) => `${ROOTS.TEACHER}/department/member/${id}`,
     scheduleBuilder: `${ROOTS.TEACHER}/schedule-builder`,
+    departmentAcademicYear: {
+      root: `${ROOTS.TEACHER}/department/academic-year`,
+      semester: (id: string) => `${ROOTS.TEACHER}/department/academic-year/${id}/semester`,
+    },
+    departmentClassroom: `${ROOTS.TEACHER}/department/classroom`,
+    departmentSubject: `${ROOTS.TEACHER}/department/subject`,
+    departmentEnrollment: {
+      root: `${ROOTS.TEACHER}/department/enrollment`,
+      classroom: (id: string) => `${ROOTS.TEACHER}/department/enrollment/classroom/${id}`,
+    },
+    departmentAnnouncements: `${ROOTS.TEACHER}/department/announcements`,
+    departmentStudent: `${ROOTS.TEACHER}/department/student`,
+    departmentStaff: {
+      root: `${ROOTS.TEACHER}/department/user`,
+      teaching: (id: string) => `${ROOTS.TEACHER}/department/user/${id}/teaching`,
+    },
   },
   // MASTER ADMIN
   master: {

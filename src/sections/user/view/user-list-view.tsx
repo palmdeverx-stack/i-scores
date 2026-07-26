@@ -34,6 +34,8 @@ import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import { CreateUserDialog } from '../components/create-user-dialog';
 import { listUsers, updateUserActive, deleteManagedUser } from '../user-actions';
 
@@ -58,6 +60,8 @@ const ROLE_LABEL = {
 } as const;
 
 export function UserListView() {
+  const { user: currentUser } = useAuthContext();
+  const isTeacher = currentUser?.role === 'teacher';
   const table = useTable({ defaultRowsPerPage: 10 });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -334,7 +338,11 @@ export function UserListView() {
                           <IconButton
                             size="small"
                             component={RouterLink}
-                            href={paths.admin.user.teaching(user.id)}
+                            href={
+                              isTeacher
+                                ? paths.teacher.departmentStaff.teaching(user.id)
+                                : paths.admin.user.teaching(user.id)
+                            }
                             aria-label={`ดูข้อมูลการสอนของ ${user.username}`}
                           >
                             <Iconify icon="solar:notebook-bold-duotone" width={18} />

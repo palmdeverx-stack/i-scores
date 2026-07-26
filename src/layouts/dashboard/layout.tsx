@@ -188,9 +188,6 @@ export function DashboardLayout({
           {/** @slot Searchbar */}
           {/* <Searchbar data={navData} /> */}
 
-          {/** @slot Language popover */}
-          <LanguagePopover data={languageOptions} />
-
           {/** @slot Notifications popover */}
           {/* <NotificationsDrawer data={_notifications} /> */}
 
@@ -204,6 +201,7 @@ export function DashboardLayout({
           {mobileBottom && (
             <AccountPopover sx={{ display: { xs: 'inline-flex', [mobileNavQuery]: 'none' } }} />
           )}
+
           <AccountDrawer
             data={_account}
             sx={
@@ -212,6 +210,9 @@ export function DashboardLayout({
                 : undefined
             }
           />
+
+          {/** @slot Language popover */}
+          <LanguagePopover data={languageOptions} />
         </Box>
       ),
     };

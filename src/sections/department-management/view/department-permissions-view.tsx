@@ -1,5 +1,8 @@
 'use client';
 
+import type { Department } from '../department-management-actions';
+
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
@@ -62,6 +65,12 @@ const PERMISSION_MENU_ITEMS: Record<string, string[]> = Object.fromEntries(
   ])
 );
 
+function samePermissions(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  const set = new Set(a);
+  return b.every((key) => set.has(key));
+}
+
 export function DepartmentPermissionsView() {
   const queryClient = useQueryClient();
 
@@ -72,22 +81,41 @@ export function DepartmentPermissionsView() {
     refetch,
   } = useQuery({ queryKey: ['departments'], queryFn: listDepartments });
 
-  const toggleMutation = useMutation({
-    mutationFn: ({
-      departmentId,
-      name,
-      description,
-      permissions,
-    }: {
-      departmentId: string;
-      name: string;
-      description: string | null;
-      permissions: string[];
-    }) => updateDepartment(departmentId, { name, description: description ?? '', permissions }),
+  // Permission edits made in the table but not yet saved, keyed by department
+  // id — only departments the admin actually touched get an entry here.
+  const [draft, setDraft] = useState<Record<string, string[]>>({});
+
+  const getPermissions = (department: Department) => draft[department.id] ?? department.permissions;
+
+  const togglePermission = (department: Department, key: string, checked: boolean) => {
+    const current = getPermissions(department);
+    const next = checked ? [...current, key] : current.filter((permission) => permission !== key);
+    setDraft((prev) => ({ ...prev, [department.id]: next }));
+  };
+
+  const dirtyDepartments = departments.filter(
+    (department) => draft[department.id] && !samePermissions(draft[department.id], department.permissions)
+  );
+  const hasChanges = dirtyDepartments.length > 0;
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      Promise.all(
+        dirtyDepartments.map((department) =>
+          updateDepartment(department.id, {
+            name: department.name,
+            description: department.description ?? '',
+            permissions: draft[department.id],
+          })
+        )
+      ),
     onSuccess: async () => {
+      setDraft({});
       await queryClient.invalidateQueries({ queryKey: ['departments'] });
     },
   });
+
+  const discardChanges = () => setDraft({});
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
@@ -123,6 +151,42 @@ export function DepartmentPermissionsView() {
           sx={{ mb: 3 }}
         >
           ไม่สามารถโหลดรายการฝ่ายได้
+        </Alert>
+      )}
+
+      {saveMutation.isError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          บันทึกสิทธิ์ไม่สำเร็จ กรุณาลองอีกครั้ง
+        </Alert>
+      )}
+
+      {hasChanges && (
+        <Alert
+          severity="warning"
+          variant="outlined"
+          sx={{ mb: 3 }}
+          action={
+            <Box sx={{ gap: 1, display: 'flex' }}>
+              <Button
+                color="inherit"
+                size="small"
+                onClick={discardChanges}
+                disabled={saveMutation.isPending}
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => saveMutation.mutate()}
+                loading={saveMutation.isPending}
+              >
+                บันทึกการเปลี่ยนแปลง
+              </Button>
+            </Box>
+          }
+        >
+          มีการแก้ไขสิทธิ์ {dirtyDepartments.length} ฝ่ายที่ยังไม่ได้บันทึก
         </Alert>
       )}
 
@@ -211,37 +275,39 @@ export function DepartmentPermissionsView() {
                   </TableCell>
                 </TableRow>
               )}
-              {departments.map((department) => (
-                <TableRow key={department.id} hover>
-                  <TableCell>
-                    <Typography variant="subtitle2">{department.name}</Typography>
-                  </TableCell>
-                  {DEPARTMENT_PERMISSIONS.map((item) => {
-                    const granted = department.permissions.includes(item.key);
-                    return (
-                      <TableCell key={item.key}>
-                        <Switch
-                          checked={granted}
-                          disabled={toggleMutation.isPending}
-                          onChange={(event) =>
-                            toggleMutation.mutate({
-                              departmentId: department.id,
-                              name: department.name,
-                              description: department.description,
-                              permissions: event.target.checked
-                                ? [...department.permissions, item.key]
-                                : department.permissions.filter((key) => key !== item.key),
-                            })
-                          }
-                          inputProps={{
-                            'aria-label': `สิทธิ์ ${item.label} ของ ${department.name}`,
-                          }}
-                        />
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
+              {departments.map((department) => {
+                const isDirty = dirtyDepartments.some((d) => d.id === department.id);
+                const permissions = getPermissions(department);
+                return (
+                  <TableRow key={department.id} hover selected={isDirty}>
+                    <TableCell>
+                      <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="subtitle2">{department.name}</Typography>
+                        {isDirty && (
+                          <Chip size="small" color="warning" variant="soft" label="ยังไม่บันทึก" />
+                        )}
+                      </Box>
+                    </TableCell>
+                    {DEPARTMENT_PERMISSIONS.map((item) => {
+                      const granted = permissions.includes(item.key);
+                      return (
+                        <TableCell key={item.key}>
+                          <Switch
+                            checked={granted}
+                            disabled={saveMutation.isPending}
+                            onChange={(event) =>
+                              togglePermission(department, item.key, event.target.checked)
+                            }
+                            inputProps={{
+                              'aria-label': `สิทธิ์ ${item.label} ของ ${department.name}`,
+                            }}
+                          />
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>

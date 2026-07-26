@@ -13,7 +13,12 @@ import {
 } from 'src/sections/school-subscription/use-school-subscription';
 
 import { useAuthContext } from 'src/auth/hooks';
-import { AuthGuard, RoleRedirectGuard, MustChangePasswordGuard } from 'src/auth/guard';
+import {
+  AuthGuard,
+  AcceptLegalGuard,
+  RoleRedirectGuard,
+  MustChangePasswordGuard,
+} from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
 
@@ -45,29 +50,31 @@ export default function Layout({ children }: Props) {
     <AuthGuard>
       <RoleRedirectGuard currentRole={user?.role} allowedRoles={['teacher']}>
         <MustChangePasswordGuard mustChangePassword={user?.must_change_password}>
-          <DashboardLayout
-            tabletHorizontalNav
-            tabletQuery="sm"
-            cssVars={{
-              '--layout-nav-bg': '#FFFFFF',
-              '--layout-nav-horizontal-bg': '#FFFFFF',
-            }}
-            slotProps={{
-              nav: {
-                data: navData,
-                headerIdentity: <SchoolHeaderIdentity />,
-                mobileBottom: true,
-              },
-              header: {
-                sx: {
-                  bgcolor: '#FFFFFF',
-                  color: 'grey.900',
+          <AcceptLegalGuard acceptedLegalAt={user?.accepted_legal_at}>
+            <DashboardLayout
+              tabletHorizontalNav
+              tabletQuery="sm"
+              cssVars={{
+                '--layout-nav-bg': '#FFFFFF',
+                '--layout-nav-horizontal-bg': '#FFFFFF',
+              }}
+              slotProps={{
+                nav: {
+                  data: navData,
+                  headerIdentity: <SchoolHeaderIdentity />,
+                  mobileBottom: true,
                 },
-              },
-            }}
-          >
-            <SchoolSubscriptionGuard>{children}</SchoolSubscriptionGuard>
-          </DashboardLayout>
+                header: {
+                  sx: {
+                    bgcolor: '#FFFFFF',
+                    color: 'grey.900',
+                  },
+                },
+              }}
+            >
+              <SchoolSubscriptionGuard>{children}</SchoolSubscriptionGuard>
+            </DashboardLayout>
+          </AcceptLegalGuard>
         </MustChangePasswordGuard>
       </RoleRedirectGuard>
     </AuthGuard>

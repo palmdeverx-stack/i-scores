@@ -16,7 +16,12 @@ import {
 } from 'src/sections/school-subscription/use-school-subscription';
 
 import { useAuthContext } from 'src/auth/hooks';
-import { AuthGuard, RoleRedirectGuard, MustChangePasswordGuard } from 'src/auth/guard';
+import {
+  AuthGuard,
+  AcceptLegalGuard,
+  RoleRedirectGuard,
+  MustChangePasswordGuard,
+} from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
 
@@ -65,9 +70,11 @@ export default function Layout({ children }: Props) {
     <AuthGuard>
       <RoleRedirectGuard currentRole={user?.role} allowedRoles={['school_admin', 'teacher']}>
         <MustChangePasswordGuard mustChangePassword={user?.must_change_password}>
-          <DashboardLayout slotProps={{ nav: { data: navData } }}>
-            <SchoolSubscriptionGuard>{children}</SchoolSubscriptionGuard>
-          </DashboardLayout>
+          <AcceptLegalGuard acceptedLegalAt={user?.accepted_legal_at}>
+            <DashboardLayout slotProps={{ nav: { data: navData } }}>
+              <SchoolSubscriptionGuard>{children}</SchoolSubscriptionGuard>
+            </DashboardLayout>
+          </AcceptLegalGuard>
         </MustChangePasswordGuard>
       </RoleRedirectGuard>
     </AuthGuard>

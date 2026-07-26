@@ -4,6 +4,8 @@ import { CONFIG } from 'src/global-config';
 
 import { AssignmentCreateView } from 'src/sections/assignment/view/assignment-create-view';
 
+import { DepartmentPermissionGuard } from 'src/auth/guard';
+
 // ----------------------------------------------------------------------
 
 export const metadata: Metadata = { title: `สร้างงาน - ${CONFIG.appName}` };
@@ -17,5 +19,9 @@ export default async function Page({ params, searchParams }: Props) {
   const { id } = await params;
   const { returnTab } = await searchParams;
 
-  return <AssignmentCreateView teacherAssignmentId={id} returnTab={returnTab} />;
+  return (
+    <DepartmentPermissionGuard permission="schedule.manage">
+      <AssignmentCreateView teacherAssignmentId={id} returnTab={returnTab} />
+    </DepartmentPermissionGuard>
+  );
 }

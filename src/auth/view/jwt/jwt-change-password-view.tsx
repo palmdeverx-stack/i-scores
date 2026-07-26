@@ -19,8 +19,8 @@ import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
-import { changePassword } from '../../context/jwt';
 import { FormHead } from '../../components/form-head';
+import { signOut, changePassword } from '../../context/jwt';
 import { getHomePathForRole } from '../../utils/role-home-path';
 
 // ----------------------------------------------------------------------
@@ -45,6 +45,13 @@ export function JwtChangePasswordView() {
   const showPassword = useBoolean();
 
   const { user, checkUserSession } = useAuthContext();
+
+  const signOutMutation = useMutation({
+    mutationFn: async () => {
+      await signOut();
+      await checkUserSession?.();
+    },
+  });
 
   const methods = useForm({
     resolver: zodResolver(ChangePasswordSchema),
@@ -123,8 +130,16 @@ export function JwtChangePasswordView() {
             บันทึกรหัสผ่านใหม่
           </Button>
 
-          <Button fullWidth color="inherit" size="large" variant="text" href="/">
-            กลับหน้าหลัก
+          <Button
+            fullWidth
+            type="button"
+            color="inherit"
+            size="large"
+            variant="text"
+            loading={signOutMutation.isPending}
+            onClick={() => signOutMutation.mutate()}
+          >
+            ไม่ใช่บัญชีของฉัน ออกจากระบบ
           </Button>
         </Box>
       </Form>

@@ -35,6 +35,8 @@ import { RouterLink } from 'src/routes/components';
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import {
   listAcademicYears,
   createAcademicYear,
@@ -68,6 +70,8 @@ const CreateSchema = z
   );
 
 export function AcademicYearListView() {
+  const { user } = useAuthContext();
+  const isTeacher = user?.role === 'teacher';
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingYear, setEditingYear] = useState<AcademicYear | null>(null);
   const [deletingYear, setDeletingYear] = useState<AcademicYear | null>(null);
@@ -290,7 +294,11 @@ export function AcademicYearListView() {
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <Button
                         component={RouterLink}
-                        href={`${paths.admin.academicYear.root}/${year.id}/semester`}
+                        href={
+                          isTeacher
+                            ? paths.teacher.departmentAcademicYear.semester(year.id)
+                            : `${paths.admin.academicYear.root}/${year.id}/semester`
+                        }
                         size="small"
                       >
                         ภาคเรียน

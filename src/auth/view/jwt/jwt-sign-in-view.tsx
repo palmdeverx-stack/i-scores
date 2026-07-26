@@ -11,12 +11,13 @@ import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { useRouter } from 'src/routes/hooks';
 
-import { Logo } from 'src/components/logo';
+import { CONFIG } from 'src/global-config';
+
+import { Image } from 'src/components/image';
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
@@ -169,20 +170,7 @@ export function JwtSignInView() {
       })}
     >
       <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', mb: 2 }}>
-        <Logo />
-
-        <Typography
-          variant="h6"
-          sx={{
-            color: 'primary.main',
-            textTransform: 'uppercase',
-            fontWeight: 800,
-            letterSpacing: 1.2,
-            ml: 1,
-          }}
-        >
-          e-Kru
-        </Typography>
+        <Image src={`${CONFIG.assetsDir}/logo/logo-tran-ver.svg`} />
       </Box>
 
       <FormHead

@@ -155,3 +155,22 @@ export async function unlinkGuardianLine(guardianId: string) {
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถยกเลิกการเชื่อม LINE ได้');
 }
+
+export async function sendGuardianLineMessage(guardianId: string, text: string) {
+  const response = await fetch(`/api/guardians/${guardianId}/line-message`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify({ text }),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถส่งข้อความได้');
+}
+
+export async function listHomeroomStudentGuardians(studentId: string) {
+  const response = await fetch(`/api/teacher/students/${studentId}/guardians`, {
+    headers: authHeader(),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดข้อมูลผู้ปกครองได้');
+  return json.guardians as StudentGuardian[];
+}

@@ -27,6 +27,7 @@ export type AppUser = {
   school_id: string | null;
   created_at: string;
   must_change_password: boolean;
+  accepted_legal_at: string | null;
 };
 
 async function postJson(url: string, body: unknown) {
@@ -95,6 +96,25 @@ export const changePassword = async (newPassword: string): Promise<AppUser> => {
 
   if (!response.ok) {
     throw new Error(json.message ?? 'Failed to change password');
+  }
+
+  return json.user;
+};
+
+/** **************************************
+ * Accept terms of service / privacy policy (forced on first use for every role)
+ *************************************** */
+export const acceptLegal = async (): Promise<AppUser> => {
+  const token = getStoredToken();
+  const response = await fetch('/api/auth/accept-legal', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json.message ?? 'Failed to record acceptance');
   }
 
   return json.user;

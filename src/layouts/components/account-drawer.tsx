@@ -29,6 +29,8 @@ import {
   RiHome5Line,
   RiUser3Line,
   RiSchoolLine,
+  RiBookOpenLine,
+  RiFileList3Line,
   RiArrowRightSLine,
   RiShieldCheckLine,
   RiShieldKeyholeLine,
@@ -123,6 +125,21 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
             icon: <RiGuideLine />,
           },
           {
+            label: 'นโยบายความเป็นส่วนตัว',
+            href: paths.legal.privacyPolicy,
+            icon: <RiShieldCheckLine />,
+          },
+          {
+            label: 'ข้อกำหนดการใช้บริการ',
+            href: paths.legal.termsOfService,
+            icon: <RiFileList3Line />,
+          },
+          {
+            label: 'ข้อตกลงการให้บริการ',
+            href: paths.legal.serviceAgreement,
+            icon: <RiBookOpenLine />,
+          },
+          {
             label: 'เปลี่ยนรหัสผ่าน',
             href: paths.auth.jwt.changePassword,
             icon: <RiShieldKeyholeLine />,
@@ -144,6 +161,21 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
       label: 'วิธีใช้งาน',
       href: paths.teacher.guide,
       icon: <RiGuideLine />,
+    },
+    {
+      label: 'นโยบายความเป็นส่วนตัว',
+      href: paths.legal.privacyPolicy,
+      icon: <RiShieldCheckLine />,
+    },
+    {
+      label: 'ข้อกำหนดการใช้บริการ',
+      href: paths.legal.termsOfService,
+      icon: <RiFileList3Line />,
+    },
+    {
+      label: 'ข้อตกลงการให้บริการ',
+      href: paths.legal.serviceAgreement,
+      icon: <RiBookOpenLine />,
     },
     {
       label: 'เปลี่ยนรหัสผ่าน',
@@ -308,7 +340,16 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
                   (!isRootPath && option.href !== '#' && pathname.startsWith(`${option.href}/`));
 
                 return (
-                  <MenuItem key={`${option.label}-${option.href}`} disableGutters>
+                  <MenuItem
+                    key={`${option.label}-${option.href}`}
+                    disableGutters
+                    sx={{
+                      '&:hover': {
+                        color: 'text.primary',
+                        bgcolor: 'transparent',
+                      },
+                    }}
+                  >
                     <Link
                       component={RouterLink}
                       href={option.href}
@@ -326,13 +367,11 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
                         typography: 'subtitle2',
                         alignItems: 'center',
                         color: selected ? 'primary.main' : 'text.secondary',
-                        bgcolor: selected
-                          ? (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.1)
-                          : 'transparent',
+                        bgcolor: selected ? 'transparent' : 'transparent',
                         '& svg': { width: 23, height: 23, flexShrink: 0 },
                         '&:hover': {
                           color: 'text.primary',
-                          bgcolor: 'none',
+                          bgcolor: 'transparent',
                         },
                       }}
                     >
@@ -356,9 +395,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
         <Box
           sx={{
             p: 2.5,
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            bgcolor: 'transparent',
           }}
         >
           <SignOutButton onClose={onClose} />

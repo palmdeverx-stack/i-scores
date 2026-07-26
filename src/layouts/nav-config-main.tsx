@@ -6,7 +6,7 @@ import { RiHome5Line } from 'src/components/remix-icon';
 
 export const navData: NavMainProps['data'] = [
   {
-    title: 'อรรคฮาตสี',
+    title: '',
     path: '/',
     icon: <RiHome5Line size={22} />,
   },

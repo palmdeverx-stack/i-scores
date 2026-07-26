@@ -24,7 +24,7 @@ export function FormHead({ sx, icon, title, description, ...other }: FormHeadPro
         sx={[
           () => ({
             mb: 5,
-            gap: 1.5,
+            gap: 1,
             display: 'flex',
             textAlign: 'center',
             whiteSpace: 'pre-line',

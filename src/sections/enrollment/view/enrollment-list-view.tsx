@@ -36,6 +36,8 @@ import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table
 import { listClassrooms } from 'src/sections/classroom/classroom-actions';
 import { listUsers, updateStudentStatus } from 'src/sections/user/user-actions';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import { BulkPromoteDialog } from '../components/bulk-promote-dialog';
 import { EnrollmentFormDialog } from '../components/enrollment-form-dialog';
 import { StudentProgressDialog } from '../components/student-progress-dialog';
@@ -71,6 +73,8 @@ type Props = {
 };
 
 export function EnrollmentListView({ initialClassroomId, classroomMode = false }: Props = {}) {
+  const { user } = useAuthContext();
+  const isTeacher = user?.role === 'teacher';
   const router = useRouter();
   const table = useTable({ defaultRowsPerPage: 10 });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -243,7 +247,11 @@ export function EnrollmentListView({ initialClassroomId, classroomMode = false }
             <Button
               color="inherit"
               size="small"
-              onClick={() => router.push(paths.admin.enrollment.root)}
+              onClick={() =>
+                router.push(
+                  isTeacher ? paths.teacher.departmentEnrollment.root : paths.admin.enrollment.root
+                )
+              }
               startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
               sx={{ mb: 1.25, color: 'text.secondary' }}
             >
@@ -412,7 +420,13 @@ export function EnrollmentListView({ initialClassroomId, classroomMode = false }
                       : 'ยังไม่ระบุปีการศึกษา'
                   }
                   studentCount={studentCount}
-                  onClick={() => router.push(paths.admin.enrollment.classroom(classroom.id))}
+                  onClick={() =>
+                    router.push(
+                      isTeacher
+                        ? paths.teacher.departmentEnrollment.classroom(classroom.id)
+                        : paths.admin.enrollment.classroom(classroom.id)
+                    )
+                  }
                 />
               );
             })}

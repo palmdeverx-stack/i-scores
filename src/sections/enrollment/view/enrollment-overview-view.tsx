@@ -23,12 +23,16 @@ import { Iconify } from 'src/components/iconify';
 
 import { listClassrooms } from 'src/sections/classroom/classroom-actions';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import { listEnrollments } from '../enrollment-actions';
 import { BulkPromoteDialog } from '../components/bulk-promote-dialog';
 
 // ----------------------------------------------------------------------
 
 export function EnrollmentOverviewView() {
+  const { user } = useAuthContext();
+  const isTeacher = user?.role === 'teacher';
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
@@ -258,7 +262,13 @@ export function EnrollmentOverviewView() {
                   gradeLevel={classroom.grade_level}
                   teachers={classroom.homeroom_teachers}
                   studentCount={classroomCounts.get(classroom.id) ?? 0}
-                  onClick={() => router.push(paths.admin.enrollment.classroom(classroom.id))}
+                  onClick={() =>
+                    router.push(
+                      isTeacher
+                        ? paths.teacher.departmentEnrollment.classroom(classroom.id)
+                        : paths.admin.enrollment.classroom(classroom.id)
+                    )
+                  }
                 />
               ))}
             </Box>
