@@ -19,20 +19,9 @@ import { MotionLazy } from 'src/components/animate/motion-lazy';
 import { detectSettings } from 'src/components/settings/server';
 import { defaultSettings, SettingsProvider, LazySettingsDrawer } from 'src/components/settings';
 
-import { AuthProvider as JwtAuthProvider } from 'src/auth/context/jwt';
-import { AuthProvider as Auth0AuthProvider } from 'src/auth/context/auth0';
-import { AuthProvider as AmplifyAuthProvider } from 'src/auth/context/amplify';
-import { AuthProvider as SupabaseAuthProvider } from 'src/auth/context/supabase';
-import { AuthProvider as FirebaseAuthProvider } from 'src/auth/context/firebase';
+import { AuthProvider } from 'src/auth/context/jwt';
 
 // ----------------------------------------------------------------------
-
-const AuthProvider =
-  (CONFIG.auth.method === 'amplify' && AmplifyAuthProvider) ||
-  (CONFIG.auth.method === 'firebase' && FirebaseAuthProvider) ||
-  (CONFIG.auth.method === 'supabase' && SupabaseAuthProvider) ||
-  (CONFIG.auth.method === 'auth0' && Auth0AuthProvider) ||
-  JwtAuthProvider;
 
 const OG_IMAGE_URL =
   'https://res.cloudinary.com/dkdbilwtj/image/upload/v1784725452/og-images_mnmhy7.svg';

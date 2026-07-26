@@ -3,10 +3,8 @@ import type { NavMainProps } from '../types';
 import { useEffect } from 'react';
 
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Drawer from '@mui/material/Drawer';
 
-import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
 
 import { Logo } from 'src/components/logo';
@@ -94,16 +92,6 @@ export function NavMobile({ data, open, onClose, slots, sx }: NavMobileProps) {
           }}
         >
           <SignInButton fullWidth />
-
-          <Button
-            fullWidth
-            variant="contained"
-            rel="noopener noreferrer"
-            target="_blank"
-            href={paths.minimalStore}
-          >
-            Purchase
-          </Button>
         </Box>
       )}
     </Drawer>

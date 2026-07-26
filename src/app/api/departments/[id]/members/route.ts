@@ -148,6 +148,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!caller?.schoolId) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
   const { id } = await params;
+  const { data: department } = await supabaseAdmin
+    .from('departments')
+    .select('id')
+    .eq('id', id)
+    .eq('school_id', caller.schoolId)
+    .maybeSingle();
+  if (!department) return NextResponse.json({ message: 'ไม่พบฝ่ายนี้' }, { status: 404 });
+
   if (!(await canManageDepartment(caller, id))) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
@@ -242,6 +250,14 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   if (!caller?.schoolId) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
   const { id } = await params;
+  const { data: department } = await supabaseAdmin
+    .from('departments')
+    .select('id')
+    .eq('id', id)
+    .eq('school_id', caller.schoolId)
+    .maybeSingle();
+  if (!department) return NextResponse.json({ message: 'ไม่พบฝ่ายนี้' }, { status: 404 });
+
   if (!(await canManageDepartment(caller, id))) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
