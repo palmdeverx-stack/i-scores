@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type StudentQrData = {
@@ -16,13 +14,13 @@ export type StudentQrData = {
   };
 };
 
-export async function issueStudentQr(studentId: string, regenerate = false): Promise<StudentQrData> {
+export async function issueStudentQr(
+  studentId: string,
+  regenerate = false
+): Promise<StudentQrData> {
   const response = await fetch(`/api/teacher/students/${studentId}/qr`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${getStoredToken()}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ regenerate }),
   });
   const json = await response.json();

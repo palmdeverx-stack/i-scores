@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type StudentGuardian = {
@@ -31,14 +29,13 @@ export type GuardianInput = {
   isPrimary: boolean;
 };
 
-const authHeader = () => ({ Authorization: `Bearer ${getStoredToken()}` });
 const baseUrl = (assignmentId: string | null, studentId: string) =>
   assignmentId
     ? `/api/teacher-assignments/${assignmentId}/students/${studentId}/guardians`
     : `/api/admin/students/${studentId}/guardians`;
 
 export async function listStudentGuardians(assignmentId: string | null, studentId: string) {
-  const response = await fetch(baseUrl(assignmentId, studentId), { headers: authHeader() });
+  const response = await fetch(baseUrl(assignmentId, studentId), {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดข้อมูลผู้ปกครองได้');
   return json.guardians as StudentGuardian[];
@@ -51,7 +48,7 @@ export async function createStudentGuardian(
 ) {
   const response = await fetch(baseUrl(assignmentId, studentId), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
   const json = await response.json();
@@ -67,7 +64,7 @@ export async function updateStudentGuardian(
 ) {
   const response = await fetch(`${baseUrl(assignmentId, studentId)}/${guardianId}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
   const json = await response.json();
@@ -82,7 +79,6 @@ export async function deleteStudentGuardian(
 ) {
   const response = await fetch(`${baseUrl(assignmentId, studentId)}/${guardianId}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถลบข้อมูลผู้ปกครองได้');
@@ -99,7 +95,6 @@ export type GuardianLineInvitation = {
 export async function createGuardianLineInvitation(guardianId: string) {
   const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
     method: 'POST',
-    headers: authHeader(),
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถสร้างรหัสเชื่อม LINE ได้');
@@ -119,9 +114,7 @@ export type GuardianLineStatus = {
 };
 
 export async function getGuardianLineStatus(guardianId: string) {
-  const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/guardians/${guardianId}/line-link`, {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถตรวจสอบสถานะ LINE ได้');
   return json as GuardianLineStatus;
@@ -130,7 +123,7 @@ export async function getGuardianLineStatus(guardianId: string) {
 export async function sendGuardianLineHello(guardianId: string) {
   const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'hello' }),
   });
   const json = await response.json();
@@ -140,7 +133,7 @@ export async function sendGuardianLineHello(guardianId: string) {
 export async function sendGuardianProfileLink(guardianId: string) {
   const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'profile' }),
   });
   const json = await response.json();
@@ -150,7 +143,6 @@ export async function sendGuardianProfileLink(guardianId: string) {
 export async function unlinkGuardianLine(guardianId: string) {
   const response = await fetch(`/api/guardians/${guardianId}/line-link`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถยกเลิกการเชื่อม LINE ได้');
@@ -159,7 +151,7 @@ export async function unlinkGuardianLine(guardianId: string) {
 export async function sendGuardianLineMessage(guardianId: string, text: string) {
   const response = await fetch(`/api/guardians/${guardianId}/line-message`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
   const json = await response.json();
@@ -167,9 +159,7 @@ export async function sendGuardianLineMessage(guardianId: string, text: string) 
 }
 
 export async function listHomeroomStudentGuardians(studentId: string) {
-  const response = await fetch(`/api/teacher/students/${studentId}/guardians`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/teacher/students/${studentId}/guardians`, {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดข้อมูลผู้ปกครองได้');
   return json.guardians as StudentGuardian[];

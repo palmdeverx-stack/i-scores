@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type Subject = {
@@ -31,10 +29,6 @@ export type SaveSubjectParams = {
   semesterId: string;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function listSubjects(filters?: {
   academicYearId?: string;
   semesterId?: string;
@@ -43,7 +37,7 @@ export async function listSubjects(filters?: {
   if (filters?.academicYearId) params.set('academicYearId', filters.academicYearId);
   if (filters?.semesterId) params.set('semesterId', filters.semesterId);
   const query = params.size ? `?${params.toString()}` : '';
-  const response = await fetch(`/api/subjects${query}`, { headers: authHeader() });
+  const response = await fetch(`/api/subjects${query}`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load subjects');
@@ -54,7 +48,7 @@ export async function listSubjects(filters?: {
 export async function createSubject(params: SaveSubjectParams): Promise<Subject> {
   const response = await fetch('/api/subjects', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -67,7 +61,7 @@ export async function createSubject(params: SaveSubjectParams): Promise<Subject>
 export async function updateSubject(id: string, params: SaveSubjectParams): Promise<Subject> {
   const response = await fetch(`/api/subjects/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -83,7 +77,6 @@ export async function uploadSubjectImage(id: string, file: File): Promise<Subjec
 
   const response = await fetch(`/api/subjects/${id}/image`, {
     method: 'POST',
-    headers: authHeader(),
     body: formData,
   });
   const json = await response.json();
@@ -96,7 +89,6 @@ export async function uploadSubjectImage(id: string, file: File): Promise<Subjec
 export async function removeSubjectImage(id: string): Promise<Subject> {
   const response = await fetch(`/api/subjects/${id}/image`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 
@@ -108,7 +100,6 @@ export async function removeSubjectImage(id: string): Promise<Subject> {
 export async function deleteSubject(id: string): Promise<void> {
   const response = await fetch(`/api/subjects/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 

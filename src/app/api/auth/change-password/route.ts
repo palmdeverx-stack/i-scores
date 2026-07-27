@@ -3,12 +3,12 @@ import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { encryptCredential } from 'src/lib/credential-cipher';
-import { toPublicUser, getBearerToken, verifyAppToken } from 'src/lib/auth-token';
+import { toPublicUser, verifyAppToken, getRequestToken } from 'src/lib/auth-token';
 
 // ----------------------------------------------------------------------
 
 export async function POST(request: Request) {
-  const token = getBearerToken(request);
+  const token = getRequestToken(request);
   const payload = token ? verifyAppToken(token) : null;
 
   if (!payload) {

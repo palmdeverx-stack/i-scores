@@ -5,8 +5,6 @@ import type {
   HomeroomAttendanceStatus,
 } from './homeroom-attendance-actions';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 export type HomeroomAttendanceHistoryRecord = {
   id: string;
   attendanceDate: string;
@@ -49,10 +47,6 @@ export type HomeroomAttendanceHistoryData = {
   pageSize: number;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getHomeroomAttendanceHistory(
   filters: HomeroomAttendanceHistoryFilters
 ): Promise<HomeroomAttendanceHistoryData> {
@@ -67,9 +61,7 @@ export async function getHomeroomAttendanceHistory(
   if (filters.period) params.set('period', filters.period);
   if (filters.status) params.set('status', filters.status);
 
-  const response = await fetch(`/api/teacher/homeroom-attendance/history?${params}`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/teacher/homeroom-attendance/history?${params}`, {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดประวัติการเข้าแถวได้');
   return json;

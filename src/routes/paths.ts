@@ -86,6 +86,7 @@ export const paths = {
   // MASTER ADMIN
   master: {
     root: ROOTS.MASTER,
+    systemFlow: `${ROOTS.MASTER}/system-flow`,
     school: {
       root: `${ROOTS.MASTER}/school`,
       new: `${ROOTS.MASTER}/school/new`,

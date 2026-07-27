@@ -2,8 +2,6 @@
 
 import type { SchoolFeatureKey } from 'src/lib/school-subscription-config';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'suspended' | 'canceled';
@@ -74,14 +72,8 @@ export type UpdateSchoolSubscriptionParams = {
   notes: string;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getSchoolSubscription(schoolId: string): Promise<SchoolSubscriptionData> {
-  const response = await fetch(`/api/schools/${schoolId}/subscription`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/schools/${schoolId}/subscription`, {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดแพ็กเกจโรงเรียนได้');
   return json;
@@ -90,9 +82,7 @@ export async function getSchoolSubscription(schoolId: string): Promise<SchoolSub
 export async function getSchoolSubscriptionAccess(
   schoolId: string
 ): Promise<SchoolSubscriptionAccessData> {
-  const response = await fetch(`/api/schools/${schoolId}/subscription`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/schools/${schoolId}/subscription`, {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถตรวจสอบแพ็กเกจโรงเรียนได้');
   return json;
@@ -104,7 +94,7 @@ export async function updateSchoolSubscription(
 ): Promise<SchoolSubscription> {
   const response = await fetch(`/api/schools/${schoolId}/subscription`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();

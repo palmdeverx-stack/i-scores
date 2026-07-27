@@ -6,7 +6,6 @@ import { useSetState } from 'minimal-shared/hooks';
 import { useMemo, useEffect, useCallback } from 'react';
 
 import { AuthContext } from '../auth-context';
-import { setSession, isValidToken, getStoredToken } from './utils';
 
 // ----------------------------------------------------------------------
 
@@ -19,29 +18,16 @@ export function AuthProvider({ children }: Props) {
 
   const checkUserSession = useCallback(async (): Promise<void> => {
     try {
-      const accessToken = getStoredToken();
-
-      if (!accessToken || !isValidToken(accessToken)) {
-        setSession(null);
-        setState({ user: null, loading: false });
-        return;
-      }
-
-      setSession(accessToken);
-
-      const response = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const response = await fetch('/api/auth/me');
 
       if (!response.ok) {
-        setSession(null);
         setState({ user: null, loading: false });
         return;
       }
 
       const { user } = await response.json();
 
-      setState({ user: { ...user, accessToken }, loading: false });
+      setState({ user, loading: false });
     } catch (error) {
       console.error(error);
       setState({ user: null, loading: false });

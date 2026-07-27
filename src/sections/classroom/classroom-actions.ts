@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type Classroom = {
@@ -34,15 +32,11 @@ export type CreateClassroomParams = {
   semesterId?: string;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function listClassrooms(filters?: { academicYearId?: string }): Promise<Classroom[]> {
   const params = new URLSearchParams();
   if (filters?.academicYearId) params.set('academicYearId', filters.academicYearId);
   const query = params.size ? `?${params.toString()}` : '';
-  const response = await fetch(`/api/classrooms${query}`, { headers: authHeader() });
+  const response = await fetch(`/api/classrooms${query}`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load classrooms');
@@ -53,7 +47,7 @@ export async function listClassrooms(filters?: { academicYearId?: string }): Pro
 export async function createClassroom(params: CreateClassroomParams) {
   const response = await fetch('/api/classrooms', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -66,7 +60,7 @@ export async function createClassroom(params: CreateClassroomParams) {
 export async function updateClassroom(id: string, params: CreateClassroomParams) {
   const response = await fetch(`/api/classrooms/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -79,7 +73,6 @@ export async function updateClassroom(id: string, params: CreateClassroomParams)
 export async function deleteClassroom(id: string): Promise<void> {
   const response = await fetch(`/api/classrooms/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 

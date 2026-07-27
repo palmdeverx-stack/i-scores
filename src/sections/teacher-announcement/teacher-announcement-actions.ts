@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type AnnouncementType = 'general' | 'holiday' | 'exam';
@@ -40,15 +38,11 @@ export type AnnouncementPayload = {
   sendLine: boolean;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getTeacherAnnouncements(): Promise<{
   announcements: TeacherAnnouncement[];
   classrooms: TeacherClassroom[];
 }> {
-  const response = await fetch('/api/teacher/announcements', { headers: authHeader() });
+  const response = await fetch('/api/teacher/announcements', {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดประกาศได้');
   return json;
@@ -77,7 +71,6 @@ function announcementFormData(
 export async function createTeacherAnnouncement(payload: AnnouncementPayload, image?: File | null) {
   const response = await fetch('/api/teacher/announcements', {
     method: 'POST',
-    headers: authHeader(),
     body: announcementFormData(payload, image),
   });
   const json = await response.json();
@@ -93,7 +86,6 @@ export async function updateTeacherAnnouncement(
 ) {
   const response = await fetch(`/api/teacher/announcements/${id}`, {
     method: 'PATCH',
-    headers: authHeader(),
     body: announcementFormData(payload, image, removeImage),
   });
   const json = await response.json();
@@ -104,7 +96,6 @@ export async function updateTeacherAnnouncement(
 export async function deleteTeacherAnnouncement(id: string) {
   const response = await fetch(`/api/teacher/announcements/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถลบประกาศได้');

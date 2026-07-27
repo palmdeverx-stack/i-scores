@@ -2,8 +2,6 @@
 
 import type { DepartmentPermissionKey } from 'src/lib/department-permissions-config';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type DepartmentTeacher = {
@@ -29,12 +27,8 @@ export type Department = {
   members: DepartmentMember[];
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function listDepartments(): Promise<Department[]> {
-  const response = await fetch('/api/departments', { headers: authHeader() });
+  const response = await fetch('/api/departments', {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'Failed to load departments');
   return json.departments;
@@ -49,7 +43,7 @@ export type SaveDepartmentParams = {
 export async function createDepartment(params: SaveDepartmentParams): Promise<Department> {
   const response = await fetch('/api/departments', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -63,7 +57,7 @@ export async function updateDepartment(
 ): Promise<Department> {
   const response = await fetch(`/api/departments/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -74,7 +68,6 @@ export async function updateDepartment(
 export async function deleteDepartment(id: string): Promise<void> {
   const response = await fetch(`/api/departments/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'Failed to delete department');
@@ -85,9 +78,7 @@ export async function getDepartmentMembers(departmentId: string): Promise<{
   members: DepartmentMember[];
   eligibleTeachers: DepartmentTeacher[];
 }> {
-  const response = await fetch(`/api/departments/${departmentId}/members`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/departments/${departmentId}/members`, {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'Failed to load members');
   return json;
@@ -99,7 +90,7 @@ export async function addDepartmentMember(
 ): Promise<DepartmentMember> {
   const response = await fetch(`/api/departments/${departmentId}/members`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -114,7 +105,7 @@ export async function updateDepartmentMemberRole(
 ): Promise<DepartmentMember> {
   const response = await fetch(`/api/departments/${departmentId}/members`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ memberId, roleInDepartment }),
   });
   const json = await response.json();
@@ -130,7 +121,7 @@ export async function updateDepartmentMemberPermission(
 ): Promise<DepartmentMember> {
   const response = await fetch(`/api/departments/${departmentId}/members`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ memberId, permissionKey, granted }),
   });
   const json = await response.json();
@@ -142,10 +133,9 @@ export async function removeDepartmentMember(
   departmentId: string,
   memberId: string
 ): Promise<void> {
-  const response = await fetch(
-    `/api/departments/${departmentId}/members?memberId=${memberId}`,
-    { method: 'DELETE', headers: authHeader() }
-  );
+  const response = await fetch(`/api/departments/${departmentId}/members?memberId=${memberId}`, {
+    method: 'DELETE',
+  });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'Failed to remove member');
 }

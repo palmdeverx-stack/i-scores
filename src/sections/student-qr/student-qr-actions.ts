@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type MyStudentQr = {
@@ -18,10 +16,7 @@ export type MyStudentQr = {
 };
 
 export async function getMyStudentQr(): Promise<MyStudentQr> {
-  const response = await fetch('/api/student/qr', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${getStoredToken()}` },
-  });
+  const response = await fetch('/api/student/qr', { method: 'POST' });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลด QR ได้');
   return json.qr;

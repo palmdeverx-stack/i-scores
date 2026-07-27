@@ -4,6 +4,7 @@ import { paths } from 'src/routes/paths';
 
 import {
   RiAdminLine,
+  RiFlowChart,
   RiBuildingLine,
   RiDashboardLine,
   RiPriceTag3Line,
@@ -16,6 +17,7 @@ const ICONS = {
   school: <RiBuildingLine />,
   schoolAdmin: <RiAdminLine />,
   subscription: <RiPriceTag3Line />,
+  systemFlow: <RiFlowChart />,
 };
 
 // ----------------------------------------------------------------------
@@ -45,6 +47,16 @@ export const navData: NavSectionProps['data'] = [
         title: 'ตั้งค่าแพ็กเกจ',
         path: paths.master.subscriptionPlan.root,
         icon: ICONS.subscription,
+      },
+    ],
+  },
+  {
+    subheader: 'เอกสารระบบ',
+    items: [
+      {
+        title: 'การทำงานของระบบ',
+        path: paths.master.systemFlow,
+        icon: ICONS.systemFlow,
       },
     ],
   },

@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type AttendanceScanSessionType = 'homeroom_morning' | 'class_period' | 'homeroom_evening';
@@ -61,10 +59,6 @@ export type AttendanceScanResult = {
   scannedAt: string;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function createAttendanceScanSession(params: {
   sessionType: AttendanceScanSessionType;
   sessionDate: string;
@@ -76,7 +70,7 @@ export async function createAttendanceScanSession(params: {
 }): Promise<string> {
   const response = await fetch('/api/teacher/attendance-scan/sessions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -87,9 +81,7 @@ export async function createAttendanceScanSession(params: {
 export async function getAttendanceScanSession(
   sessionId: string
 ): Promise<AttendanceScanSessionData> {
-  const response = await fetch(`/api/teacher/attendance-scan/sessions/${sessionId}`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/teacher/attendance-scan/sessions/${sessionId}`, {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดรอบเช็คชื่อได้');
   return json;
@@ -101,7 +93,7 @@ export async function scanStudentQr(
 ): Promise<AttendanceScanResult> {
   const response = await fetch(`/api/teacher/attendance-scan/sessions/${sessionId}/scan`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ payload }),
   });
   const json = await response.json();
@@ -112,7 +104,6 @@ export async function scanStudentQr(
 export async function closeAttendanceScanSession(sessionId: string): Promise<void> {
   const response = await fetch(`/api/teacher/attendance-scan/sessions/${sessionId}`, {
     method: 'PATCH',
-    headers: authHeader(),
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถปิดรอบเช็คชื่อได้');

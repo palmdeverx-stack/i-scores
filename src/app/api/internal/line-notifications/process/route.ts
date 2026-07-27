@@ -1,13 +1,28 @@
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'node:crypto';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { processPendingLineNotifications } from 'src/lib/line-notifications';
 
 // ----------------------------------------------------------------------
 
-export async function GET(request: Request) {
+function isValidCronSecret(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+  const provided = request.headers.get('authorization') ?? '';
+  const expected = cronSecret ? `Bearer ${cronSecret}` : '';
+
+  const providedBuffer = Buffer.from(provided);
+  const expectedBuffer = Buffer.from(expected);
+
+  return (
+    !!cronSecret &&
+    providedBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(providedBuffer, expectedBuffer)
+  );
+}
+
+export async function GET(request: Request) {
+  if (!isValidCronSecret(request)) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 401 });
   }
 

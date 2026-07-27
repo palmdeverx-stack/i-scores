@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type ClassroomScheduleAssignment = {
@@ -24,17 +22,13 @@ export type ClassroomSchedule = {
   schedules: ClassroomScheduleSlot[];
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getClassroomSchedule(
   classroomId: string,
   semesterId: string
 ): Promise<ClassroomSchedule> {
   const response = await fetch(
     `/api/classrooms/${classroomId}/schedule?semesterId=${semesterId}`,
-    { headers: authHeader() }
+    {}
   );
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'Failed to load classroom schedule');
@@ -53,7 +47,7 @@ export async function addScheduleSlot(
 ): Promise<ClassroomScheduleSlot> {
   const response = await fetch(`/api/teacher-assignments/${params.teacherAssignmentId}/schedules`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       dayOfWeek: params.dayOfWeek,
       startTime: params.startTime,
@@ -71,7 +65,7 @@ export async function deleteScheduleSlot(
 ): Promise<void> {
   const response = await fetch(
     `/api/teacher-assignments/${teacherAssignmentId}/schedules/${scheduleId}`,
-    { method: 'DELETE', headers: authHeader() }
+    { method: 'DELETE' }
   );
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'Failed to delete schedule slot');

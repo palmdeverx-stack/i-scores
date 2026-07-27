@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 export type HomeroomAttendancePeriod = 'morning' | 'evening';
 export type HomeroomAttendanceStatus = 'present' | 'absent' | 'leave' | 'late';
 
@@ -39,19 +37,13 @@ export type HomeroomAttendanceRecord = {
   note: string | null;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getHomeroomAttendance(
   classroomId: string,
   date: string,
   period: HomeroomAttendancePeriod
 ): Promise<HomeroomAttendanceData> {
   const params = new URLSearchParams({ classroomId, date, period });
-  const response = await fetch(`/api/teacher/homeroom-attendance?${params}`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/teacher/homeroom-attendance?${params}`, {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดข้อมูลเช็คชื่อเข้าแถวได้');
   return json;
@@ -65,7 +57,7 @@ export async function saveHomeroomAttendance(
 ) {
   const response = await fetch('/api/teacher/homeroom-attendance', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ classroomId, date, period, records }),
   });
   const json = await response.json();

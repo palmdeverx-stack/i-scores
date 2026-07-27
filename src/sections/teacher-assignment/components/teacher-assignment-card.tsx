@@ -23,11 +23,12 @@ import { TruncatedTypography } from 'src/components/typography';
 type Props = {
   row: TeacherAssignment;
   detailPath: string;
+  canEdit: boolean;
   onEdit: (row: TeacherAssignment) => void;
   onDelete: (row: TeacherAssignment) => void;
 };
 
-export function TeacherAssignmentCard({ row, detailPath, onEdit, onDelete }: Props) {
+export function TeacherAssignmentCard({ row, detailPath, canEdit, onEdit, onDelete }: Props) {
   const teacherName =
     `${row.teacher.first_name ?? ''} ${row.teacher.last_name ?? ''}`.trim() || row.teacher.username;
   const teacherInitial = teacherName.charAt(0).toUpperCase();
@@ -189,14 +190,16 @@ export function TeacherAssignmentCard({ row, detailPath, onEdit, onDelete }: Pro
           จัดการรายวิชา
         </Typography>
         <Box sx={{ gap: 0.5, display: 'flex' }}>
-          <Button
-            size="small"
-            color="inherit"
-            onClick={() => onEdit(row)}
-            startIcon={<RemixIcon icon="solar:pen-bold" />}
-          >
-            แก้ไข
-          </Button>
+          {canEdit && (
+            <Button
+              size="small"
+              color="inherit"
+              onClick={() => onEdit(row)}
+              startIcon={<RemixIcon icon="solar:pen-bold" />}
+            >
+              แก้ไข
+            </Button>
+          )}
           <Button
             size="small"
             color="error"

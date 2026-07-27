@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type TimetableSlot = {
@@ -20,12 +18,8 @@ export type TimetableSlot = {
   };
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getTimetable(): Promise<TimetableSlot[]> {
-  const response = await fetch('/api/teacher/timetable', { headers: authHeader() });
+  const response = await fetch('/api/teacher/timetable', {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load timetable');

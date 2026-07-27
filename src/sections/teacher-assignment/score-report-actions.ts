@@ -3,8 +3,6 @@
 import type { SubmissionStatus } from 'src/sections/gradebook/gradebook-actions';
 import type { AssignmentCategory } from 'src/sections/assignment/assignment-actions';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type ScoreReport = {
@@ -30,14 +28,8 @@ export type ScoreReport = {
   }>;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getScoreReport(teacherAssignmentId: string): Promise<ScoreReport> {
-  const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/score-report`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/score-report`, {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถสร้างรายงานคะแนนได้');
   return json.report;

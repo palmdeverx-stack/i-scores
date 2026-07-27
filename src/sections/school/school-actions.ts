@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type School = {
@@ -39,12 +37,8 @@ export type CreateSchoolParams = {
   code: string;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function listSchools(): Promise<School[]> {
-  const response = await fetch('/api/schools', { headers: authHeader() });
+  const response = await fetch('/api/schools', {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load schools');
@@ -55,7 +49,7 @@ export async function listSchools(): Promise<School[]> {
 export async function createSchool(params: CreateSchoolParams) {
   const response = await fetch('/api/schools', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -68,7 +62,7 @@ export async function createSchool(params: CreateSchoolParams) {
 export async function toggleSchoolActive(id: string, isActive: boolean) {
   const response = await fetch(`/api/schools/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ isActive }),
   });
   const json = await response.json();
@@ -79,7 +73,7 @@ export async function toggleSchoolActive(id: string, isActive: boolean) {
 }
 
 export async function getSchool(id: string): Promise<SchoolProfile> {
-  const response = await fetch(`/api/schools/${id}`, { headers: authHeader() });
+  const response = await fetch(`/api/schools/${id}`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load school');
@@ -93,7 +87,7 @@ export async function updateSchool(
 ): Promise<SchoolProfile> {
   const response = await fetch(`/api/schools/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -106,7 +100,6 @@ export async function updateSchool(
 export async function deleteSchool(id: string): Promise<void> {
   const response = await fetch(`/api/schools/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 
@@ -119,7 +112,6 @@ export async function uploadSchoolLogo(id: string, file: File): Promise<SchoolPr
 
   const response = await fetch(`/api/schools/${id}/logo`, {
     method: 'POST',
-    headers: authHeader(),
     body: formData,
   });
   const json = await response.json();
@@ -140,7 +132,7 @@ export type SchoolTeacherRoster = {
 };
 
 export async function listSchoolTeachers(id: string): Promise<SchoolTeacherRoster[]> {
-  const response = await fetch(`/api/schools/${id}/teachers`, { headers: authHeader() });
+  const response = await fetch(`/api/schools/${id}/teachers`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load teacher roster');

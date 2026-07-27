@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 type Subject = { id: string; code: string | null; name: string; image_url: string | null } | null;
@@ -59,7 +57,7 @@ export type TeacherDashboardRecentAssignments = {
 };
 
 async function fetchJson<T>(url: string, errorMessage: string): Promise<T> {
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${getStoredToken()}` } });
+  const response = await fetch(url);
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? errorMessage);

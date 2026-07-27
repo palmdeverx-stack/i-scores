@@ -4,6 +4,9 @@
 
 ## Installation
 
+Copy `.env.example` to `.env` and set `MASTER_ADMIN_PIN` to the 8-digit PIN used by
+`master_admin` accounts. School administrators use their school's 8-digit code as the PIN.
+
 **Using Yarn (Recommended)**
 
 ```sh

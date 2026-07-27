@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type HomeroomClassroom = {
@@ -37,12 +35,8 @@ export type HomeroomStudentsData = {
   enrollments: HomeroomEnrollment[];
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getMyHomeroomStudents(): Promise<HomeroomStudentsData> {
-  const response = await fetch('/api/teacher/homeroom-students', { headers: authHeader() });
+  const response = await fetch('/api/teacher/homeroom-students', {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดรายชื่อนักเรียนได้');
   return json;
@@ -51,7 +45,7 @@ export async function getMyHomeroomStudents(): Promise<HomeroomStudentsData> {
 export async function addMyHomeroomStudents(classroomId: string, studentIds: string[]) {
   const response = await fetch('/api/teacher/homeroom-students', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ classroomId, studentIds }),
   });
   const json = await response.json();
@@ -62,7 +56,7 @@ export async function addMyHomeroomStudents(classroomId: string, studentIds: str
 export async function updateMyHomeroomStudent(enrollmentId: string, studentNumber: string) {
   const response = await fetch('/api/teacher/homeroom-students', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enrollmentId, studentNumber }),
   });
   const json = await response.json();
@@ -73,7 +67,7 @@ export async function updateMyHomeroomStudent(enrollmentId: string, studentNumbe
 export async function removeMyHomeroomStudent(enrollmentId: string): Promise<void> {
   const response = await fetch(
     `/api/teacher/homeroom-students?enrollmentId=${encodeURIComponent(enrollmentId)}`,
-    { method: 'DELETE', headers: authHeader() }
+    { method: 'DELETE' }
   );
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถนำนักเรียนออกจากชั้นได้');

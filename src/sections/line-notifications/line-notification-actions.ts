@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type LineNotificationSettings = {
@@ -91,11 +89,6 @@ export type LineRichMenuStatus = {
   } | null;
 };
 
-const headers = (json = false) => ({
-  ...(json ? { 'Content-Type': 'application/json' } : {}),
-  Authorization: `Bearer ${getStoredToken()}`,
-});
-
 async function parse<T>(response: Response, fallback: string): Promise<T> {
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new Error(data?.message ?? fallback);
@@ -103,24 +96,21 @@ async function parse<T>(response: Response, fallback: string): Promise<T> {
 }
 
 export async function getLineNotificationSettings() {
-  const response = await fetch('/api/admin/line-notifications', { headers: headers() });
+  const response = await fetch('/api/admin/line-notifications');
   return parse<LineNotificationSettings>(response, 'ไม่สามารถโหลดการตั้งค่า LINE ได้');
 }
 
 export async function saveLineNotificationSettings(input: LineNotificationSettingsInput) {
   const response = await fetch('/api/admin/line-notifications', {
     method: 'PATCH',
-    headers: headers(true),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
   return parse<{ success: boolean }>(response, 'ไม่สามารถบันทึกการตั้งค่า LINE ได้');
 }
 
 export async function testLineConnection() {
-  const response = await fetch('/api/admin/line-notifications', {
-    method: 'POST',
-    headers: headers(),
-  });
+  const response = await fetch('/api/admin/line-notifications', { method: 'POST' });
   return parse<{ bot: { displayName?: string; basicId?: string } }>(
     response,
     'ไม่สามารถทดสอบ LINE ได้'
@@ -128,14 +118,12 @@ export async function testLineConnection() {
 }
 
 export async function getLineRichMenu() {
-  const response = await fetch('/api/admin/line-rich-menu', { headers: headers() });
+  const response = await fetch('/api/admin/line-rich-menu');
   return parse<LineRichMenuStatus>(response, 'ไม่สามารถตรวจสอบ Rich Menu ได้');
 }
 
 export async function getLineRichMenuImage() {
-  const response = await fetch('/api/admin/line-rich-menu?content=1', {
-    headers: headers(),
-  });
+  const response = await fetch('/api/admin/line-rich-menu?content=1');
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new Error(data?.message ?? 'ไม่สามารถโหลดภาพ Rich Menu ได้');
@@ -160,16 +148,12 @@ export async function createLineRichMenu(input: {
   formData.append('actions', JSON.stringify(input.actions));
   const response = await fetch('/api/admin/line-rich-menu', {
     method: 'POST',
-    headers: headers(),
     body: formData,
   });
   return parse<{ success: boolean; richMenuId: string }>(response, 'ไม่สามารถสร้าง Rich Menu ได้');
 }
 
 export async function deleteLineRichMenu() {
-  const response = await fetch('/api/admin/line-rich-menu', {
-    method: 'DELETE',
-    headers: headers(),
-  });
+  const response = await fetch('/api/admin/line-rich-menu', { method: 'DELETE' });
   return parse<{ success: boolean }>(response, 'ไม่สามารถยกเลิก Rich Menu ได้');
 }

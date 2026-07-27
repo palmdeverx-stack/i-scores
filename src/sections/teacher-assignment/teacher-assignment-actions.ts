@@ -2,8 +2,6 @@
 
 import type { SubmissionStatus } from 'src/sections/gradebook/gradebook-actions';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type TeacherAssignment = {
@@ -112,10 +110,6 @@ export type CreateScheduleParams = {
   endTime: string;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function listTeacherAssignmentsPage(params: {
   classroomId?: string;
   search?: string;
@@ -129,9 +123,7 @@ export async function listTeacherAssignmentsPage(params: {
   if (params.classroomId) query.set('classroomId', params.classroomId);
   if (params.search) query.set('search', params.search);
 
-  const response = await fetch(`/api/teacher-assignments?${query.toString()}`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/teacher-assignments?${query.toString()}`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load teacher assignments');
@@ -140,7 +132,7 @@ export async function listTeacherAssignmentsPage(params: {
 }
 
 export async function getTeacherAssignmentSummary(): Promise<TeacherAssignmentSummary> {
-  const response = await fetch('/api/teacher-assignments/summary', { headers: authHeader() });
+  const response = await fetch('/api/teacher-assignments/summary', {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load teacher assignment summary');
@@ -157,9 +149,7 @@ export async function listTeacherAssignments(): Promise<TeacherAssignment[]> {
 }
 
 export async function getRoster(teacherAssignmentId: string): Promise<Roster> {
-  const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/roster`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/roster`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load roster');
@@ -173,7 +163,7 @@ export async function getStudentBreakdown(
 ): Promise<StudentBreakdown> {
   const response = await fetch(
     `/api/teacher-assignments/${teacherAssignmentId}/students/${studentId}`,
-    { headers: authHeader() }
+    {}
   );
   const json = await response.json();
 
@@ -183,9 +173,7 @@ export async function getStudentBreakdown(
 }
 
 export async function getSchedules(teacherAssignmentId: string): Promise<ScheduleSlot[]> {
-  const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/schedules`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/schedules`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load schedules');
@@ -196,7 +184,7 @@ export async function getSchedules(teacherAssignmentId: string): Promise<Schedul
 export async function createSchedule(teacherAssignmentId: string, params: CreateScheduleParams) {
   const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/schedules`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -215,7 +203,7 @@ export async function updateSchedule(
     `/api/teacher-assignments/${teacherAssignmentId}/schedules/${scheduleId}`,
     {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
     }
   );
@@ -232,7 +220,7 @@ export async function deleteSchedule(
 ): Promise<void> {
   const response = await fetch(
     `/api/teacher-assignments/${teacherAssignmentId}/schedules/${scheduleId}`,
-    { method: 'DELETE', headers: authHeader() }
+    { method: 'DELETE' }
   );
   const json = await response.json();
 
@@ -242,7 +230,7 @@ export async function deleteSchedule(
 export async function createTeacherAssignment(params: CreateTeacherAssignmentParams) {
   const response = await fetch('/api/teacher-assignments', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -255,7 +243,7 @@ export async function createTeacherAssignment(params: CreateTeacherAssignmentPar
 export async function updateTeacherAssignment(id: string, params: CreateTeacherAssignmentParams) {
   const response = await fetch(`/api/teacher-assignments/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -268,7 +256,6 @@ export async function updateTeacherAssignment(id: string, params: CreateTeacherA
 export async function deleteTeacherAssignment(id: string): Promise<void> {
   const response = await fetch(`/api/teacher-assignments/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 

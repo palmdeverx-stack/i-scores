@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type SubmissionStatus =
@@ -54,14 +52,8 @@ export type SaveScoreParams = {
   status?: SubmissionStatus;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getGradebook(assignmentId: string): Promise<Gradebook> {
-  const response = await fetch(`/api/assignments/${assignmentId}/scores`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/assignments/${assignmentId}/scores`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load gradebook');
@@ -72,7 +64,7 @@ export async function getGradebook(assignmentId: string): Promise<Gradebook> {
 export async function saveScore(assignmentId: string, params: SaveScoreParams) {
   const response = await fetch(`/api/assignments/${assignmentId}/scores`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();

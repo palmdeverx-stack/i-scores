@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 type Person = {
@@ -88,7 +86,7 @@ export type EnrolledStudentExportRow = {
 };
 
 async function fetchJson<T>(url: string, errorMessage: string): Promise<T> {
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${getStoredToken()}` } });
+  const response = await fetch(url);
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? errorMessage);
@@ -110,9 +108,7 @@ export function getAdminDashboardRecentActivity() {
 }
 
 export async function getEnrolledStudentsForExport(): Promise<EnrolledStudentExportRow[]> {
-  const response = await fetch('/api/admin/dashboard/enrolled-students', {
-    headers: { Authorization: `Bearer ${getStoredToken()}` },
-  });
+  const response = await fetch('/api/admin/dashboard/enrolled-students');
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดข้อมูลนักเรียนได้');

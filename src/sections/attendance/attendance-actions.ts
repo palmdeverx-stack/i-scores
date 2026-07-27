@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type AttendanceStatus = 'present' | 'absent' | 'leave' | 'late';
@@ -46,17 +44,13 @@ export type StudentAttendanceRecord = {
   } | null;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getAttendance(
   teacherAssignmentId: string,
   sessionDate: string
 ): Promise<AttendanceSheet> {
   const response = await fetch(
     `/api/teacher-assignments/${teacherAssignmentId}/attendance?date=${sessionDate}`,
-    { headers: authHeader() }
+    {}
   );
   const json = await response.json();
 
@@ -72,7 +66,7 @@ export async function saveAttendance(
 ) {
   const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/attendance`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionDate, records }),
   });
   const json = await response.json();
@@ -83,7 +77,7 @@ export async function saveAttendance(
 }
 
 export async function getMyAttendance(): Promise<StudentAttendanceRecord[]> {
-  const response = await fetch('/api/student/attendance', { headers: authHeader() });
+  const response = await fetch('/api/student/attendance', {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load attendance');

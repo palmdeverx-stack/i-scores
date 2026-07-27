@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type StudentQuiz = {
@@ -43,10 +41,6 @@ export type QuizResult = {
   showScore: boolean;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 async function parseResponse<T>(response: Response): Promise<T> {
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่');
@@ -55,7 +49,6 @@ async function parseResponse<T>(response: Response): Promise<T> {
 
 export async function getStudentQuiz(assignmentId: string): Promise<StudentQuiz> {
   const response = await fetch(`/api/student/quizzes/${assignmentId}`, {
-    headers: authHeader(),
     cache: 'no-store',
   });
   const json = await parseResponse<{ quiz: StudentQuiz }>(response);
@@ -65,7 +58,6 @@ export async function getStudentQuiz(assignmentId: string): Promise<StudentQuiz>
 export async function startStudentQuiz(assignmentId: string) {
   const response = await fetch(`/api/student/quizzes/${assignmentId}/start`, {
     method: 'POST',
-    headers: authHeader(),
   });
   return parseResponse<{ attempt: StudentQuiz['attempt'] }>(response);
 }
@@ -77,7 +69,7 @@ export async function submitStudentQuiz(
 ) {
   const response = await fetch(`/api/student/quizzes/${assignmentId}/submit`, {
     method: 'POST',
-    headers: { ...authHeader(), 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ attemptId, answers }),
   });
   const json = await parseResponse<{ result: QuizResult }>(response);

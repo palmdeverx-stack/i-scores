@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type Enrollment = {
@@ -80,10 +78,6 @@ export type EnrollmentProgress = {
   }>;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function listEnrollments(params?: {
   classroomId?: string;
   studentId?: string;
@@ -94,7 +88,7 @@ export async function listEnrollments(params?: {
   if (params?.studentId) query.set('studentId', params.studentId);
   if (params?.academicYearId) query.set('academicYearId', params.academicYearId);
 
-  const response = await fetch(`/api/enrollments?${query.toString()}`, { headers: authHeader() });
+  const response = await fetch(`/api/enrollments?${query.toString()}`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load enrollments');
@@ -105,7 +99,7 @@ export async function listEnrollments(params?: {
 export async function createEnrollment(params: CreateEnrollmentParams) {
   const response = await fetch('/api/enrollments', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -118,7 +112,7 @@ export async function createEnrollment(params: CreateEnrollmentParams) {
 export async function createEnrollments(params: CreateEnrollmentsParams) {
   const response = await fetch('/api/enrollments', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -133,7 +127,7 @@ export async function updateEnrollment(
 ) {
   const response = await fetch(`/api/enrollments/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -145,7 +139,6 @@ export async function updateEnrollment(
 export async function deleteEnrollment(id: string): Promise<void> {
   const response = await fetch(`/api/enrollments/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 
@@ -158,7 +151,7 @@ export async function bulkPromoteEnrollments(params: {
 }) {
   const response = await fetch('/api/enrollments/bulk-promote', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -169,7 +162,7 @@ export async function bulkPromoteEnrollments(params: {
 }
 
 export async function getEnrollmentProgress(id: string): Promise<EnrollmentProgress> {
-  const response = await fetch(`/api/enrollments/${id}/progress`, { headers: authHeader() });
+  const response = await fetch(`/api/enrollments/${id}/progress`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load student progress');

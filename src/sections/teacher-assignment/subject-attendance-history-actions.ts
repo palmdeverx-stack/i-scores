@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type SubjectAttendanceStatus = 'present' | 'absent' | 'leave' | 'late';
@@ -42,10 +40,6 @@ export type SubjectAttendanceHistoryData = {
   pageSize: number;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getSubjectAttendanceHistory(
   teacherAssignmentId: string,
   filters: SubjectAttendanceHistoryFilters
@@ -62,7 +56,7 @@ export async function getSubjectAttendanceHistory(
 
   const response = await fetch(
     `/api/teacher-assignments/${teacherAssignmentId}/attendance/history?${params}`,
-    { headers: authHeader() }
+    {}
   );
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดประวัติการเข้าเรียนได้');

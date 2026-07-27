@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type AssignmentCategory = 'assignment' | 'quiz' | 'midterm' | 'final' | 'other';
@@ -105,14 +103,8 @@ export type UpdateAssignmentParams = {
   fullScore: number;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function listAssignments(teacherAssignmentId: string): Promise<Assignment[]> {
-  const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/assignments`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/assignments`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load assignments');
@@ -135,7 +127,6 @@ export async function createAssignment(
 
   const response = await fetch(`/api/teacher-assignments/${teacherAssignmentId}/assignments`, {
     method: 'POST',
-    headers: authHeader(),
     body: formData,
   });
   const json = await response.json();
@@ -151,7 +142,7 @@ export async function updateAssignment(
 ): Promise<Assignment> {
   const response = await fetch(`/api/assignments/${assignmentId}`, {
     method: 'PATCH',
-    headers: { ...authHeader(), 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -164,7 +155,6 @@ export async function updateAssignment(
 export async function deleteAssignment(assignmentId: string): Promise<void> {
   const response = await fetch(`/api/assignments/${assignmentId}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 

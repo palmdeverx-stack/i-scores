@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type UserRole = 'master_admin' | 'school_admin' | 'teacher' | 'student';
@@ -71,17 +69,13 @@ export type UpdateSchoolAdminParams = {
   schoolId: string;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 /** **************************************
  * List users — school admin sees their own school, master admin sees
  * school admins (or pass `role` to filter, e.g. for select dropdowns)
  *************************************** */
 export async function listUsers(role?: UserRole): Promise<UserRow[]> {
   const url = role ? `/api/admin/users?role=${role}` : '/api/admin/users';
-  const response = await fetch(url, { headers: authHeader() });
+  const response = await fetch(url, {});
   const json = await response.json();
 
   if (!response.ok) {
@@ -97,7 +91,7 @@ export async function listUsers(role?: UserRole): Promise<UserRow[]> {
 export async function createUser(params: CreateUserParams) {
   const response = await fetch('/api/admin/users', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
 
@@ -113,7 +107,7 @@ export async function createUser(params: CreateUserParams) {
 export async function updateSchoolAdmin(id: string, params: UpdateSchoolAdminParams) {
   const response = await fetch(`/api/admin/users/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -125,7 +119,6 @@ export async function updateSchoolAdmin(id: string, params: UpdateSchoolAdminPar
 export async function deleteSchoolAdmin(id: string): Promise<void> {
   const response = await fetch(`/api/admin/users/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 
@@ -135,7 +128,7 @@ export async function deleteSchoolAdmin(id: string): Promise<void> {
 export async function updateStudentProfile(id: string, params: UpdateStudentProfileParams) {
   const response = await fetch(`/api/admin/students/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -150,7 +143,6 @@ export async function uploadStudentAvatar(studentId: string, file: File): Promis
 
   const response = await fetch(`/api/admin/students/${studentId}/avatar`, {
     method: 'POST',
-    headers: authHeader(),
     body: formData,
   });
   const json = await response.json();
@@ -161,7 +153,6 @@ export async function uploadStudentAvatar(studentId: string, file: File): Promis
 export async function deleteStudentAvatar(studentId: string): Promise<void> {
   const response = await fetch(`/api/admin/students/${studentId}/avatar`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถลบรูปนักเรียนได้');
@@ -173,7 +164,7 @@ export async function updateStudentStatus(
 ): Promise<StudentStatus> {
   const response = await fetch(`/api/admin/students/${studentId}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
   });
   const json = await response.json();
@@ -184,7 +175,7 @@ export async function updateStudentStatus(
 export async function updateUserActive(id: string, isActive: boolean): Promise<boolean> {
   const response = await fetch(`/api/admin/users/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ isActive }),
   });
   const json = await response.json();
@@ -195,7 +186,6 @@ export async function updateUserActive(id: string, isActive: boolean): Promise<b
 export async function deleteManagedUser(id: string): Promise<void> {
   const response = await fetch(`/api/admin/users/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถลบบัญชีได้');
@@ -207,7 +197,7 @@ export async function updateStaffUser(
 ) {
   const response = await fetch(`/api/admin/users/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();

@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type AcademicYear = {
@@ -22,12 +20,8 @@ export type Semester = {
   created_at: string;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function listAcademicYears(): Promise<AcademicYear[]> {
-  const response = await fetch('/api/academic-years', { headers: authHeader() });
+  const response = await fetch('/api/academic-years', {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load academic years');
@@ -45,7 +39,7 @@ export type SaveAcademicYearParams = {
 export async function createAcademicYear(params: SaveAcademicYearParams): Promise<AcademicYear> {
   const response = await fetch('/api/academic-years', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -61,7 +55,7 @@ export async function updateAcademicYear(
 ): Promise<AcademicYear> {
   const response = await fetch(`/api/academic-years/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -74,7 +68,6 @@ export async function updateAcademicYear(
 export async function deleteAcademicYear(id: string): Promise<void> {
   const response = await fetch(`/api/academic-years/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 
@@ -82,9 +75,7 @@ export async function deleteAcademicYear(id: string): Promise<void> {
 }
 
 export async function listSemesters(academicYearId: string): Promise<Semester[]> {
-  const response = await fetch(`/api/semesters?academicYearId=${academicYearId}`, {
-    headers: authHeader(),
-  });
+  const response = await fetch(`/api/semesters?academicYearId=${academicYearId}`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load semesters');
@@ -103,7 +94,7 @@ export type SaveSemesterParams = {
 export async function createSemester(params: SaveSemesterParams): Promise<Semester> {
   const response = await fetch('/api/semesters', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -119,7 +110,7 @@ export async function updateSemester(
 ): Promise<Semester> {
   const response = await fetch(`/api/semesters/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -132,7 +123,6 @@ export async function updateSemester(
 export async function deleteSemester(id: string): Promise<void> {
   const response = await fetch(`/api/semesters/${id}`, {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 

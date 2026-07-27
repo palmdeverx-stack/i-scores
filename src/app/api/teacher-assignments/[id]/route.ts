@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { canManageAssignmentSchedule } from 'src/lib/schedule-access';
+import { hasTimetableCapability, canManageAssignmentSchedule } from 'src/lib/schedule-access';
 import {
   loadTeacherAssignment,
   canAccessTeacherAssignment,
@@ -26,9 +26,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์แก้ไขรายการสอนนี้' }, { status: 403 });
   }
 
+  const canManageAssignments =
+    caller.role === 'school_admin' ||
+    (await hasTimetableCapability(caller.sub, caller.schoolId));
+
+  if (!canManageAssignments) {
+    return NextResponse.json(
+      { message: 'ไม่มีสิทธิ์แก้ไขวิชา ห้องเรียน หรือภาคเรียนของรายการสอนนี้ กรุณาติดต่อผู้ดูแลโรงเรียน' },
+      { status: 403 }
+    );
+  }
+
   const { teacherId, subjectId, classroomId, semesterId } = await request.json();
-  const resolvedTeacherId =
-    caller.role === 'teacher' ? caller.sub : teacherId || current!.teacher_id;
+  const resolvedTeacherId = teacherId || current!.teacher_id;
 
   if (!resolvedTeacherId || !subjectId || !classroomId || !semesterId) {
     return NextResponse.json({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, { status: 400 });

@@ -29,7 +29,10 @@ export type SchoolCreateSchemaType = z.infer<typeof SchoolCreateSchema>;
 export const SchoolCreateSchema = z.object({
   name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อโรงเรียนภาษาไทย!' }),
   nameEn: z.string().trim(),
-  code: z.string().trim().min(1, { error: 'กรุณากรอกรหัสโรงเรียน!' }),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{8}$/, { error: 'รหัสโรงเรียนต้องเป็นตัวเลข 8 หลัก' }),
 });
 
 // ----------------------------------------------------------------------
@@ -131,8 +134,9 @@ export function SchoolCreateView() {
                 <Field.Text
                   name="code"
                   label="รหัสโรงเรียน"
-                  placeholder="เช่น SCH001"
-                  helperText="ใช้สำหรับอ้างอิงโรงเรียน ควรเป็นรหัสสั้นและไม่ซ้ำกัน"
+                  placeholder="เช่น 12345678"
+                  helperText="ตัวเลข 8 หลัก ใช้เป็น PIN สำหรับผู้ดูแลโรงเรียน"
+                  slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 8 } }}
                 />
                 <Box sx={{ gap: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
                   <Button

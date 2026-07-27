@@ -1,6 +1,7 @@
 'use client';
 
 import * as z from 'zod';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
@@ -23,8 +24,8 @@ import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from '../../hooks';
 import { FormHead } from '../../components/form-head';
-import { signInWithPassword } from '../../context/jwt';
 import { getErrorMessage, getHomePathForRole } from '../../utils';
+import { verifySignInPin, signInWithPassword } from '../../context/jwt';
 
 // ----------------------------------------------------------------------
 
@@ -36,6 +37,11 @@ export const SignInSchema = z.object({
     .string()
     .min(1, { error: 'กรุณากรอกรหัสผ่าน!' })
     .min(6, { error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร!' }),
+  pin: z
+    .string()
+    .refine((value) => value === '' || /^\d{8}$/.test(value), {
+      error: 'PIN ต้องเป็นตัวเลข 8 หลัก',
+    }),
 });
 
 // ----------------------------------------------------------------------
@@ -44,12 +50,18 @@ export function JwtSignInView() {
   const router = useRouter();
 
   const showPassword = useBoolean();
+  const showPin = useBoolean();
+  const [pinChallenge, setPinChallenge] = useState<{
+    token: string;
+    role: 'master_admin' | 'school_admin';
+  } | null>(null);
 
   const { checkUserSession } = useAuthContext();
 
   const defaultValues: SignInSchemaType = {
     username: '',
     password: '',
+    pin: '',
   };
 
   const methods = useForm({
@@ -61,6 +73,20 @@ export function JwtSignInView() {
 
   const signInMutation = useMutation({
     mutationFn: signInWithPassword,
+    onSuccess: async (result) => {
+      if ('requiresPin' in result) {
+        setPinChallenge({ token: result.pinChallengeToken, role: result.role });
+        return;
+      }
+
+      await checkUserSession?.();
+
+      router.replace(getHomePathForRole(result.role));
+    },
+  });
+
+  const verifyPinMutation = useMutation({
+    mutationFn: verifySignInPin,
     onSuccess: async (user) => {
       await checkUserSession?.();
 
@@ -69,52 +95,97 @@ export function JwtSignInView() {
   });
 
   const onSubmit = handleSubmit(async (data) => {
+    if (pinChallenge) {
+      if (!/^\d{8}$/.test(data.pin)) {
+        methods.setError('pin', { message: 'PIN ต้องเป็นตัวเลข 8 หลัก' });
+        return;
+      }
+      verifyPinMutation.mutate({ pinChallengeToken: pinChallenge.token, pin: data.pin });
+      return;
+    }
+
     signInMutation.mutate({ username: data.username, password: data.password });
   });
 
-  const errorMessage = signInMutation.error ? getErrorMessage(signInMutation.error) : null;
+  const error = pinChallenge ? verifyPinMutation.error : signInMutation.error;
+  const errorMessage = error ? getErrorMessage(error) : null;
 
   const renderForm = () => (
     <Box sx={{ gap: 2.5, display: 'flex', flexDirection: 'column' }}>
-      <Field.Text
-        name="username"
-        label="ชื่อผู้ใช้งาน"
-        placeholder="กรอกชื่อผู้ใช้งาน"
-        slotProps={{
-          inputLabel: { shrink: true },
-          input: {
-            startAdornment: (
-              <InputAdornment position="start">
-                <RemixIcon icon="solar:user-rounded-bold" width={22} />
-              </InputAdornment>
-            ),
-          },
-        }}
-      />
+      {!pinChallenge ? (
+        <>
+          <Field.Text
+            name="username"
+            label="ชื่อผู้ใช้งาน"
+            placeholder="กรอกชื่อผู้ใช้งาน"
+            slotProps={{
+              inputLabel: { shrink: true },
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <RemixIcon icon="solar:user-rounded-bold" width={22} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
 
-      <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
+            <Field.Text
+              name="password"
+              label="รหัสผ่าน"
+              placeholder="6 ตัวอักษรขึ้นไป"
+              type={showPassword.value ? 'text' : 'password'}
+              slotProps={{
+                inputLabel: { shrink: true },
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <RemixIcon icon="solar:lock-password-outline" width={22} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={showPassword.onToggle}
+                        edge="end"
+                        aria-label={showPassword.value ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+                      >
+                        <RemixIcon
+                          icon={showPassword.value ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
+                        />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+          </Box>
+        </>
+      ) : (
         <Field.Text
-          name="password"
-          label="รหัสผ่าน"
-          placeholder="6 ตัวอักษรขึ้นไป"
-          type={showPassword.value ? 'text' : 'password'}
+          name="pin"
+          label="PIN 8 หลัก"
+          placeholder="กรอกตัวเลข 8 หลัก"
+          type={showPin.value ? 'text' : 'password'}
           slotProps={{
             inputLabel: { shrink: true },
+            htmlInput: { inputMode: 'numeric', maxLength: 8, autoComplete: 'one-time-code' },
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <RemixIcon icon="solar:lock-password-outline" width={22} />
+                  <RemixIcon icon="solar:key-minimalistic-bold" width={22} />
                 </InputAdornment>
               ),
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
-                    onClick={showPassword.onToggle}
+                    onClick={showPin.onToggle}
                     edge="end"
-                    aria-label={showPassword.value ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+                    aria-label={showPin.value ? 'ซ่อน PIN' : 'แสดง PIN'}
                   >
                     <RemixIcon
-                      icon={showPassword.value ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
+                      icon={showPin.value ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
                     />
                   </IconButton>
                 </InputAdornment>
@@ -122,7 +193,7 @@ export function JwtSignInView() {
             },
           }}
         />
-      </Box>
+      )}
 
       <Button
         fullWidth
@@ -130,8 +201,8 @@ export function JwtSignInView() {
         size="large"
         type="submit"
         variant="contained"
-        loading={signInMutation.isPending}
-        loadingIndicator="กำลังเข้าสู่ระบบ..."
+        loading={signInMutation.isPending || verifyPinMutation.isPending}
+        loadingIndicator={pinChallenge ? 'กำลังตรวจสอบ PIN...' : 'กำลังเข้าสู่ระบบ...'}
         sx={(theme) => ({
           mt: 1,
           py: 1.4,
@@ -145,8 +216,21 @@ export function JwtSignInView() {
           },
         })}
       >
-        เข้าสู่ระบบ
+        {pinChallenge ? 'ยืนยัน PIN' : 'เข้าสู่ระบบ'}
       </Button>
+
+      {pinChallenge && (
+        <Button
+          color="inherit"
+          onClick={() => {
+            setPinChallenge(null);
+            methods.setValue('pin', '');
+            verifyPinMutation.reset();
+          }}
+        >
+          กลับไปกรอกชื่อผู้ใช้งาน
+        </Button>
+      )}
     </Box>
   );
 
@@ -174,8 +258,14 @@ export function JwtSignInView() {
       </Box>
 
       <FormHead
-        title="ยินดีต้อนรับกลับมา"
-        description="เข้าสู่ระบบเพื่อจัดการคะแนนและติดตามผลการเรียน"
+        title={pinChallenge ? 'ยืนยัน PIN' : 'ยินดีต้อนรับกลับมา'}
+        description={
+          pinChallenge?.role === 'school_admin'
+            ? 'กรอกรหัสโรงเรียน 8 หลักเพื่อเข้าสู่ระบบ'
+            : pinChallenge
+              ? 'กรอก PIN ผู้ดูแลระบบ 8 หลักเพื่อเข้าสู่ระบบ'
+              : 'เข้าสู่ระบบเพื่อจัดการคะแนนและติดตามผลการเรียน'
+        }
         sx={{ mt: 0.5, mb: 4, textAlign: 'left' }}
       />
 

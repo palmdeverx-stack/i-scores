@@ -104,11 +104,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { teacherId, subjectId, classroomId, semesterId } = await request.json();
-  const canAssignOtherTeachers =
+  const canManageAssignments =
     caller.role === 'school_admin' ||
-    (caller.role === 'teacher' && (await hasTimetableCapability(caller.sub, caller.schoolId)));
-  const resolvedTeacherId = canAssignOtherTeachers ? teacherId : caller.sub;
+    (await hasTimetableCapability(caller.sub, caller.schoolId));
+
+  if (!canManageAssignments) {
+    return NextResponse.json(
+      { message: 'ไม่มีสิทธิ์เพิ่มรายวิชาที่สอน กรุณาติดต่อผู้ดูแลโรงเรียน' },
+      { status: 403 }
+    );
+  }
+
+  const { teacherId, subjectId, classroomId, semesterId } = await request.json();
+  const resolvedTeacherId = teacherId || caller.sub;
 
   if (!resolvedTeacherId || !subjectId || !classroomId || !semesterId) {
     return NextResponse.json({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, { status: 400 });

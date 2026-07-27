@@ -75,6 +75,8 @@ const summaryItems = [
 export function TeacherAssignmentListView() {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
+  const canManageAssignments =
+    user?.role === 'school_admin' || (user?.department_permissions ?? []).includes('schedule.manage');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
   const [classroomFilter, setClassroomFilter] = useState('');
@@ -227,19 +229,21 @@ export function TeacherAssignmentListView() {
             </Typography>
           </Box>
 
-          <Button
-            variant="contained"
-            onClick={openCreateDialog}
-            startIcon={<RemixIcon icon="mingcute:add-line" />}
-            sx={{
-              flexShrink: 0,
-              color: 'primary.darker',
-              bgcolor: 'common.white',
-              '&:hover': { bgcolor: 'grey.200' },
-            }}
-          >
-            {isTeacher ? 'เพิ่มรายวิชาที่สอน' : 'เพิ่มครูประจำวิชา'}
-          </Button>
+          {canManageAssignments && (
+            <Button
+              variant="contained"
+              onClick={openCreateDialog}
+              startIcon={<RemixIcon icon="mingcute:add-line" />}
+              sx={{
+                flexShrink: 0,
+                color: 'primary.darker',
+                bgcolor: 'common.white',
+                '&:hover': { bgcolor: 'grey.200' },
+              }}
+            >
+              {isTeacher ? 'เพิ่มรายวิชาที่สอน' : 'เพิ่มครูประจำวิชา'}
+            </Button>
+          )}
         </Box>
       </Card>
 
@@ -404,6 +408,7 @@ export function TeacherAssignmentListView() {
               key={row.id}
               row={row}
               detailPath={detailPath(row.id)}
+              canEdit={canManageAssignments}
               onEdit={openEditDialog}
               onDelete={(target) => {
                 deleteMutation.reset();
@@ -472,7 +477,8 @@ export function TeacherAssignmentListView() {
               ล้างตัวกรอง
             </Button>
           ) : (
-            isTeacher && (
+            isTeacher &&
+            canManageAssignments && (
               <Button
                 variant="contained"
                 sx={{ mt: 2.5 }}

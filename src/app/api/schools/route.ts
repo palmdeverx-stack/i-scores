@@ -72,10 +72,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'กรุณากรอกชื่อและรหัสโรงเรียน' }, { status: 400 });
   }
 
+  const normalizedCode = String(code).trim();
+  if (!/^\d{8}$/.test(normalizedCode)) {
+    return NextResponse.json(
+      { message: 'รหัสโรงเรียนต้องเป็นตัวเลข 8 หลัก' },
+      { status: 400 }
+    );
+  }
+
   const { data: existing } = await supabaseAdmin
     .from('schools')
     .select('id')
-    .ilike('code', code)
+    .ilike('code', normalizedCode)
     .maybeSingle();
 
   if (existing) {
@@ -87,7 +95,7 @@ export async function POST(request: Request) {
     .insert({
       name: String(name).trim(),
       name_en: typeof nameEn === 'string' && nameEn.trim() ? nameEn.trim() : null,
-      code: String(code).trim(),
+      code: normalizedCode,
       created_by: caller.sub,
     })
     .select('id, name, name_en, code, logo_url, is_active, created_at')

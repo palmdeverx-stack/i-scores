@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { toPublicUser, getBearerToken, verifyAppToken } from 'src/lib/auth-token';
+import { toPublicUser, verifyAppToken, getRequestToken } from 'src/lib/auth-token';
 import { getDepartmentGrantedPermissions } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
 export async function GET(request: Request) {
-  const token = getBearerToken(request);
+  const token = getRequestToken(request);
   const payload = token ? verifyAppToken(token) : null;
 
   if (!payload) {

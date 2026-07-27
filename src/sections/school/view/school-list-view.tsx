@@ -95,7 +95,7 @@ export function SchoolListView() {
   };
 
   const saveSchool = () => {
-    if (!editingSchool || !editName.trim() || !editCode.trim()) return;
+    if (!editingSchool || !editName.trim() || !/^\d{8}$/.test(editCode.trim())) return;
     updateMutation.mutate({
       id: editingSchool.id,
       name: editName.trim(),
@@ -468,6 +468,8 @@ export function SchoolListView() {
               label="รหัสโรงเรียน"
               value={editCode}
               onChange={(event) => setEditCode(event.target.value)}
+              helperText="ตัวเลข 8 หลัก ใช้เป็น PIN สำหรับผู้ดูแลโรงเรียน"
+              slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 8 } }}
               required
             />
           </Box>
@@ -484,7 +486,7 @@ export function SchoolListView() {
             variant="contained"
             onClick={saveSchool}
             loading={updateMutation.isPending}
-            disabled={!editName.trim() || !editCode.trim()}
+            disabled={!editName.trim() || !/^\d{8}$/.test(editCode.trim())}
           >
             บันทึกการแก้ไข
           </Button>

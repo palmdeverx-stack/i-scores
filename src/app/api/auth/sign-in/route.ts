@@ -2,8 +2,15 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { signAppToken, toPublicUser } from 'src/lib/auth-token';
+import { isSignInAllowed } from 'src/lib/auth-rate-limit';
 import { isSubscriptionUsable, loadSchoolSubscription } from 'src/lib/school-subscription';
+import {
+  signAppToken,
+  toPublicUser,
+  signPinChallenge,
+  ACCESS_TOKEN_COOKIE,
+  accessTokenCookieOptions,
+} from 'src/lib/auth-token';
 
 // ----------------------------------------------------------------------
 
@@ -12,6 +19,13 @@ export async function POST(request: Request) {
 
   if (!username || !password) {
     return NextResponse.json({ message: 'กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน' }, { status: 400 });
+  }
+
+  if (!(await isSignInAllowed(request, username))) {
+    return NextResponse.json(
+      { message: 'พยายามเข้าสู่ระบบบ่อยเกินไป กรุณาลองใหม่อีกครั้งในภายหลัง' },
+      { status: 429 }
+    );
   }
 
   const { data: user } = await supabaseAdmin
@@ -59,6 +73,14 @@ export async function POST(request: Request) {
     }
   }
 
+  if (user.role === 'master_admin' || user.role === 'school_admin') {
+    return NextResponse.json({
+      requiresPin: true,
+      pinChallengeToken: signPinChallenge(user.id),
+      role: user.role,
+    });
+  }
+
   const accessToken = signAppToken({
     sub: user.id,
     username: user.username,
@@ -66,5 +88,7 @@ export async function POST(request: Request) {
     schoolId: user.school_id,
   });
 
-  return NextResponse.json({ accessToken, user: toPublicUser(user) });
+  const response = NextResponse.json({ user: toPublicUser(user) });
+  response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, accessTokenCookieOptions);
+  return response;
 }

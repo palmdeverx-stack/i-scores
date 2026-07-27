@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type MyDepartmentTeacher = {
@@ -32,21 +30,15 @@ export type DepartmentAnnouncement = {
   author: { first_name: string | null; last_name: string | null } | null;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getMyDepartment(): Promise<MyDepartment> {
-  const response = await fetch('/api/teacher/department', { headers: authHeader() });
+  const response = await fetch('/api/teacher/department', {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'Failed to load department');
   return json;
 }
 
 export async function listDepartmentAnnouncements(): Promise<DepartmentAnnouncement[]> {
-  const response = await fetch('/api/teacher/department/announcements', {
-    headers: authHeader(),
-  });
+  const response = await fetch('/api/teacher/department/announcements', {});
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'Failed to load announcements');
   return json.announcements;
@@ -58,7 +50,7 @@ export async function createDepartmentAnnouncement(params: {
 }): Promise<DepartmentAnnouncement> {
   const response = await fetch('/api/teacher/department/announcements', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();

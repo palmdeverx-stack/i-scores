@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type TeacherProfile = {
@@ -33,12 +31,8 @@ export type UpdateTeacherProfileParams = {
   email: string;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getTeacherProfile(): Promise<TeacherProfile> {
-  const response = await fetch('/api/teacher/profile', { headers: authHeader() });
+  const response = await fetch('/api/teacher/profile', {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดข้อมูลโปรไฟล์ได้');
@@ -51,7 +45,7 @@ export async function updateTeacherProfile(
 ): Promise<TeacherProfile> {
   const response = await fetch('/api/teacher/profile', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
@@ -67,7 +61,6 @@ export async function uploadTeacherAvatar(file: File): Promise<string> {
 
   const response = await fetch('/api/teacher/profile/avatar', {
     method: 'POST',
-    headers: authHeader(),
     body: formData,
   });
   const json = await response.json();
@@ -79,7 +72,6 @@ export async function uploadTeacherAvatar(file: File): Promise<string> {
 export async function deleteTeacherAvatar(): Promise<void> {
   const response = await fetch('/api/teacher/profile/avatar', {
     method: 'DELETE',
-    headers: authHeader(),
   });
   const json = await response.json();
 

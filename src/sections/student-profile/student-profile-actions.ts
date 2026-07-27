@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type StudentProfile = {
@@ -43,12 +41,8 @@ export type StudentProfile = {
   } | null;
 };
 
-function authHeader() {
-  return { Authorization: `Bearer ${getStoredToken()}` };
-}
-
 export async function getStudentProfile(): Promise<StudentProfile> {
-  const response = await fetch('/api/student/profile', { headers: authHeader() });
+  const response = await fetch('/api/student/profile', {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดข้อมูลโปรไฟล์ได้');

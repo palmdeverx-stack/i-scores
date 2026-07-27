@@ -1,7 +1,5 @@
 'use client';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type SubmissionStatus =
@@ -158,10 +156,7 @@ export type StudentAssignmentsDashboard = StudentDashboardBase & {
 };
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${getStoredToken()}` },
-    cache: 'no-store',
-  });
+  const response = await fetch(url, { cache: 'no-store' });
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load student dashboard');

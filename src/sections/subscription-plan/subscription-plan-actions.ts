@@ -2,8 +2,6 @@
 
 import type { SchoolFeatureKey } from 'src/lib/school-subscription-config';
 
-import { getStoredToken } from 'src/auth/context/jwt/utils';
-
 // ----------------------------------------------------------------------
 
 export type SubscriptionPlanBillingCycle = 'monthly' | 'yearly' | 'custom';
@@ -42,13 +40,6 @@ export type SubscriptionPlanInput = {
   sortOrder: number;
 };
 
-function authHeaders(json = false) {
-  return {
-    ...(json ? { 'Content-Type': 'application/json' } : {}),
-    Authorization: `Bearer ${getStoredToken()}`,
-  };
-}
-
 async function parseResponse<T>(response: Response, fallbackMessage: string): Promise<T> {
   const json = await response.json().catch(() => null);
   if (!response.ok) throw new Error(json?.message ?? fallbackMessage);
@@ -57,8 +48,7 @@ async function parseResponse<T>(response: Response, fallbackMessage: string): Pr
 
 export async function listSubscriptionPlans(includeInactive = true): Promise<SubscriptionPlan[]> {
   const response = await fetch(
-    `/api/subscription-plans?includeInactive=${includeInactive ? 'true' : 'false'}`,
-    { headers: authHeaders() }
+    `/api/subscription-plans?includeInactive=${includeInactive ? 'true' : 'false'}`
   );
   const data = await parseResponse<{ plans: SubscriptionPlan[] }>(
     response,
@@ -72,7 +62,7 @@ export async function createSubscriptionPlan(
 ): Promise<SubscriptionPlan> {
   const response = await fetch('/api/subscription-plans', {
     method: 'POST',
-    headers: authHeaders(true),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
   const data = await parseResponse<{ plan: SubscriptionPlan }>(
@@ -88,7 +78,7 @@ export async function updateSubscriptionPlan(
 ): Promise<SubscriptionPlan> {
   const response = await fetch(`/api/subscription-plans/${id}`, {
     method: 'PATCH',
-    headers: authHeaders(true),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
   const data = await parseResponse<{ plan: SubscriptionPlan }>(
@@ -101,7 +91,6 @@ export async function updateSubscriptionPlan(
 export async function deleteSubscriptionPlan(id: string): Promise<void> {
   const response = await fetch(`/api/subscription-plans/${id}`, {
     method: 'DELETE',
-    headers: authHeaders(),
   });
   await parseResponse<{ success: boolean }>(response, 'ไม่สามารถลบแพ็กเกจได้');
 }

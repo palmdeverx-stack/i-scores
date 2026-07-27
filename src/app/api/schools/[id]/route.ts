@@ -81,6 +81,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (typeof code !== 'string' || !code.trim()) {
       return NextResponse.json({ message: 'กรุณากรอกรหัสโรงเรียน' }, { status: 400 });
     }
+    if (!/^\d{8}$/.test(code.trim())) {
+      return NextResponse.json(
+        { message: 'รหัสโรงเรียนต้องเป็นตัวเลข 8 หลัก' },
+        { status: 400 }
+      );
+    }
 
     const { data: duplicate } = await supabaseAdmin
       .from('schools')
