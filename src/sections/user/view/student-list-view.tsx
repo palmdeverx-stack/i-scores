@@ -5,8 +5,11 @@ import type { UserRow } from '../user-actions';
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+import Tab from '@mui/material/Tab';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import Tabs from '@mui/material/Tabs';
+import Chip from '@mui/material/Chip';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
@@ -29,14 +32,21 @@ import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 
 import { Label } from 'src/components/label';
-import { RemixIcon , RiLineFill, RiLineLine } from 'src/components/remix-icon';
+import { RemixIcon, RiLineFill, RiLineLine } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { StudentGuardiansDialog } from 'src/sections/student-guardian/components/student-guardians-dialog';
 
 import { StudentFormDialog } from '../components/student-form-dialog';
+import { downloadStudentImportTemplate } from '../student-import-utils';
 import { StudentAvatarDialog } from '../components/student-avatar-dialog';
-import { listUsers, updateUserActive, deleteManagedUser } from '../user-actions';
+import { StudentImportDialog } from '../components/student-import-dialog';
+import {
+  listUsers,
+  updateUserActive,
+  deleteManagedUser,
+  confirmStudentImport,
+} from '../user-actions';
 
 // ----------------------------------------------------------------------
 
@@ -47,6 +57,8 @@ function maskPassword(password: string) {
 export function StudentListView() {
   const table = useTable({ defaultRowsPerPage: 10 });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [tab, setTab] = useState<'confirmed' | 'pending'>('confirmed');
   const [search, setSearch] = useState('');
   const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
   const [avatarStudent, setAvatarStudent] = useState<UserRow | null>(null);
@@ -79,11 +91,26 @@ export function StudentListView() {
     },
   });
 
-  const filteredStudents = useMemo(() => {
-    const keyword = search.trim().toLocaleLowerCase('th');
-    if (!keyword) return students;
+  const confirmMutation = useMutation({
+    mutationFn: confirmStudentImport,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users', 'student'] }),
+  });
 
-    return students.filter((student) =>
+  const pendingStudents = useMemo(
+    () => students.filter((student) => !student.import_confirmed_at),
+    [students]
+  );
+  const confirmedStudents = useMemo(
+    () => students.filter((student) => !!student.import_confirmed_at),
+    [students]
+  );
+
+  const filteredStudents = useMemo(() => {
+    const source = tab === 'pending' ? pendingStudents : confirmedStudents;
+    const keyword = search.trim().toLocaleLowerCase('th');
+    if (!keyword) return source;
+
+    return source.filter((student) =>
       [
         student.student_code,
         student.username,
@@ -100,7 +127,7 @@ export function StudentListView() {
         .toLocaleLowerCase('th')
         .includes(keyword)
     );
-  }, [search, students]);
+  }, [search, tab, pendingStudents, confirmedStudents]);
 
   const visibleStudents = useMemo(
     () => rowInPage(filteredStudents, table.page, table.rowsPerPage),
@@ -136,13 +163,29 @@ export function StudentListView() {
             จัดการบัญชี รูปโปรไฟล์ และข้อมูลผู้ปกครองของนักเรียน
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          onClick={() => setDialogOpen(true)}
-          startIcon={<RemixIcon icon="solar:user-plus-bold" />}
-        >
-          เพิ่มนักเรียน
-        </Button>
+        <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+          <Button
+            color="inherit"
+            onClick={downloadStudentImportTemplate}
+            startIcon={<RemixIcon icon="solar:download-bold" />}
+          >
+            ดาวน์โหลด Template
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => setImportDialogOpen(true)}
+            startIcon={<RemixIcon icon="solar:upload-bold" />}
+          >
+            นำเข้าจาก Excel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => setDialogOpen(true)}
+            startIcon={<RemixIcon icon="solar:user-plus-bold" />}
+          >
+            เพิ่มนักเรียน
+          </Button>
+        </Box>
       </Box>
 
       {isError && (
@@ -164,7 +207,42 @@ export function StudentListView() {
         </Alert>
       )}
 
+      {confirmMutation.error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {confirmMutation.error.message}
+        </Alert>
+      )}
+
       <Card variant="outlined">
+        <Tabs
+          value={tab}
+          onChange={(_event, value) => {
+            setTab(value);
+            table.onResetPage();
+          }}
+          sx={{ px: 2, borderBottom: '1px solid', borderColor: 'divider' }}
+        >
+          <Tab
+            value="confirmed"
+            label={
+              <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
+                ยืนยันสำเร็จ
+                <Chip size="small" label={confirmedStudents.length} />
+              </Box>
+            }
+          />
+          <Tab
+            value="pending"
+            label={
+              <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
+                รอยืนยัน
+                {!!pendingStudents.length && (
+                  <Chip size="small" color="warning" label={pendingStudents.length} />
+                )}
+              </Box>
+            }
+          />
+        </Tabs>
         <Box
           sx={{
             gap: 2,
@@ -180,32 +258,52 @@ export function StudentListView() {
         >
           <Box>
             <Typography component="h2" variant="h6">
-              รายการนักเรียน
+              {tab === 'pending' ? 'นักเรียนรอยืนยันข้อมูล' : 'รายการนักเรียน'}
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              {isLoading ? 'กำลังโหลด...' : `${filteredStudents.length} บัญชี`}
+              {isLoading
+                ? 'กำลังโหลด...'
+                : tab === 'pending'
+                  ? `${filteredStudents.length} บัญชี · นำเข้าจาก Excel ยังไม่ได้ตรวจสอบ`
+                  : `${filteredStudents.length} บัญชี`}
             </Typography>
           </Box>
-          <TextField
-            size="small"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              table.onResetPage();
-            }}
-            placeholder="ค้นหารหัสนักเรียน ชื่อ หรือผู้ใช้"
-            aria-label="ค้นหานักเรียน"
-            sx={{ width: { xs: 1, sm: 320 } }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <RemixIcon icon="eva:search-fill" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
+          <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+            {tab === 'pending' && !!filteredStudents.length && (
+              <Button
+                variant="contained"
+                color="warning"
+                size="small"
+                loading={confirmMutation.isPending}
+                onClick={() =>
+                  confirmMutation.mutate(filteredStudents.map((student) => student.id))
+                }
+                startIcon={<RemixIcon icon="solar:check-circle-bold" />}
+              >
+                ยืนยันทั้งหมด ({filteredStudents.length})
+              </Button>
+            )}
+            <TextField
+              size="small"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                table.onResetPage();
+              }}
+              placeholder="ค้นหารหัสนักเรียน ชื่อ หรือผู้ใช้"
+              aria-label="ค้นหานักเรียน"
+              sx={{ width: { xs: 1, sm: 320 } }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <RemixIcon icon="eva:search-fill" />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+          </Box>
         </Box>
 
         <TableContainer>
@@ -403,6 +501,19 @@ export function StudentListView() {
                   </TableCell>
                   <TableCell align="right">
                     <Box sx={{ gap: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
+                      {tab === 'pending' && (
+                        <Tooltip title="ยืนยันข้อมูลนักเรียนคนนี้">
+                          <IconButton
+                            size="small"
+                            color="warning"
+                            disabled={confirmMutation.isPending}
+                            onClick={() => confirmMutation.mutate([student.id])}
+                            aria-label={`ยืนยันข้อมูล ${student.first_name ?? student.username}`}
+                          >
+                            <RemixIcon icon="solar:check-circle-bold" width={18} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       <Button
                         size="small"
                         variant="outlined"
@@ -469,6 +580,7 @@ export function StudentListView() {
         onClose={() => setEditingStudent(null)}
       />
       <StudentAvatarDialog student={avatarStudent} onClose={() => setAvatarStudent(null)} />
+      <StudentImportDialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} />
       <StudentGuardiansDialog
         open={!!guardianStudent}
         student={guardianStudent}

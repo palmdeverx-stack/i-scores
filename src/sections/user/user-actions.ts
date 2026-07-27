@@ -35,6 +35,7 @@ export type UserRow = {
   guardian_count?: number;
   line_guardian_count?: number;
   line_notifications_enabled_count?: number;
+  import_confirmed_at?: string | null;
 };
 
 export type CreateUserParams = {
@@ -102,6 +103,69 @@ export async function createUser(params: CreateUserParams) {
   }
 
   return json.user;
+}
+
+/** **************************************
+ * Bulk import students from Excel
+ *************************************** */
+export type BulkImportStudentRow = {
+  row: number;
+  studentCode?: string;
+  nationalId?: string;
+  namePrefix?: string;
+  firstName?: string;
+  lastName?: string;
+  firstNameEn?: string;
+  lastNameEn?: string;
+  nickname?: string;
+  gender?: string;
+  birthDate?: string;
+  nationality?: string;
+  ethnicity?: string;
+  religion?: string;
+  username?: string;
+  email?: string;
+  password?: string;
+};
+
+export type BulkImportResult = {
+  results: Array<{ row: number; success: boolean; studentCode?: string; message?: string }>;
+  successCount: number;
+  failureCount: number;
+};
+
+export async function bulkImportStudents(
+  rows: BulkImportStudentRow[]
+): Promise<BulkImportResult> {
+  const response = await fetch('/api/admin/users/bulk-import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rows }),
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json.message ?? 'Failed to import students');
+  }
+
+  return json;
+}
+
+export async function confirmStudentImport(ids: string[]): Promise<number> {
+  const response = await fetch('/api/admin/students/confirm-import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json.message ?? 'Failed to confirm students');
+  }
+
+  return json.confirmedCount;
 }
 
 export async function updateSchoolAdmin(id: string, params: UpdateSchoolAdminParams) {
