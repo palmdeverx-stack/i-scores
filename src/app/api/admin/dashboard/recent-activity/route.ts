@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canViewViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
 export async function GET(request: Request) {
-  const caller = requireRole(request, ['school_admin']);
-  if (!caller?.schoolId) {
+  const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (
+    !caller?.schoolId ||
+    (caller.role === 'teacher' && !(await canViewViaPermission(caller, 'dashboard.view')))
+  ) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 

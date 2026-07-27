@@ -6,8 +6,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
+import Tabs from '@mui/material/Tabs';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
@@ -21,16 +23,14 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
 
-import { paths } from 'src/routes/paths';
-import { RouterLink } from 'src/routes/components';
-
 import { navData as adminNavData } from 'src/layouts/nav-config-dashboard';
 import { navData as teacherNavData } from 'src/layouts/nav-config-teacher';
-import { DEPARTMENT_PERMISSIONS } from 'src/lib/department-permissions-config';
+import { DEPARTMENT_DELEGABLE_PERMISSIONS } from 'src/lib/department-permissions-config';
 
 import { RemixIcon } from 'src/components/remix-icon';
 
 import { listDepartments, updateDepartment } from '../department-management-actions';
+import { StaffAccessPermissionsPanel } from '../components/staff-access-permissions-panel';
 
 // ----------------------------------------------------------------------
 
@@ -57,7 +57,7 @@ const departmentMenuItems = teacherMenuItems.filter(
 // delegated teacher reaches them via /admin, same as a school admin) — map
 // each permission key to the admin nav items that declare it.
 const PERMISSION_MENU_ITEMS: Record<string, string[]> = Object.fromEntries(
-  DEPARTMENT_PERMISSIONS.map((permission) => [
+  DEPARTMENT_DELEGABLE_PERMISSIONS.map((permission) => [
     permission.key,
     adminMenuItems
       .filter((item) => item.requiresDepartmentPermission === permission.key)
@@ -73,6 +73,7 @@ function samePermissions(a: string[], b: string[]) {
 
 export function DepartmentPermissionsView() {
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState(0);
 
   const {
     data: departments = [],
@@ -119,28 +120,31 @@ export function DepartmentPermissionsView() {
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
-      <Box sx={{ mb: 1 }}>
-        <Button
-          component={RouterLink}
-          href={paths.admin.department.root}
-          size="small"
-          startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
-        >
-          กลับไปหน้ารายการฝ่าย
-        </Button>
-      </Box>
-
       <Box sx={{ mb: 4 }}>
         <Typography component="h1" variant="h3">
-          จัดการสิทธิ์เข้าใช้งาน
+          สิทธิ์การใช้งาน
         </Typography>
         <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-          เปิดสิทธิ์ให้ฝ่ายไหน สมาชิกทุกคนในฝ่ายนั้นจะเห็นเมนูและดูข้อมูลได้ทันที — ส่วนสิทธิ์
-          แก้ไข/จัดการ ต้องไปมอบให้เป็นรายคนที่หน้า “จัดการสมาชิก” ของฝ่ายนั้นอีกที
+          กำหนดสิทธิ์ตามฝ่าย ประเภทบุคลากร และข้อยกเว้นเฉพาะบุคคล
         </Typography>
       </Box>
 
-      {isError && (
+      <Card variant="outlined" sx={{ mb: 3 }}>
+        <Tabs
+          value={tab}
+          onChange={(_, value: number) => setTab(value)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ px: 2 }}
+        >
+          <Tab label="สิทธิ์ตามฝ่าย" />
+          <Tab label="สิทธิ์ตามประเภทบุคลากร" />
+          <Tab label="สิทธิ์เฉพาะบุคคล" />
+        </Tabs>
+      </Card>
+
+      <Box sx={{ display: tab === 0 ? 'block' : 'none' }}>
+        {isError && (
         <Alert
           severity="error"
           action={
@@ -152,15 +156,15 @@ export function DepartmentPermissionsView() {
         >
           ไม่สามารถโหลดรายการฝ่ายได้
         </Alert>
-      )}
+        )}
 
-      {saveMutation.isError && (
+        {saveMutation.isError && (
         <Alert severity="error" sx={{ mb: 3 }}>
           บันทึกสิทธิ์ไม่สำเร็จ กรุณาลองอีกครั้ง
         </Alert>
-      )}
+        )}
 
-      {hasChanges && (
+        {hasChanges && (
         <Alert
           severity="warning"
           variant="outlined"
@@ -188,9 +192,9 @@ export function DepartmentPermissionsView() {
         >
           มีการแก้ไขสิทธิ์ {dirtyDepartments.length} ฝ่ายที่ยังไม่ได้บันทึก
         </Alert>
-      )}
+        )}
 
-      <Card variant="outlined" sx={{ p: 2.5, mb: 3 }}>
+        <Card variant="outlined" sx={{ p: 2.5, mb: 3 }}>
         <Typography variant="subtitle1" sx={{ mb: 2 }}>
           เมนูที่ครูเห็นในระบบตอนนี้
         </Typography>
@@ -226,7 +230,7 @@ export function DepartmentPermissionsView() {
               เมนูที่ปลดล็อกตามสิทธิ์ (คอลัมน์ในตารางด้านล่าง)
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {DEPARTMENT_PERMISSIONS.map((permission) => (
+              {DEPARTMENT_DELEGABLE_PERMISSIONS.map((permission) => (
                 <Box key={permission.key} sx={{ gap: 0.75, display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' }}>
                   {(PERMISSION_MENU_ITEMS[permission.key] ?? []).map((title) => (
                     <Chip key={title} size="small" variant="soft" color="info" label={title} />
@@ -239,15 +243,15 @@ export function DepartmentPermissionsView() {
             </Box>
           </Box>
         </Box>
-      </Card>
+        </Card>
 
-      <Card variant="outlined">
+        <Card variant="outlined">
         <TableContainer>
           <Table sx={{ minWidth: 640 }}>
             <TableHead>
               <TableRow>
                 <TableCell>ฝ่าย</TableCell>
-                {DEPARTMENT_PERMISSIONS.map((item) => (
+                {DEPARTMENT_DELEGABLE_PERMISSIONS.map((item) => (
                   <TableCell key={item.key}>
                     <Tooltip title={item.description}>
                       <Box sx={{ gap: 0.5, display: 'inline-flex', alignItems: 'center' }}>
@@ -262,13 +266,15 @@ export function DepartmentPermissionsView() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={1 + DEPARTMENT_PERMISSIONS.length}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={1 + DEPARTMENT_DELEGABLE_PERMISSIONS.length}>
+                    กำลังโหลด...
+                  </TableCell>
                 </TableRow>
               )}
               {!isLoading && !departments.length && (
                 <TableRow>
                   <TableCell
-                    colSpan={1 + DEPARTMENT_PERMISSIONS.length}
+                    colSpan={1 + DEPARTMENT_DELEGABLE_PERMISSIONS.length}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
                     ยังไม่มีฝ่าย ไปที่หน้ารายการฝ่ายเพื่อเพิ่มฝ่ายก่อน
@@ -288,7 +294,7 @@ export function DepartmentPermissionsView() {
                         )}
                       </Box>
                     </TableCell>
-                    {DEPARTMENT_PERMISSIONS.map((item) => {
+                    {DEPARTMENT_DELEGABLE_PERMISSIONS.map((item) => {
                       const granted = permissions.includes(item.key);
                       return (
                         <TableCell key={item.key}>
@@ -311,7 +317,11 @@ export function DepartmentPermissionsView() {
             </TableBody>
           </Table>
         </TableContainer>
-      </Card>
+        </Card>
+      </Box>
+
+      {tab === 1 && <StaffAccessPermissionsPanel mode="staff_type" />}
+      {tab === 2 && <StaffAccessPermissionsPanel mode="individual" />}
     </Container>
   );
 }

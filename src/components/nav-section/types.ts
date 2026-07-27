@@ -57,6 +57,7 @@ export type NavItemDataProps = Pick<NavItemStateProps, 'disabled'> & {
   requiresDepartment?: boolean;
   departmentHeadOnly?: boolean;
   requiresDepartmentPermission?: string;
+  requiresSchoolDirector?: boolean;
   children?: NavItemDataProps[];
 };
 

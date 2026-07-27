@@ -5,14 +5,22 @@ import { paths } from 'src/routes/paths';
 import {
   RiTeamLine,
   RiBook2Line,
+  RiIdCardLine,
   RiSchoolLine,
   RiUserAddLine,
   RiCalendarLine,
   RiUserStarLine,
   RiMessage2Line,
+  RiFileChartLine,
+  RiFileList3Line,
   RiMegaphoneLine,
   RiDashboardLine,
+  RiSettings3Line,
+  RiFileSearchLine,
+  RiFileHistoryLine,
+  RiShieldCheckLine,
   RiPresentationLine,
+  RiCalendarCheckLine,
   RiGraduationCapLine,
   RiOrganizationChart,
   RiCalendarScheduleLine,
@@ -34,6 +42,16 @@ const ICONS = {
   announcements: <RiMegaphoneLine />,
   department: <RiOrganizationChart />,
   scheduleBuilder: <RiCalendarScheduleLine />,
+  scheduleSubmissions: <RiFileHistoryLine />,
+  scheduleApprovals: <RiCalendarCheckLine />,
+  gradeReviews: <RiFileSearchLine />,
+  gradeResults: <RiFileChartLine />,
+  documents: <RiFileList3Line />,
+  accessPermissions: <RiShieldCheckLine />,
+  staffMasters: <RiSettings3Line />,
+  staffTypes: <RiTeamLine />,
+  positions: <RiIdCardLine />,
+  academicRanks: <RiUserStarLine />,
 };
 
 // ----------------------------------------------------------------------
@@ -45,7 +63,12 @@ export const navData: NavSectionProps['data'] = [
   {
     subheader: 'ภาพรวม',
     items: [
-      { title: 'หน้าหลัก', path: paths.admin.root, icon: ICONS.dashboard },
+      {
+        title: 'หน้าหลัก',
+        path: paths.admin.root,
+        icon: ICONS.dashboard,
+        requiresDepartmentPermission: 'dashboard.view',
+      },
       {
         title: 'ประกาศ',
         path: paths.admin.announcements,
@@ -63,6 +86,7 @@ export const navData: NavSectionProps['data'] = [
         path: paths.admin.school,
         icon: ICONS.school,
         featureKey: 'admin.school_profile',
+        requiresDepartmentPermission: 'school_profile.view',
       },
     ],
   },
@@ -115,6 +139,41 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.scheduleBuilder,
         requiresDepartmentPermission: 'schedule.manage',
       },
+      {
+        title: 'สถานะการลงนามตารางสอน',
+        path: paths.admin.scheduleSubmissions,
+        icon: ICONS.scheduleSubmissions,
+        requiresDepartmentPermission: 'schedule.manage',
+      },
+      {
+        title: 'ตรวจสอบผลการเรียน',
+        path: paths.admin.gradeReviews,
+        icon: ICONS.gradeReviews,
+        requiresDepartmentPermission: 'grades.approve',
+      },
+      {
+        title: 'ผลการเรียน',
+        path: paths.admin.gradeResults,
+        icon: ICONS.gradeResults,
+        requiresDepartmentPermission: 'grades.review',
+      },
+      {
+        title: 'อนุมัติตารางสอน',
+        path: paths.admin.scheduleApprovals,
+        icon: ICONS.scheduleApprovals,
+        requiresSchoolDirector: true,
+      },
+    ],
+  },
+  {
+    subheader: 'เอกสาร',
+    items: [
+      {
+        title: 'เอกสาร',
+        path: paths.admin.documents.root,
+        icon: ICONS.documents,
+        requiresDepartmentPermission: 'grades.review',
+      },
     ],
   },
   {
@@ -128,20 +187,37 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'staff.manage',
       },
       {
-        title: 'จัดการฝ่าย',
+        title: 'ข้อมูลหลักบุคลากร',
         path: '#',
-        icon: ICONS.department,
+        icon: ICONS.staffMasters,
         children: [
           {
-            title: 'รายการฝ่าย',
-            path: paths.admin.department.root,
-            deepMatch: true,
+            title: 'ประเภทบุคลากร',
+            path: paths.admin.staffMasters.staffTypes,
+            icon: ICONS.staffTypes,
           },
           {
-            title: 'จัดการสิทธิ์เข้าใช้งาน',
-            path: paths.admin.department.permissions,
+            title: 'ตำแหน่ง',
+            path: paths.admin.staffMasters.positions,
+            icon: ICONS.positions,
+          },
+          {
+            title: 'วิทยฐานะ',
+            path: paths.admin.staffMasters.academicRanks,
+            icon: ICONS.academicRanks,
           },
         ],
+      },
+      {
+        title: 'จัดการฝ่าย',
+        path: paths.admin.department.root,
+        icon: ICONS.department,
+        deepMatch: true,
+      },
+      {
+        title: 'สิทธิ์การใช้งาน',
+        path: paths.admin.accessPermissions,
+        icon: ICONS.accessPermissions,
       },
       {
         title: 'นักเรียน',

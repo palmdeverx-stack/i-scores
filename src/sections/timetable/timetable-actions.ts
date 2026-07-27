@@ -7,6 +7,8 @@ export type TimetableSlot = {
   day_of_week: number;
   start_time: string;
   end_time: string;
+  location_name: string | null;
+  schedule_period: { period_number: number | null; name: string } | null;
   teacher_assignment: {
     id: string;
     subject: { name: string; code: string } | null;

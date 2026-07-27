@@ -1,14 +1,18 @@
 import 'server-only';
 
 import type { AppTokenPayload } from 'src/lib/auth-token';
+import type { StaffType, EmploymentStatus } from 'src/types/staff-employment';
 
 import bcrypt from 'bcryptjs';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { generatePassword } from 'src/lib/generate-password';
 import { encryptCredential } from 'src/lib/credential-cipher';
+import { isActiveStaffMasterValue } from 'src/lib/staff-master';
 import { schoolHasFeature, checkSchoolSeatLimit } from 'src/lib/school-subscription';
 import { getEffectiveDepartmentPermissions } from 'src/lib/department-permission-access';
+
+import { isStaffType, isEmploymentStatus } from 'src/types/staff-employment';
 
 // ----------------------------------------------------------------------
 
@@ -35,6 +39,13 @@ export type CreateManagedUserInput = {
   religion?: string;
   /** Excel bulk-import rows start unconfirmed; manual single-add is confirmed immediately. */
   pendingConfirmation?: boolean;
+  staffType?: StaffType;
+  employmentStatus?: EmploymentStatus;
+  employmentStartDate?: string;
+  appointmentDate?: string;
+  contractEndDate?: string;
+  positionTitle?: string;
+  academicRank?: string;
 };
 
 export type CreateManagedUserResult =
@@ -70,6 +81,13 @@ export async function createManagedUser(
     ethnicity,
     religion,
     pendingConfirmation,
+    staffType,
+    employmentStatus,
+    employmentStartDate,
+    appointmentDate,
+    contractEndDate,
+    positionTitle,
+    academicRank,
   } = input;
 
   if (!username || !firstName || !lastName || !role) {
@@ -94,6 +112,27 @@ export async function createManagedUser(
   }
   if (role === 'student' && birthDate && new Date(birthDate).getTime() > Date.now()) {
     return { ok: false, status: 400, message: 'วันเดือนปีเกิดต้องไม่เป็นวันที่ในอนาคต' };
+  }
+  if (role === 'teacher' && !isStaffType(staffType)) {
+    return { ok: false, status: 400, message: 'กรุณาเลือกประเภทบุคลากร' };
+  }
+  if (role === 'teacher' && !isEmploymentStatus(employmentStatus)) {
+    return { ok: false, status: 400, message: 'กรุณาเลือกสถานะการทำงาน' };
+  }
+  const employmentDates = [employmentStartDate, appointmentDate, contractEndDate].filter(Boolean);
+  if (
+    role === 'teacher' &&
+    employmentDates.some((date) => Number.isNaN(Date.parse(date as string)))
+  ) {
+    return { ok: false, status: 400, message: 'วันที่ในข้อมูลการทำงานไม่ถูกต้อง' };
+  }
+  if (
+    role === 'teacher' &&
+    employmentStartDate &&
+    contractEndDate &&
+    contractEndDate < employmentStartDate
+  ) {
+    return { ok: false, status: 400, message: 'วันที่สิ้นสุดสัญญาต้องไม่ก่อนวันที่เริ่มงาน' };
   }
 
   // Teacher/student passwords are auto-generated: the account holder must
@@ -134,10 +173,33 @@ export async function createManagedUser(
     }
     targetSchoolId = caller.schoolId!;
   } else {
-    if (role !== 'student' || !caller.schoolId) {
-      return { ok: false, status: 403, message: 'ครูสร้างได้เฉพาะบัญชีนักเรียนในโรงเรียนของตนเอง' };
-    }
-    targetSchoolId = caller.schoolId;
+    return {
+      ok: false,
+      status: 403,
+      message: 'การสร้างบัญชีสงวนไว้เฉพาะผู้ดูแลโรงเรียน',
+    };
+  }
+
+  if (
+    role === 'teacher' &&
+    (!staffType ||
+      !(await isActiveStaffMasterValue(targetSchoolId, 'staff_type', staffType)))
+  ) {
+    return { ok: false, status: 400, message: 'ประเภทบุคลากรไม่ถูกต้องหรือปิดใช้งานแล้ว' };
+  }
+  if (
+    role === 'teacher' &&
+    positionTitle?.trim() &&
+    !(await isActiveStaffMasterValue(targetSchoolId, 'position', positionTitle.trim()))
+  ) {
+    return { ok: false, status: 400, message: 'ตำแหน่งไม่ถูกต้องหรือปิดใช้งานแล้ว' };
+  }
+  if (
+    role === 'teacher' &&
+    academicRank?.trim() &&
+    !(await isActiveStaffMasterValue(targetSchoolId, 'academic_rank', academicRank.trim()))
+  ) {
+    return { ok: false, status: 400, message: 'วิทยฐานะไม่ถูกต้องหรือปิดใช้งานแล้ว' };
   }
 
   const requiredFeature = isDelegatedAdmin
@@ -228,11 +290,19 @@ export async function createManagedUser(
       nationality: role === 'student' ? nationality?.trim() || null : null,
       ethnicity: role === 'student' ? ethnicity?.trim() || null : null,
       religion: role === 'student' ? religion?.trim() || null : null,
+      staff_type: role === 'teacher' ? staffType : null,
+      employment_status: role === 'teacher' ? employmentStatus : null,
+      employment_start_date: role === 'teacher' ? employmentStartDate || null : null,
+      appointment_date: role === 'teacher' ? appointmentDate || null : null,
+      contract_end_date: role === 'teacher' ? contractEndDate || null : null,
+      position_title: role === 'teacher' ? positionTitle?.trim() || null : null,
+      academic_rank: role === 'teacher' ? academicRank?.trim() || null : null,
+      is_school_director: role === 'teacher' && staffType === 'executive',
       is_active: true,
       ...(role === 'student' && pendingConfirmation && { import_confirmed_at: null }),
     })
     .select(
-      'id, username, email, first_name, last_name, avatar_url, role, school_id, created_at, must_change_password, student_status, student_code, national_id, name_prefix, first_name_en, last_name_en, nickname, gender, birth_date, nationality, ethnicity, religion, is_active, import_confirmed_at'
+      'id, username, email, first_name, last_name, avatar_url, role, school_id, created_at, must_change_password, student_status, student_code, national_id, name_prefix, first_name_en, last_name_en, nickname, gender, birth_date, nationality, ethnicity, religion, is_active, import_confirmed_at, staff_type, employment_status, employment_start_date, appointment_date, contract_end_date, position_title, academic_rank, is_school_director'
     )
     .single();
 

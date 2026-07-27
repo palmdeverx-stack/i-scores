@@ -1,19 +1,9 @@
-import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-import { CONFIG } from 'src/global-config';
-
-import { DepartmentPermissionsView } from 'src/sections/department-management/view/department-permissions-view';
-
-import { DepartmentPermissionGuard } from 'src/auth/guard';
+import { paths } from 'src/routes/paths';
 
 // ----------------------------------------------------------------------
 
-export const metadata: Metadata = { title: `จัดการสิทธิ์เข้าใช้งาน - ${CONFIG.appName}` };
-
 export default function Page() {
-  return (
-    <DepartmentPermissionGuard>
-      <DepartmentPermissionsView />
-    </DepartmentPermissionGuard>
-  );
+  redirect(paths.admin.accessPermissions);
 }

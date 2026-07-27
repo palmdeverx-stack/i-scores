@@ -6,12 +6,14 @@ import * as z from 'zod';
 import { useForm } from 'react-hook-form';
 import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import { Box, Stack } from '@mui/material';
+import Divider from '@mui/material/Divider';
+import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -22,23 +24,47 @@ import InputAdornment from '@mui/material/InputAdornment';
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
+import { listStaffMasterItems } from 'src/sections/staff-master/staff-master-actions';
+
+import { STAFF_TYPES, EMPLOYMENT_STATUSES } from 'src/types/staff-employment';
+
 import { createUser, updateStaffUser } from '../user-actions';
 
 // ----------------------------------------------------------------------
 
-const CreateSchema = z.object({
-  firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อภาษาไทย!' }),
-  lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุลภาษาไทย!' }),
-  firstNameEn: z.string(),
-  lastNameEn: z.string(),
-  username: z.string().trim().min(1, { error: 'กรุณากรอกชื่อผู้ใช้งาน!' }),
-  email: z.union([z.literal(''), z.email({ error: 'อีเมลไม่ถูกต้อง!' })]),
-  password: z.union([
-    z.literal(''),
-    z.string().min(6, { error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร!' }),
-  ]),
-  role: z.enum(['teacher', 'student']),
-});
+const CreateSchema = z
+  .object({
+    firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อภาษาไทย!' }),
+    lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุลภาษาไทย!' }),
+    firstNameEn: z.string(),
+    lastNameEn: z.string(),
+    username: z.string().trim().min(1, { error: 'กรุณากรอกชื่อผู้ใช้งาน!' }),
+    email: z.union([z.literal(''), z.email({ error: 'อีเมลไม่ถูกต้อง!' })]),
+    password: z.union([
+      z.literal(''),
+      z.string().min(6, { error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร!' }),
+    ]),
+    role: z.enum(['teacher', 'student']),
+    staffType: z.string().trim().min(1, { error: 'กรุณาเลือกประเภทบุคลากร' }),
+    employmentStatus: z.enum(['active', 'study_leave', 'leave', 'retired', 'terminated']),
+    employmentStartDate: z.string(),
+    appointmentDate: z.string(),
+    contractEndDate: z.string(),
+    positionTitle: z.string(),
+    academicRank: z.string(),
+  })
+  .refine(
+    (data) =>
+      !data.employmentStartDate ||
+      !data.contractEndDate ||
+      data.contractEndDate >= data.employmentStartDate,
+    {
+      path: ['contractEndDate'],
+      error: 'วันที่สิ้นสุดสัญญาต้องไม่ก่อนวันที่เริ่มงาน',
+    }
+  );
+
+type CreateFormValues = z.infer<typeof CreateSchema>;
 
 export function generatePassword(length = 12) {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
@@ -59,8 +85,22 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
   const isEdit = !!user;
   const [showPassword, setShowPassword] = useState(false);
   const queryClient = useQueryClient();
+  const masterItemsQuery = useQuery({
+    queryKey: ['staff-master-items'],
+    queryFn: listStaffMasterItems,
+    enabled: open && !isStudentMode,
+  });
+  const activeMasterItems = (category: 'staff_type' | 'position' | 'academic_rank') =>
+    (masterItemsQuery.data ?? []).filter(
+      (item) =>
+        item.category === category &&
+        (item.is_active ||
+          item.code === user?.staff_type ||
+          item.name === user?.position_title ||
+          item.name === user?.academic_rank)
+    );
 
-  const methods = useForm({
+  const methods = useForm<CreateFormValues>({
     resolver: zodResolver(CreateSchema),
     defaultValues: {
       firstName: '',
@@ -71,6 +111,13 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
       email: '',
       password: '',
       role: (isStudentMode ? 'student' : 'teacher') as 'student' | 'teacher',
+      staffType: 'teacher',
+      employmentStatus: 'active',
+      employmentStartDate: '',
+      appointmentDate: '',
+      contractEndDate: '',
+      positionTitle: '',
+      academicRank: '',
     },
   });
   const { handleSubmit, reset, setValue } = methods;
@@ -99,6 +146,13 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
             email: user.email ?? '',
             password: '',
             role: 'teacher',
+            staffType: user.staff_type ?? 'teacher',
+            employmentStatus: user.employment_status ?? 'active',
+            employmentStartDate: user.employment_start_date ?? '',
+            appointmentDate: user.appointment_date ?? '',
+            contractEndDate: user.contract_end_date ?? '',
+            positionTitle: user.position_title ?? '',
+            academicRank: user.academic_rank ?? '',
           }
         : {
             firstName: '',
@@ -109,6 +163,13 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
             email: '',
             password: generatePassword(),
             role: isStudentMode ? 'student' : 'teacher',
+            staffType: 'teacher',
+            employmentStatus: 'active',
+            employmentStartDate: '',
+            appointmentDate: '',
+            contractEndDate: '',
+            positionTitle: '',
+            academicRank: '',
           }
     );
     setShowPassword(false);
@@ -135,11 +196,13 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
       email: data.email || undefined,
       password: data.password || (isEdit ? undefined : generatePassword()),
       role: isStudentMode ? 'student' : 'teacher',
+      positionTitle: data.positionTitle.trim() || undefined,
+      academicRank: data.academicRank.trim() || undefined,
     })
   );
 
   return (
-    <Dialog open={open} onClose={closeDialog} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={closeDialog} fullWidth maxWidth="md">
       <Form methods={methods} onSubmit={onSubmit}>
         <DialogTitle sx={{ pb: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -271,6 +334,62 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
                 </Button>
               </Box>
             </Box>
+
+            {!isStudentMode && (
+              <>
+                <Divider sx={{ my: 3 }} />
+                <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                  ข้อมูลการทำงาน
+                </Typography>
+                <Box
+                  sx={{
+                    gap: 2.5,
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+                  }}
+                >
+                  <Field.Select name="staffType" label="ประเภทบุคลากร *">
+                    {(activeMasterItems('staff_type').length
+                      ? activeMasterItems('staff_type').map((item) => ({
+                          value: item.code!,
+                          label: item.name_en ? `${item.name} / ${item.name_en}` : item.name,
+                        }))
+                      : STAFF_TYPES
+                    ).map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Field.Select>
+                  <Field.Select name="employmentStatus" label="สถานะ *">
+                    {EMPLOYMENT_STATUSES.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Field.Select>
+                  <Field.DatePicker name="employmentStartDate" label="วันที่เริ่มงาน" />
+                  <Field.DatePicker name="appointmentDate" label="วันที่บรรจุ" />
+                  <Field.DatePicker name="contractEndDate" label="วันที่สิ้นสุดสัญญา" />
+                  <Field.Select name="positionTitle" label="ตำแหน่ง">
+                    <MenuItem value="">ไม่ระบุ</MenuItem>
+                    {activeMasterItems('position').map((item) => (
+                      <MenuItem key={item.id} value={item.name}>
+                        {item.name_en ? `${item.name} / ${item.name_en}` : item.name}
+                      </MenuItem>
+                    ))}
+                  </Field.Select>
+                  <Field.Select name="academicRank" label="วิทยฐานะ">
+                    <MenuItem value="">ไม่ระบุ</MenuItem>
+                    {activeMasterItems('academic_rank').map((item) => (
+                      <MenuItem key={item.id} value={item.name}>
+                        {item.name_en ? `${item.name} / ${item.name_en}` : item.name}
+                      </MenuItem>
+                    ))}
+                  </Field.Select>
+                </Box>
+              </>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

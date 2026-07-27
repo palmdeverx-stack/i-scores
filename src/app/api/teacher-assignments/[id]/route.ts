@@ -2,11 +2,15 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { hasTimetableCapability, canManageAssignmentSchedule } from 'src/lib/schedule-access';
 import {
   loadTeacherAssignment,
   canAccessTeacherAssignment,
 } from 'src/lib/teacher-assignment-access';
+import {
+  hasTimetableCapability,
+  canManageAssignmentSchedule,
+  revertScheduleApprovalOnEdit,
+} from 'src/lib/schedule-access';
 
 // ----------------------------------------------------------------------
 
@@ -127,6 +131,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     );
   }
 
+  await revertScheduleApprovalOnEdit(current!.classroom_id, current!.semester_id);
+  if (classroomId !== current!.classroom_id || semesterId !== current!.semester_id) {
+    await revertScheduleApprovalOnEdit(classroomId, semesterId);
+  }
+
   return NextResponse.json({ teacherAssignment });
 }
 
@@ -149,6 +158,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
+
+  await revertScheduleApprovalOnEdit(current!.classroom_id, current!.semester_id);
 
   return NextResponse.json({ success: true });
 }

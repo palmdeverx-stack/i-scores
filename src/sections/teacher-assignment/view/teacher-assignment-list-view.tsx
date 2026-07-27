@@ -76,7 +76,7 @@ export function TeacherAssignmentListView() {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
   const canManageAssignments =
-    user?.role === 'school_admin' || (user?.department_permissions ?? []).includes('schedule.manage');
+    user?.role === 'school_admin' || (user?.manage_permissions ?? []).includes('schedule.manage');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
   const [classroomFilter, setClassroomFilter] = useState('');

@@ -140,14 +140,6 @@ export function DepartmentListView() {
 
         <Box sx={{ gap: 1, display: 'flex' }}>
           <Button
-            component={RouterLink}
-            href={paths.admin.department.permissions}
-            variant="outlined"
-            startIcon={<RemixIcon icon="solar:shield-keyhole-bold-duotone" />}
-          >
-            จัดการสิทธิ์เข้าใช้งาน
-          </Button>
-          <Button
             variant="contained"
             onClick={openCreateDialog}
             startIcon={<RemixIcon icon="mingcute:add-line" />}

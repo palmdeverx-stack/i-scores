@@ -30,6 +30,7 @@ import { DashboardBottomNav } from './dashboard-bottom-nav';
 import { AccountDrawer } from '../components/account-drawer';
 import { AccountPopover } from '../components/account-popover';
 import { LanguagePopover } from '../components/language-popover';
+import { NotificationsMenu } from '../components/notifications-menu';
 import { navData as dashboardNavData } from '../nav-config-dashboard';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import { MainSection, layoutClasses, HeaderSection, LayoutSection } from '../core';
@@ -189,7 +190,7 @@ export function DashboardLayout({
           {/* <Searchbar data={navData} /> */}
 
           {/** @slot Notifications popover */}
-          {/* <NotificationsDrawer data={_notifications} /> */}
+          <NotificationsMenu />
 
           {/** @slot Contacts popover */}
           {/* <ContactsPopover data={_contacts} /> */}

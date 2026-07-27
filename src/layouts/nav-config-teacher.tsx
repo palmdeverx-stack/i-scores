@@ -6,13 +6,19 @@ import {
   RiTeamLine,
   RiBook2Line,
   RiGroupLine,
+  RiSchoolLine,
   RiQrScan2Line,
   RiUserAddLine,
   RiCalendarLine,
   RiBookOpenLine,
+  RiFileChartLine,
+  RiFileList3Line,
   RiDashboardLine,
   RiMegaphoneLine,
+  RiFileSearchLine,
+  RiFileHistoryLine,
   RiPresentationLine,
+  RiCalendarCheckLine,
   RiOrganizationChart,
   RiGraduationCapLine,
   RiCalendarScheduleLine,
@@ -22,6 +28,7 @@ import {
 
 const ICONS = {
   dashboard: <RiDashboardLine />,
+  school: <RiSchoolLine />,
   assignments: <RiBookOpenLine />,
   students: <RiGroupLine />,
   attendance: <RiQrScan2Line />,
@@ -34,6 +41,11 @@ const ICONS = {
   scheduleBuilder: <RiOrganizationChart />,
   academicYear: <RiCalendarLine />,
   allStudents: <RiGraduationCapLine />,
+  scheduleSubmissions: <RiFileHistoryLine />,
+  scheduleApprovals: <RiCalendarCheckLine />,
+  gradeReviews: <RiFileSearchLine />,
+  gradeResults: <RiFileChartLine />,
+  documents: <RiFileList3Line />,
 };
 
 // ----------------------------------------------------------------------
@@ -45,13 +57,24 @@ export const navData: NavSectionProps['data'] = [
   {
     subheader: 'ภาพรวม',
     items: [
-      { title: 'หน้าหลัก', path: paths.teacher.root, icon: ICONS.dashboard },
+      {
+        title: 'หน้าหลัก',
+        path: paths.teacher.root,
+        icon: ICONS.dashboard,
+        requiresDepartmentPermission: 'dashboard.view',
+      },
+      {
+        title: 'ข้อมูลโรงเรียน',
+        path: paths.teacher.school,
+        icon: ICONS.school,
+      },
       {
         title: 'วิชาที่สอน',
         path: paths.teacher.assignments,
         icon: ICONS.assignments,
         deepMatch: true,
         featureKey: 'teacher.assignments',
+        requiresDepartmentPermission: 'teaching.assignments',
       },
       {
         title: 'นักเรียนของฉัน',
@@ -59,6 +82,7 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.students,
         deepMatch: true,
         featureKey: 'teacher.students',
+        requiresDepartmentPermission: 'teaching.students',
       },
       {
         title: 'สแกนเช็คชื่อ',
@@ -66,18 +90,21 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.attendance,
         deepMatch: true,
         featureKey: 'teacher.qr_attendance',
+        requiresDepartmentPermission: 'teaching.attendance',
       },
       {
         title: 'ตารางสอน',
         path: paths.teacher.timetable,
         icon: ICONS.timetable,
         featureKey: 'teacher.timetable',
+        requiresDepartmentPermission: 'teaching.timetable',
       },
       {
         title: 'ประกาศ',
         path: paths.teacher.announcements,
         icon: ICONS.announcements,
         featureKey: 'teacher.announcements',
+        requiresDepartmentPermission: 'teaching.announcements',
       },
       {
         title: 'งานฝ่าย',
@@ -95,6 +122,30 @@ export const navData: NavSectionProps['data'] = [
             path: paths.teacher.scheduleBuilder,
             icon: ICONS.scheduleBuilder,
             requiresDepartmentPermission: 'schedule.manage',
+          },
+          {
+            title: 'สถานะการลงนามตารางสอน',
+            path: paths.teacher.scheduleSubmissions,
+            icon: ICONS.scheduleSubmissions,
+            requiresDepartmentPermission: 'schedule.manage',
+          },
+          {
+            title: 'อนุมัติตารางสอน',
+            path: paths.teacher.scheduleApprovals,
+            icon: ICONS.scheduleApprovals,
+            requiresDepartmentPermission: 'schedule.approve',
+          },
+          {
+            title: 'ตรวจสอบผลการเรียน',
+            path: paths.teacher.gradeReviews,
+            icon: ICONS.gradeReviews,
+            requiresDepartmentPermission: 'grades.approve',
+          },
+          {
+            title: 'ผลการเรียน',
+            path: paths.teacher.gradeResults,
+            icon: ICONS.gradeResults,
+            requiresDepartmentPermission: 'grades.review',
           },
           {
             title: 'ปีการศึกษา',
@@ -139,6 +190,12 @@ export const navData: NavSectionProps['data'] = [
             requiresDepartmentPermission: 'staff.manage',
           },
         ],
+      },
+      {
+        title: 'เอกสาร',
+        path: paths.teacher.documents.root,
+        icon: ICONS.documents,
+        requiresDepartmentPermission: 'grades.review',
       },
     ],
   },

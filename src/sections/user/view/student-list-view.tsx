@@ -37,6 +37,8 @@ import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table
 
 import { StudentGuardiansDialog } from 'src/sections/student-guardian/components/student-guardians-dialog';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import { StudentFormDialog } from '../components/student-form-dialog';
 import { downloadStudentImportTemplate } from '../student-import-utils';
 import { StudentAvatarDialog } from '../components/student-avatar-dialog';
@@ -55,6 +57,8 @@ function maskPassword(password: string) {
 }
 
 export function StudentListView() {
+  const { user: currentUser } = useAuthContext();
+  const canManageStudents = currentUser?.role === 'school_admin';
   const table = useTable({ defaultRowsPerPage: 10 });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -171,20 +175,24 @@ export function StudentListView() {
           >
             ดาวน์โหลด Template
           </Button>
-          <Button
-            variant="outlined"
-            onClick={() => setImportDialogOpen(true)}
-            startIcon={<RemixIcon icon="solar:upload-bold" />}
-          >
-            นำเข้าจาก Excel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => setDialogOpen(true)}
-            startIcon={<RemixIcon icon="solar:user-plus-bold" />}
-          >
-            เพิ่มนักเรียน
-          </Button>
+          {canManageStudents && (
+            <>
+              <Button
+                variant="outlined"
+                onClick={() => setImportDialogOpen(true)}
+                startIcon={<RemixIcon icon="solar:upload-bold" />}
+              >
+                นำเข้าจาก Excel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => setDialogOpen(true)}
+                startIcon={<RemixIcon icon="solar:user-plus-bold" />}
+              >
+                เพิ่มนักเรียน
+              </Button>
+            </>
+          )}
         </Box>
       </Box>
 
@@ -341,9 +349,10 @@ export function StudentListView() {
               {visibleStudents.map((student) => (
                 <TableRow key={student.id} hover>
                   <TableCell>
-                    <Tooltip title="เปลี่ยนรูปโปรไฟล์">
+                    <Tooltip title={canManageStudents ? 'เปลี่ยนรูปโปรไฟล์' : 'รูปโปรไฟล์'}>
                       <IconButton
-                        onClick={() => setAvatarStudent(student)}
+                        onClick={() => canManageStudents && setAvatarStudent(student)}
+                        disabled={!canManageStudents}
                         aria-label={`จัดการรูปโปรไฟล์ของ ${student.first_name ?? student.username}`}
                         sx={{ p: 0.5 }}
                       >
@@ -490,6 +499,7 @@ export function StudentListView() {
                         checked={student.is_active !== false}
                         disabled={
                           (student.student_status ?? 'studying') !== 'studying' ||
+                          !canManageStudents ||
                           (activeMutation.isPending && activeMutation.variables?.id === student.id)
                         }
                         onChange={(event) =>
@@ -501,7 +511,7 @@ export function StudentListView() {
                   </TableCell>
                   <TableCell align="right">
                     <Box sx={{ gap: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
-                      {tab === 'pending' && (
+                      {canManageStudents && tab === 'pending' && (
                         <Tooltip title="ยืนยันข้อมูลนักเรียนคนนี้">
                           <IconButton
                             size="small"
@@ -523,29 +533,33 @@ export function StudentListView() {
                         ผู้ปกครอง
                       </Button>
 
-                      <Tooltip title="แก้ไขข้อมูลนักเรียน">
-                        <IconButton
-                          size="small"
-                          onClick={() => setEditingStudent(student)}
-                          aria-label={`แก้ไขข้อมูล ${student.first_name ?? student.username}`}
-                        >
-                          <RemixIcon icon="solar:pen-bold" width={18} />
-                        </IconButton>
-                      </Tooltip>
+                      {canManageStudents && (
+                        <>
+                          <Tooltip title="แก้ไขข้อมูลนักเรียน">
+                            <IconButton
+                              size="small"
+                              onClick={() => setEditingStudent(student)}
+                              aria-label={`แก้ไขข้อมูล ${student.first_name ?? student.username}`}
+                            >
+                              <RemixIcon icon="solar:pen-bold" width={18} />
+                            </IconButton>
+                          </Tooltip>
 
-                      <Tooltip title="ลบบัญชีนักเรียน">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => {
-                            deleteMutation.reset();
-                            setDeletingStudent(student);
-                          }}
-                          aria-label={`ลบ ${student.first_name ?? student.username}`}
-                        >
-                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                        </IconButton>
-                      </Tooltip>
+                          <Tooltip title="ลบบัญชีนักเรียน">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => {
+                                deleteMutation.reset();
+                                setDeletingStudent(student);
+                              }}
+                              aria-label={`ลบ ${student.first_name ?? student.username}`}
+                            >
+                              <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
                     </Box>
                   </TableCell>
                 </TableRow>

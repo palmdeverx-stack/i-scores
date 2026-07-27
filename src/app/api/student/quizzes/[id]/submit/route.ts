@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canEditGradebook } from 'src/lib/grade-review-access';
 import { loadStudentQuizAccess } from 'src/lib/student-quiz-access';
 
 // ----------------------------------------------------------------------
@@ -18,6 +19,9 @@ export async function POST(request: Request, { params }: RouteParams) {
   const access = await loadStudentQuizAccess(caller, id);
   if (!access) {
     return NextResponse.json({ message: 'ไม่พบแบบทดสอบหรือไม่มีสิทธิ์เข้าถึง' }, { status: 404 });
+  }
+  if (!(await canEditGradebook(access.assignment.teacher_assignment_id))) {
+    return NextResponse.json({ message: 'รายวิชานี้ส่งผลการเรียนแล้ว' }, { status: 409 });
   }
 
   const body = (await request.json()) as {

@@ -27,6 +27,7 @@ import { fDateTime } from 'src/utils/format-time';
 import { Label } from 'src/components/label';
 import { RemixIcon } from 'src/components/remix-icon';
 
+import { GradeSubmissionCard } from 'src/sections/grade-review/components/grade-submission-card';
 import {
   listAssignments,
   ASSIGNMENT_CATEGORY_META,
@@ -215,6 +216,8 @@ export const ScoresTab = memo(function ScoresTab({
           })}
         </Box>
       </Card>
+
+      <GradeSubmissionCard teacherAssignmentId={teacherAssignmentId} />
 
       <ScoreCategorySection
         category={selectedCategory}

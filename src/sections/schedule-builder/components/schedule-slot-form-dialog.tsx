@@ -1,10 +1,12 @@
 'use client';
 
-import type { ClassroomScheduleAssignment } from '../schedule-builder-actions';
+import type { SchedulePeriod } from '../schedule-period-actions';
+import type { ClassroomScheduleSlot, ClassroomScheduleAssignment } from '../schedule-builder-actions';
 
 import dayjs from 'dayjs';
 import { useState } from 'react';
 
+import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -22,13 +24,18 @@ const DAY_LABELS = ['', 'จันทร์', 'อังคาร', 'พุธ',
 type Props = {
   open: boolean;
   assignments: ClassroomScheduleAssignment[];
+  periods: SchedulePeriod[];
+  editingSlot?: ClassroomScheduleSlot | null;
   onClose: () => void;
   onSubmit: (params: {
     teacherAssignmentId: string;
     dayOfWeek: number;
     startTime: string;
     endTime: string;
+    locationName: string;
+    schedulePeriodId: string;
   }) => Promise<void>;
+  onDelete?: (slot: ClassroomScheduleSlot) => void;
 };
 
 function assignmentLabel(assignment: ClassroomScheduleAssignment) {
@@ -37,11 +44,36 @@ function assignmentLabel(assignment: ClassroomScheduleAssignment) {
   return teacher ? `${subject} · ครู${teacher}` : subject;
 }
 
-export function ScheduleSlotFormDialog({ open, assignments, onClose, onSubmit }: Props) {
-  const [teacherAssignmentId, setTeacherAssignmentId] = useState(assignments[0]?.id ?? '');
-  const [dayOfWeek, setDayOfWeek] = useState(1);
-  const [startTime, setStartTime] = useState('08:00');
-  const [endTime, setEndTime] = useState('09:00');
+export function ScheduleSlotFormDialog({
+  open,
+  assignments,
+  periods,
+  editingSlot = null,
+  onClose,
+  onSubmit,
+  onDelete,
+}: Props) {
+  const isEdit = !!editingSlot;
+  const teachingPeriods = periods.filter((period) => !period.is_break);
+  const matchedPeriod = teachingPeriods.find(
+    (period) =>
+      period.id === editingSlot?.schedule_period_id ||
+      (period.start_time.slice(0, 5) === editingSlot?.start_time.slice(0, 5) &&
+        period.end_time.slice(0, 5) === editingSlot?.end_time.slice(0, 5))
+  );
+  const initialPeriod = matchedPeriod ?? teachingPeriods[0];
+  const [teacherAssignmentId, setTeacherAssignmentId] = useState(
+    editingSlot?.teacher_assignment_id ?? assignments[0]?.id ?? ''
+  );
+  const [dayOfWeek, setDayOfWeek] = useState(editingSlot?.day_of_week ?? 1);
+  const [startTime, setStartTime] = useState(
+    editingSlot?.start_time.slice(0, 5) ?? initialPeriod?.start_time.slice(0, 5) ?? '08:00'
+  );
+  const [endTime, setEndTime] = useState(
+    editingSlot?.end_time.slice(0, 5) ?? initialPeriod?.end_time.slice(0, 5) ?? '09:00'
+  );
+  const [locationName, setLocationName] = useState(editingSlot?.location_name ?? '');
+  const [schedulePeriodId, setSchedulePeriodId] = useState(initialPeriod?.id ?? '');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const invalidTime = startTime >= endTime;
@@ -49,6 +81,10 @@ export function ScheduleSlotFormDialog({ open, assignments, onClose, onSubmit }:
   const handleSubmit = async () => {
     if (!teacherAssignmentId) {
       setError('กรุณาเลือกวิชา/ครูผู้สอน');
+      return;
+    }
+    if (teachingPeriods.length && !schedulePeriodId) {
+      setError('กรุณาเลือกคาบเรียน');
       return;
     }
     if (invalidTime) {
@@ -59,10 +95,23 @@ export function ScheduleSlotFormDialog({ open, assignments, onClose, onSubmit }:
     setError(null);
     setIsSaving(true);
     try {
-      await onSubmit({ teacherAssignmentId, dayOfWeek, startTime, endTime });
+      await onSubmit({
+        teacherAssignmentId,
+        dayOfWeek,
+        startTime,
+        endTime,
+        locationName: locationName.trim(),
+        schedulePeriodId,
+      });
       onClose();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'ไม่สามารถเพิ่มคาบสอนได้');
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : isEdit
+            ? 'ไม่สามารถแก้ไขคาบสอนได้'
+            : 'ไม่สามารถเพิ่มคาบสอนได้'
+      );
     } finally {
       setIsSaving(false);
     }
@@ -70,7 +119,7 @@ export function ScheduleSlotFormDialog({ open, assignments, onClose, onSubmit }:
 
   return (
     <Dialog fullWidth maxWidth="xs" open={open} onClose={isSaving ? undefined : onClose}>
-      <DialogTitle>เพิ่มคาบสอน</DialogTitle>
+      <DialogTitle>{isEdit ? 'แก้ไขคาบสอน' : 'เพิ่มคาบสอน'}</DialogTitle>
 
       <DialogContent sx={{ pt: 1 }}>
         {error && (
@@ -97,6 +146,47 @@ export function ScheduleSlotFormDialog({ open, assignments, onClose, onSubmit }:
         <TextField
           select
           fullWidth
+          label="คาบเรียน"
+          value={schedulePeriodId}
+          onChange={(event) => {
+            const nextPeriod = teachingPeriods.find(
+              (period) => period.id === event.target.value
+            );
+            setSchedulePeriodId(event.target.value);
+            if (nextPeriod) {
+              setStartTime(nextPeriod.start_time.slice(0, 5));
+              setEndTime(nextPeriod.end_time.slice(0, 5));
+            }
+          }}
+          helperText={
+            teachingPeriods.length
+              ? 'เวลาอ้างอิงจากคาบที่ Admin กำหนด'
+              : 'ยังไม่ได้ตั้งค่าคาบเรียน กรุณาระบุเวลาด้วยตนเอง'
+          }
+          sx={{ mt: 2 }}
+        >
+          {teachingPeriods.map((period) => (
+            <MenuItem key={period.id} value={period.id}>
+              คาบ {period.period_number} · {period.start_time.slice(0, 5)}–
+              {period.end_time.slice(0, 5)} น.
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <TextField
+          fullWidth
+          label="ห้อง / อาคาร / สถานที่สอน"
+          value={locationName}
+          onChange={(event) => setLocationName(event.target.value)}
+          placeholder="เช่น ห้อง 204, อาคารวิทยาศาสตร์"
+          slotProps={{ htmlInput: { maxLength: 200 } }}
+          helperText="ไม่บังคับ ระบุได้สูงสุด 200 ตัวอักษร"
+          sx={{ mt: 2 }}
+        />
+
+        <TextField
+          select
+          fullWidth
           label="วัน"
           value={dayOfWeek}
           onChange={(event) => setDayOfWeek(Number(event.target.value))}
@@ -109,55 +199,70 @@ export function ScheduleSlotFormDialog({ open, assignments, onClose, onSubmit }:
           ))}
         </TextField>
 
-        <TimePicker
-          label="เวลาเริ่ม"
-          value={dayjs(`2000-01-01T${startTime}`)}
-          onChange={(value) => {
-            if (value?.isValid()) {
-              setStartTime(value.format('HH:mm'));
-              setError(null);
-            }
-          }}
-          ampm={false}
-          format="HH:mm"
-          slotProps={{ textField: { fullWidth: true } }}
-          sx={{ mt: 2 }}
-        />
+        {!teachingPeriods.length && (
+          <>
+            <TimePicker
+              label="เวลาเริ่ม"
+              value={dayjs(`2000-01-01T${startTime}`)}
+              onChange={(value) => {
+                if (value?.isValid()) {
+                  setStartTime(value.format('HH:mm'));
+                  setError(null);
+                }
+              }}
+              ampm={false}
+              format="HH:mm"
+              slotProps={{ textField: { fullWidth: true } }}
+              sx={{ mt: 2 }}
+            />
 
-        <TimePicker
-          label="เวลาสิ้นสุด"
-          value={dayjs(`2000-01-01T${endTime}`)}
-          onChange={(value) => {
-            if (value?.isValid()) {
-              setEndTime(value.format('HH:mm'));
-              setError(null);
-            }
-          }}
-          ampm={false}
-          format="HH:mm"
-          slotProps={{
-            textField: {
-              fullWidth: true,
-              error: invalidTime,
-              helperText: invalidTime ? 'เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น' : undefined,
-            },
-          }}
-          sx={{ mt: 2 }}
-        />
+            <TimePicker
+              label="เวลาสิ้นสุด"
+              value={dayjs(`2000-01-01T${endTime}`)}
+              onChange={(value) => {
+                if (value?.isValid()) {
+                  setEndTime(value.format('HH:mm'));
+                  setError(null);
+                }
+              }}
+              ampm={false}
+              format="HH:mm"
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  error: invalidTime,
+                  helperText: invalidTime ? 'เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น' : undefined,
+                },
+              }}
+              sx={{ mt: 2 }}
+            />
+          </>
+        )}
       </DialogContent>
 
-      <DialogActions>
-        <Button color="inherit" variant="outlined" disabled={isSaving} onClick={onClose}>
-          ยกเลิก
-        </Button>
-        <Button
-          variant="contained"
-          loading={isSaving}
-          disabled={invalidTime || !assignments.length}
-          onClick={handleSubmit}
-        >
-          เพิ่มคาบสอน
-        </Button>
+      <DialogActions sx={{ justifyContent: isEdit && onDelete ? 'space-between' : 'flex-end' }}>
+        {isEdit && onDelete && (
+          <Button
+            color="error"
+            disabled={isSaving}
+            onClick={() => editingSlot && onDelete(editingSlot)}
+          >
+            ลบคาบสอนนี้
+          </Button>
+        )}
+        <Box sx={{ gap: 1, display: 'flex' }}>
+          <Button color="inherit" variant="outlined" disabled={isSaving} onClick={onClose}>
+            ยกเลิก
+          </Button>
+          <Button
+            variant="contained"
+            loading={isSaving}
+            disabled={invalidTime || !assignments.length}
+            onClick={handleSubmit}
+          >
+            {isEdit ? 'บันทึกการแก้ไข' : 'เพิ่มคาบสอน'}
+          </Button>
+        </Box>
       </DialogActions>
     </Dialog>
   );

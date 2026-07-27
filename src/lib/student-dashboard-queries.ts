@@ -136,7 +136,9 @@ export function fetchAssignmentsForRanking(teachingIds: string[]) {
 export function fetchSchedules(teachingIds: string[]) {
   return supabaseAdmin
     .from('teaching_schedules')
-    .select('id, teacher_assignment_id, day_of_week, start_time, end_time')
+    .select(
+      'id, teacher_assignment_id, day_of_week, start_time, end_time, location_name, schedule_period:schedule_periods(period_number, name)'
+    )
     .in('teacher_assignment_id', teachingIds)
     .order('day_of_week')
     .order('start_time');

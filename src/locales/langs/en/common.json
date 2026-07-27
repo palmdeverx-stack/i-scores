@@ -23,7 +23,12 @@
   },
   "errors": {
     "signOut": "Unable to sign out",
-    "loadData": "Unable to load data"
+    "loadData": "Unable to load data",
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page may have been moved, deleted, or the URL may be incorrect.",
+      "backHome": "Back to home"
+    }
   },
   "navigation": {
     "studentMenu": "Student main menu",

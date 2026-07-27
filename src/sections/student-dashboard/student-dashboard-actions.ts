@@ -145,6 +145,8 @@ export type StudentSubjectsDashboard = StudentDashboardBase & {
     day_of_week: number;
     start_time: string;
     end_time: string;
+    location_name: string | null;
+    schedule_period: { period_number: number | null; name: string } | null;
     subject: StudentSubject['subject'];
     classroom: StudentClassroom;
     teacher: StudentPerson;

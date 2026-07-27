@@ -105,6 +105,9 @@ type AppUserRow = {
   must_change_password?: boolean;
   is_active?: boolean;
   accepted_legal_at?: string | null;
+  is_school_director?: boolean;
+  staff_type?: string | null;
+  employment_status?: string | null;
 };
 
 export function toPublicUser(user: AppUserRow) {
@@ -122,5 +125,8 @@ export function toPublicUser(user: AppUserRow) {
     must_change_password: user.must_change_password ?? false,
     is_active: user.is_active ?? true,
     accepted_legal_at: user.accepted_legal_at ?? null,
+    is_school_director: user.is_school_director ?? false,
+    staff_type: user.staff_type ?? null,
+    employment_status: user.employment_status ?? null,
   };
 }

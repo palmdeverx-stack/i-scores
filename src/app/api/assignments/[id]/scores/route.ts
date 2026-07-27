@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canEditGradebook } from 'src/lib/grade-review-access';
 import {
   loadTeacherAssignment,
   canAccessTeacherAssignment,
@@ -105,6 +106,12 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   if (!loaded || !canAccessTeacherAssignment(caller, loaded.teacherAssignment)) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  }
+  if (!(await canEditGradebook(loaded.assignment.teacher_assignment_id))) {
+    return NextResponse.json(
+      { message: 'ผลการเรียนถูกส่งตรวจแล้ว ต้องรอฝ่ายวิชาการส่งกลับแก้ไขก่อน' },
+      { status: 409 }
+    );
   }
 
   const { studentId, score, feedback, status } = await request.json();

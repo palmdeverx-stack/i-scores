@@ -34,6 +34,8 @@ import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from 'src/auth/hooks';
 
+import { STAFF_TYPES, EMPLOYMENT_STATUSES } from 'src/types/staff-employment';
+
 import {
   getTeacherProfile,
   deleteTeacherAvatar,
@@ -47,9 +49,17 @@ import {
 const ProfileSchema = z.object({
   firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อภาษาไทย' }),
   lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุลภาษาไทย' }),
+  namePrefix: z.string().max(30, { error: 'คำนำหน้าชื่อยาวเกินไป' }),
   firstNameEn: z.string(),
   lastNameEn: z.string(),
+  nickname: z.string().max(100, { error: 'ชื่อเล่นยาวเกินไป' }),
   email: z.union([z.literal(''), z.email({ error: 'รูปแบบอีเมลไม่ถูกต้อง' })]),
+  phone: z
+    .string()
+    .refine((value) => !value || /^\+?[0-9][0-9 -]{7,19}$/.test(value), {
+      error: 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง',
+    }),
+  address: z.string().max(500, { error: 'ที่อยู่ยาวเกิน 500 ตัวอักษร' }),
   username: z.string(),
 });
 
@@ -60,6 +70,24 @@ const AVATAR_ACCEPT = {
   'image/jpeg': ['.jpg', '.jpeg'],
   'image/webp': ['.webp'],
 };
+
+const STAFF_TYPE_LABEL = Object.fromEntries(
+  STAFF_TYPES.map((option) => [option.value, option.label])
+);
+const EMPLOYMENT_STATUS_LABEL = Object.fromEntries(
+  EMPLOYMENT_STATUSES.map((option) => [option.value, option.label])
+);
+
+function employmentDate(value: string | null) {
+  if (!value) return '-';
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
 
 export function TeacherProfileView() {
   const queryClient = useQueryClient();
@@ -90,18 +118,26 @@ export function TeacherProfileView() {
     defaultValues: {
       firstName: '',
       lastName: '',
+      namePrefix: '',
       firstNameEn: '',
       lastNameEn: '',
+      nickname: '',
       email: '',
+      phone: '',
+      address: '',
       username: '',
     },
     values: profile
       ? {
           firstName: profile.first_name ?? '',
           lastName: profile.last_name ?? '',
+          namePrefix: profile.name_prefix ?? '',
           firstNameEn: profile.first_name_en ?? '',
           lastNameEn: profile.last_name_en ?? '',
+          nickname: profile.nickname ?? '',
           email: profile.email ?? '',
+          phone: profile.phone ?? '',
+          address: profile.address ?? '',
           username: profile.username,
         }
       : undefined,
@@ -116,9 +152,13 @@ export function TeacherProfileView() {
       methods.reset({
         firstName: updatedProfile.first_name ?? '',
         lastName: updatedProfile.last_name ?? '',
+        namePrefix: updatedProfile.name_prefix ?? '',
         firstNameEn: updatedProfile.first_name_en ?? '',
         lastNameEn: updatedProfile.last_name_en ?? '',
+        nickname: updatedProfile.nickname ?? '',
         email: updatedProfile.email ?? '',
+        phone: updatedProfile.phone ?? '',
+        address: updatedProfile.address ?? '',
         username: updatedProfile.username,
       });
     },
@@ -163,9 +203,13 @@ export function TeacherProfileView() {
     mutation.mutate({
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
+      namePrefix: values.namePrefix.trim(),
       firstNameEn: values.firstNameEn.trim(),
       lastNameEn: values.lastNameEn.trim(),
+      nickname: values.nickname.trim(),
       email: values.email.trim(),
+      phone: values.phone.trim(),
+      address: values.address.trim(),
     })
   );
 
@@ -276,6 +320,16 @@ export function TeacherProfileView() {
                   bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.16),
                 })}
               />
+              {(profile.position_title || profile.academic_rank) && (
+                <Chip
+                  size="small"
+                  label={[profile.position_title, profile.academic_rank].filter(Boolean).join(' · ')}
+                  sx={(theme) => ({
+                    color: 'common.white',
+                    bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.16),
+                  })}
+                />
+              )}
             </Box>
           </Box>
         </Box>
@@ -323,6 +377,8 @@ export function TeacherProfileView() {
                     gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
                   }}
                 >
+                  <Field.Text name="namePrefix" label="คำนำหน้าชื่อ" />
+                  <Field.Text name="nickname" label="ชื่อเล่น" />
                   <Field.Text name="firstName" label="ชื่อภาษาไทย *" autoComplete="given-name" />
                   <Field.Text name="lastName" label="นามสกุลภาษาไทย *" autoComplete="family-name" />
                   <Field.Text
@@ -336,12 +392,33 @@ export function TeacherProfileView() {
                     slotProps={{ htmlInput: { lang: 'en' } }}
                   />
                 </Box>
+                <Box
+                  sx={{
+                    gap: 2.5,
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                  }}
+                >
+                  <Field.Text
+                    name="email"
+                    type="email"
+                    label="อีเมล"
+                    placeholder="teacher@example.com"
+                    autoComplete="email"
+                  />
+                  <Field.Text
+                    name="phone"
+                    type="tel"
+                    label="เบอร์โทรศัพท์"
+                    placeholder="0812345678"
+                    autoComplete="tel"
+                  />
+                </Box>
                 <Field.Text
-                  name="email"
-                  type="email"
-                  label="อีเมล"
-                  placeholder="teacher@example.com"
-                  autoComplete="email"
+                  name="address"
+                  label="ที่อยู่สำหรับติดต่อ"
+                  multiline
+                  minRows={3}
                 />
                 <Field.Text
                   name="username"
@@ -524,6 +601,64 @@ export function TeacherProfileView() {
                 ลบรูปโปรไฟล์
               </Button>
             )}
+          </Card>
+
+          <Card variant="outlined" sx={{ p: 3 }}>
+            <Typography component="h2" variant="h6">
+              ข้อมูลการทำงาน
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, mb: 2.5, color: 'text.secondary' }}>
+              ผู้ดูแลโรงเรียนเป็นผู้กำหนด หากข้อมูลไม่ถูกต้องกรุณาติดต่อผู้ดูแล
+            </Typography>
+            <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
+              {[
+                {
+                  label: 'ประเภทบุคลากร',
+                  value:
+                    (profile.staff_type_name_en && profile.staff_type_name
+                      ? `${profile.staff_type_name} / ${profile.staff_type_name_en}`
+                      : profile.staff_type_name) ??
+                    (profile.staff_type ? STAFF_TYPE_LABEL[profile.staff_type] : '-'),
+                },
+                {
+                  label: 'สถานะการทำงาน',
+                  value: profile.employment_status
+                    ? EMPLOYMENT_STATUS_LABEL[profile.employment_status]
+                    : '-',
+                },
+                {
+                  label: 'วันที่เริ่มงาน',
+                  value: employmentDate(profile.employment_start_date),
+                },
+                {
+                  label: 'วันที่บรรจุ',
+                  value: employmentDate(profile.appointment_date),
+                },
+                {
+                  label: 'วันที่สิ้นสุดสัญญา',
+                  value: employmentDate(profile.contract_end_date),
+                },
+                { label: 'ตำแหน่ง', value: profile.position_title || '-' },
+                { label: 'วิทยฐานะ', value: profile.academic_rank || '-' },
+              ].map((item) => (
+                <Box
+                  key={item.label}
+                  sx={{
+                    gap: 1,
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {item.label}
+                  </Typography>
+                  <Typography variant="subtitle2" sx={{ textAlign: 'right' }}>
+                    {item.value}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
           </Card>
 
           <Card variant="outlined" sx={{ p: 3 }}>

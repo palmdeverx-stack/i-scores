@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { isDepartmentPermissionKey } from 'src/lib/department-permissions-config';
+import {
+  isDepartmentPermissionKey,
+  isManageableDepartmentPermission,
+} from 'src/lib/department-permissions-config';
 
 // ----------------------------------------------------------------------
 
@@ -191,6 +194,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (typeof permissionKey === 'string' && typeof granted === 'boolean') {
     if (!isDepartmentPermissionKey(permissionKey)) {
       return NextResponse.json({ message: 'สิทธิ์ไม่ถูกต้อง' }, { status: 400 });
+    }
+    if (!isManageableDepartmentPermission(permissionKey)) {
+      return NextResponse.json(
+        { message: 'สิทธิ์นี้เป็นแบบดูข้อมูลเท่านั้น' },
+        { status: 400 }
+      );
     }
 
     const { data: member } = await supabaseAdmin

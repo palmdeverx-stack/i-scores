@@ -1,5 +1,7 @@
 'use client';
 
+import type { StaffType, EmploymentStatus } from 'src/types/staff-employment';
+
 // ----------------------------------------------------------------------
 
 export type UserRole = 'master_admin' | 'school_admin' | 'teacher' | 'student';
@@ -36,6 +38,14 @@ export type UserRow = {
   line_guardian_count?: number;
   line_notifications_enabled_count?: number;
   import_confirmed_at?: string | null;
+  is_school_director?: boolean;
+  staff_type?: StaffType | null;
+  employment_status?: EmploymentStatus | null;
+  employment_start_date?: string | null;
+  appointment_date?: string | null;
+  contract_end_date?: string | null;
+  position_title?: string | null;
+  academic_rank?: string | null;
 };
 
 export type CreateUserParams = {
@@ -57,6 +67,13 @@ export type CreateUserParams = {
   nationality?: string;
   ethnicity?: string;
   religion?: string;
+  staffType?: StaffType;
+  employmentStatus?: EmploymentStatus;
+  employmentStartDate?: string;
+  appointmentDate?: string;
+  contractEndDate?: string;
+  positionTitle?: string;
+  academicRank?: string;
 };
 
 export type UpdateStudentProfileParams = Omit<CreateUserParams, 'role' | 'schoolId'>;
@@ -245,6 +262,17 @@ export async function updateUserActive(id: string, isActive: boolean): Promise<b
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถเปลี่ยนสถานะบัญชีได้');
   return json.user.is_active;
+}
+
+export async function updateSchoolDirector(id: string, isSchoolDirector: boolean): Promise<boolean> {
+  const response = await fetch(`/api/admin/users/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isSchoolDirector }),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถเปลี่ยนสิทธิ์ผู้อำนวยการได้');
+  return json.user.is_school_director;
 }
 
 export async function deleteManagedUser(id: string): Promise<void> {

@@ -16,15 +16,20 @@ export type DepartmentMembership = {
 export function filterNavByDepartment(
   data: NavSectionProps['data'],
   departments: DepartmentMembership[],
-  permissions: string[] = []
+  permissions: string[] = [],
+  isSchoolDirector = false
 ): NavSectionProps['data'] {
   const hasDepartment = departments.length > 0;
   const isHead = departments.some((department) => department.role_in_department === 'head');
 
   const filterItems = (items: NavItemDataProps[]): NavItemDataProps[] =>
     items.flatMap((item) => {
-      if (item.requiresDepartment && !hasDepartment) return [];
+      // Executives use /teacher as an approval workspace. Even when an
+      // executive was previously added to a department, do not expose the
+      // operational "งานฝ่ายของฉัน" entry.
+      if (item.requiresDepartment && (!hasDepartment || isSchoolDirector)) return [];
       if (item.departmentHeadOnly && !isHead) return [];
+      if (item.requiresSchoolDirector && !isSchoolDirector) return [];
       if (item.requiresDepartmentPermission && !permissions.includes(item.requiresDepartmentPermission)) {
         return [];
       }
@@ -32,7 +37,23 @@ export function filterNavByDepartment(
       if (!item.children) return [item];
 
       const children = filterItems(item.children);
-      return children.length ? [{ ...item, children }] : [];
+      if (!children.length) return [];
+
+      const containsApprovalsOnly =
+        item.title === 'งานฝ่าย' &&
+        children.every((child) =>
+          ['schedule.approve', 'grades.approve'].includes(
+            child.requiresDepartmentPermission ?? ''
+          )
+        );
+
+      return [
+        {
+          ...item,
+          title: containsApprovalsOnly ? 'รายการอนุมัติ' : item.title,
+          children,
+        },
+      ];
     });
 
   return data
@@ -48,7 +69,8 @@ export function filterNavByDepartment(
  */
 export function filterAdminNavForTeacher(
   data: NavSectionProps['data'],
-  permissions: string[]
+  permissions: string[],
+  isSchoolDirector = false
 ): NavSectionProps['data'] {
   const filterItems = (items: NavItemDataProps[]): NavItemDataProps[] =>
     items.flatMap((item) => {
@@ -57,6 +79,7 @@ export function filterAdminNavForTeacher(
         return children.length ? [{ ...item, children }] : [];
       }
 
+      if (item.requiresSchoolDirector && isSchoolDirector) return [item];
       if (!item.requiresDepartmentPermission) return [];
       return permissions.includes(item.requiresDepartmentPermission) ? [item] : [];
     });

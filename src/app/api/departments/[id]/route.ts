@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { isDepartmentPermissionKey } from 'src/lib/department-permissions-config';
+import {
+  isDepartmentPermissionKey,
+  isDepartmentDelegablePermission,
+} from 'src/lib/department-permissions-config';
 
 // ----------------------------------------------------------------------
 
@@ -11,7 +14,9 @@ type RouteParams = { params: Promise<{ id: string }> };
 function parsePermissions(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   const unique = Array.from(new Set(value.filter((item): item is string => typeof item === 'string')));
-  return unique.filter(isDepartmentPermissionKey);
+  return unique
+    .filter(isDepartmentPermissionKey)
+    .filter(isDepartmentDelegablePermission);
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {

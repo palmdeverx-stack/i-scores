@@ -34,10 +34,19 @@ import { Label } from 'src/components/label';
 import { RemixIcon } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
+import { listStaffMasterItems } from 'src/sections/staff-master/staff-master-actions';
+
 import { useAuthContext } from 'src/auth/hooks';
 
+import { STAFF_TYPES, EMPLOYMENT_STATUSES } from 'src/types/staff-employment';
+
 import { CreateUserDialog } from '../components/create-user-dialog';
-import { listUsers, updateUserActive, deleteManagedUser } from '../user-actions';
+import {
+  listUsers,
+  updateUserActive,
+  deleteManagedUser,
+  updateSchoolDirector,
+} from '../user-actions';
 
 // ----------------------------------------------------------------------
 
@@ -59,9 +68,26 @@ const ROLE_LABEL = {
   student: 'นักเรียน',
 } as const;
 
+const STAFF_TYPE_LABEL = Object.fromEntries(
+  STAFF_TYPES.map((option) => [option.value, option.label])
+) as Record<(typeof STAFF_TYPES)[number]['value'], string>;
+
+const EMPLOYMENT_STATUS_LABEL = Object.fromEntries(
+  EMPLOYMENT_STATUSES.map((option) => [option.value, option.label])
+) as Record<(typeof EMPLOYMENT_STATUSES)[number]['value'], string>;
+
+const EMPLOYMENT_STATUS_COLOR = {
+  active: 'success',
+  study_leave: 'info',
+  leave: 'warning',
+  retired: 'default',
+  terminated: 'error',
+} as const;
+
 export function UserListView() {
   const { user: currentUser } = useAuthContext();
   const isTeacher = currentUser?.role === 'teacher';
+  const canManageStaff = currentUser?.role === 'school_admin';
   const table = useTable({ defaultRowsPerPage: 10 });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -77,12 +103,36 @@ export function UserListView() {
     refetch,
   } = useQuery({
     queryKey: ['users', 'staff'],
-    queryFn: () => listUsers(),
+    queryFn: () => listUsers('teacher'),
   });
+  const masterItemsQuery = useQuery({
+    queryKey: ['staff-master-items'],
+    queryFn: listStaffMasterItems,
+  });
+  const staffTypeLabels = useMemo(
+    () => ({
+      ...STAFF_TYPE_LABEL,
+      ...Object.fromEntries(
+        (masterItemsQuery.data ?? [])
+          .filter((item) => item.category === 'staff_type' && item.code)
+          .map((item) => [
+            item.code,
+            item.name_en ? `${item.name} / ${item.name_en}` : item.name,
+          ])
+      ),
+    }),
+    [masterItemsQuery.data]
+  );
 
   const activeMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       updateUserActive(id, isActive),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+
+  const directorMutation = useMutation({
+    mutationFn: ({ id, isSchoolDirector }: { id: string; isSchoolDirector: boolean }) =>
+      updateSchoolDirector(id, isSchoolDirector),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   });
 
@@ -108,6 +158,10 @@ export function UserListView() {
         user.last_name,
         user.first_name_en,
         user.last_name_en,
+        user.position_title,
+        user.academic_rank,
+        user.staff_type ? staffTypeLabels[user.staff_type] : null,
+        user.employment_status ? EMPLOYMENT_STATUS_LABEL[user.employment_status] : null,
         ROLE_LABEL[user.role],
       ]
         .filter(Boolean)
@@ -115,7 +169,7 @@ export function UserListView() {
         .toLocaleLowerCase('th')
         .includes(keyword)
     );
-  }, [search, staffUsers]);
+  }, [search, staffTypeLabels, staffUsers]);
 
   const visibleUsers = useMemo(
     () => rowInPage(filteredUsers, table.page, table.rowsPerPage),
@@ -151,13 +205,15 @@ export function UserListView() {
             จัดการบัญชีบุคลากรและครูภายในโรงเรียน
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          onClick={() => setDialogOpen(true)}
-          startIcon={<RemixIcon icon="solar:user-plus-bold" />}
-        >
-          เพิ่มครู/บุคลากร
-        </Button>
+        {canManageStaff && (
+          <Button
+            variant="contained"
+            onClick={() => setDialogOpen(true)}
+            startIcon={<RemixIcon icon="solar:user-plus-bold" />}
+          >
+            เพิ่มครู/บุคลากร
+          </Button>
+        )}
       </Box>
 
       {isError && (
@@ -231,7 +287,8 @@ export function UserListView() {
                 <TableCell>ชื่อ-นามสกุล</TableCell>
                 <TableCell>อีเมล</TableCell>
                 <TableCell>รหัสผ่าน</TableCell>
-                <TableCell>บทบาท</TableCell>
+                <TableCell>ประเภทบุคลากร</TableCell>
+                <TableCell>สถานะการทำงาน</TableCell>
                 <TableCell align="center">เข้าใช้งาน</TableCell>
                 <TableCell align="right">การจัดการ</TableCell>
               </TableRow>
@@ -239,13 +296,13 @@ export function UserListView() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={7}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={8}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!isLoading && !filteredUsers.length && (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
                     ไม่พบผู้ใช้งาน
@@ -310,9 +367,34 @@ export function UserListView() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Label variant="soft" color={ROLE_COLOR[user.role]}>
-                      {ROLE_LABEL[user.role]}
-                    </Label>
+                    {user.staff_type ? (
+                      <>
+                        <Typography variant="body2">
+                          {staffTypeLabels[user.staff_type] ?? user.staff_type}
+                        </Typography>
+                        {(user.position_title || user.academic_rank) && (
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            {[user.position_title, user.academic_rank].filter(Boolean).join(' · ')}
+                          </Typography>
+                        )}
+                      </>
+                    ) : (
+                      <Label variant="soft" color={ROLE_COLOR[user.role]}>
+                        {ROLE_LABEL[user.role]}
+                      </Label>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {user.employment_status ? (
+                      <Label
+                        variant="soft"
+                        color={EMPLOYMENT_STATUS_COLOR[user.employment_status]}
+                      >
+                        {EMPLOYMENT_STATUS_LABEL[user.employment_status]}
+                      </Label>
+                    ) : (
+                      '-'
+                    )}
                   </TableCell>
                   <TableCell align="center">
                     <Tooltip
@@ -322,6 +404,7 @@ export function UserListView() {
                         size="small"
                         checked={user.is_active !== false}
                         disabled={
+                          !canManageStaff ||
                           activeMutation.isPending && activeMutation.variables?.id === user.id
                         }
                         onChange={(event) =>
@@ -333,6 +416,33 @@ export function UserListView() {
                   </TableCell>
                   <TableCell align="right">
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      {!isTeacher && user.role === 'teacher' && (
+                        <Tooltip
+                          title={
+                            user.staff_type === 'executive'
+                              ? 'ผู้บริหาร / ผู้อำนวยการ — คลิกเพื่อเปลี่ยนเป็นครูผู้สอน'
+                              : 'กำหนดเป็นผู้บริหาร / ผู้อำนวยการ'
+                          }
+                        >
+                          <IconButton
+                            size="small"
+                            color={user.staff_type === 'executive' ? 'warning' : 'default'}
+                            disabled={
+                              directorMutation.isPending &&
+                              directorMutation.variables?.id === user.id
+                            }
+                            onClick={() =>
+                              directorMutation.mutate({
+                                id: user.id,
+                                isSchoolDirector: user.staff_type !== 'executive',
+                              })
+                            }
+                            aria-label={`ประเภทผู้บริหารและสิทธิ์ผู้อำนวยการของ ${user.username}`}
+                          >
+                            <RemixIcon icon="solar:medal-ribbons-star-bold" width={18} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       {user.role === 'teacher' && (
                         <Tooltip title="ดูข้อมูลการสอน">
                           <IconButton
@@ -349,28 +459,32 @@ export function UserListView() {
                           </IconButton>
                         </Tooltip>
                       )}
-                      <Tooltip title="แก้ไขบัญชี">
-                        <IconButton
-                          size="small"
-                          onClick={() => setEditingUser(user)}
-                          aria-label={`แก้ไข ${user.username}`}
-                        >
-                          <RemixIcon icon="solar:pen-bold" width={18} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="ลบบัญชี">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => {
-                            deleteMutation.reset();
-                            setDeletingUser(user);
-                          }}
-                          aria-label={`ลบ ${user.username}`}
-                        >
-                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                        </IconButton>
-                      </Tooltip>
+                      {canManageStaff && (
+                        <>
+                          <Tooltip title="แก้ไขบัญชี">
+                            <IconButton
+                              size="small"
+                              onClick={() => setEditingUser(user)}
+                              aria-label={`แก้ไข ${user.username}`}
+                            >
+                              <RemixIcon icon="solar:pen-bold" width={18} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="ลบบัญชี">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => {
+                                deleteMutation.reset();
+                                setDeletingUser(user);
+                              }}
+                              aria-label={`ลบ ${user.username}`}
+                            >
+                              <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
                     </Box>
                   </TableCell>
                 </TableRow>

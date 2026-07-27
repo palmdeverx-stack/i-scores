@@ -8,7 +8,7 @@ import { supabaseAdmin } from 'src/lib/supabase-admin';
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['school_admin']);
+  const caller = requireRole(request, ['school_admin', 'teacher']);
   if (!caller || caller.schoolId !== (await params).id) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
@@ -17,7 +17,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   const { data: teachers, error } = await supabaseAdmin
     .from('app_users')
-    .select('id, first_name, last_name, avatar_url')
+    .select('id, first_name, last_name, avatar_url, position_title, academic_rank')
     .eq('school_id', schoolId)
     .eq('role', 'teacher')
     .order('first_name');

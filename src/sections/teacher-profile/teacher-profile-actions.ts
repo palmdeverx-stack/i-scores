@@ -1,15 +1,30 @@
 'use client';
 
+import type { StaffType, EmploymentStatus } from 'src/types/staff-employment';
+
 // ----------------------------------------------------------------------
 
 export type TeacherProfile = {
   id: string;
   username: string;
   email: string | null;
+  name_prefix: string | null;
   first_name: string | null;
   last_name: string | null;
   first_name_en: string | null;
   last_name_en: string | null;
+  nickname: string | null;
+  phone: string | null;
+  address: string | null;
+  staff_type: StaffType | null;
+  staff_type_name: string | null;
+  staff_type_name_en: string | null;
+  employment_status: EmploymentStatus | null;
+  employment_start_date: string | null;
+  appointment_date: string | null;
+  contract_end_date: string | null;
+  position_title: string | null;
+  academic_rank: string | null;
   avatar_url: string | null;
   created_at: string;
   school: { id: string; name: string; code: string; logo_url: string | null } | null;
@@ -26,9 +41,13 @@ export type TeacherProfile = {
 export type UpdateTeacherProfileParams = {
   firstName: string;
   lastName: string;
+  namePrefix: string;
   firstNameEn: string;
   lastNameEn: string;
+  nickname: string;
   email: string;
+  phone: string;
+  address: string;
 };
 
 export async function getTeacherProfile(): Promise<TeacherProfile> {

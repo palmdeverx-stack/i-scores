@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { hasTimetableCapability } from 'src/lib/schedule-access';
+import { hasTimetableCapability, revertScheduleApprovalOnEdit } from 'src/lib/schedule-access';
 
 // ----------------------------------------------------------------------
 
@@ -221,6 +221,8 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  await revertScheduleApprovalOnEdit(classroomId, semesterId);
 
   return NextResponse.json({ teacherAssignment: assignment }, { status: 201 });
 }

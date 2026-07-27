@@ -1,6 +1,7 @@
 'use client';
 
 import type { StudentSubjectsDashboard } from '../student-dashboard-actions';
+import type { ScheduleMode } from 'src/sections/schedule-builder/schedule-settings-actions';
 
 import { useMemo } from 'react';
 
@@ -27,7 +28,10 @@ const DAYS = [
 const ROW_HEIGHT = 92;
 const SLOT_COLORS = ['primary', 'secondary', 'error', 'info', 'success', 'warning'] as const;
 
-type Props = { schedules: StudentSubjectsDashboard['schedules'] };
+type Props = {
+  schedules: StudentSubjectsDashboard['schedules'];
+  scheduleMode: ScheduleMode;
+};
 
 function timeToMinutes(value: string) {
   const [hour, minute] = value.split(':').map(Number);
@@ -45,7 +49,7 @@ function getSlotColor(id: string) {
   return SLOT_COLORS[hash % SLOT_COLORS.length];
 }
 
-export function StudentWeeklyTimetable({ schedules }: Props) {
+export function StudentWeeklyTimetable({ schedules, scheduleMode }: Props) {
   const timetable = useMemo(() => {
     const slotsByDay = new Map<number, typeof schedules>();
     schedules.forEach((slot) => {
@@ -196,6 +200,10 @@ export function StudentWeeklyTimetable({ schedules }: Props) {
                             </Box>
                             <Box sx={{ minWidth: 0 }}>
                               <Typography variant="subtitle2" sx={{ overflowWrap: 'anywhere' }}>
+                                {scheduleMode === 'period' &&
+                                slot.schedule_period?.period_number
+                                  ? `คาบ ${slot.schedule_period.period_number} · `
+                                  : ''}
                                 {slot.subject.name}
                               </Typography>
                               <Typography
@@ -211,6 +219,14 @@ export function StudentWeeklyTimetable({ schedules }: Props) {
                               >
                                 ครู {displayName(slot.teacher)}
                               </Typography>
+                              {slot.location_name && (
+                                <Typography
+                                  variant="caption"
+                                  sx={{ display: 'block', color: 'text.secondary' }}
+                                >
+                                  สถานที่ {slot.location_name}
+                                </Typography>
+                              )}
                             </Box>
                           </Box>
                         );
@@ -426,6 +442,9 @@ export function StudentWeeklyTimetable({ schedules }: Props) {
                             noWrap
                             sx={{ color: 'inherit', fontSize: { xs: '0.62rem', sm: '0.82rem' } }}
                           >
+                            {scheduleMode === 'period' && slot.schedule_period?.period_number
+                              ? `คาบ ${slot.schedule_period.period_number} · `
+                              : ''}
                             {slot.subject.name}
                           </Typography>
                           <Typography
@@ -456,6 +475,19 @@ export function StudentWeeklyTimetable({ schedules }: Props) {
                               น. · ห้อง {slot.classroom.name}
                             </Box>
                           </Typography>
+                          {slot.location_name && (
+                            <Typography
+                              variant="caption"
+                              noWrap
+                              sx={{
+                                color: 'inherit',
+                                opacity: 0.82,
+                                fontSize: { xs: '0.52rem', sm: '0.68rem' },
+                              }}
+                            >
+                              สถานที่ {slot.location_name}
+                            </Typography>
+                          )}
                         </Card>
                       );
                     })}

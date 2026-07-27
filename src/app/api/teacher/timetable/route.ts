@@ -15,7 +15,8 @@ export async function GET(request: Request) {
   const { data, error } = await supabaseAdmin
     .from('teaching_schedules')
     .select(
-      `id, day_of_week, start_time, end_time,
+      `id, day_of_week, start_time, end_time, location_name,
+       schedule_period:schedule_periods(period_number, name),
        teacher_assignment:teacher_assignments!inner(
          id, teacher_id,
          subject:subjects(name, code),

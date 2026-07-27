@@ -49,7 +49,11 @@ const LOGO_ACCEPT = {
 
 const MAX_LOGO_SIZE = 2 * 1024 * 1024;
 
-export function SchoolProfileView() {
+type Props = {
+  readOnly?: boolean;
+};
+
+export function SchoolProfileView({ readOnly = false }: Props) {
   const { user } = useAuthContext();
   const schoolId = user?.school_id ?? '';
   const queryClient = useQueryClient();
@@ -246,7 +250,7 @@ export function SchoolProfileView() {
         </Box>
       </Card>
 
-      {(errorMessage || updateMutation.isSuccess || logoMutation.isSuccess) && (
+      {!readOnly && (errorMessage || updateMutation.isSuccess || logoMutation.isSuccess) && (
         <Alert severity={errorMessage ? 'error' : 'success'} sx={{ mb: 3 }}>
           {errorMessage ??
             (logoMutation.isSuccess
@@ -274,35 +278,64 @@ export function SchoolProfileView() {
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-            <UploadAvatar
-              value={school.logo_url ?? undefined}
-              loading={logoMutation.isPending}
-              disabled={logoMutation.isPending}
-              accept={LOGO_ACCEPT}
-              maxSize={MAX_LOGO_SIZE}
-              onDrop={(files) => {
-                const file = files[0];
-                if (file) logoMutation.mutate(file);
-              }}
-              helperText={
-                <Box sx={{ mt: 2.5, textAlign: 'center' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    คลิกหรือลากรูปมาวางเพื่อเปลี่ยนโลโก้
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ mt: 0.5, display: 'block', color: 'text.secondary' }}
-                  >
-                    PNG, JPEG, WEBP หรือ SVG ขนาดไม่เกิน 2MB
-                  </Typography>
-                </Box>
-              }
-            />
+            {readOnly ? (
+              <Box
+                sx={{
+                  width: 180,
+                  height: 180,
+                  display: 'grid',
+                  overflow: 'hidden',
+                  borderRadius: 3,
+                  placeItems: 'center',
+                  bgcolor: 'background.neutral',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                {school.logo_url ? (
+                  <Box
+                    component="img"
+                    src={school.logo_url}
+                    alt={`โลโก้ ${school.name}`}
+                    sx={{ width: 1, height: 1, p: 2, objectFit: 'contain' }}
+                  />
+                ) : (
+                  <RemixIcon icon="solar:school-bold" width={72} sx={{ color: 'text.disabled' }} />
+                )}
+              </Box>
+            ) : (
+              <UploadAvatar
+                value={school.logo_url ?? undefined}
+                loading={logoMutation.isPending}
+                disabled={logoMutation.isPending}
+                accept={LOGO_ACCEPT}
+                maxSize={MAX_LOGO_SIZE}
+                onDrop={(files) => {
+                  const file = files[0];
+                  if (file) logoMutation.mutate(file);
+                }}
+                helperText={
+                  <Box sx={{ mt: 2.5, textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      คลิกหรือลากรูปมาวางเพื่อเปลี่ยนโลโก้
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ mt: 0.5, display: 'block', color: 'text.secondary' }}
+                    >
+                      PNG, JPEG, WEBP หรือ SVG ขนาดไม่เกิน 2MB
+                    </Typography>
+                  </Box>
+                }
+              />
+            )}
           </Box>
 
-          <Alert severity="info" icon={<RemixIcon icon="solar:info-circle-bold" />} sx={{ mt: 3 }}>
-            แนะนำรูปสี่เหลี่ยมจัตุรัส พื้นหลังโปร่งใส เพื่อให้แสดงผลได้สวยในทุกจุด
-          </Alert>
+          {!readOnly && (
+            <Alert severity="info" icon={<RemixIcon icon="solar:info-circle-bold" />} sx={{ mt: 3 }}>
+              แนะนำรูปสี่เหลี่ยมจัตุรัส พื้นหลังโปร่งใส เพื่อให้แสดงผลได้สวยในทุกจุด
+            </Alert>
+          )}
         </Card>
 
         <Card variant="outlined">
@@ -316,63 +349,97 @@ export function SchoolProfileView() {
               </Typography>
             </Box>
 
-            <Form methods={methods} onSubmit={onSubmit}>
-              <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
-                <Field.Text
-                  name="name"
-                  label="ชื่อโรงเรียนภาษาไทย *"
-                  placeholder="เช่น โรงเรียนตัวอย่างวิทยา"
-                  helperText="ชื่อหลักที่ใช้แสดงในระบบ"
+            {readOnly ? (
+              <Box
+                sx={{
+                  gap: 2,
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+                }}
+              >
+                <ReadOnlyInfo
+                  icon="solar:school-bold"
+                  label="ชื่อโรงเรียนภาษาไทย"
+                  value={school.name}
+                  description="ชื่ออย่างเป็นทางการของโรงเรียน"
                 />
-                <Field.Text
-                  name="nameEn"
+                <ReadOnlyInfo
+                  icon="solar:global-bold"
                   label="ชื่อโรงเรียนภาษาอังกฤษ"
-                  placeholder="e.g. Example Wittaya School"
-                  helperText="ไม่บังคับ"
-                  slotProps={{ htmlInput: { lang: 'en' } }}
+                  value={school.name_en || '-'}
+                  description={school.name_en ? 'ชื่อภาษาอังกฤษ' : 'ยังไม่ได้ระบุ'}
                 />
-
-                <Divider />
-
-                <Box
-                  sx={{
-                    gap: 2,
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-                  }}
-                >
-                  <ReadOnlyInfo
-                    icon="solar:file-text-bold"
-                    label="รหัสโรงเรียน"
-                    value={school.code}
-                    description="รหัสนี้ไม่สามารถแก้ไขได้"
-                  />
-                  <ReadOnlyInfo
-                    icon="solar:calendar-date-bold"
-                    label="เริ่มใช้งานเมื่อ"
-                    value={createdDate}
-                    description="วันที่สร้างโรงเรียนในระบบ"
-                  />
-                </Box>
-
-                <Divider />
-
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button
-                    type="submit"
-                    size="large"
-                    variant="contained"
-                    disabled={!isDirty}
-                    loading={updateMutation.isPending}
-                    loadingIndicator="กำลังบันทึก..."
-                    startIcon={<RemixIcon icon="solar:check-circle-bold" />}
-                    sx={{ width: { xs: 1, sm: 'auto' }, minWidth: 210 }}
-                  >
-                    บันทึกการเปลี่ยนแปลง
-                  </Button>
-                </Box>
+                <ReadOnlyInfo
+                  icon="solar:file-text-bold"
+                  label="รหัสโรงเรียน"
+                  value={school.code}
+                  description="รหัสประจำโรงเรียน 8 หลัก"
+                />
+                <ReadOnlyInfo
+                  icon="solar:calendar-date-bold"
+                  label="เริ่มใช้งานเมื่อ"
+                  value={createdDate}
+                  description="วันที่เข้าร่วมระบบ"
+                />
               </Box>
-            </Form>
+            ) : (
+              <Form methods={methods} onSubmit={onSubmit}>
+                <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
+                  <Field.Text
+                    name="name"
+                    label="ชื่อโรงเรียนภาษาไทย *"
+                    placeholder="เช่น โรงเรียนตัวอย่างวิทยา"
+                    helperText="ชื่อหลักที่ใช้แสดงในระบบ"
+                  />
+                  <Field.Text
+                    name="nameEn"
+                    label="ชื่อโรงเรียนภาษาอังกฤษ"
+                    placeholder="e.g. Example Wittaya School"
+                    helperText="ไม่บังคับ"
+                    slotProps={{ htmlInput: { lang: 'en' } }}
+                  />
+
+                  <Divider />
+
+                  <Box
+                    sx={{
+                      gap: 2,
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+                    }}
+                  >
+                    <ReadOnlyInfo
+                      icon="solar:file-text-bold"
+                      label="รหัสโรงเรียน"
+                      value={school.code}
+                      description="รหัสนี้ไม่สามารถแก้ไขได้"
+                    />
+                    <ReadOnlyInfo
+                      icon="solar:calendar-date-bold"
+                      label="เริ่มใช้งานเมื่อ"
+                      value={createdDate}
+                      description="วันที่สร้างโรงเรียนในระบบ"
+                    />
+                  </Box>
+
+                  <Divider />
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                      type="submit"
+                      size="large"
+                      variant="contained"
+                      disabled={!isDirty}
+                      loading={updateMutation.isPending}
+                      loadingIndicator="กำลังบันทึก..."
+                      startIcon={<RemixIcon icon="solar:check-circle-bold" />}
+                      sx={{ width: { xs: 1, sm: 'auto' }, minWidth: 210 }}
+                    >
+                      บันทึกการเปลี่ยนแปลง
+                    </Button>
+                  </Box>
+                </Box>
+              </Form>
+            )}
           </Box>
         </Card>
       </Box>
@@ -380,12 +447,12 @@ export function SchoolProfileView() {
       <Card variant="outlined" sx={{ mt: 3 }}>
         <Box sx={{ px: { xs: 2.5, sm: 3 }, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Typography component="h2" variant="h6">
-            รายชื่อครู
+            บอร์ดบุคลากรโรงเรียน
           </Typography>
           <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
             {teachersQuery.isLoading
               ? 'กำลังโหลด...'
-              : `${teachersQuery.data?.length ?? 0} คน — ตำแหน่ง ฝ่าย และครูประจำชั้นของแต่ละคน`}
+              : `${teachersQuery.data?.length ?? 0} คน — ข้อมูลบุคลากร ฝ่าย และครูประจำชั้น`}
           </Typography>
         </Box>
 
@@ -395,26 +462,96 @@ export function SchoolProfileView() {
           </Alert>
         )}
 
-        <TableContainer>
+        <Box sx={{ gap: 1.5, p: 2, display: { xs: 'grid', md: 'none' } }}>
+          {teachersQuery.isLoading &&
+            Array.from({ length: 3 }, (_, index) => (
+              <Skeleton key={index} variant="rounded" height={180} />
+            ))}
+          {!teachersQuery.isLoading && !teachersQuery.data?.length && (
+            <Typography sx={{ py: 5, textAlign: 'center', color: 'text.secondary' }}>
+              ยังไม่มีบุคลากรในโรงเรียนนี้
+            </Typography>
+          )}
+          {teachersQuery.data?.map((teacher) => (
+            <Card key={teacher.id} variant="outlined" sx={{ p: 2 }}>
+              <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+                <Avatar src={teacher.avatar_url ?? undefined} sx={{ width: 48, height: 48 }}>
+                  {teacher.first_name?.charAt(0) ?? '?'}
+                </Avatar>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="subtitle1">
+                    {`${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim()}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {[teacher.position_title, teacher.academic_rank].filter(Boolean).join(' · ') ||
+                      'ยังไม่ได้ระบุตำแหน่ง'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              <Box sx={{ gap: 1.25, display: 'grid' }}>
+                <BoardInfoRow label="ฝ่าย" value={teacher.department_name || 'ไม่มีฝ่าย'} />
+                <BoardInfoRow
+                  label="หน้าที่ในฝ่าย"
+                  value={
+                    teacher.role_in_department === 'head'
+                      ? 'หัวหน้าฝ่าย'
+                      : teacher.role_in_department === 'member'
+                        ? 'สมาชิกฝ่าย'
+                        : '-'
+                  }
+                />
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    ครูประจำชั้น
+                  </Typography>
+                  {teacher.homeroom_classrooms.length ? (
+                    <Box sx={{ gap: 0.5, mt: 0.5, display: 'flex', flexWrap: 'wrap' }}>
+                      {teacher.homeroom_classrooms.map((classroom) => (
+                        <Chip
+                          key={`${classroom.grade_level}-${classroom.name}`}
+                          size="small"
+                          variant="soft"
+                          label={
+                            classroom.grade_level
+                              ? `${classroom.grade_level} ${classroom.name}`
+                              : classroom.name
+                          }
+                        />
+                      ))}
+                    </Box>
+                  ) : (
+                    <Typography variant="body2">ไม่ได้เป็นครูประจำชั้น</Typography>
+                  )}
+                </Box>
+              </Box>
+            </Card>
+          ))}
+        </Box>
+
+        <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>ครู</TableCell>
+                <TableCell>บุคลากร</TableCell>
                 <TableCell>ฝ่าย</TableCell>
                 <TableCell>ตำแหน่ง</TableCell>
+                <TableCell>หน้าที่ในฝ่าย</TableCell>
                 <TableCell>ครูประจำชั้น</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {teachersQuery.isLoading && (
                 <TableRow>
-                  <TableCell colSpan={4}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={5}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!teachersQuery.isLoading && !teachersQuery.data?.length && (
                 <TableRow>
-                  <TableCell colSpan={4} sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}>
-                    ยังไม่มีครูในโรงเรียนนี้
+                  <TableCell colSpan={5} sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}>
+                    ยังไม่มีบุคลากรในโรงเรียนนี้
                   </TableCell>
                 </TableRow>
               )}
@@ -436,6 +573,10 @@ export function SchoolProfileView() {
                         ไม่มีฝ่าย
                       </Typography>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    {[teacher.position_title, teacher.academic_rank].filter(Boolean).join(' · ') ||
+                      '-'}
                   </TableCell>
                   <TableCell>
                     {teacher.role_in_department ? (
@@ -483,8 +624,25 @@ export function SchoolProfileView() {
 
 // ----------------------------------------------------------------------
 
+function BoardInfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Box sx={{ gap: 1, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+        {label}
+      </Typography>
+      <Typography variant="body2" sx={{ textAlign: 'right', fontWeight: 600 }}>
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
 type ReadOnlyInfoProps = {
-  icon: 'solar:file-text-bold' | 'solar:calendar-date-bold';
+  icon:
+    | 'solar:school-bold'
+    | 'solar:global-bold'
+    | 'solar:file-text-bold'
+    | 'solar:calendar-date-bold';
   label: string;
   value: string;
   description: string;

@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { canManageAssignmentSchedule } from 'src/lib/schedule-access';
 import { loadTeacherAssignment } from 'src/lib/teacher-assignment-access';
+import {
+  canManageAssignmentSchedule,
+  revertScheduleApprovalOnEdit,
+} from 'src/lib/schedule-access';
 
 // ----------------------------------------------------------------------
 
@@ -30,9 +33,28 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { dayOfWeek, startTime, endTime } = await request.json();
+  const { dayOfWeek, startTime, endTime, locationName, schedulePeriodId } = await request.json();
+  const normalizedLocation = typeof locationName === 'string' ? locationName.trim() : '';
+  let resolvedStartTime = startTime;
+  let resolvedEndTime = endTime;
 
-  if (!dayOfWeek || !startTime || !endTime) {
+  if (schedulePeriodId) {
+    const { data: period } = await supabaseAdmin
+      .from('schedule_periods')
+      .select('id, start_time, end_time')
+      .eq('id', schedulePeriodId)
+      .eq('school_id', caller.schoolId)
+      .eq('semester_id', teacherAssignment!.semester_id)
+      .eq('is_break', false)
+      .maybeSingle();
+    if (!period) {
+      return NextResponse.json({ message: 'ไม่พบคาบเรียนที่เลือก' }, { status: 400 });
+    }
+    resolvedStartTime = period.start_time;
+    resolvedEndTime = period.end_time;
+  }
+
+  if (!dayOfWeek || !resolvedStartTime || !resolvedEndTime) {
     return NextResponse.json(
       { message: 'กรุณาเลือกวันและเวลาเริ่ม-สิ้นสุดให้ครบถ้วน' },
       { status: 400 }
@@ -41,8 +63,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (dayOfWeek < 1 || dayOfWeek > 7) {
     return NextResponse.json({ message: 'วันในสัปดาห์ไม่ถูกต้อง' }, { status: 400 });
   }
-  if (startTime >= endTime) {
+  if (resolvedStartTime >= resolvedEndTime) {
     return NextResponse.json({ message: 'เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น' }, { status: 400 });
+  }
+  if (normalizedLocation.length > 200) {
+    return NextResponse.json(
+      { message: 'ห้อง อาคาร หรือสถานที่สอนต้องไม่เกิน 200 ตัวอักษร' },
+      { status: 400 }
+    );
   }
 
   const { data: teacherSchedules } = await supabaseAdmin
@@ -54,8 +82,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .eq('teacher_assignment.teacher_id', teacherAssignment!.teacher_id)
     .neq('id', scheduleId);
 
-  const start = toMinutes(startTime);
-  const end = toMinutes(endTime);
+  const start = toMinutes(resolvedStartTime);
+  const end = toMinutes(resolvedEndTime);
   const conflict = teacherSchedules?.find(
     (slot) => start < toMinutes(slot.end_time) && end > toMinutes(slot.start_time)
   );
@@ -103,12 +131,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .from('teaching_schedules')
     .update({
       day_of_week: dayOfWeek,
-      start_time: startTime,
-      end_time: endTime,
+      start_time: resolvedStartTime,
+      end_time: resolvedEndTime,
+      location_name: normalizedLocation || null,
+      schedule_period_id: schedulePeriodId || null,
     })
     .eq('id', scheduleId)
     .eq('teacher_assignment_id', id)
-    .select('id, day_of_week, start_time, end_time')
+    .select('id, day_of_week, start_time, end_time, location_name, schedule_period_id')
     .maybeSingle();
 
   if (error) {
@@ -117,6 +147,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!schedule) {
     return NextResponse.json({ message: 'ไม่พบคาบสอนที่ต้องการแก้ไข' }, { status: 404 });
   }
+
+  await revertScheduleApprovalOnEdit(teacherAssignment!.classroom_id, teacherAssignment!.semester_id);
 
   return NextResponse.json({ schedule });
 }
@@ -144,6 +176,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
+
+  await revertScheduleApprovalOnEdit(teacherAssignment!.classroom_id, teacherAssignment!.semester_id);
 
   return NextResponse.json({ success: true });
 }

@@ -35,7 +35,10 @@ import TableContainer from '@mui/material/TableContainer';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { DEPARTMENT_PERMISSIONS } from 'src/lib/department-permissions-config';
+import {
+  DEPARTMENT_PERMISSIONS,
+  isManageableDepartmentPermission,
+} from 'src/lib/department-permissions-config';
 
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
@@ -73,8 +76,8 @@ export function DepartmentDetailView({ departmentId }: Props) {
   const members = data?.members ?? [];
   const eligibleTeachers = data?.eligibleTeachers ?? [];
   const grantedPermissions = data?.department.permissions ?? [];
-  const permissionColumns = DEPARTMENT_PERMISSIONS.filter((item) =>
-    grantedPermissions.includes(item.key)
+  const permissionColumns = DEPARTMENT_PERMISSIONS.filter(
+    (item) => grantedPermissions.includes(item.key) && isManageableDepartmentPermission(item.key)
   );
   const columnCount = 3 + permissionColumns.length;
 
@@ -84,8 +87,7 @@ export function DepartmentDetailView({ departmentId }: Props) {
   });
 
   const addMutation = useMutation({
-    mutationFn: (values: z.infer<typeof FormSchema>) =>
-      addDepartmentMember(departmentId, values),
+    mutationFn: (values: z.infer<typeof FormSchema>) => addDepartmentMember(departmentId, values),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['department-members', departmentId] });
       await queryClient.invalidateQueries({ queryKey: ['departments'] });
@@ -163,7 +165,8 @@ export function DepartmentDetailView({ departmentId }: Props) {
             สมาชิกฝ่าย
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-            เพิ่ม/ถอดครู กำหนดหัวหน้าฝ่าย และมอบสิทธิ์แก้ไข/จัดการให้สมาชิกเป็นรายคน — สมาชิกทุกคนในฝ่ายดูข้อมูลได้อยู่แล้วโดยไม่ต้องมอบสิทธิ์
+            เพิ่ม/ถอดครู กำหนดหัวหน้าฝ่าย และมอบสิทธิ์แก้ไข/จัดการให้สมาชิกเป็นรายคน —
+            สมาชิกทุกคนในฝ่ายดูข้อมูลได้อยู่แล้วโดยไม่ต้องมอบสิทธิ์
           </Typography>
         </Box>
 
@@ -219,7 +222,10 @@ export function DepartmentDetailView({ departmentId }: Props) {
               )}
               {!isLoading && !members.length && (
                 <TableRow>
-                  <TableCell colSpan={columnCount} sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={columnCount}
+                    sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
+                  >
                     ยังไม่มีสมาชิกในฝ่ายนี้
                   </TableCell>
                 </TableRow>
@@ -275,17 +281,19 @@ export function DepartmentDetailView({ departmentId }: Props) {
                         {member.role_in_department === 'head' ? 'ลดเป็นสมาชิก' : 'ตั้งเป็นหัวหน้า'}
                       </Button>
                       <Tooltip title="ถอดออกจากฝ่าย">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => {
-                            removeMutation.reset();
-                            setRemovingId(member.id);
-                          }}
-                          aria-label={`ถอด ${teacherName(member.teacher)} ออกจากฝ่าย`}
-                        >
-                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                        </IconButton>
+                        <Box>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => {
+                              removeMutation.reset();
+                              setRemovingId(member.id);
+                            }}
+                            aria-label={`ถอด ${teacherName(member.teacher)} ออกจากฝ่าย`}
+                          >
+                            <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+                          </IconButton>
+                        </Box>
                       </Tooltip>
                     </Box>
                   </TableCell>
@@ -296,7 +304,12 @@ export function DepartmentDetailView({ departmentId }: Props) {
         </TableContainer>
       </Card>
 
-      <Dialog open={addDialogOpen} onClose={() => !addMutation.isPending && setAddDialogOpen(false)} fullWidth maxWidth="xs">
+      <Dialog
+        open={addDialogOpen}
+        onClose={() => !addMutation.isPending && setAddDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
         <Form methods={methods} onSubmit={onSubmit}>
           <DialogTitle sx={{ pb: 1 }}>เพิ่มสมาชิกฝ่าย</DialogTitle>
           <DialogContent sx={{ pt: 1 }}>
@@ -330,7 +343,11 @@ export function DepartmentDetailView({ departmentId }: Props) {
             )}
           </DialogContent>
           <DialogActions>
-            <Button color="inherit" onClick={() => setAddDialogOpen(false)} disabled={addMutation.isPending}>
+            <Button
+              color="inherit"
+              onClick={() => setAddDialogOpen(false)}
+              disabled={addMutation.isPending}
+            >
               ยกเลิก
             </Button>
             <Button
@@ -345,7 +362,12 @@ export function DepartmentDetailView({ departmentId }: Props) {
         </Form>
       </Dialog>
 
-      <Dialog open={!!removingId} onClose={() => !removeMutation.isPending && setRemovingId(null)} fullWidth maxWidth="xs">
+      <Dialog
+        open={!!removingId}
+        onClose={() => !removeMutation.isPending && setRemovingId(null)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle>ยืนยันการถอดสมาชิก</DialogTitle>
         <DialogContent>
           {removeMutation.error && (
@@ -356,7 +378,11 @@ export function DepartmentDetailView({ departmentId }: Props) {
           <Typography variant="body2">ต้องการถอดครูคนนี้ออกจากฝ่ายใช่หรือไม่?</Typography>
         </DialogContent>
         <DialogActions>
-          <Button color="inherit" onClick={() => setRemovingId(null)} disabled={removeMutation.isPending}>
+          <Button
+            color="inherit"
+            onClick={() => setRemovingId(null)}
+            disabled={removeMutation.isPending}
+          >
             ยกเลิก
           </Button>
           <Button

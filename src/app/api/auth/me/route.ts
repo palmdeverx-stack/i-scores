@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { toPublicUser, verifyAppToken, getRequestToken } from 'src/lib/auth-token';
-import { getDepartmentGrantedPermissions } from 'src/lib/department-permission-access';
+import {
+  getDepartmentGrantedPermissions,
+  getEffectiveDepartmentPermissions,
+} from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
@@ -29,6 +32,7 @@ export async function GET(request: Request) {
 
   let departments: { id: string; name: string; role_in_department: 'head' | 'member' }[] = [];
   let departmentPermissions: string[] = [];
+  let managePermissions: string[] = [];
   if (user.role === 'teacher') {
     const { data: membership } = await supabaseAdmin
       .from('department_members')
@@ -40,14 +44,21 @@ export async function GET(request: Request) {
       role_in_department: row.role_in_department as 'head' | 'member',
     }));
     if (user.school_id) {
-      // View-level: any member of a department sees the menus/data the
-      // department has been granted — editing still requires a personal
-      // grant, checked server-side via canManageViaPermission on each write.
-      departmentPermissions = await getDepartmentGrantedPermissions(user.id, user.school_id);
+      // View and manage levels combine department grants, staff-type presets,
+      // and per-person overrides. Writes are still checked server-side.
+      [departmentPermissions, managePermissions] = await Promise.all([
+        getDepartmentGrantedPermissions(user.id, user.school_id),
+        getEffectiveDepartmentPermissions(user.id, user.school_id),
+      ]);
     }
   }
 
   return NextResponse.json({
-    user: { ...toPublicUser(user), departments, department_permissions: departmentPermissions },
+    user: {
+      ...toPublicUser(user),
+      departments,
+      department_permissions: departmentPermissions,
+      manage_permissions: managePermissions,
+    },
   });
 }

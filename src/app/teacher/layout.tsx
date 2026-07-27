@@ -5,7 +5,9 @@ import { useMemo } from 'react';
 import { navData as teacherNavData } from 'src/layouts/nav-config-teacher';
 import { DashboardLayout, SchoolHeaderIdentity } from 'src/layouts/dashboard';
 
-import { filterNavByDepartment } from 'src/sections/teacher-department/filter-nav-by-department';
+import {
+  filterNavByDepartment,
+} from 'src/sections/teacher-department/filter-nav-by-department';
 import { SchoolSubscriptionGuard } from 'src/sections/school-subscription/school-subscription-guard';
 import {
   filterDashboardNav,
@@ -30,19 +32,23 @@ export default function Layout({ children }: Props) {
   const { user } = useAuthContext();
   const subscriptionQuery = useSchoolSubscription(user?.school_id);
   const navData = useMemo(
-    () =>
-      filterNavByDepartment(
+    () => {
+      const filtered = filterNavByDepartment(
         filterDashboardNav(
           teacherNavData,
           subscriptionQuery.data?.subscription.enabled_features ?? []
         ),
         user?.departments ?? [],
-        user?.department_permissions ?? []
-      ),
+        user?.department_permissions ?? [],
+        !!user?.is_school_director
+      );
+      return filtered;
+    },
     [
       subscriptionQuery.data?.subscription.enabled_features,
       user?.departments,
       user?.department_permissions,
+      user?.is_school_director,
     ]
   );
 

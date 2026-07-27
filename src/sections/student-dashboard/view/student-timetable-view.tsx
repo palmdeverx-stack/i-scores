@@ -1,5 +1,9 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
+
+import { getScheduleMode } from 'src/sections/schedule-builder/schedule-settings-actions';
+
 import { StudentWeeklyTimetable } from '../components/student-weekly-timetable';
 import {
   HeroStat,
@@ -12,6 +16,10 @@ import {
 // ----------------------------------------------------------------------
 
 export function StudentTimetableView() {
+  const { data: scheduleMode = 'hour' } = useQuery({
+    queryKey: ['schedule-mode'],
+    queryFn: getScheduleMode,
+  });
   const { data, isLoading, isError, refetch } = useStudentSubjectsDashboard();
 
   if (isLoading || isError || !data) {
@@ -37,7 +45,7 @@ export function StudentTimetableView() {
         </HeroStats>
       }
     >
-      <StudentWeeklyTimetable schedules={data.schedules} />
+      <StudentWeeklyTimetable schedules={data.schedules} scheduleMode={scheduleMode} />
     </StudentPageScaffold>
   );
 }

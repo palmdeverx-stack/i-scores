@@ -45,6 +45,7 @@ export const paths = {
   // TEACHER
   teacher: {
     root: ROOTS.TEACHER,
+    school: `${ROOTS.TEACHER}/school`,
     profile: `${ROOTS.TEACHER}/profile`,
     guide: `${ROOTS.TEACHER}/guide`,
     announcements: `${ROOTS.TEACHER}/announcements`,
@@ -66,6 +67,23 @@ export const paths = {
     department: `${ROOTS.TEACHER}/department`,
     departmentMember: (id: string) => `${ROOTS.TEACHER}/department/member/${id}`,
     scheduleBuilder: `${ROOTS.TEACHER}/schedule-builder`,
+    scheduleSubmission: (classroomId: string, semesterId: string) =>
+      `${ROOTS.TEACHER}/schedule-builder/${classroomId}/${semesterId}/sign`,
+    scheduleSubmissions: `${ROOTS.TEACHER}/schedule-submissions`,
+    scheduleSubmissionDetail: (id: string) => `${ROOTS.TEACHER}/schedule-submissions/${id}`,
+    scheduleApprovals: `${ROOTS.TEACHER}/schedule-approvals`,
+    scheduleApprovalDetail: (id: string) => `${ROOTS.TEACHER}/schedule-approvals/${id}`,
+    gradeReviews: `${ROOTS.TEACHER}/grade-reviews`,
+    gradeReviewGrade: (gradeLevel: string) =>
+      `${ROOTS.TEACHER}/grade-reviews/grade/${encodeURIComponent(gradeLevel)}`,
+    gradeReviewDetail: (id: string) => `${ROOTS.TEACHER}/grade-reviews/${id}`,
+    gradeResults: `${ROOTS.TEACHER}/grade-results`,
+    gradeResultDetail: (id: string) => `${ROOTS.TEACHER}/grade-results/${id}`,
+    documents: {
+      root: `${ROOTS.TEACHER}/documents`,
+      pp5: `${ROOTS.TEACHER}/documents/pp5`,
+      detail: (slug: string) => `${ROOTS.TEACHER}/documents/${slug}`,
+    },
     departmentAcademicYear: {
       root: `${ROOTS.TEACHER}/department-work/academic-year`,
       semester: (id: string) => `${ROOTS.TEACHER}/department-work/academic-year/${id}/semester`,
@@ -107,6 +125,13 @@ export const paths = {
     guide: `${ROOTS.ADMIN}/guide`,
     announcements: `${ROOTS.ADMIN}/announcements`,
     lineNotifications: `${ROOTS.ADMIN}/line-notifications`,
+    accessPermissions: `${ROOTS.ADMIN}/access-permissions`,
+    staffMasters: {
+      root: `${ROOTS.ADMIN}/staff-masters`,
+      staffTypes: `${ROOTS.ADMIN}/staff-masters/staff-types`,
+      positions: `${ROOTS.ADMIN}/staff-masters/positions`,
+      academicRanks: `${ROOTS.ADMIN}/staff-masters/academic-ranks`,
+    },
     user: {
       root: `${ROOTS.ADMIN}/user`,
       teaching: (id: string) => `${ROOTS.ADMIN}/user/${id}/teaching`,
@@ -114,6 +139,7 @@ export const paths = {
     department: {
       root: `${ROOTS.ADMIN}/department`,
       detail: (id: string) => `${ROOTS.ADMIN}/department/${id}`,
+      /** @deprecated Use `admin.accessPermissions`. Kept for old links. */
       permissions: `${ROOTS.ADMIN}/department-permissions`,
     },
     student: {
@@ -136,6 +162,23 @@ export const paths = {
     },
     gradebook: (assignmentId: string) => `${ROOTS.ADMIN}/gradebook/${assignmentId}`,
     scheduleBuilder: `${ROOTS.ADMIN}/schedule-builder`,
+    scheduleSubmission: (classroomId: string, semesterId: string) =>
+      `${ROOTS.ADMIN}/schedule-builder/${classroomId}/${semesterId}/sign`,
+    scheduleSubmissions: `${ROOTS.ADMIN}/schedule-submissions`,
+    scheduleSubmissionDetail: (id: string) => `${ROOTS.ADMIN}/schedule-submissions/${id}`,
+    scheduleApprovals: `${ROOTS.ADMIN}/schedule-approvals`,
+    scheduleApprovalDetail: (id: string) => `${ROOTS.ADMIN}/schedule-approvals/${id}`,
+    gradeReviews: `${ROOTS.ADMIN}/grade-reviews`,
+    gradeReviewGrade: (gradeLevel: string) =>
+      `${ROOTS.ADMIN}/grade-reviews/grade/${encodeURIComponent(gradeLevel)}`,
+    gradeReviewDetail: (id: string) => `${ROOTS.ADMIN}/grade-reviews/${id}`,
+    gradeResults: `${ROOTS.ADMIN}/grade-results`,
+    gradeResultDetail: (id: string) => `${ROOTS.ADMIN}/grade-results/${id}`,
+    documents: {
+      root: `${ROOTS.ADMIN}/documents`,
+      pp5: `${ROOTS.ADMIN}/documents/pp5`,
+      detail: (slug: string) => `${ROOTS.ADMIN}/documents/${slug}`,
+    },
     enrollment: {
       root: `${ROOTS.ADMIN}/enrollment`,
       classroom: (id: string) => `${ROOTS.ADMIN}/enrollment/classroom/${id}`,

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canEditGradebook } from 'src/lib/grade-review-access';
 import {
   loadTeacherAssignment,
   canAccessTeacherAssignment,
@@ -37,6 +38,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const loaded = await loadAssignmentWithAccess(id);
   if (!loaded || !canAccessTeacherAssignment(caller, loaded.teacherAssignment)) {
     return NextResponse.json({ message: 'ไม่พบรายการคะแนนหรือไม่มีสิทธิ์แก้ไข' }, { status: 404 });
+  }
+  if (!(await canEditGradebook(loaded.assignment.teacher_assignment_id))) {
+    return NextResponse.json(
+      { message: 'ผลการเรียนถูกส่งตรวจแล้ว ต้องรอฝ่ายวิชาการส่งกลับแก้ไขก่อน' },
+      { status: 409 }
+    );
   }
 
   const body = await request.json().catch(() => null);
@@ -106,6 +113,12 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   const loaded = await loadAssignmentWithAccess(id);
   if (!loaded || !canAccessTeacherAssignment(caller, loaded.teacherAssignment)) {
     return NextResponse.json({ message: 'ไม่พบรายการคะแนนหรือไม่มีสิทธิ์ลบ' }, { status: 404 });
+  }
+  if (!(await canEditGradebook(loaded.assignment.teacher_assignment_id))) {
+    return NextResponse.json(
+      { message: 'ผลการเรียนถูกส่งตรวจแล้ว ต้องรอฝ่ายวิชาการส่งกลับแก้ไขก่อน' },
+      { status: 409 }
+    );
   }
 
   const { data: attachments } = await supabaseAdmin

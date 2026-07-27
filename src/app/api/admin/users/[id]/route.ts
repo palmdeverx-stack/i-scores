@@ -4,18 +4,21 @@ import { NextResponse } from 'next/server';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { encryptCredential } from 'src/lib/credential-cipher';
+import { isActiveStaffMasterValue } from 'src/lib/staff-master';
 import { checkSchoolSeatLimit } from 'src/lib/school-subscription';
 import {
   hasDepartmentPermission,
   getDepartmentGrantedPermissions,
 } from 'src/lib/department-permission-access';
 
+import { isStaffType, isEmploymentStatus } from 'src/types/staff-employment';
+
 // ----------------------------------------------------------------------
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 const USER_SELECT =
-  'id, username, email, first_name, last_name, first_name_en, last_name_en, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, is_active';
+  'id, username, email, first_name, last_name, first_name_en, last_name_en, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, is_active, is_school_director, staff_type, employment_status, employment_start_date, appointment_date, contract_end_date, position_title, academic_rank';
 
 async function getManagedUser(id: string) {
   return supabaseAdmin.from('app_users').select(USER_SELECT).eq('id', id).maybeSingle();
@@ -130,6 +133,37 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ user });
   }
 
+  if (body?.isSchoolDirector !== undefined) {
+    if (typeof body.isSchoolDirector !== 'boolean') {
+      return NextResponse.json({ message: 'ค่าไม่ถูกต้อง' }, { status: 400 });
+    }
+    if (caller.role !== 'school_admin' || target.role !== 'teacher') {
+      return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+    }
+
+    const { data: user, error } = await supabaseAdmin
+      .from('app_users')
+      .update({
+        is_school_director: body.isSchoolDirector,
+        staff_type: body.isSchoolDirector
+          ? 'executive'
+          : target.staff_type === 'executive'
+            ? 'teacher'
+            : target.staff_type,
+      })
+      .eq('id', id)
+      .select(USER_SELECT)
+      .single();
+
+    if (error || !user) {
+      return NextResponse.json(
+        { message: error?.message ?? 'ไม่สามารถเปลี่ยนสิทธิ์ผู้อำนวยการได้' },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ user });
+  }
+
   const username = typeof body?.username === 'string' ? body.username.trim() : '';
   const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : '';
   const lastName = typeof body?.lastName === 'string' ? body.lastName.trim() : '';
@@ -137,6 +171,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const lastNameEn = typeof body?.lastNameEn === 'string' ? body.lastNameEn.trim() : '';
   const email = typeof body?.email === 'string' ? body.email.trim() : '';
   const password = typeof body?.password === 'string' ? body.password : '';
+  const staffType = body?.staffType;
+  const employmentStatus = body?.employmentStatus;
+  const employmentStartDate =
+    typeof body?.employmentStartDate === 'string' ? body.employmentStartDate : '';
+  const appointmentDate = typeof body?.appointmentDate === 'string' ? body.appointmentDate : '';
+  const contractEndDate =
+    typeof body?.contractEndDate === 'string' ? body.contractEndDate : '';
+  const positionTitle = typeof body?.positionTitle === 'string' ? body.positionTitle.trim() : '';
+  const academicRank = typeof body?.academicRank === 'string' ? body.academicRank.trim() : '';
   const schoolId =
     caller.role === 'master_admin' && typeof body?.schoolId === 'string'
       ? body.schoolId
@@ -147,6 +190,22 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
   if (password && password.length < 6) {
     return NextResponse.json({ message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' }, { status: 400 });
+  }
+  if (target.role === 'teacher' && !isStaffType(staffType)) {
+    return NextResponse.json({ message: 'กรุณาเลือกประเภทบุคลากร' }, { status: 400 });
+  }
+  if (target.role === 'teacher' && !isEmploymentStatus(employmentStatus)) {
+    return NextResponse.json({ message: 'กรุณาเลือกสถานะการทำงาน' }, { status: 400 });
+  }
+  const employmentDates = [employmentStartDate, appointmentDate, contractEndDate].filter(Boolean);
+  if (employmentDates.some((date) => Number.isNaN(Date.parse(date)))) {
+    return NextResponse.json({ message: 'วันที่ในข้อมูลการทำงานไม่ถูกต้อง' }, { status: 400 });
+  }
+  if (employmentStartDate && contractEndDate && contractEndDate < employmentStartDate) {
+    return NextResponse.json(
+      { message: 'วันที่สิ้นสุดสัญญาต้องไม่ก่อนวันที่เริ่มงาน' },
+      { status: 400 }
+    );
   }
 
   const [{ data: duplicate }, { data: school }] = await Promise.all([
@@ -164,6 +223,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
   if (!school) {
     return NextResponse.json({ message: 'ไม่พบโรงเรียนที่เลือก' }, { status: 400 });
+  }
+  if (
+    target.role === 'teacher' &&
+    (!(await isActiveStaffMasterValue(schoolId, 'staff_type', staffType)) ||
+      (positionTitle &&
+        !(await isActiveStaffMasterValue(schoolId, 'position', positionTitle))) ||
+      (academicRank &&
+        !(await isActiveStaffMasterValue(schoolId, 'academic_rank', academicRank))))
+  ) {
+    return NextResponse.json(
+      { message: 'ประเภทบุคลากร ตำแหน่ง หรือวิทยฐานะไม่ถูกต้องหรือปิดใช้งานแล้ว' },
+      { status: 400 }
+    );
   }
   if (schoolId !== target.school_id) {
     const seat = await checkSchoolSeatLimit(
@@ -185,6 +257,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (target.role === 'teacher' || target.role === 'student') {
     updates.first_name_en = firstNameEn || null;
     updates.last_name_en = lastNameEn || null;
+  }
+  if (target.role === 'teacher') {
+    updates.staff_type = staffType;
+    updates.employment_status = employmentStatus;
+    updates.employment_start_date = employmentStartDate || null;
+    updates.appointment_date = appointmentDate || null;
+    updates.contract_end_date = contractEndDate || null;
+    updates.position_title = positionTitle || null;
+    updates.academic_rank = academicRank || null;
+    updates.is_school_director = staffType === 'executive';
   }
   if (password) {
     updates.password_hash = await bcrypt.hash(password, 10);

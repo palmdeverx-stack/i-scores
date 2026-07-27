@@ -10,7 +10,10 @@ async function loadTeacherProfile(teacherId: string, schoolId: string | null) {
     supabaseAdmin
       .from('app_users')
       .select(
-        'id, username, email, first_name, last_name, first_name_en, last_name_en, avatar_url, created_at'
+        `id, username, email, name_prefix, first_name, last_name,
+         first_name_en, last_name_en, nickname, phone, address,
+         staff_type, employment_status, employment_start_date, appointment_date,
+         contract_end_date, position_title, academic_rank, avatar_url, created_at`
       )
       .eq('id', teacherId)
       .eq('role', 'teacher')
@@ -46,9 +49,21 @@ async function loadTeacherProfile(teacherId: string, schoolId: string | null) {
   if (!teacherResult.data) return null;
 
   const assignments = assignmentsResult.data;
+  const { data: staffTypeItem } =
+    schoolId && teacherResult.data.staff_type
+      ? await supabaseAdmin
+          .from('staff_master_items')
+          .select('name, name_en')
+          .eq('school_id', schoolId)
+          .eq('category', 'staff_type')
+          .eq('code', teacherResult.data.staff_type)
+          .maybeSingle()
+      : { data: null };
 
   return {
     ...teacherResult.data,
+    staff_type_name: staffTypeItem?.name ?? null,
+    staff_type_name_en: staffTypeItem?.name_en ?? null,
     school: schoolResult.data,
     summary: {
       assignments: assignments.length,
@@ -100,9 +115,13 @@ export async function PUT(request: Request) {
   const body = await request.json().catch(() => null);
   const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : '';
   const lastName = typeof body?.lastName === 'string' ? body.lastName.trim() : '';
+  const namePrefix = typeof body?.namePrefix === 'string' ? body.namePrefix.trim() : '';
   const firstNameEn = typeof body?.firstNameEn === 'string' ? body.firstNameEn.trim() : '';
   const lastNameEn = typeof body?.lastNameEn === 'string' ? body.lastNameEn.trim() : '';
+  const nickname = typeof body?.nickname === 'string' ? body.nickname.trim() : '';
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+  const phone = typeof body?.phone === 'string' ? body.phone.trim() : '';
+  const address = typeof body?.address === 'string' ? body.address.trim() : '';
 
   if (!firstName || !lastName) {
     return NextResponse.json({ message: 'กรุณากรอกชื่อและนามสกุล' }, { status: 400 });
@@ -111,15 +130,25 @@ export async function PUT(request: Request) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ message: 'รูปแบบอีเมลไม่ถูกต้อง' }, { status: 400 });
   }
+  if (phone && !/^\+?[0-9][0-9 -]{7,19}$/.test(phone)) {
+    return NextResponse.json({ message: 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง' }, { status: 400 });
+  }
+  if (namePrefix.length > 30 || nickname.length > 100 || address.length > 500) {
+    return NextResponse.json({ message: 'ข้อมูลโปรไฟล์ยาวเกินกำหนด' }, { status: 400 });
+  }
 
   const { error: updateError } = await supabaseAdmin
     .from('app_users')
     .update({
       first_name: firstName,
       last_name: lastName,
+      name_prefix: namePrefix || null,
       first_name_en: firstNameEn || null,
       last_name_en: lastNameEn || null,
+      nickname: nickname || null,
       email: email || null,
+      phone: phone || null,
+      address: address || null,
     })
     .eq('id', caller.sub)
     .eq('role', 'teacher');

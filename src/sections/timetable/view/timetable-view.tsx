@@ -21,6 +21,8 @@ import { RouterLink } from 'src/routes/components';
 
 import { RemixIcon } from 'src/components/remix-icon';
 
+import { getScheduleMode } from 'src/sections/schedule-builder/schedule-settings-actions';
+
 import { getTimetable } from '../timetable-actions';
 
 // ----------------------------------------------------------------------
@@ -56,6 +58,10 @@ function getSlotColor(id: string) {
 }
 
 export function TimetableView() {
+  const { data: scheduleMode = 'hour' } = useQuery({
+    queryKey: ['schedule-mode'],
+    queryFn: getScheduleMode,
+  });
   const {
     data: schedules = [],
     isLoading,
@@ -321,6 +327,9 @@ export function TimetableView() {
                           </Box>
                           <Box sx={{ minWidth: 0 }}>
                             <Typography variant="subtitle2" noWrap>
+                              {scheduleMode === 'period' && slot.schedule_period?.period_number
+                                ? `คาบ ${slot.schedule_period.period_number} · `
+                                : ''}
                               {subject?.name ?? 'ไม่ระบุรายวิชา'}
                             </Typography>
                             <Typography
@@ -329,6 +338,7 @@ export function TimetableView() {
                               noWrap
                             >
                               {subject?.code && `${subject.code} · `}ห้อง {classroom?.name ?? '-'}
+                              {slot.location_name && ` · สอนที่ ${slot.location_name}`}
                             </Typography>
                           </Box>
                           <RemixIcon
@@ -592,6 +602,9 @@ export function TimetableView() {
                               noWrap
                               sx={{ color: 'inherit', fontSize: { xs: '0.62rem', sm: '0.82rem' } }}
                             >
+                              {scheduleMode === 'period' && slot.schedule_period?.period_number
+                                ? `คาบ ${slot.schedule_period.period_number} · `
+                                : ''}
                               {subject?.name ?? 'ไม่ระบุรายวิชา'}
                             </Typography>
                             <Typography
@@ -621,6 +634,19 @@ export function TimetableView() {
                                 น.
                               </Box>
                             </Typography>
+                            {slot.location_name && (
+                              <Typography
+                                variant="caption"
+                                noWrap
+                                sx={{
+                                  color: 'inherit',
+                                  opacity: 0.82,
+                                  fontSize: { xs: '0.52rem', sm: '0.68rem' },
+                                }}
+                              >
+                                สอนที่ {slot.location_name}
+                              </Typography>
+                            )}
                           </Card>
                         );
                       })}

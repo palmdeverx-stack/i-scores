@@ -137,6 +137,8 @@ export type SchoolTeacherRoster = {
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
+  position_title: string | null;
+  academic_rank: string | null;
   department_name: string | null;
   role_in_department: 'head' | 'member' | null;
   homeroom_classrooms: { name: string; grade_level: string | null }[];

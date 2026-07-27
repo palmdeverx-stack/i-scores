@@ -8,20 +8,33 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
+import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import Switch from '@mui/material/Switch';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
 import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import InputAdornment from '@mui/material/InputAdornment';
+import TableContainer from '@mui/material/TableContainer';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { paths } from 'src/routes/paths';
+import { useRouter } from 'src/routes/hooks';
+
 import { RemixIcon } from 'src/components/remix-icon';
+import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { listUsers } from 'src/sections/user/user-actions';
 import { listSubjects } from 'src/sections/subject/subject-actions';
@@ -32,47 +45,37 @@ import {
   deleteTeacherAssignment,
 } from 'src/sections/teacher-assignment/teacher-assignment-actions';
 
+import { useAuthContext } from 'src/auth/hooks';
+
+import { ScheduleGrid } from '../components/schedule-grid';
+import { listSchedulePeriods } from '../schedule-period-actions';
 import { AssignmentFormDialog } from '../components/assignment-form-dialog';
+import { SchedulePeriodsDialog } from '../components/schedule-periods-dialog';
 import { ScheduleSlotFormDialog } from '../components/schedule-slot-form-dialog';
-import { addScheduleSlot, deleteScheduleSlot, getClassroomSchedule } from '../schedule-builder-actions';
+import { getScheduleMode, updateScheduleMode } from '../schedule-settings-actions';
+import {
+  addScheduleSlot,
+  deleteScheduleSlot,
+  updateScheduleSlot,
+  getScheduleApproval,
+  getClassroomSchedule,
+  cancelScheduleSubmission,
+} from '../schedule-builder-actions';
 
 // ----------------------------------------------------------------------
 
-const DAYS = [
-  { value: 1, label: 'วันจันทร์', shortLabel: 'จ.' },
-  { value: 2, label: 'วันอังคาร', shortLabel: 'อ.' },
-  { value: 3, label: 'วันพุธ', shortLabel: 'พ.' },
-  { value: 4, label: 'วันพฤหัสบดี', shortLabel: 'พฤ.' },
-  { value: 5, label: 'วันศุกร์', shortLabel: 'ศ.' },
-  { value: 6, label: 'วันเสาร์', shortLabel: 'ส.' },
-  { value: 7, label: 'วันอาทิตย์', shortLabel: 'อา.' },
-];
-
-const ROW_HEIGHT = 92;
-const SLOT_COLORS = ['primary', 'secondary', 'error', 'info', 'success', 'warning'] as const;
-
-function timeToMinutes(value: string) {
-  const [hour, minute] = value.split(':').map(Number);
-  return hour * 60 + minute;
-}
-
-function formatMinutes(value: number) {
-  const hour = Math.floor(value / 60);
-  const minute = value % 60;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
-function getSlotColor(id: string) {
-  const hash = [...id].reduce((total, character) => total + character.charCodeAt(0), 0);
-  return SLOT_COLORS[hash % SLOT_COLORS.length];
-}
-
 export function ScheduleBuilderView() {
+  const router = useRouter();
+  const classroomTable = useTable({ defaultRowsPerPage: 10 });
   const queryClient = useQueryClient();
+  const { user } = useAuthContext();
   const [academicYearId, setAcademicYearId] = useState('');
   const [semesterId, setSemesterId] = useState('');
   const [classroomId, setClassroomId] = useState('');
+  const [classroomSearch, setClassroomSearch] = useState('');
+  const [periodsDialogOpen, setPeriodsDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingSlot, setEditingSlot] = useState<ClassroomScheduleSlot | null>(null);
   const [deletingSlot, setDeletingSlot] = useState<ClassroomScheduleSlot | null>(null);
   const [addAssignmentDialogOpen, setAddAssignmentDialogOpen] = useState(false);
   const [deletingAssignment, setDeletingAssignment] =
@@ -111,6 +114,25 @@ export function ScheduleBuilderView() {
     enabled: !!academicYearId,
   });
 
+  const scheduleModeQuery = useQuery({
+    queryKey: ['schedule-mode'],
+    queryFn: getScheduleMode,
+  });
+
+  const scheduleModeMutation = useMutation({
+    mutationFn: updateScheduleMode,
+    onSuccess: async (nextMode) => {
+      queryClient.setQueryData(['schedule-mode'], nextMode);
+      await queryClient.invalidateQueries({ queryKey: ['classroom-schedule'] });
+    },
+  });
+
+  const periodsQuery = useQuery({
+    queryKey: ['schedule-periods', semesterId],
+    queryFn: () => listSchedulePeriods(semesterId),
+    enabled: !!semesterId,
+  });
+
   useEffect(() => {
     setClassroomId('');
   }, [academicYearId]);
@@ -121,8 +143,56 @@ export function ScheduleBuilderView() {
     enabled: !!classroomId && !!semesterId,
   });
 
+  const approvalQuery = useQuery({
+    queryKey: ['classroom-schedule-approval', classroomId, semesterId],
+    queryFn: () => getScheduleApproval(classroomId, semesterId),
+    enabled: !!classroomId && !!semesterId,
+  });
+
+  const cancelSubmitMutation = useMutation({
+    mutationFn: () => cancelScheduleSubmission(classroomId, semesterId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['classroom-schedule-approval', classroomId, semesterId],
+      });
+    },
+  });
+
   const addMutation = useMutation({
     mutationFn: addScheduleSlot,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['classroom-schedule', classroomId, semesterId],
+      });
+    },
+  });
+
+  const editMutation = useMutation({
+    mutationFn: async (params: {
+      teacherAssignmentId: string;
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+      locationName: string;
+      schedulePeriodId: string;
+    }) => {
+      if (!editingSlot) return;
+      if (params.teacherAssignmentId === editingSlot.teacher_assignment_id) {
+        await updateScheduleSlot(editingSlot.teacher_assignment_id, editingSlot.id, {
+          dayOfWeek: params.dayOfWeek,
+          startTime: params.startTime,
+          endTime: params.endTime,
+          locationName: params.locationName,
+          schedulePeriodId: params.schedulePeriodId,
+        });
+      } else {
+        // Moving to a different subject/teacher means moving to a different
+        // teacher_assignment's schedule list — delete under the old one, add
+        // under the new one.
+        await deleteScheduleSlot(editingSlot.teacher_assignment_id, editingSlot.id);
+        await addScheduleSlot(params);
+      }
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ['classroom-schedule', classroomId, semesterId],
@@ -174,35 +244,61 @@ export function ScheduleBuilderView() {
     },
   });
 
+  const filteredClassrooms = useMemo(() => {
+    const keyword = classroomSearch.trim().toLocaleLowerCase('th');
+    if (!keyword) return classroomsQuery.data ?? [];
+
+    return (classroomsQuery.data ?? []).filter((classroom) => {
+      const homeroomNames = classroom.homeroom_teachers
+        .map((teacher) => `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim())
+        .filter(Boolean)
+        .join(' ');
+      return [classroom.grade_level, classroom.name, homeroomNames]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('th')
+        .includes(keyword);
+    });
+  }, [classroomSearch, classroomsQuery.data]);
+
+  const visibleClassrooms = useMemo(
+    () => rowInPage(filteredClassrooms, classroomTable.page, classroomTable.rowsPerPage),
+    [classroomTable.page, classroomTable.rowsPerPage, filteredClassrooms]
+  );
+  const scheduleMode = scheduleModeQuery.data ?? 'hour';
+
   const schedules = useMemo(() => scheduleQuery.data?.schedules ?? [], [scheduleQuery.data]);
   const assignments = useMemo(() => scheduleQuery.data?.assignments ?? [], [scheduleQuery.data]);
 
-  const assignmentById = useMemo(
-    () => new Map(assignments.map((assignment) => [assignment.id, assignment])),
-    [assignments]
-  );
+  const wasApprovedButModified =
+    approvalQuery.data?.status === 'draft' && !!approvalQuery.data.approved_at;
+  const isAwaitingDirector =
+    approvalQuery.data?.status === 'submitted' &&
+    !!approvalQuery.data.submitter_signature_url;
 
-  const grid = useMemo(() => {
-    const slotsByDay = new Map<number, ClassroomScheduleSlot[]>();
-    schedules.forEach((slot) => {
-      slotsByDay.set(slot.day_of_week, [...(slotsByDay.get(slot.day_of_week) ?? []), slot]);
-    });
-
-    const startMinute =
-      Math.floor(
-        Math.min(8 * 60, ...schedules.map((slot) => timeToMinutes(slot.start_time))) / 60
-      ) * 60;
-    const endMinute =
-      Math.ceil(Math.max(17 * 60, ...schedules.map((slot) => timeToMinutes(slot.end_time))) / 60) *
-      60;
-    const totalHours = Math.max(1, (endMinute - startMinute) / 60);
-    const timeLabels = Array.from({ length: totalHours }, (_, index) => startMinute + index * 60);
-    const visibleDays = DAYS.filter(
-      (day) => day.value <= 5 || schedules.some((slot) => slot.day_of_week === day.value)
-    );
-
-    return { slotsByDay, visibleDays, timeLabels, startMinute, totalHours };
-  }, [schedules]);
+  const approvalStatusChip = (() => {
+    if (approvalQuery.data?.status === 'approved') {
+      return <Chip size="small" color="success" label="ผอ. ยืนยันแล้ว" />;
+    }
+    if (approvalQuery.data?.status === 'submitted') {
+      return (
+        <Chip
+          size="small"
+          color="warning"
+          label={isAwaitingDirector ? 'รอ ผอ. ยืนยัน' : 'รอผู้จัดทำลงนาม'}
+        />
+      );
+    }
+    if (approvalQuery.data?.status === 'canceled') {
+      return <Chip size="small" color="default" label="ยกเลิกการส่งแล้ว" />;
+    }
+    if (wasApprovedButModified) {
+      return (
+        <Chip size="small" color="error" label="ยืนยันแล้ว แต่มีการแก้ไข ต้องส่งยืนยันใหม่" />
+      );
+    }
+    return null;
+  })();
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
@@ -217,13 +313,62 @@ export function ScheduleBuilderView() {
 
       <Card variant="outlined" sx={{ p: 2.5, mb: 3 }}>
         <Box
-          sx={{ gap: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}
+          sx={{
+            mb: 2.5,
+            gap: 2,
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box>
+            <Typography variant="subtitle1">รูปแบบตารางเรียนทั้งระบบ</Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {scheduleMode === 'period'
+                ? 'แสดงและจัดตารางตามหมายเลขคาบที่โรงเรียนกำหนด'
+                : 'แสดงและจัดตารางตามเวลาเริ่ม–สิ้นสุดแบบอิสระ'}
+            </Typography>
+          </Box>
+          {user?.role === 'school_admin' ? (
+            <FormControlLabel
+              label={scheduleMode === 'period' ? 'แบบคาบ' : 'แบบชั่วโมง'}
+              control={
+                <Switch
+                  checked={scheduleMode === 'period'}
+                  disabled={scheduleModeQuery.isLoading || scheduleModeMutation.isPending}
+                  onChange={(event) =>
+                    scheduleModeMutation.mutate(event.target.checked ? 'period' : 'hour')
+                  }
+                />
+              }
+            />
+          ) : (
+            <Chip
+              size="small"
+              color={scheduleMode === 'period' ? 'primary' : 'default'}
+              label={scheduleMode === 'period' ? 'แบบคาบ' : 'แบบชั่วโมง'}
+            />
+          )}
+        </Box>
+
+        {scheduleModeMutation.error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {scheduleModeMutation.error.message}
+          </Alert>
+        )}
+
+        <Box
+          sx={{ gap: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}
         >
           <TextField
             select
             label="ปีการศึกษา"
             value={academicYearId}
-            onChange={(event) => setAcademicYearId(event.target.value)}
+            onChange={(event) => {
+              setAcademicYearId(event.target.value);
+              classroomTable.onResetPage();
+            }}
             disabled={academicYearsQuery.isLoading}
           >
             {(academicYearsQuery.data ?? []).map((year) => (
@@ -237,7 +382,10 @@ export function ScheduleBuilderView() {
             select
             label="ภาคเรียน"
             value={semesterId}
-            onChange={(event) => setSemesterId(event.target.value)}
+            onChange={(event) => {
+              setSemesterId(event.target.value);
+              classroomTable.onResetPage();
+            }}
             disabled={!academicYearId || semestersQuery.isLoading}
           >
             {(semestersQuery.data ?? []).map((semester) => (
@@ -246,28 +394,159 @@ export function ScheduleBuilderView() {
               </MenuItem>
             ))}
           </TextField>
-
-          <TextField
-            select
-            label="ห้องเรียน"
-            value={classroomId}
-            onChange={(event) => setClassroomId(event.target.value)}
-            disabled={!academicYearId || classroomsQuery.isLoading}
-          >
-            {(classroomsQuery.data ?? []).map((classroom) => (
-              <MenuItem key={classroom.id} value={classroom.id}>
-                {classroom.grade_level ? `${classroom.grade_level} ` : ''}
-                {classroom.name}
-              </MenuItem>
-            ))}
-          </TextField>
         </Box>
+        {user?.role === 'school_admin' && semesterId && scheduleMode === 'period' && (
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="outlined"
+              startIcon={<RemixIcon icon="solar:clock-circle-bold" />}
+              onClick={() => setPeriodsDialogOpen(true)}
+            >
+              ตั้งค่าคาบเรียนและเวลา
+            </Button>
+          </Box>
+        )}
       </Card>
 
-      {!classroomId || !semesterId ? (
-        <Alert severity="info" icon={<RemixIcon icon="solar:calendar-date-bold" />}>
-          เลือกปีการศึกษา ภาคเรียน และห้องเรียน เพื่อดูและจัดตารางสอน
-        </Alert>
+      {scheduleMode === 'period' &&
+        semesterId &&
+        !periodsQuery.isLoading &&
+        !periodsQuery.data?.length && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            เปิดใช้งานแบบคาบแล้ว แต่ภาคเรียนนี้ยังไม่มีโครงสร้างคาบ{' '}
+            {user?.role === 'school_admin'
+              ? 'กรุณากด “ตั้งค่าคาบเรียนและเวลา”'
+              : 'กรุณาติดต่อผู้ดูแลโรงเรียนเพื่อตั้งค่าคาบเรียน'}
+          </Alert>
+        )}
+
+      {!classroomId ? (
+        !academicYearId || !semesterId ? (
+          <Alert severity="info" icon={<RemixIcon icon="solar:calendar-date-bold" />}>
+            เลือกปีการศึกษาและภาคเรียน เพื่อดูรายการห้องเรียน
+          </Alert>
+        ) : classroomsQuery.isLoading ? (
+          <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
+            <CircularProgress />
+          </Box>
+        ) : classroomsQuery.isError ? (
+          <Alert severity="error">ไม่สามารถโหลดรายการห้องเรียนได้</Alert>
+        ) : !classroomsQuery.data?.length ? (
+          <Alert severity="warning">ยังไม่มีห้องเรียนในปีการศึกษานี้</Alert>
+        ) : (
+          <Card variant="outlined">
+            <Box
+              sx={{
+                p: 2.5,
+                gap: 2,
+                display: 'flex',
+                alignItems: { xs: 'stretch', sm: 'center' },
+                flexDirection: { xs: 'column', sm: 'row' },
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Box>
+                <Typography variant="h6">เลือกห้องเรียน</Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  {filteredClassrooms.length} ห้องเรียน
+                </Typography>
+              </Box>
+              <TextField
+                size="small"
+                value={classroomSearch}
+                onChange={(event) => {
+                  setClassroomSearch(event.target.value);
+                  classroomTable.onResetPage();
+                }}
+                placeholder="ค้นหาชั้น ห้อง หรือครูประจำชั้น"
+                aria-label="ค้นหาห้องเรียนสำหรับจัดตารางสอน"
+                sx={{ width: { xs: 1, sm: 360 } }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <RemixIcon icon="eva:search-fill" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            </Box>
+
+            <TableContainer>
+              <Table sx={{ minWidth: 760 }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ระดับชั้น</TableCell>
+                    <TableCell>ห้องเรียน</TableCell>
+                    <TableCell>ครูประจำชั้น</TableCell>
+                    <TableCell align="right">จัดการ</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {!filteredClassrooms.length && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
+                      >
+                        ไม่พบห้องเรียนที่ตรงกับคำค้นหา
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {visibleClassrooms.map((classroom) => {
+                    const homeroomNames = classroom.homeroom_teachers
+                      .map(
+                        (teacher) =>
+                          `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim()
+                      )
+                      .filter(Boolean)
+                      .join(', ');
+                    return (
+                      <TableRow key={classroom.id} hover>
+                        <TableCell>{classroom.grade_level ?? 'ไม่ระบุชั้น'}</TableCell>
+                        <TableCell>
+                          <Typography variant="subtitle2">{classroom.name}</Typography>
+                        </TableCell>
+                        <TableCell>{homeroomNames || 'ยังไม่กำหนดครูประจำชั้น'}</TableCell>
+                        <TableCell align="right">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<RemixIcon icon="solar:calendar-bold" />}
+                            onClick={() => setClassroomId(classroom.id)}
+                          >
+                            จัดตารางสอน
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <TablePaginationCustom
+              page={classroomTable.page}
+              count={filteredClassrooms.length}
+              rowsPerPage={classroomTable.rowsPerPage}
+              rowsPerPageOptions={[10, 25, 50]}
+              onPageChange={classroomTable.onChangePage}
+              onRowsPerPageChange={classroomTable.onChangeRowsPerPage}
+              labelRowsPerPage="แสดงต่อหน้า"
+              labelDisplayedRows={({ from, to, count }) => `${from}–${to} จาก ${count}`}
+              getItemAriaLabel={(type) => {
+                if (type === 'first') return 'หน้าแรก';
+                if (type === 'last') return 'หน้าสุดท้าย';
+                if (type === 'next') return 'หน้าถัดไป';
+                return 'หน้าก่อนหน้า';
+              }}
+              sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+            />
+          </Card>
+        )
       ) : scheduleQuery.isLoading ? (
         <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
           <CircularProgress />
@@ -276,19 +555,84 @@ export function ScheduleBuilderView() {
         <Alert severity="error">ไม่สามารถโหลดตารางสอนของห้องนี้ได้</Alert>
       ) : (
         <>
-          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6">
-              {scheduleQuery.data?.classroom.grade_level} {scheduleQuery.data?.classroom.name}
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<RemixIcon icon="mingcute:add-line" />}
-              onClick={() => setAddDialogOpen(true)}
-              disabled={!assignments.length}
-            >
-              เพิ่มคาบสอน
-            </Button>
+          <Button
+            color="inherit"
+            onClick={() => setClassroomId('')}
+            startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
+            sx={{ mb: 2 }}
+          >
+            กลับไปเลือกห้องเรียน
+          </Button>
+
+          <Box
+            sx={{
+              mb: 2,
+              gap: 1.5,
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+              <Typography variant="h6">
+                {scheduleQuery.data?.classroom.grade_level} {scheduleQuery.data?.classroom.name}
+              </Typography>
+              {approvalStatusChip}
+            </Box>
+            <Box sx={{ gap: 1, display: 'flex' }}>
+              {approvalQuery.data?.status !== 'approved' && (
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  disabled={!schedules.length || isAwaitingDirector}
+                  startIcon={<RemixIcon icon="solar:send-bold" />}
+                  onClick={() =>
+                    router.push(
+                      user?.role === 'teacher'
+                        ? paths.teacher.scheduleSubmission(classroomId, semesterId)
+                        : paths.admin.scheduleSubmission(classroomId, semesterId)
+                    )
+                  }
+                >
+                  {approvalQuery.data?.status === 'submitted'
+                    ? isAwaitingDirector
+                      ? 'ส่งไปแล้ว รอ ผอ. ยืนยัน'
+                      : 'ลงนามผู้จัดทำ'
+                    : approvalQuery.data?.status === 'canceled'
+                      ? 'ลงนามส่งอีกครั้ง'
+                    : wasApprovedButModified
+                      ? 'ตรวจสอบและลงนามใหม่'
+                      : 'ตรวจสอบและลงนามส่ง'}
+                </Button>
+              )}
+              {approvalQuery.data?.status === 'submitted' && (
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  loading={cancelSubmitMutation.isPending}
+                  startIcon={<RemixIcon icon="solar:close-circle-bold" />}
+                  onClick={() => cancelSubmitMutation.mutate()}
+                >
+                  ยกเลิกการส่ง
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                startIcon={<RemixIcon icon="mingcute:add-line" />}
+                onClick={() => setAddDialogOpen(true)}
+                disabled={!assignments.length}
+              >
+                เพิ่มคาบสอน
+              </Button>
+            </Box>
           </Box>
+
+          {cancelSubmitMutation.error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {cancelSubmitMutation.error.message}
+            </Alert>
+          )}
 
           <Card variant="outlined" sx={{ p: 2.5, mb: 3 }}>
             <Box
@@ -335,169 +679,47 @@ export function ScheduleBuilderView() {
             )}
           </Card>
 
-          <Card variant="outlined" sx={{ overflow: 'hidden', borderRadius: 3 }}>
-            <Box sx={{ width: 1, overflowX: 'auto' }}>
-              <Box sx={{ minWidth: 640 }}>
-                <Box
-                  sx={{
-                    height: 58,
-                    display: 'grid',
-                    gridTemplateColumns: '104px minmax(0, 1fr)',
-                    bgcolor: 'background.neutral',
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      px: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      borderRight: '1px solid',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    <Typography variant="subtitle2">วัน / เวลา</Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: `repeat(${grid.totalHours}, minmax(0, 1fr))`,
-                    }}
-                  >
-                    {grid.timeLabels.map((minute) => (
-                      <Box
-                        key={minute}
-                        sx={{
-                          px: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          borderRight: '1px solid',
-                          borderColor: 'divider',
-                        }}
-                      >
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                          {formatMinutes(minute)} น.
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-
-                {grid.visibleDays.map((day) => {
-                  const daySlots = [...(grid.slotsByDay.get(day.value) ?? [])].sort((a, b) =>
-                    a.start_time.localeCompare(b.start_time)
-                  );
-
-                  return (
-                    <Box
-                      key={day.value}
-                      sx={{
-                        height: ROW_HEIGHT,
-                        display: 'grid',
-                        gridTemplateColumns: '104px minmax(0, 1fr)',
-                        borderBottom: '1px solid',
-                        borderColor: 'divider',
-                        '&:last-child': { borderBottom: 0 },
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          px: 2,
-                          display: 'flex',
-                          alignItems: 'center',
-                          borderRight: '1px solid',
-                          borderColor: 'divider',
-                        }}
-                      >
-                        <Typography variant="subtitle2">{day.label}</Typography>
-                      </Box>
-
-                      <Box
-                        sx={{
-                          position: 'relative',
-                          backgroundSize: `${100 / grid.totalHours}% 100%`,
-                          backgroundImage: (theme) =>
-                            `linear-gradient(to right, transparent calc(100% - 1px), ${theme.vars.palette.divider} calc(100% - 1px))`,
-                        }}
-                      >
-                        {!daySlots.length && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              top: '50%',
-                              left: 20,
-                              position: 'absolute',
-                              color: 'text.disabled',
-                              transform: 'translateY(-50%)',
-                            }}
-                          >
-                            ไม่มีคาบสอน
-                          </Typography>
-                        )}
-
-                        {daySlots.map((slot) => {
-                          const start = timeToMinutes(slot.start_time);
-                          const end = timeToMinutes(slot.end_time);
-                          const left = ((start - grid.startMinute) / (grid.totalHours * 60)) * 100;
-                          const width = ((end - start) / (grid.totalHours * 60)) * 100;
-                          const assignment = assignmentById.get(slot.teacher_assignment_id);
-                          const color = getSlotColor(slot.teacher_assignment_id);
-                          const teacherName = `${assignment?.teacher?.first_name ?? ''} ${assignment?.teacher?.last_name ?? ''}`.trim();
-
-                          return (
-                            <Card
-                              key={slot.id}
-                              onClick={() => setDeletingSlot(slot)}
-                              title={`${assignment?.subject?.name ?? ''} ครู${teacherName} ${slot.start_time.slice(0, 5)}-${slot.end_time.slice(0, 5)} น. — คลิกเพื่อลบ`}
-                              sx={{
-                                top: 10,
-                                left: `calc(${left}% + 2px)`,
-                                width: `calc(${width}% - 4px)`,
-                                height: ROW_HEIGHT - 20,
-                                px: 1,
-                                py: 0.75,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                overflow: 'hidden',
-                                position: 'absolute',
-                                borderRadius: 1.5,
-                                color: `${color}.darker`,
-                                flexDirection: 'column',
-                                justifyContent: 'center',
-                                bgcolor: `${color}.lighter`,
-                                border: '1px solid',
-                                borderColor: `${color}.light`,
-                                '&:hover': { boxShadow: (theme) => theme.shadows[8] },
-                              }}
-                            >
-                              <Typography variant="subtitle2" noWrap sx={{ color: 'inherit', fontSize: '0.82rem' }}>
-                                {assignment?.subject?.name ?? 'ไม่ระบุวิชา'}
-                              </Typography>
-                              <Typography variant="caption" noWrap sx={{ color: 'inherit', opacity: 0.82 }}>
-                                ครู{teacherName || '-'}
-                              </Typography>
-                              <Typography variant="caption" noWrap sx={{ color: 'inherit', fontWeight: 700 }}>
-                                {slot.start_time.slice(0, 5)}–{slot.end_time.slice(0, 5)} น.
-                              </Typography>
-                            </Card>
-                          );
-                        })}
-                      </Box>
-                    </Box>
-                  );
-                })}
-              </Box>
-            </Box>
-          </Card>
+          <ScheduleGrid
+            schedules={schedules}
+            assignments={assignments}
+            periods={periodsQuery.data ?? []}
+            scheduleMode={scheduleMode}
+            onSlotClick={(slot) => setEditingSlot(slot)}
+          />
         </>
       )}
 
       <ScheduleSlotFormDialog
-        open={addDialogOpen}
+        key={editingSlot?.id ?? 'new'}
+        open={addDialogOpen || !!editingSlot}
         assignments={assignments}
-        onClose={() => setAddDialogOpen(false)}
-        onSubmit={(params) => addMutation.mutateAsync(params).then(() => {})}
+        periods={scheduleMode === 'period' ? periodsQuery.data ?? [] : []}
+        editingSlot={editingSlot}
+        onClose={() => {
+          setAddDialogOpen(false);
+          setEditingSlot(null);
+        }}
+        onSubmit={(params) =>
+          editingSlot
+            ? editMutation.mutateAsync(params).then(() => {})
+            : addMutation.mutateAsync(params).then(() => {})
+        }
+        onDelete={(slot) => {
+          setEditingSlot(null);
+          deleteMutation.reset();
+          setDeletingSlot(slot);
+        }}
+      />
+
+      <SchedulePeriodsDialog
+        key={`${semesterId}-${periodsQuery.data?.length ?? 0}`}
+        open={periodsDialogOpen}
+        semesterId={semesterId}
+        periods={periodsQuery.data ?? []}
+        onClose={() => setPeriodsDialogOpen(false)}
+        onChanged={async () => {
+          await periodsQuery.refetch();
+        }}
       />
 
       <AssignmentFormDialog

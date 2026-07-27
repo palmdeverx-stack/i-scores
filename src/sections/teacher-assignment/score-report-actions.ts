@@ -7,8 +7,11 @@ import type { AssignmentCategory } from 'src/sections/assignment/assignment-acti
 
 export type ScoreReport = {
   teacherAssignmentId: string;
-  subject: { name: string; code: string | null };
-  classroom: { name: string; academicYear: string | null };
+  schoolName: string;
+  schoolLogoUrl: string | null;
+  teacher: { firstName: string | null; lastName: string | null; username: string };
+  subject: { name: string; code: string | null; credits: number };
+  classroom: { name: string; gradeLevel: string | null; academicYear: string | null };
   semesterName: string | null;
   assignments: Array<{
     id: string;
@@ -20,10 +23,15 @@ export type ScoreReport = {
     id: string;
     studentNumber: string | null;
     studentCode: string | null;
+    nationalId: string | null;
     username: string;
     firstName: string | null;
     lastName: string | null;
     nickname: string | null;
+    specialResult: 'ร' | 'มส' | 'มผ' | null;
+    desirableAttributesLevel: number | null;
+    readingThinkingWritingLevel: number | null;
+    activityResult: 'pass' | 'fail' | 'pending' | null;
     scores: Record<string, { score: number | null; status: SubmissionStatus }>;
   }>;
 };
