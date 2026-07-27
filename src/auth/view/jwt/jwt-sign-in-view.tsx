@@ -37,11 +37,9 @@ export const SignInSchema = z.object({
     .string()
     .min(1, { error: 'กรุณากรอกรหัสผ่าน!' })
     .min(6, { error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร!' }),
-  pin: z
-    .string()
-    .refine((value) => value === '' || /^\d{8}$/.test(value), {
-      error: 'PIN ต้องเป็นตัวเลข 8 หลัก',
-    }),
+  pin: z.string().refine((value) => value === '' || /^\d{8}$/.test(value), {
+    error: 'PIN ต้องเป็นตัวเลข 8 หลัก',
+  }),
 });
 
 // ----------------------------------------------------------------------
@@ -50,7 +48,6 @@ export function JwtSignInView() {
   const router = useRouter();
 
   const showPassword = useBoolean();
-  const showPin = useBoolean();
   const [pinChallenge, setPinChallenge] = useState<{
     token: string;
     role: 'master_admin' | 'school_admin';
@@ -67,6 +64,7 @@ export function JwtSignInView() {
   const methods = useForm({
     resolver: zodResolver(SignInSchema),
     defaultValues,
+    reValidateMode: 'onBlur',
   });
 
   const { handleSubmit } = methods;
@@ -163,35 +161,14 @@ export function JwtSignInView() {
           </Box>
         </>
       ) : (
-        <Field.Text
+        <Field.Code
           name="pin"
-          label="PIN 8 หลัก"
-          placeholder="กรอกตัวเลข 8 หลัก"
-          type={showPin.value ? 'text' : 'password'}
-          slotProps={{
-            inputLabel: { shrink: true },
-            htmlInput: { inputMode: 'numeric', maxLength: 8, autoComplete: 'one-time-code' },
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <RemixIcon icon="solar:key-minimalistic-bold" width={22} />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={showPin.onToggle}
-                    edge="end"
-                    aria-label={showPin.value ? 'ซ่อน PIN' : 'แสดง PIN'}
-                  >
-                    <RemixIcon
-                      icon={showPin.value ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
-                    />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            },
-          }}
+          length={8}
+          gap={1}
+          maxSize={40}
+          autoFocus
+          validateChar={(character) => /^\d$/.test(character)}
+          slotProps={{ textField: { inputMode: 'numeric' } }}
         />
       )}
 
@@ -266,7 +243,7 @@ export function JwtSignInView() {
               ? 'กรอก PIN ผู้ดูแลระบบ 8 หลักเพื่อเข้าสู่ระบบ'
               : 'เข้าสู่ระบบเพื่อจัดการคะแนนและติดตามผลการเรียน'
         }
-        sx={{ mt: 0.5, mb: 4, textAlign: 'left' }}
+        sx={{ mt: 0.5, mb: 3, textAlign: 'left' }}
       />
 
       {!!errorMessage && (

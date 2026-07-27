@@ -1,7 +1,13 @@
+import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
+
+import { paths } from 'src/routes/paths';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { generatePassword } from 'src/lib/generate-password';
+import { encryptCredential } from 'src/lib/credential-cipher';
+import { sendSchoolInviteEmail } from 'src/lib/school-invite-email';
 import { seedDefaultDepartments } from 'src/lib/default-departments';
 
 // ----------------------------------------------------------------------
@@ -66,10 +72,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { name, nameEn, code } = await request.json();
+  const { name, nameEn, code, email } = await request.json();
 
-  if (!name || !code) {
-    return NextResponse.json({ message: 'กรุณากรอกชื่อและรหัสโรงเรียน' }, { status: 400 });
+  if (!name || !code || !email) {
+    return NextResponse.json(
+      { message: 'กรุณากรอกชื่อ รหัสโรงเรียน และอีเมล' },
+      { status: 400 }
+    );
   }
 
   const normalizedCode = String(code).trim();
@@ -78,6 +87,11 @@ export async function POST(request: Request) {
       { message: 'รหัสโรงเรียนต้องเป็นตัวเลข 8 หลัก' },
       { status: 400 }
     );
+  }
+
+  const normalizedEmail = String(email).trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return NextResponse.json({ message: 'อีเมลไม่ถูกต้อง' }, { status: 400 });
   }
 
   const { data: existing } = await supabaseAdmin
@@ -90,15 +104,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'รหัสโรงเรียนนี้ถูกใช้แล้ว' }, { status: 409 });
   }
 
+  const trimmedName = String(name).trim();
+
   const { data: school, error } = await supabaseAdmin
     .from('schools')
     .insert({
-      name: String(name).trim(),
+      name: trimmedName,
       name_en: typeof nameEn === 'string' && nameEn.trim() ? nameEn.trim() : null,
       code: normalizedCode,
+      email: normalizedEmail,
       created_by: caller.sub,
     })
-    .select('id, name, name_en, code, logo_url, is_active, created_at')
+    .select('id, name, name_en, code, email, logo_url, is_active, created_at')
     .single();
 
   if (error || !school) {
@@ -110,5 +127,61 @@ export async function POST(request: Request) {
 
   await seedDefaultDepartments(school.id);
 
-  return NextResponse.json({ school }, { status: 201 });
+  // Auto-provision the school's first admin account and invite them by email
+  // — "admin.<code>" can't collide since school codes are unique.
+  const adminUsername = `admin.${normalizedCode}`;
+  const adminPassword = generatePassword();
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
+
+  const { error: adminError } = await supabaseAdmin.from('app_users').insert({
+    username: adminUsername,
+    password_hash: adminPasswordHash,
+    password_ciphertext: encryptCredential(adminPassword),
+    must_change_password: true,
+    email: normalizedEmail,
+    first_name: 'ผู้ดูแลโรงเรียน',
+    last_name: trimmedName,
+    role: 'school_admin',
+    school_id: school.id,
+    is_active: true,
+  });
+
+  if (adminError) {
+    return NextResponse.json(
+      {
+        school,
+        adminCreated: false,
+        message: `สร้างโรงเรียนสำเร็จ แต่สร้างบัญชีผู้ดูแลไม่สำเร็จ: ${adminError.message}`,
+      },
+      { status: 201 }
+    );
+  }
+
+  let emailSent = true;
+  try {
+    await sendSchoolInviteEmail({
+      to: normalizedEmail,
+      schoolName: trimmedName,
+      schoolCode: normalizedCode,
+      adminUsername,
+      adminPassword,
+      signInUrl: new URL(paths.auth.jwt.signIn, request.url).toString(),
+    });
+  } catch (emailError) {
+    console.error('Failed to send school invite email', emailError);
+    emailSent = false;
+  }
+
+  return NextResponse.json(
+    {
+      school,
+      adminCreated: true,
+      emailSent,
+      adminUsername,
+      // Only sent back to the client when the invite email failed to send,
+      // so the caller has a fallback way to hand over the credentials.
+      adminPassword: emailSent ? undefined : adminPassword,
+    },
+    { status: 201 }
+  );
 }

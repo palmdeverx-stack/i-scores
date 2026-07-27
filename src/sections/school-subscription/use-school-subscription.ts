@@ -67,6 +67,8 @@ const ROUTE_FEATURES: Record<
     ['/admin/student', 'admin.students'],
     ['/admin/user', 'admin.staff'],
     ['/admin/school', 'admin.school_profile'],
+    ['/admin/announcements', 'admin.announcements'],
+    ['/admin/gradebook', 'admin.teacher_assignments'],
   ],
   teacher: [
     ['/teacher/attendance-scan', 'teacher.qr_attendance'],
@@ -84,6 +86,7 @@ const ROUTE_FEATURES: Record<
     ['/student/attendance', 'student.attendance'],
     ['/student/timetable', 'student.subjects'],
     ['/student/subjects', 'student.subjects'],
+    ['/student/classroom', 'student.subjects'],
     ['/student/qr', 'student.qr'],
   ],
 };

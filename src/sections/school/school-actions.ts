@@ -35,6 +35,17 @@ export type CreateSchoolParams = {
   name: string;
   nameEn?: string;
   code: string;
+  email: string;
+};
+
+export type CreateSchoolResult = {
+  school: School;
+  adminCreated: boolean;
+  emailSent?: boolean;
+  adminUsername?: string;
+  /** Only present when the invite email failed to send. */
+  adminPassword?: string;
+  message?: string;
 };
 
 export async function listSchools(): Promise<School[]> {
@@ -46,7 +57,7 @@ export async function listSchools(): Promise<School[]> {
   return json.schools;
 }
 
-export async function createSchool(params: CreateSchoolParams) {
+export async function createSchool(params: CreateSchoolParams): Promise<CreateSchoolResult> {
   const response = await fetch('/api/schools', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -56,7 +67,7 @@ export async function createSchool(params: CreateSchoolParams) {
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to create school');
 
-  return json.school;
+  return json;
 }
 
 export async function toggleSchoolActive(id: string, isActive: boolean) {

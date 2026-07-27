@@ -1,6 +1,9 @@
 'use client';
 
+import type { CreateSchoolResult } from '../school-actions';
+
 import * as z from 'zod';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,15 +11,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Alert from '@mui/material/Alert';
+import Dialog from '@mui/material/Dialog';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Container from '@mui/material/Container';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
@@ -33,21 +42,24 @@ export const SchoolCreateSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{8}$/, { error: 'รหัสโรงเรียนต้องเป็นตัวเลข 8 หลัก' }),
+  email: z.email({ error: 'กรุณากรอกอีเมลโรงเรียนให้ถูกต้อง' }),
 });
 
 // ----------------------------------------------------------------------
 
 export function SchoolCreateView() {
   const router = useRouter();
+  const [result, setResult] = useState<CreateSchoolResult | null>(null);
+
   const methods = useForm({
     resolver: zodResolver(SchoolCreateSchema),
-    defaultValues: { name: '', nameEn: '', code: '' },
+    defaultValues: { name: '', nameEn: '', code: '', email: '' },
   });
   const { handleSubmit } = methods;
 
   const createSchoolMutation = useMutation({
     mutationFn: createSchool,
-    onSuccess: () => router.push(paths.master.school.root),
+    onSuccess: (data) => setResult(data),
   });
 
   const onSubmit = handleSubmit((data) =>
@@ -55,8 +67,20 @@ export function SchoolCreateView() {
       name: data.name.trim(),
       nameEn: data.nameEn.trim() || undefined,
       code: data.code.trim(),
+      email: data.email.trim(),
     })
   );
+
+  const closeResultDialog = () => {
+    setResult(null);
+    router.push(paths.master.school.root);
+  };
+
+  const copyPassword = async () => {
+    if (!result?.adminPassword) return;
+    await navigator.clipboard.writeText(result.adminPassword);
+    toast.success('คัดลอกรหัสผ่านแล้ว');
+  };
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
@@ -138,6 +162,13 @@ export function SchoolCreateView() {
                   helperText="ตัวเลข 8 หลัก ใช้เป็น PIN สำหรับผู้ดูแลโรงเรียน"
                   slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 8 } }}
                 />
+                <Field.Text
+                  name="email"
+                  label="อีเมลโรงเรียน"
+                  type="email"
+                  placeholder="เช่น school@example.ac.th"
+                  helperText="ใช้ส่งคำเชิญพร้อมบัญชีผู้ดูแลโรงเรียนให้ทันทีที่สร้างเสร็จ"
+                />
                 <Box sx={{ gap: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
                   <Button
                     component={RouterLink}
@@ -163,15 +194,18 @@ export function SchoolCreateView() {
         </Card>
 
         <Card variant="outlined" sx={{ p: 3 }}>
-          <Typography variant="h6">ขั้นตอนถัดไป</Typography>
+          <Typography variant="h6">เกิดอะไรขึ้นต่อจากนี้</Typography>
           <Typography variant="body2" sx={{ mt: 0.5, mb: 2.5, color: 'text.secondary' }}>
-            หลังสร้างโรงเรียนแล้ว สามารถตั้งค่าต่อได้ดังนี้
+            ทำอัตโนมัติทันทีที่บันทึกโรงเรียนสำเร็จ
           </Typography>
           {[
-            { label: 'สร้างบัญชีผู้ดูแลโรงเรียน', icon: 'solar:user-plus-bold' as const },
-            { label: 'ผู้ดูแลเพิ่มข้อมูลโรงเรียน', icon: 'solar:notebook-bold-duotone' as const },
+            { label: 'สร้างบัญชีผู้ดูแลโรงเรียนให้อัตโนมัติ', icon: 'solar:user-plus-bold' as const },
             {
-              label: 'เริ่มเพิ่มครูและนักเรียน',
+              label: 'ส่งอีเมลเชิญพร้อมชื่อผู้ใช้งานและรหัสผ่านชั่วคราว',
+              icon: 'solar:letter-bold-duotone' as const,
+            },
+            {
+              label: 'ผู้ดูแลโรงเรียนเข้าสู่ระบบและเริ่มเพิ่มครู/นักเรียนเอง',
               icon: 'solar:users-group-rounded-bold-duotone' as const,
             },
           ].map((item, index) => (
@@ -202,6 +236,55 @@ export function SchoolCreateView() {
           </Alert>
         </Card>
       </Box>
+
+      <Dialog open={!!result} onClose={closeResultDialog} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          {result?.emailSent ? 'ส่งคำเชิญเรียบร้อย' : 'สร้างโรงเรียนสำเร็จ'}
+        </DialogTitle>
+        <DialogContent>
+          {result?.adminCreated === false ? (
+            <Alert severity="warning">{result.message}</Alert>
+          ) : result?.emailSent ? (
+            <Alert severity="success">
+              ส่งอีเมลเชิญพร้อมชื่อผู้ใช้งานและรหัสผ่านไปที่อีเมลโรงเรียนแล้ว
+            </Alert>
+          ) : (
+            <>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                สร้างบัญชีผู้ดูแลโรงเรียนสำเร็จ แต่ส่งอีเมลเชิญไม่สำเร็จ — กรุณาคัดลอกข้อมูลด้านล่างไปส่งให้โรงเรียนเอง
+              </Alert>
+              <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
+                <TextField
+                  label="ชื่อผู้ใช้งาน"
+                  value={result?.adminUsername ?? ''}
+                  slotProps={{ input: { readOnly: true } }}
+                  fullWidth
+                />
+                <TextField
+                  label="รหัสผ่านชั่วคราว"
+                  value={result?.adminPassword ?? ''}
+                  slotProps={{
+                    input: {
+                      readOnly: true,
+                      endAdornment: (
+                        <Button size="small" onClick={copyPassword}>
+                          คัดลอก
+                        </Button>
+                      ),
+                    },
+                  }}
+                  fullWidth
+                />
+              </Box>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={closeResultDialog}>
+            ไปที่รายการโรงเรียน
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

@@ -48,6 +48,12 @@ export const SCHOOL_FEATURES = [
     description: 'เพิ่ม ย้าย และเลื่อนชั้นนักเรียน',
   },
   {
+    key: 'admin.announcements',
+    group: 'ผู้ดูแลโรงเรียน',
+    label: 'ประกาศโรงเรียน',
+    description: 'สร้างและจัดการประกาศทั้งโรงเรียน',
+  },
+  {
     key: 'admin.line_notifications',
     group: 'ผู้ดูแลโรงเรียน',
     label: 'แจ้งเตือนผู้ปกครองผ่าน LINE',
