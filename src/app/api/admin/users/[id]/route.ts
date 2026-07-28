@@ -5,6 +5,7 @@ import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { encryptCredential } from 'src/lib/credential-cipher';
 import { isActiveStaffMasterValue } from 'src/lib/staff-master';
+import { syncLinkedStaffAuth } from 'src/lib/staff-supabase-auth';
 import { checkSchoolSeatLimit } from 'src/lib/school-subscription';
 import {
   hasDepartmentPermission,
@@ -18,7 +19,7 @@ import { isStaffType, isEmploymentStatus } from 'src/types/staff-employment';
 type RouteParams = { params: Promise<{ id: string }> };
 
 const USER_SELECT =
-  'id, username, email, name_prefix, first_name, last_name, first_name_en, last_name_en, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, is_active, is_school_director, staff_type, employment_status, employment_start_date, appointment_date, contract_end_date, position_title, academic_rank, line_linked_at, line_display_name';
+  'id, username, email, name_prefix, first_name, last_name, first_name_en, last_name_en, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, is_active, is_school_director, staff_type, employment_status, employment_start_date, appointment_date, contract_end_date, position_title, academic_rank, line_linked_at, line_display_name, auth_user_id, auth_login_email, auth_role, auth_migrated_at';
 
 async function getManagedUser(id: string) {
   return supabaseAdmin.from('app_users').select(USER_SELECT).eq('id', id).maybeSingle();
@@ -114,6 +115,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
       if (!seat.allowed) {
         return NextResponse.json({ message: seat.message }, { status: 409 });
+      }
+    }
+
+    if (target.role !== 'student') {
+      const authResult = await syncLinkedStaffAuth(target, { isActive: body.isActive });
+      if (!authResult.ok) {
+        return NextResponse.json(
+          { message: `ไม่สามารถอัปเดตสถานะ Supabase Auth ได้: ${authResult.message}` },
+          { status: 500 }
+        );
       }
     }
 
@@ -278,6 +289,27 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       target.role === 'teacher' || target.role === 'student' ? encryptCredential(password) : null;
   }
 
+  if (target.role !== 'student' && target.auth_user_id) {
+    const authResult = await syncLinkedStaffAuth(
+      {
+        ...target,
+        username,
+        email: email || null,
+        first_name: firstName,
+        last_name: lastName,
+        school_id: schoolId,
+        auth_role: target.auth_role,
+      },
+      password ? { password } : undefined
+    );
+    if (!authResult.ok) {
+      return NextResponse.json(
+        { message: `ไม่สามารถอัปเดต Supabase Auth ได้: ${authResult.message}` },
+        { status: 500 }
+      );
+    }
+  }
+
   const { data: user, error } = await supabaseAdmin
     .from('app_users')
     .update(updates)
@@ -332,6 +364,19 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     await supabaseAdmin.storage
       .from('profile-avatars')
       .remove(avatarFiles.map((file) => `${id}/${file.name}`));
+  }
+
+  if (target.auth_user_id) {
+    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(
+      target.auth_user_id
+    );
+    if (authDeleteError) {
+      console.error('Deleted app profile but failed to delete linked Supabase Auth user', {
+        appUserId: id,
+        authUserId: target.auth_user_id,
+        message: authDeleteError.message,
+      });
+    }
   }
 
   return NextResponse.json({ success: true });

@@ -11,6 +11,12 @@ import {
   ACCESS_TOKEN_COOKIE,
   accessTokenCookieOptions,
 } from 'src/lib/auth-token';
+import {
+  isStaffAuthRole,
+  syncLinkedStaffAuth,
+  linkStaffToSupabaseAuth,
+  verifyStaffSupabasePassword,
+} from 'src/lib/staff-supabase-auth';
 
 // ----------------------------------------------------------------------
 
@@ -34,9 +40,49 @@ export async function POST(request: Request) {
     .ilike('username', username)
     .single();
 
-  const passwordMatches = user && (await bcrypt.compare(password, user.password_hash));
+  if (!user) {
+    return NextResponse.json({ message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
+  }
 
-  if (!user || !passwordMatches) {
+  let passwordMatches = false;
+  if (user.role === 'student') {
+    passwordMatches = await bcrypt.compare(password, user.password_hash);
+  } else if (isStaffAuthRole(user.role)) {
+    if (user.auth_user_id) {
+      passwordMatches = await verifyStaffSupabasePassword(user, password);
+      if (passwordMatches) {
+        const synced = await syncLinkedStaffAuth(user, {
+          isActive: user.is_active !== false,
+        });
+        if (!synced.ok) {
+          console.error('Failed to sync Supabase Auth metadata', synced.message);
+          return NextResponse.json(
+            { message: 'ไม่สามารถอัปเดตข้อมูลบัญชีกลางได้ กรุณาลองใหม่อีกครั้ง' },
+            { status: 503 }
+          );
+        }
+      }
+    } else {
+      // One-time legacy verification. A successful login moves the credential
+      // to Supabase Auth without asking the account holder to reset it.
+      passwordMatches = await bcrypt.compare(password, user.password_hash);
+      if (passwordMatches) {
+        const linked = await linkStaffToSupabaseAuth(user, password);
+        if (!linked.ok) {
+          console.error('Failed to migrate staff account to Supabase Auth', linked.message);
+          return NextResponse.json(
+            {
+              message:
+                'ยืนยันรหัสผ่านสำเร็จ แต่ยังย้ายบัญชีไป Supabase Auth ไม่ได้ กรุณาติดต่อผู้ดูแลระบบ',
+            },
+            { status: 503 }
+          );
+        }
+      }
+    }
+  }
+
+  if (!passwordMatches) {
     return NextResponse.json({ message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
   }
 

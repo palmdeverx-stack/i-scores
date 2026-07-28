@@ -4,6 +4,11 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { encryptCredential } from 'src/lib/credential-cipher';
 import { toPublicUser, verifyAppToken, getRequestToken } from 'src/lib/auth-token';
+import {
+  isStaffAuthRole,
+  syncLinkedStaffAuth,
+  linkStaffToSupabaseAuth,
+} from 'src/lib/staff-supabase-auth';
 
 // ----------------------------------------------------------------------
 
@@ -24,16 +29,34 @@ export async function POST(request: Request) {
     );
   }
 
-  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const { data: currentUser } = await supabaseAdmin
+    .from('app_users')
+    .select('*')
+    .eq('id', payload.sub)
+    .maybeSingle();
+
+  if (!currentUser) {
+    return NextResponse.json({ message: 'ไม่พบบัญชีผู้ใช้งาน' }, { status: 404 });
+  }
+
+  if (isStaffAuthRole(currentUser.role)) {
+    const authResult = currentUser.auth_user_id
+      ? await syncLinkedStaffAuth(currentUser, { password: newPassword })
+      : await linkStaffToSupabaseAuth(currentUser, newPassword);
+    if (!authResult.ok) {
+      return NextResponse.json(
+        { message: `ไม่สามารถเปลี่ยนรหัสผ่าน Supabase Auth ได้: ${authResult.message}` },
+        { status: 500 }
+      );
+    }
+  }
 
   const { data: user, error } = await supabaseAdmin
     .from('app_users')
     .update({
-      password_hash: passwordHash,
+      password_hash: await bcrypt.hash(newPassword, 10),
       password_ciphertext:
-        payload.role === 'teacher' || payload.role === 'student'
-          ? encryptCredential(newPassword)
-          : null,
+        payload.role === 'student' ? encryptCredential(newPassword) : null,
       must_change_password: false,
     })
     .eq('id', payload.sub)

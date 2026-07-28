@@ -9,6 +9,7 @@ import { generatePassword } from 'src/lib/generate-password';
 import { encryptCredential } from 'src/lib/credential-cipher';
 import { sendSchoolInviteEmail } from 'src/lib/school-invite-email';
 import { seedDefaultDepartments } from 'src/lib/default-departments';
+import { linkStaffToSupabaseAuth } from 'src/lib/staff-supabase-auth';
 
 // ----------------------------------------------------------------------
 
@@ -133,25 +134,44 @@ export async function POST(request: Request) {
   const adminPassword = generatePassword();
   const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
 
-  const { error: adminError } = await supabaseAdmin.from('app_users').insert({
-    username: adminUsername,
-    password_hash: adminPasswordHash,
-    password_ciphertext: encryptCredential(adminPassword),
-    must_change_password: true,
-    email: normalizedEmail,
-    first_name: 'ผู้ดูแลโรงเรียน',
-    last_name: trimmedName,
-    role: 'school_admin',
-    school_id: school.id,
-    is_active: true,
-  });
+  const { data: adminUser, error: adminError } = await supabaseAdmin
+    .from('app_users')
+    .insert({
+      username: adminUsername,
+      password_hash: adminPasswordHash,
+      password_ciphertext: encryptCredential(adminPassword),
+      must_change_password: true,
+      email: normalizedEmail,
+      first_name: 'ผู้ดูแลโรงเรียน',
+      last_name: trimmedName,
+      role: 'school_admin',
+      school_id: school.id,
+      is_active: true,
+    })
+    .select(
+      'id, username, email, first_name, last_name, role, school_id, auth_user_id, auth_login_email, auth_role'
+    )
+    .single();
 
-  if (adminError) {
+  if (adminError || !adminUser) {
     return NextResponse.json(
       {
         school,
         adminCreated: false,
-        message: `สร้างโรงเรียนสำเร็จ แต่สร้างบัญชีผู้ดูแลไม่สำเร็จ: ${adminError.message}`,
+        message: `สร้างโรงเรียนสำเร็จ แต่สร้างบัญชีผู้ดูแลไม่สำเร็จ: ${adminError?.message ?? 'ไม่พบข้อมูลบัญชีที่สร้าง'}`,
+      },
+      { status: 201 }
+    );
+  }
+
+  const linkedAdmin = await linkStaffToSupabaseAuth(adminUser, adminPassword);
+  if (!linkedAdmin.ok) {
+    await supabaseAdmin.from('app_users').delete().eq('id', adminUser.id);
+    return NextResponse.json(
+      {
+        school,
+        adminCreated: false,
+        message: `สร้างโรงเรียนสำเร็จ แต่สร้าง Supabase Auth ของผู้ดูแลไม่สำเร็จ: ${linkedAdmin.message}`,
       },
       { status: 201 }
     );

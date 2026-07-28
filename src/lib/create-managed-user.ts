@@ -9,6 +9,7 @@ import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { generatePassword } from 'src/lib/generate-password';
 import { encryptCredential } from 'src/lib/credential-cipher';
 import { isActiveStaffMasterValue } from 'src/lib/staff-master';
+import { linkStaffToSupabaseAuth } from 'src/lib/staff-supabase-auth';
 import { schoolHasFeature, checkSchoolSeatLimit } from 'src/lib/school-subscription';
 import { getEffectiveDepartmentPermissions } from 'src/lib/department-permission-access';
 
@@ -314,6 +315,27 @@ export async function createManagedUser(
 
   if (error || !user) {
     return { ok: false, status: 500, message: error?.message ?? 'Failed to create user' };
+  }
+
+  if (role !== 'student') {
+    const linked = await linkStaffToSupabaseAuth(
+      {
+        ...user,
+        role,
+        school_id: targetSchoolId,
+        first_name: firstName,
+        last_name: lastName,
+      },
+      password
+    );
+    if (!linked.ok) {
+      await supabaseAdmin.from('app_users').delete().eq('id', user.id);
+      return {
+        ok: false,
+        status: 500,
+        message: `ไม่สามารถสร้างบัญชี Supabase Auth ได้: ${linked.message}`,
+      };
+    }
   }
 
   return { ok: true, user, generatedPassword: isAutoGenRole ? password : undefined };
