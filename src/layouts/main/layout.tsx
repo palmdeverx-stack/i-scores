@@ -25,6 +25,7 @@ import { AccountPopover } from '../components/account-popover';
 import { LanguagePopover } from '../components/language-popover';
 import { StudentBottomNav } from './nav/mobile/student-bottom-nav';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
+import { MarketplaceButton } from '../components/marketplace-button';
 
 // ----------------------------------------------------------------------
 
@@ -86,6 +87,8 @@ export function MainLayout({
 
           {/** @slot Logo */}
           <MainSchoolLogo />
+
+          <MarketplaceButton sx={{ ml: { xs: 0.5, sm: 1.5 } }} />
         </>
       ),
       rightArea: (

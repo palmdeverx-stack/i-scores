@@ -30,6 +30,7 @@ import { DashboardBottomNav } from './dashboard-bottom-nav';
 import { AccountDrawer } from '../components/account-drawer';
 import { AccountPopover } from '../components/account-popover';
 import { LanguagePopover } from '../components/language-popover';
+import { MarketplaceButton } from '../components/marketplace-button';
 import { NotificationsMenu } from '../components/notifications-menu';
 import { navData as dashboardNavData } from '../nav-config-dashboard';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
@@ -176,6 +177,8 @@ export function DashboardLayout({
               }}
             />
           )}
+
+          <MarketplaceButton sx={{ ml: { xs: 0.5, sm: 1 } }} />
 
           {/** @slot Workspace popover */}
           {/* <WorkspacesPopover
