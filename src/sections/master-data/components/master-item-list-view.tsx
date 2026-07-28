@@ -1,18 +1,14 @@
 'use client';
 
-import type { StaffMasterItem, StaffMasterCategory } from '../staff-master-actions';
-
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
-import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
-import Tabs from '@mui/material/Tabs';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
@@ -35,76 +31,62 @@ import TablePagination from '@mui/material/TablePagination';
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
-import {
-  listStaffMasterItems,
-  createStaffMasterItem,
-  deleteStaffMasterItem,
-  updateStaffMasterItem,
-} from '../staff-master-actions';
-
 // ----------------------------------------------------------------------
 
-const CATEGORIES: Array<{
-  value: StaffMasterCategory;
-  label: string;
-  singular: string;
-  description: string;
-}> = [
-  {
-    value: 'staff_type',
-    label: 'ประเภทบุคลากร',
-    singular: 'ประเภทบุคลากร',
-    description: 'ใช้กำหนดเมนูและสิทธิ์เริ่มต้นของบัญชี role teacher',
-  },
-  {
-    value: 'position',
-    label: 'ตำแหน่ง',
-    singular: 'ตำแหน่ง',
-    description: 'รายการตำแหน่งที่เลือกใช้ในข้อมูลการทำงาน',
-  },
-  {
-    value: 'academic_rank',
-    label: 'วิทยฐานะ',
-    singular: 'วิทยฐานะ',
-    description: 'รายการวิทยฐานะที่เลือกใช้ในข้อมูลการทำงาน',
-  },
-];
+type MasterItem = {
+  id: string;
+  code: string | null;
+  name: string;
+  name_en: string | null;
+  sort_order: number;
+  is_active: boolean;
+  is_system: boolean;
+};
 
 const ItemSchema = z.object({
   nameTh: z.string().trim().min(1, { error: 'กรุณากรอกชื่อภาษาไทย' }),
   nameEn: z.string().trim(),
-  sortOrder: z
-    .string()
-    .regex(/^\d+$/, { error: 'ลำดับต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป' }),
+  sortOrder: z.string().regex(/^\d+$/, { error: 'ลำดับต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป' }),
   isActive: z.boolean(),
 });
 
 type ItemForm = z.infer<typeof ItemSchema>;
 
-type Props = {
-  initialCategory?: StaffMasterCategory;
+type Props<TItem extends MasterItem> = {
+  title: string;
+  description: string;
+  itemLabel: string;
+  showCode?: boolean;
+  queryKey: string[];
+  listItems: () => Promise<TItem[]>;
+  createItem: (input: { nameTh: string; nameEn: string; sortOrder: number }) => Promise<TItem>;
+  updateItem: (
+    id: string,
+    input: { nameTh: string; nameEn: string; sortOrder: number; isActive: boolean }
+  ) => Promise<TItem>;
+  deleteItem: (id: string) => Promise<void>;
 };
 
-export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
+export function MasterItemListView<TItem extends MasterItem>({
+  title,
+  description,
+  itemLabel,
+  showCode = false,
+  queryKey,
+  listItems,
+  createItem,
+  updateItem,
+  deleteItem,
+}: Props<TItem>) {
   const queryClient = useQueryClient();
-  const [category, setCategory] = useState<StaffMasterCategory>(initialCategory);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<StaffMasterItem | null>(null);
-  const [deletingItem, setDeletingItem] = useState<StaffMasterItem | null>(null);
+  const [editingItem, setEditingItem] = useState<TItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<TItem | null>(null);
 
-  useEffect(() => {
-    setCategory(initialCategory);
-    setPage(0);
-    setQuery('');
-  }, [initialCategory]);
-
-  const itemsQuery = useQuery({
-    queryKey: ['staff-master-items'],
-    queryFn: listStaffMasterItems,
-  });
+  const itemsQuery = useQuery({ queryKey, queryFn: listItems });
   const methods = useForm<ItemForm>({
     resolver: zodResolver(ItemSchema),
     defaultValues: { nameTh: '', nameEn: '', sortOrder: '0', isActive: true },
@@ -114,40 +96,31 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
   const saveMutation = useMutation({
     mutationFn: (values: ItemForm) =>
       editingItem
-        ? updateStaffMasterItem(editingItem.id, {
-            ...values,
-            sortOrder: Number(values.sortOrder),
-          })
-        : createStaffMasterItem({
-            category,
-            ...values,
-            sortOrder: Number(values.sortOrder),
-          }),
+        ? updateItem(editingItem.id, { ...values, sortOrder: Number(values.sortOrder) })
+        : createItem({ ...values, sortOrder: Number(values.sortOrder) }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['staff-master-items'] });
+      await queryClient.invalidateQueries({ queryKey });
       closeDialog();
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteStaffMasterItem(id),
+    mutationFn: (id: string) => deleteItem(id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['staff-master-items'] });
+      await queryClient.invalidateQueries({ queryKey });
       setDeletingItem(null);
     },
   });
 
-  const categoryConfig = CATEGORIES.find((item) => item.value === category)!;
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase('th');
     return (itemsQuery.data ?? []).filter(
       (item) =>
-        item.category === category &&
-        (!normalizedQuery ||
-          item.name.toLocaleLowerCase('th').includes(normalizedQuery) ||
-          item.name_en?.toLocaleLowerCase().includes(normalizedQuery) ||
-          item.code?.toLocaleLowerCase().includes(normalizedQuery))
+        !normalizedQuery ||
+        item.name.toLocaleLowerCase('th').includes(normalizedQuery) ||
+        item.name_en?.toLocaleLowerCase().includes(normalizedQuery) ||
+        item.code?.toLocaleLowerCase().includes(normalizedQuery)
     );
-  }, [category, itemsQuery.data, query]);
+  }, [itemsQuery.data, query]);
   const visibleItems = filteredItems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   function closeDialog() {
@@ -169,7 +142,7 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
     setDialogOpen(true);
   }
 
-  function openEdit(item: StaffMasterItem) {
+  function openEdit(item: TItem) {
     setEditingItem(item);
     reset({
       nameTh: item.name,
@@ -180,6 +153,8 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
     saveMutation.reset();
     setDialogOpen(true);
   }
+
+  const columnCount = showCode ? 5 : 4;
 
   return (
     <Container maxWidth="lg" sx={{ pb: 5 }}>
@@ -194,44 +169,27 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
         }}
       >
         <Box>
-          <Typography component="h1" variant="h3">ข้อมูลหลักบุคลากร</Typography>
-          <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-            จัดการประเภทบุคลากร ตำแหน่ง และวิทยฐานะของโรงเรียน
+          <Typography component="h1" variant="h3">
+            {title}
           </Typography>
+          <Typography sx={{ mt: 1, color: 'text.secondary' }}>{description}</Typography>
         </Box>
         <Button
           variant="contained"
           startIcon={<RemixIcon icon="mingcute:add-line" />}
           onClick={openCreate}
         >
-          เพิ่ม{categoryConfig.singular}
+          เพิ่ม{itemLabel}
         </Button>
       </Box>
 
       <Card>
-        <Tabs
-          value={category}
-          onChange={(_, value: StaffMasterCategory) => {
-            setCategory(value);
-            setPage(0);
-            setQuery('');
-          }}
-          sx={{ px: 2, borderBottom: '1px solid', borderColor: 'divider' }}
-        >
-          {CATEGORIES.map((item) => (
-            <Tab key={item.value} value={item.value} label={item.label} />
-          ))}
-        </Tabs>
-
         <Box sx={{ p: 2.5 }}>
-          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-            {categoryConfig.description}
-          </Typography>
           <TextField
             fullWidth
             size="small"
             value={query}
-            placeholder={`ค้นหา${categoryConfig.singular}`}
+            placeholder={`ค้นหา${itemLabel}`}
             onChange={(event) => {
               setQuery(event.target.value);
               setPage(0);
@@ -246,7 +204,7 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
 
         {itemsQuery.isError && (
           <Alert severity="error" sx={{ mx: 2.5, mb: 2 }}>
-            ไม่สามารถโหลดข้อมูลหลักบุคลากรได้
+            ไม่สามารถโหลดข้อมูลได้
           </Alert>
         )}
 
@@ -256,7 +214,7 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
               <TableRow>
                 <TableCell>ชื่อภาษาไทย</TableCell>
                 <TableCell>ชื่อภาษาอังกฤษ</TableCell>
-                {category === 'staff_type' && <TableCell>รหัสระบบ</TableCell>}
+                {showCode && <TableCell>รหัสระบบ</TableCell>}
                 <TableCell align="center">ลำดับ</TableCell>
                 <TableCell align="center">สถานะ</TableCell>
                 <TableCell align="right">จัดการ</TableCell>
@@ -270,8 +228,10 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
                     {item.is_system && <Chip size="small" label="รายการระบบ" sx={{ mt: 0.5 }} />}
                   </TableCell>
                   <TableCell>{item.name_en || '-'}</TableCell>
-                  {category === 'staff_type' && (
-                    <TableCell><Typography variant="body2">{item.code}</Typography></TableCell>
+                  {showCode && (
+                    <TableCell>
+                      <Typography variant="body2">{item.code ?? '-'}</Typography>
+                    </TableCell>
                   )}
                   <TableCell align="center">{item.sort_order}</TableCell>
                   <TableCell align="center">
@@ -307,7 +267,7 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
               ))}
               {!itemsQuery.isLoading && !visibleItems.length && (
                 <TableRow>
-                  <TableCell colSpan={category === 'staff_type' ? 6 : 5} align="center" sx={{ py: 8 }}>
+                  <TableCell colSpan={columnCount} align="center" sx={{ py: 8 }}>
                     ไม่พบรายการ
                   </TableCell>
                 </TableRow>
@@ -331,9 +291,7 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
 
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
         <Form methods={methods} onSubmit={handleSubmit((values) => saveMutation.mutate(values))}>
-          <DialogTitle>
-            {editingItem ? `แก้ไข${categoryConfig.singular}` : `เพิ่ม${categoryConfig.singular}`}
-          </DialogTitle>
+          <DialogTitle>{editingItem ? `แก้ไข${itemLabel}` : `เพิ่ม${itemLabel}`}</DialogTitle>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <Field.Text name="nameTh" label="ชื่อภาษาไทย *" />
             <Field.Text name="nameEn" label="ชื่อภาษาอังกฤษ" />
@@ -348,7 +306,9 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
             {saveMutation.error && <Alert severity="error">{saveMutation.error.message}</Alert>}
           </DialogContent>
           <DialogActions>
-            <Button color="inherit" onClick={closeDialog}>ยกเลิก</Button>
+            <Button color="inherit" onClick={closeDialog}>
+              ยกเลิก
+            </Button>
             <Button type="submit" variant="contained" loading={saveMutation.isPending}>
               บันทึก
             </Button>
@@ -359,15 +319,17 @@ export function StaffMasterListView({ initialCategory = 'staff_type' }: Props) {
       <Dialog open={!!deletingItem} onClose={() => setDeletingItem(null)} maxWidth="xs" fullWidth>
         <DialogTitle>ยืนยันการลบ</DialogTitle>
         <DialogContent>
-          <Typography>
-            ต้องการลบ “{deletingItem?.name}” หรือไม่?
-          </Typography>
+          <Typography>ต้องการลบ “{deletingItem?.name}” หรือไม่?</Typography>
           {deleteMutation.error && (
-            <Alert severity="error" sx={{ mt: 2 }}>{deleteMutation.error.message}</Alert>
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deleteMutation.error.message}
+            </Alert>
           )}
         </DialogContent>
         <DialogActions>
-          <Button color="inherit" onClick={() => setDeletingItem(null)}>ยกเลิก</Button>
+          <Button color="inherit" onClick={() => setDeletingItem(null)}>
+            ยกเลิก
+          </Button>
           <Button
             color="error"
             variant="contained"

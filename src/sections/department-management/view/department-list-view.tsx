@@ -3,8 +3,9 @@
 import type { Department } from '../department-management-actions';
 
 import * as z from 'zod';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { usePopover } from 'minimal-shared/hooks';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -16,11 +17,14 @@ import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import Tooltip from '@mui/material/Tooltip';
+import Divider from '@mui/material/Divider';
+import MenuList from '@mui/material/MenuList';
+import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
+import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
@@ -28,15 +32,17 @@ import AvatarGroup from '@mui/material/AvatarGroup';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
+import TablePagination from '@mui/material/TablePagination';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { DEPARTMENT_PERMISSIONS } from 'src/lib/department-permissions-config';
-
-import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
+import { CustomPopover } from 'src/components/custom-popover';
+import { RemixIcon, RiSearch2Line } from 'src/components/remix-icon';
 
 import {
   listDepartments,
@@ -52,8 +58,17 @@ const FormSchema = z.object({
   description: z.string().trim(),
 });
 
+function teacherName(teacher: Department['members'][number]['teacher']) {
+  return `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim() || '-';
+}
+
 export function DepartmentListView() {
+  const rowMenu = usePopover();
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [menuDepartment, setMenuDepartment] = useState<Department | null>(null);
   const [editing, setEditing] = useState<Department | null>(null);
   const [deleting, setDeleting] = useState<Department | null>(null);
   const queryClient = useQueryClient();
@@ -64,6 +79,32 @@ export function DepartmentListView() {
     isError,
     refetch,
   } = useQuery({ queryKey: ['departments'], queryFn: listDepartments });
+
+  const filteredDepartments = useMemo(() => {
+    const keyword = query.trim().toLocaleLowerCase('th');
+    if (!keyword) return departments;
+    return departments.filter((department) =>
+      [
+        department.name,
+        department.description,
+        ...department.members.map((member) => teacherName(member.teacher)),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('th')
+        .includes(keyword)
+    );
+  }, [departments, query]);
+  const visibleDepartments = filteredDepartments.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+  const departmentsWithHead = departments.filter((department) =>
+    department.members.some((member) => member.role_in_department === 'head')
+  ).length;
+  const uniqueMemberCount = new Set(
+    departments.flatMap((department) => department.members.map((member) => member.teacher.id))
+  ).size;
 
   const methods = useForm({
     resolver: zodResolver(FormSchema),
@@ -163,23 +204,82 @@ export function DepartmentListView() {
         </Alert>
       )}
 
+      <Box
+        sx={{
+          mb: 3,
+          gap: 2,
+          display: 'grid',
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+        }}
+      >
+        {[
+          { label: 'ฝ่ายทั้งหมด', value: `${departments.length} ฝ่าย` },
+          { label: 'กำหนดหัวหน้าแล้ว', value: `${departmentsWithHead} ฝ่าย` },
+          { label: 'บุคลากรในฝ่าย', value: `${uniqueMemberCount} คน` },
+        ].map((item) => (
+          <Card key={item.label} variant="outlined" sx={{ p: 2.5 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {item.label}
+            </Typography>
+            <Typography variant="h4" sx={{ mt: 0.5 }}>
+              {item.value}
+            </Typography>
+          </Card>
+        ))}
+      </Box>
+
       <Card variant="outlined">
-        <Box sx={{ px: 3, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography component="h2" variant="h6">
-            รายการฝ่าย
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-            {isLoading ? 'กำลังโหลด...' : `${departments.length} ฝ่าย`}
-          </Typography>
+        <Box
+          sx={{
+            p: 2.5,
+            gap: 2,
+            display: 'flex',
+            alignItems: { xs: 'stretch', sm: 'center' },
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box>
+            <Typography component="h2" variant="h6">
+              รายการฝ่าย
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+              {isLoading
+                ? 'กำลังโหลด...'
+                : query
+                  ? `พบ ${filteredDepartments.length} จาก ${departments.length} ฝ่าย`
+                  : `${departments.length} ฝ่าย`}
+            </Typography>
+          </Box>
+          <TextField
+            size="medium"
+            value={query}
+            placeholder="ค้นหาฝ่าย หัวหน้า หรือสมาชิก"
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(0);
+            }}
+            sx={{ width: { xs: 1, sm: 360 } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <RiSearch2Line />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
         </Box>
 
         <TableContainer>
-          <Table>
+          <Table sx={{ minWidth: 820 }}>
             <TableHead>
               <TableRow>
                 <TableCell>ฝ่าย</TableCell>
                 <TableCell>หัวหน้าฝ่าย</TableCell>
                 <TableCell>สมาชิก</TableCell>
+                <TableCell>สถานะ</TableCell>
                 <TableCell align="right">การจัดการ</TableCell>
               </TableRow>
             </TableHead>
@@ -187,50 +287,38 @@ export function DepartmentListView() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={4}>กำลังโหลด...</TableCell>
-                </TableRow>
-              )}
-
-              {!isLoading && !departments.length && (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
-                  >
-                    ยังไม่มีฝ่าย กด “เพิ่มฝ่าย” เพื่อเริ่มต้น
+                  <TableCell colSpan={5}>
+                    <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
+                      <CircularProgress size={28} />
+                    </Box>
                   </TableCell>
                 </TableRow>
               )}
 
-              {departments.map((department) => {
+              {!isLoading && !filteredDepartments.length && (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
+                  >
+                    {query
+                      ? 'ไม่พบฝ่ายที่ตรงกับคำค้นหา'
+                      : 'ยังไม่มีฝ่าย กด “เพิ่มฝ่าย” เพื่อเริ่มต้น'}
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {visibleDepartments.map((department) => {
                 const heads = department.members.filter(
                   (member) => member.role_in_department === 'head'
                 );
                 return (
                   <TableRow key={department.id} hover>
-                    <TableCell>
-                      <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center' }}>
-                        <Typography variant="subtitle2">{department.name}</Typography>
-                        {department.permissions.map((permission) => {
-                          const item = DEPARTMENT_PERMISSIONS.find(
-                            (candidate) => candidate.key === permission
-                          );
-                          return item ? (
-                            <Chip
-                              key={permission}
-                              size="small"
-                              variant="soft"
-                              color="info"
-                              label={item.label}
-                            />
-                          ) : null;
-                        })}
-                      </Box>
-                      {department.description && (
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          {department.description}
-                        </Typography>
-                      )}
+                    <TableCell sx={{ maxWidth: 300 }}>
+                      <Typography variant="subtitle2">{department.name}</Typography>
+                      <Typography variant="body2" sx={{ mt: 0.25, color: 'text.secondary' }} noWrap>
+                        {department.description || 'ไม่มีคำอธิบาย'}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       {heads.length ? (
@@ -241,70 +329,54 @@ export function DepartmentListView() {
                               size="small"
                               variant="soft"
                               color="primary"
-                              label={`${head.teacher.first_name ?? ''} ${head.teacher.last_name ?? ''}`.trim()}
+                              label={teacherName(head.teacher)}
                             />
                           ))}
                         </Box>
                       ) : (
                         <Typography variant="body2" sx={{ color: 'text.disabled' }}>
-                          ยังไม่มีหัวหน้าฝ่าย
+                          ยังไม่ได้กำหนด
                         </Typography>
                       )}
                     </TableCell>
                     <TableCell>
-                      {department.members.length ? (
+                      <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
                         <AvatarGroup
                           max={4}
-                          sx={{ justifyContent: 'flex-end', '& .MuiAvatar-root': { width: 28, height: 28 } }}
+                          sx={{ '& .MuiAvatar-root': { width: 28, height: 28, fontSize: 12 } }}
                         >
                           {department.members.map((member) => (
                             <Avatar
                               key={member.id}
                               src={member.teacher.avatar_url ?? undefined}
-                              alt={`${member.teacher.first_name ?? ''} ${member.teacher.last_name ?? ''}`.trim()}
+                              alt={teacherName(member.teacher)}
                             >
                               {member.teacher.first_name?.charAt(0) ?? '?'}
                             </Avatar>
                           ))}
                         </AvatarGroup>
-                      ) : (
-                        <Typography variant="body2" sx={{ color: 'text.disabled' }}>
-                          {department.members.length} คน
-                        </Typography>
-                      )}
+                        <Typography variant="body2">{department.members.length} คน</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        variant="soft"
+                        color={heads.length ? 'success' : 'warning'}
+                        label={heads.length ? 'พร้อมใช้งาน' : 'รอกำหนดหัวหน้า'}
+                      />
                     </TableCell>
                     <TableCell align="right">
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button
-                          component={RouterLink}
-                          href={paths.admin.department.detail(department.id)}
-                          size="small"
-                        >
-                          จัดการสมาชิก
-                        </Button>
-                        <Tooltip title="แก้ไข">
-                          <IconButton
-                            size="small"
-                            onClick={() => openEditDialog(department)}
-                            aria-label={`แก้ไขฝ่าย ${department.name}`}
-                          >
-                            <RemixIcon icon="solar:pen-bold" width={18} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="ลบ">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => {
-                              deleteMutation.reset();
-                              setDeleting(department);
-                            }}
-                            aria-label={`ลบฝ่าย ${department.name}`}
-                          >
-                            <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
+                      <IconButton
+                        size="small"
+                        onClick={(event) => {
+                          setMenuDepartment(department);
+                          rowMenu.onOpen(event);
+                        }}
+                        aria-label={`ตัวเลือกเพิ่มเติมสำหรับฝ่าย ${department.name}`}
+                      >
+                        <RemixIcon icon="eva:more-vertical-fill" width={20} />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 );
@@ -312,7 +384,58 @@ export function DepartmentListView() {
             </TableBody>
           </Table>
         </TableContainer>
+
+        <TablePagination
+          component="div"
+          page={page}
+          count={filteredDepartments.length}
+          rowsPerPage={rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={(_, nextPage) => setPage(nextPage)}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(Number(event.target.value));
+            setPage(0);
+          }}
+          labelRowsPerPage="แสดงต่อหน้า"
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} จาก ${count}`}
+        />
       </Card>
+
+      <CustomPopover open={rowMenu.open} anchorEl={rowMenu.anchorEl} onClose={rowMenu.onClose}>
+        <MenuList>
+          <MenuItem
+            component={RouterLink}
+            href={paths.admin.department.detail(menuDepartment?.id ?? '')}
+            onClick={rowMenu.onClose}
+          >
+            <RemixIcon icon="solar:users-group-rounded-bold" width={18} />
+            จัดการสมาชิก
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              if (menuDepartment) openEditDialog(menuDepartment);
+              rowMenu.onClose();
+            }}
+          >
+            <RemixIcon icon="solar:pen-bold" width={18} />
+            แก้ไข
+          </MenuItem>
+          <Divider sx={{ borderStyle: 'dashed' }} />
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              if (menuDepartment) {
+                deleteMutation.reset();
+                setDeleting(menuDepartment);
+              }
+              rowMenu.onClose();
+            }}
+          >
+            <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+            ลบ
+          </MenuItem>
+        </MenuList>
+      </CustomPopover>
 
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="xs">
         <Form methods={methods} onSubmit={onSubmit}>

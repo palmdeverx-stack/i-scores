@@ -67,6 +67,17 @@ export type CreateUserParams = {
   nationality?: string;
   ethnicity?: string;
   religion?: string;
+  pendingConfirmation?: boolean;
+  guardian?: {
+    fullName: string;
+    relationship: string;
+    phone: string;
+    email: string;
+    occupation: string;
+    address: string;
+    notes: string;
+    isPrimary: boolean;
+  };
   staffType?: StaffType;
   employmentStatus?: EmploymentStatus;
   employmentStartDate?: string;
@@ -76,7 +87,10 @@ export type CreateUserParams = {
   academicRank?: string;
 };
 
-export type UpdateStudentProfileParams = Omit<CreateUserParams, 'role' | 'schoolId'>;
+export type UpdateStudentProfileParams = Omit<
+  CreateUserParams,
+  'role' | 'schoolId' | 'pendingConfirmation' | 'guardian'
+>;
 
 export type UpdateSchoolAdminParams = {
   username: string;
@@ -101,6 +115,17 @@ export async function listUsers(role?: UserRole): Promise<UserRow[]> {
   }
 
   return json.users;
+}
+
+export async function getManagedUser(id: string): Promise<UserRow> {
+  const response = await fetch(`/api/admin/users/${id}`);
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json.message ?? 'ไม่สามารถโหลดข้อมูลครู/บุคลากรได้');
+  }
+
+  return json.user as UserRow;
 }
 
 /** **************************************
@@ -204,6 +229,14 @@ export async function deleteSchoolAdmin(id: string): Promise<void> {
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to delete school admin');
+}
+
+export async function getStudent(id: string): Promise<UserRow> {
+  const response = await fetch(`/api/admin/students/${id}`);
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'Failed to load student');
+  return json.student as UserRow;
 }
 
 export async function updateStudentProfile(id: string, params: UpdateStudentProfileParams) {

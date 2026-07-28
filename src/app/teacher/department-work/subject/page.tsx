@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { paths } from 'src/routes/paths';
+
 import { CONFIG } from 'src/global-config';
 
 import { SubjectListView } from 'src/sections/subject/view/subject-list-view';
@@ -13,7 +15,7 @@ export const metadata: Metadata = { title: `รายวิชา - ${CONFIG.app
 export default function Page() {
   return (
     <DepartmentPermissionGuard permission="subjects.manage">
-      <SubjectListView />
+      <SubjectListView basePath={paths.teacher.departmentSubject} />
     </DepartmentPermissionGuard>
   );
 }

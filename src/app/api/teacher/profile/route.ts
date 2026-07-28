@@ -59,11 +59,23 @@ async function loadTeacherProfile(teacherId: string, schoolId: string | null) {
           .eq('code', teacherResult.data.staff_type)
           .maybeSingle()
       : { data: null };
+  const { data: employmentStatusItem } =
+    schoolId && teacherResult.data.employment_status
+      ? await supabaseAdmin
+          .from('staff_master_items')
+          .select('name, name_en')
+          .eq('school_id', schoolId)
+          .eq('category', 'employment_status')
+          .eq('code', teacherResult.data.employment_status)
+          .maybeSingle()
+      : { data: null };
 
   return {
     ...teacherResult.data,
     staff_type_name: staffTypeItem?.name ?? null,
     staff_type_name_en: staffTypeItem?.name_en ?? null,
+    employment_status_name: employmentStatusItem?.name ?? null,
+    employment_status_name_en: employmentStatusItem?.name_en ?? null,
     school: schoolResult.data,
     summary: {
       assignments: assignments.length,

@@ -7,7 +7,11 @@ import { canViewViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
-const CATEGORIES = ['staff_type', 'position', 'academic_rank'] as const;
+const CATEGORIES = ['staff_type', 'position', 'academic_rank', 'employment_status'] as const;
+const CODE_REQUIRED_CATEGORIES: ReadonlyArray<(typeof CATEGORIES)[number]> = [
+  'staff_type',
+  'employment_status',
+];
 
 function isCategory(value: unknown): value is (typeof CATEGORIES)[number] {
   return typeof value === 'string' && CATEGORIES.includes(value as (typeof CATEGORIES)[number]);
@@ -55,7 +59,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'กรุณาระบุหมวดและชื่อรายการ' }, { status: 400 });
   }
 
-  const code = category === 'staff_type' ? `custom_${randomUUID().replaceAll('-', '')}` : null;
+  const code = CODE_REQUIRED_CATEGORIES.includes(category)
+    ? `custom_${randomUUID().replaceAll('-', '')}`
+    : null;
   const { data, error } = await supabaseAdmin
     .from('staff_master_items')
     .insert({

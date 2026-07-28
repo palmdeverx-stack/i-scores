@@ -1,8 +1,9 @@
 'use client';
 
-import type { UserRow } from '../user-actions';
+import type { UserRow, StudentStatus } from '../user-actions';
 
 import { useMemo, useState } from 'react';
+import { usePopover } from 'minimal-shared/hooks';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Tab from '@mui/material/Tab';
@@ -16,7 +17,10 @@ import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Switch from '@mui/material/Switch';
+import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
+import MenuList from '@mui/material/MenuList';
+import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -31,17 +35,17 @@ import DialogContent from '@mui/material/DialogContent';
 import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 
+import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
+
 import { Label } from 'src/components/label';
+import { CustomPopover } from 'src/components/custom-popover';
 import { RemixIcon, RiLineFill, RiLineLine } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
-import { StudentGuardiansDialog } from 'src/sections/student-guardian/components/student-guardians-dialog';
-
 import { useAuthContext } from 'src/auth/hooks';
 
-import { StudentFormDialog } from '../components/student-form-dialog';
 import { downloadStudentImportTemplate } from '../student-import-utils';
-import { StudentAvatarDialog } from '../components/student-avatar-dialog';
 import { StudentImportDialog } from '../components/student-import-dialog';
 import {
   listUsers,
@@ -52,23 +56,48 @@ import {
 
 // ----------------------------------------------------------------------
 
-function maskPassword(password: string) {
-  return `${'•'.repeat(Math.max(password.length - 2, 4))}${password.slice(-2)}`;
-}
+const STUDENT_STATUS_META: Record<
+  StudentStatus,
+  { label: string; color: 'success' | 'info' | 'warning' | 'error' | 'default' }
+> = {
+  studying: { label: 'กำลังศึกษา', color: 'success' },
+  graduated: { label: 'จบการศึกษา', color: 'info' },
+  transferred: { label: 'ย้ายออก', color: 'warning' },
+  withdrawn: { label: 'ลาออก', color: 'default' },
+  dismissed: { label: 'ให้ออก', color: 'error' },
+};
 
-export function StudentListView() {
+const STUDENT_STATUS_FILTERS: Array<{ value: StudentStatus | 'all'; label: string }> = [
+  { value: 'all', label: 'ทั้งหมด' },
+  { value: 'studying', label: 'กำลังศึกษา' },
+  { value: 'graduated', label: 'จบการศึกษา' },
+  { value: 'transferred', label: 'ย้ายออก' },
+  { value: 'withdrawn', label: 'ลาออก' },
+  { value: 'dismissed', label: 'ให้ออก' },
+];
+
+export function StudentListView({
+  basePath = paths.admin.student.root,
+  view = 'combined',
+}: {
+  basePath?: string;
+  view?: 'combined' | 'pending' | 'confirmed';
+} = {}) {
+  const newPath = `${basePath}/new`;
+  const detailPath = (id: string) => `${basePath}/${id}`;
+  const editPath = (id: string) => `${basePath}/${id}/edit`;
   const { user: currentUser } = useAuthContext();
   const canManageStudents = currentUser?.role === 'school_admin';
   const table = useTable({ defaultRowsPerPage: 10 });
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const rowMenu = usePopover();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [tab, setTab] = useState<'confirmed' | 'pending'>('confirmed');
+  const [tab, setTab] = useState<'confirmed' | 'pending'>(
+    view === 'pending' ? 'pending' : 'confirmed'
+  );
   const [search, setSearch] = useState('');
-  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
-  const [avatarStudent, setAvatarStudent] = useState<UserRow | null>(null);
-  const [guardianStudent, setGuardianStudent] = useState<UserRow | null>(null);
-  const [editingStudent, setEditingStudent] = useState<UserRow | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StudentStatus | 'all'>('all');
   const [deletingStudent, setDeletingStudent] = useState<UserRow | null>(null);
+  const [menuStudent, setMenuStudent] = useState<UserRow | null>(null);
   const queryClient = useQueryClient();
 
   const {
@@ -111,10 +140,14 @@ export function StudentListView() {
 
   const filteredStudents = useMemo(() => {
     const source = tab === 'pending' ? pendingStudents : confirmedStudents;
+    const byStatus =
+      statusFilter === 'all'
+        ? source
+        : source.filter((student) => (student.student_status ?? 'studying') === statusFilter);
     const keyword = search.trim().toLocaleLowerCase('th');
-    if (!keyword) return source;
+    if (!keyword) return byStatus;
 
-    return source.filter((student) =>
+    return byStatus.filter((student) =>
       [
         student.student_code,
         student.username,
@@ -131,21 +164,14 @@ export function StudentListView() {
         .toLocaleLowerCase('th')
         .includes(keyword)
     );
-  }, [search, tab, pendingStudents, confirmedStudents]);
+  }, [search, tab, statusFilter, pendingStudents, confirmedStudents]);
 
   const visibleStudents = useMemo(
     () => rowInPage(filteredStudents, table.page, table.rowsPerPage),
     [filteredStudents, table.page, table.rowsPerPage]
   );
-
-  const copyPassword = async (studentId: string, password: string) => {
-    await navigator.clipboard.writeText(password);
-    setCopiedUserId(studentId);
-    window.setTimeout(
-      () => setCopiedUserId((current) => (current === studentId ? null : current)),
-      2000
-    );
-  };
+  const isImportView = view === 'pending';
+  const showImportActions = view !== 'confirmed';
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
@@ -161,39 +187,44 @@ export function StudentListView() {
       >
         <Box>
           <Typography component="h1" variant="h3">
-            นักเรียน
+            {isImportView ? 'นำเข้าข้อมูลนักเรียน' : 'ข้อมูลนักเรียน'}
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-            จัดการบัญชี รูปโปรไฟล์ และข้อมูลผู้ปกครองของนักเรียน
+            {isImportView
+              ? 'สร้างข้อมูลใหม่หรือนำเข้าจากไฟล์ Excel แล้วตรวจสอบก่อนยืนยัน'
+              : 'ข้อมูลนักเรียนที่ผ่านการตรวจสอบและยืนยันแล้ว'}
           </Typography>
         </Box>
-        <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
-          <Button
-            color="inherit"
-            onClick={downloadStudentImportTemplate}
-            startIcon={<RemixIcon icon="solar:download-bold" />}
-          >
-            ดาวน์โหลด Template
-          </Button>
-          {canManageStudents && (
-            <>
-              <Button
-                variant="outlined"
-                onClick={() => setImportDialogOpen(true)}
-                startIcon={<RemixIcon icon="solar:upload-bold" />}
-              >
-                นำเข้าจาก Excel
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => setDialogOpen(true)}
-                startIcon={<RemixIcon icon="solar:user-plus-bold" />}
-              >
-                เพิ่มนักเรียน
-              </Button>
-            </>
-          )}
-        </Box>
+        {showImportActions && (
+          <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+            <Button
+              color="inherit"
+              onClick={downloadStudentImportTemplate}
+              startIcon={<RemixIcon icon="solar:download-bold" />}
+            >
+              ดาวน์โหลด Template
+            </Button>
+            {canManageStudents && (
+              <>
+                <Button
+                  variant="outlined"
+                  onClick={() => setImportDialogOpen(true)}
+                  startIcon={<RemixIcon icon="solar:upload-bold" />}
+                >
+                  นำเข้าจาก Excel
+                </Button>
+                <Button
+                  variant="contained"
+                  component={RouterLink}
+                  href={newPath}
+                  startIcon={<RemixIcon icon="solar:user-plus-bold" />}
+                >
+                  สร้างข้อมูลใหม่
+                </Button>
+              </>
+            )}
+          </Box>
+        )}
       </Box>
 
       {isError && (
@@ -222,35 +253,37 @@ export function StudentListView() {
       )}
 
       <Card variant="outlined">
-        <Tabs
-          value={tab}
-          onChange={(_event, value) => {
-            setTab(value);
-            table.onResetPage();
-          }}
-          sx={{ px: 2, borderBottom: '1px solid', borderColor: 'divider' }}
-        >
-          <Tab
-            value="confirmed"
-            label={
-              <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
-                ยืนยันสำเร็จ
-                <Chip size="small" label={confirmedStudents.length} />
-              </Box>
-            }
-          />
-          <Tab
-            value="pending"
-            label={
-              <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
-                รอยืนยัน
-                {!!pendingStudents.length && (
-                  <Chip size="small" color="warning" label={pendingStudents.length} />
-                )}
-              </Box>
-            }
-          />
-        </Tabs>
+        {view === 'combined' && (
+          <Tabs
+            value={tab}
+            onChange={(_event, value) => {
+              setTab(value);
+              table.onResetPage();
+            }}
+            sx={{ px: 2, borderBottom: '1px solid', borderColor: 'divider' }}
+          >
+            <Tab
+              value="confirmed"
+              label={
+                <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
+                  ยืนยันสำเร็จ
+                  <Chip size="small" label={confirmedStudents.length} />
+                </Box>
+              }
+            />
+            <Tab
+              value="pending"
+              label={
+                <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
+                  รอยืนยัน
+                  {!!pendingStudents.length && (
+                    <Chip size="small" color="warning" label={pendingStudents.length} />
+                  )}
+                </Box>
+              }
+            />
+          </Tabs>
+        )}
         <Box
           sx={{
             gap: 2,
@@ -272,8 +305,8 @@ export function StudentListView() {
               {isLoading
                 ? 'กำลังโหลด...'
                 : tab === 'pending'
-                  ? `${filteredStudents.length} บัญชี · นำเข้าจาก Excel ยังไม่ได้ตรวจสอบ`
-                  : `${filteredStudents.length} บัญชี`}
+                  ? `${filteredStudents.length} บัญชี · ข้อมูลใหม่และไฟล์ Excel ที่ยังไม่ได้ตรวจสอบ`
+                  : `${filteredStudents.length} บัญชี · ยืนยันข้อมูลแล้ว`}
             </Typography>
           </Box>
           <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
@@ -292,13 +325,30 @@ export function StudentListView() {
               </Button>
             )}
             <TextField
+              select
+              size="small"
+              value={statusFilter}
+              onChange={(event) => {
+                setStatusFilter(event.target.value as StudentStatus | 'all');
+                table.onResetPage();
+              }}
+              aria-label="กรองตามสถานะนักเรียน"
+              sx={{ width: { xs: 1, sm: 170 } }}
+            >
+              {STUDENT_STATUS_FILTERS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
               size="small"
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
                 table.onResetPage();
               }}
-              placeholder="ค้นหารหัสนักเรียน ชื่อ หรือผู้ใช้"
+              placeholder="ค้นหารหัสนักเรียน ชื่อ หรือเลขประจำตัว"
               aria-label="ค้นหานักเรียน"
               sx={{ width: { xs: 1, sm: 320 } }}
               slotProps={{
@@ -315,16 +365,13 @@ export function StudentListView() {
         </Box>
 
         <TableContainer>
-          <Table sx={{ minWidth: 1340 }}>
+          <Table sx={{ minWidth: 860 }}>
             <TableHead>
               <TableRow>
-                <TableCell width={88}>รูป</TableCell>
+                <TableCell width={72}>รูป</TableCell>
                 <TableCell>รหัสนักเรียน</TableCell>
-                <TableCell>ชื่อผู้ใช้งาน</TableCell>
                 <TableCell>ชื่อ-นามสกุล</TableCell>
-                <TableCell>อีเมล</TableCell>
-                <TableCell>รหัสผ่าน</TableCell>
-                <TableCell>บทบาท</TableCell>
+                <TableCell>สถานะ</TableCell>
                 <TableCell align="center">LINE</TableCell>
                 <TableCell align="center">เข้าใช้งาน</TableCell>
                 <TableCell align="right">การจัดการ</TableCell>
@@ -333,13 +380,13 @@ export function StudentListView() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={10}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={7}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!isLoading && !filteredStudents.length && (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={7}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
                     ไม่พบนักเรียน
@@ -349,27 +396,18 @@ export function StudentListView() {
               {visibleStudents.map((student) => (
                 <TableRow key={student.id} hover>
                   <TableCell>
-                    <Tooltip title={canManageStudents ? 'เปลี่ยนรูปโปรไฟล์' : 'รูปโปรไฟล์'}>
-                      <IconButton
-                        onClick={() => canManageStudents && setAvatarStudent(student)}
-                        disabled={!canManageStudents}
-                        aria-label={`จัดการรูปโปรไฟล์ของ ${student.first_name ?? student.username}`}
-                        sx={{ p: 0.5 }}
-                      >
-                        <Avatar
-                          src={student.avatar_url ?? undefined}
-                          alt={`${student.first_name ?? ''} ${student.last_name ?? ''}`.trim()}
-                          sx={{
-                            width: 42,
-                            height: 42,
-                            bgcolor: 'primary.lighter',
-                            color: 'primary.darker',
-                          }}
-                        >
-                          {(student.first_name ?? student.username).charAt(0).toUpperCase()}
-                        </Avatar>
-                      </IconButton>
-                    </Tooltip>
+                    <Avatar
+                      src={student.avatar_url ?? undefined}
+                      alt={`${student.first_name ?? ''} ${student.last_name ?? ''}`.trim()}
+                      sx={{
+                        width: 42,
+                        height: 42,
+                        bgcolor: 'primary.lighter',
+                        color: 'primary.darker',
+                      }}
+                    >
+                      {(student.first_name ?? student.username).charAt(0).toUpperCase()}
+                    </Avatar>
                   </TableCell>
                   <TableCell>
                     <Typography variant="subtitle2">{student.student_code ?? '-'}</Typography>
@@ -380,10 +418,16 @@ export function StudentListView() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Typography variant="subtitle2">{student.username}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
+                    <Typography
+                      variant="subtitle2"
+                      component={RouterLink}
+                      href={detailPath(student.id)}
+                      sx={{
+                        color: 'text.primary',
+                        textDecoration: 'none',
+                        '&:hover': { textDecoration: 'underline' },
+                      }}
+                    >
                       {`${student.name_prefix ?? ''}${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() ||
                         '-'}
                     </Typography>
@@ -393,54 +437,13 @@ export function StudentListView() {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell>{student.email ?? '-'}</TableCell>
                   <TableCell>
-                    {student.login_password ? (
-                      <Box sx={{ gap: 0.5, display: 'flex', alignItems: 'center' }}>
-                        <Typography
-                          component="code"
-                          variant="body2"
-                          sx={{ fontFamily: 'monospace', letterSpacing: 0.5 }}
-                        >
-                          {maskPassword(student.login_password)}
-                        </Typography>
-                        <Tooltip
-                          title={copiedUserId === student.id ? 'คัดลอกแล้ว' : 'คัดลอกรหัสผ่าน'}
-                        >
-                          <IconButton
-                            size="small"
-                            color={copiedUserId === student.id ? 'success' : 'default'}
-                            onClick={() => copyPassword(student.id, student.login_password!)}
-                            aria-label={`คัดลอกรหัสผ่านของ ${student.username}`}
-                          >
-                            <RemixIcon
-                              icon={
-                                copiedUserId === student.id
-                                  ? 'solar:check-circle-bold'
-                                  : 'solar:copy-bold'
-                              }
-                              width={18}
-                            />
-                          </IconButton>
-                        </Tooltip>
-                        {student.must_change_password && (
-                          <Tooltip title="ยังไม่ได้เปลี่ยนรหัสผ่านนี้">
-                            <Label variant="soft" color="warning" sx={{ ml: 0.5 }}>
-                              ยังไม่เปลี่ยน
-                            </Label>
-                          </Tooltip>
-                        )}
-                      </Box>
-                    ) : (
-                      <Tooltip title="บัญชีนี้ไม่มีรหัสผ่านที่สามารถเรียกดูได้">
-                        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                          ไม่มีข้อมูล
-                        </Typography>
-                      </Tooltip>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Label variant="soft">นักเรียน</Label>
+                    <Label
+                      variant="soft"
+                      color={STUDENT_STATUS_META[student.student_status ?? 'studying'].color}
+                    >
+                      {STUDENT_STATUS_META[student.student_status ?? 'studying'].label}
+                    </Label>
                   </TableCell>
                   <TableCell align="center">
                     <Tooltip
@@ -456,32 +459,28 @@ export function StudentListView() {
                             : 'ยังไม่มีข้อมูลผู้ปกครอง'
                       }
                     >
-                      <IconButton
-                        size="small"
-                        onClick={() => setGuardianStudent(student)}
-                        aria-label={
-                          student.line_guardian_count
-                            ? `เชื่อมต่อ LINE แล้ว ${student.line_guardian_count} คน`
-                            : 'ยังไม่ได้เชื่อมต่อ LINE'
-                        }
+                      <Box
                         sx={{
+                          gap: 0.75,
+                          display: 'inline-flex',
+                          alignItems: 'center',
                           color: student.line_guardian_count ? '#06C755' : 'text.disabled',
-                          bgcolor: student.line_guardian_count
-                            ? 'rgba(6, 199, 85, 0.10)'
-                            : 'action.hover',
-                          '&:hover': {
-                            bgcolor: student.line_guardian_count
-                              ? 'rgba(6, 199, 85, 0.18)'
-                              : 'action.selected',
-                          },
                         }}
                       >
                         {student.line_guardian_count ? (
-                          <RiLineFill size={22} />
+                          <RiLineFill size={21} />
                         ) : (
-                          <RiLineLine size={22} />
+                          <RiLineLine size={21} />
                         )}
-                      </IconButton>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: 'inherit', whiteSpace: 'nowrap' }}
+                        >
+                          {student.line_guardian_count
+                            ? `${student.line_guardian_count} คน`
+                            : 'ยังไม่เชื่อมต่อ'}
+                        </Typography>
+                      </Box>
                     </Tooltip>
                   </TableCell>
                   <TableCell align="center">
@@ -510,57 +509,16 @@ export function StudentListView() {
                     </Tooltip>
                   </TableCell>
                   <TableCell align="right">
-                    <Box sx={{ gap: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
-                      {canManageStudents && tab === 'pending' && (
-                        <Tooltip title="ยืนยันข้อมูลนักเรียนคนนี้">
-                          <IconButton
-                            size="small"
-                            color="warning"
-                            disabled={confirmMutation.isPending}
-                            onClick={() => confirmMutation.mutate([student.id])}
-                            aria-label={`ยืนยันข้อมูล ${student.first_name ?? student.username}`}
-                          >
-                            <RemixIcon icon="solar:check-circle-bold" width={18} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<RemixIcon icon="solar:users-group-rounded-bold" />}
-                        onClick={() => setGuardianStudent(student)}
-                      >
-                        ผู้ปกครอง
-                      </Button>
-
-                      {canManageStudents && (
-                        <>
-                          <Tooltip title="แก้ไขข้อมูลนักเรียน">
-                            <IconButton
-                              size="small"
-                              onClick={() => setEditingStudent(student)}
-                              aria-label={`แก้ไขข้อมูล ${student.first_name ?? student.username}`}
-                            >
-                              <RemixIcon icon="solar:pen-bold" width={18} />
-                            </IconButton>
-                          </Tooltip>
-
-                          <Tooltip title="ลบบัญชีนักเรียน">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => {
-                                deleteMutation.reset();
-                                setDeletingStudent(student);
-                              }}
-                              aria-label={`ลบ ${student.first_name ?? student.username}`}
-                            >
-                              <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={(event) => {
+                        setMenuStudent(student);
+                        rowMenu.onOpen(event);
+                      }}
+                      aria-label={`ตัวเลือกเพิ่มเติมสำหรับ ${student.first_name ?? student.username}`}
+                    >
+                      <RemixIcon icon="eva:more-vertical-fill" width={20} />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -587,22 +545,63 @@ export function StudentListView() {
         />
       </Card>
 
-      <StudentFormDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
-      <StudentFormDialog
-        open={!!editingStudent}
-        student={editingStudent}
-        onClose={() => setEditingStudent(null)}
-      />
-      <StudentAvatarDialog student={avatarStudent} onClose={() => setAvatarStudent(null)} />
+      <CustomPopover open={rowMenu.open} anchorEl={rowMenu.anchorEl} onClose={rowMenu.onClose}>
+        <MenuList>
+          <MenuItem
+            component={RouterLink}
+            href={detailPath(menuStudent?.id ?? '')}
+            onClick={rowMenu.onClose}
+          >
+            <RemixIcon icon="solar:eye-bold" width={18} />
+            ดูข้อมูล
+          </MenuItem>
+
+          {canManageStudents && (
+            <MenuItem
+              component={RouterLink}
+              href={editPath(menuStudent?.id ?? '')}
+              onClick={rowMenu.onClose}
+            >
+              <RemixIcon icon="solar:pen-bold" width={18} />
+              แก้ไข
+            </MenuItem>
+          )}
+
+          {canManageStudents && tab === 'pending' && (
+            <MenuItem
+              disabled={confirmMutation.isPending}
+              onClick={() => {
+                if (menuStudent) confirmMutation.mutate([menuStudent.id]);
+                rowMenu.onClose();
+              }}
+            >
+              <RemixIcon icon="solar:check-circle-bold" width={18} />
+              ยืนยันข้อมูล
+            </MenuItem>
+          )}
+
+          {canManageStudents && (
+            <>
+              <Divider sx={{ borderStyle: 'dashed' }} />
+              <MenuItem
+                sx={{ color: 'error.main' }}
+                onClick={() => {
+                  if (menuStudent) {
+                    deleteMutation.reset();
+                    setDeletingStudent(menuStudent);
+                  }
+                  rowMenu.onClose();
+                }}
+              >
+                <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+                ลบ
+              </MenuItem>
+            </>
+          )}
+        </MenuList>
+      </CustomPopover>
+
       <StudentImportDialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} />
-      <StudentGuardiansDialog
-        open={!!guardianStudent}
-        student={guardianStudent}
-        onClose={() => {
-          setGuardianStudent(null);
-          queryClient.invalidateQueries({ queryKey: ['users', 'student'] });
-        }}
-      />
 
       <Dialog
         open={!!deletingStudent}

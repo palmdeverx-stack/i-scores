@@ -20,6 +20,8 @@ export type TeacherProfile = {
   staff_type_name: string | null;
   staff_type_name_en: string | null;
   employment_status: EmploymentStatus | null;
+  employment_status_name: string | null;
+  employment_status_name_en: string | null;
   employment_start_date: string | null;
   appointment_date: string | null;
   contract_end_date: string | null;

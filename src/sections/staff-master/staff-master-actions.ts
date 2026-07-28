@@ -1,6 +1,6 @@
 'use client';
 
-export type StaffMasterCategory = 'staff_type' | 'position' | 'academic_rank';
+export type StaffMasterCategory = 'staff_type' | 'position' | 'academic_rank' | 'employment_status';
 
 export type StaffMasterItem = {
   id: string;

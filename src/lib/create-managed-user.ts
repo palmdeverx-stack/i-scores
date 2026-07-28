@@ -37,7 +37,7 @@ export type CreateManagedUserInput = {
   nationality?: string;
   ethnicity?: string;
   religion?: string;
-  /** Excel bulk-import rows start unconfirmed; manual single-add is confirmed immediately. */
+  /** Student import flows start unconfirmed until an administrator reviews the record. */
   pendingConfirmation?: boolean;
   staffType?: StaffType;
   employmentStatus?: EmploymentStatus;

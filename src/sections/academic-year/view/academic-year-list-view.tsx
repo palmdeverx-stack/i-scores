@@ -6,6 +6,7 @@ import * as z from 'zod';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { usePopover } from 'minimal-shared/hooks';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -16,7 +17,9 @@ import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import Tooltip from '@mui/material/Tooltip';
+import Divider from '@mui/material/Divider';
+import MenuList from '@mui/material/MenuList';
+import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -34,6 +37,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
+import { CustomPopover } from 'src/components/custom-popover';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -72,7 +76,9 @@ const CreateSchema = z
 export function AcademicYearListView() {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
+  const rowMenu = usePopover();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [menuYear, setMenuYear] = useState<AcademicYear | null>(null);
   const [editingYear, setEditingYear] = useState<AcademicYear | null>(null);
   const [deletingYear, setDeletingYear] = useState<AcademicYear | null>(null);
   const queryClient = useQueryClient();
@@ -235,7 +241,7 @@ export function AcademicYearListView() {
         </Box>
 
         <TableContainer>
-          <Table>
+          <Table sx={{ minWidth: 720 }}>
             <TableHead>
               <TableRow>
                 <TableCell>ปีการศึกษา</TableCell>
@@ -291,41 +297,16 @@ export function AcademicYearListView() {
                     />
                   </TableCell>
                   <TableCell align="right">
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Button
-                        component={RouterLink}
-                        href={
-                          isTeacher
-                            ? paths.teacher.departmentAcademicYear.semester(year.id)
-                            : `${paths.admin.academicYear.root}/${year.id}/semester`
-                        }
-                        size="small"
-                      >
-                        ภาคเรียน
-                      </Button>
-                      <Tooltip title="แก้ไข">
-                        <IconButton
-                          size="small"
-                          onClick={() => openEditDialog(year)}
-                          aria-label={`แก้ไขปีการศึกษา ${year.year}`}
-                        >
-                          <RemixIcon icon="solar:pen-bold" width={18} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="ลบ">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => {
-                            deleteMutation.reset();
-                            setDeletingYear(year);
-                          }}
-                          aria-label={`ลบปีการศึกษา ${year.year}`}
-                        >
-                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={(event) => {
+                        setMenuYear(year);
+                        rowMenu.onOpen(event);
+                      }}
+                      aria-label={`ตัวเลือกเพิ่มเติมสำหรับปีการศึกษา ${year.year}`}
+                    >
+                      <RemixIcon icon="eva:more-vertical-fill" width={20} />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -333,6 +314,46 @@ export function AcademicYearListView() {
           </Table>
         </TableContainer>
       </Card>
+
+      <CustomPopover open={rowMenu.open} anchorEl={rowMenu.anchorEl} onClose={rowMenu.onClose}>
+        <MenuList>
+          <MenuItem
+            component={RouterLink}
+            href={
+              isTeacher
+                ? paths.teacher.departmentAcademicYear.semester(menuYear?.id ?? '')
+                : `${paths.admin.academicYear.root}/${menuYear?.id ?? ''}/semester`
+            }
+            onClick={rowMenu.onClose}
+          >
+            <RemixIcon icon="solar:calendar-mark-bold" width={18} />
+            ดูภาคเรียน
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              if (menuYear) openEditDialog(menuYear);
+              rowMenu.onClose();
+            }}
+          >
+            <RemixIcon icon="solar:pen-bold" width={18} />
+            แก้ไข
+          </MenuItem>
+          <Divider sx={{ borderStyle: 'dashed' }} />
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              if (menuYear) {
+                deleteMutation.reset();
+                setDeletingYear(menuYear);
+              }
+              rowMenu.onClose();
+            }}
+          >
+            <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+            ลบ
+          </MenuItem>
+        </MenuList>
+      </CustomPopover>
 
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="xs">
         <Form methods={methods} onSubmit={onSubmit}>

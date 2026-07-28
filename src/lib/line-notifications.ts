@@ -527,7 +527,7 @@ export async function queueGradeResultNotifications({
         revoked_at: null,
         created_by: requestedBy,
       });
-      const downloadUrl = `${normalizedBaseUrl}/api/guardian/grade-report/${token}`;
+      const imageUrl = `${normalizedBaseUrl}/api/guardian/grade-report/${token}/image`;
       deliveries.push({
         school_id: schoolId,
         guardian_id: guardian.id,
@@ -543,18 +543,10 @@ export async function queueGradeResultNotifications({
           classroom?.name ? `ห้อง ${classroom.name}` : '',
           `ภาคเรียนที่ ${semester?.name ?? '-'} ปีการศึกษา ${year ?? '-'}`,
           `รวมผลการเรียน ${subjectAssignments.length} รายวิชา`,
-          '',
-          'ดาวน์โหลดใบแจ้งผลการเรียน PDF:',
-          downloadUrl,
-          '',
-          `ลิงก์หมดอายุวันที่ ${new Intl.DateTimeFormat('th-TH', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          }).format(expiresAt)}`,
         ]
           .filter((line) => line !== null && line !== undefined)
           .join('\n'),
+        image_url: imageUrl,
         status: 'pending',
         attempts: 0,
         next_attempt_at: new Date().toISOString(),

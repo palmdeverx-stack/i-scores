@@ -60,7 +60,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่พบรายการ' }, { status: 404 });
   }
 
-  if (currentItem.name !== name && currentItem.category !== 'staff_type') {
+  if (
+    currentItem.name !== name &&
+    currentItem.category !== 'staff_type' &&
+    currentItem.category !== 'employment_status'
+  ) {
     const column = currentItem.category === 'position' ? 'position_title' : 'academic_rank';
     const { error: cascadeError } = await supabaseAdmin
       .from('app_users')
@@ -102,10 +106,15 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   const usedColumn =
     item.category === 'staff_type'
       ? 'staff_type'
-      : item.category === 'position'
-        ? 'position_title'
-        : 'academic_rank';
-  const usedValue = item.category === 'staff_type' ? item.code : item.name;
+      : item.category === 'employment_status'
+        ? 'employment_status'
+        : item.category === 'position'
+          ? 'position_title'
+          : 'academic_rank';
+  const usedValue =
+    item.category === 'staff_type' || item.category === 'employment_status'
+      ? item.code
+      : item.name;
   const { count } = await supabaseAdmin
     .from('app_users')
     .select('id', { count: 'exact', head: true })

@@ -1,6 +1,8 @@
 import 'server-only';
 
 import path from 'node:path';
+import { ImageResponse } from 'next/og';
+import { readFile } from 'node:fs/promises';
 import { Font, Page, Text, View, Document, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
 
 import { supabaseAdmin } from './supabase-admin';
@@ -401,4 +403,201 @@ function GradeReportDocument({ report }: { report: StudentGradeReport }) {
 
 export async function renderStudentGradeReportPdf(report: StudentGradeReport) {
   return renderToBuffer(<GradeReportDocument report={report} />);
+}
+
+let reportImageFontsPromise: Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> | null = null;
+
+function loadReportImageFonts() {
+  if (!reportImageFontsPromise) {
+    reportImageFontsPromise = Promise.all([
+      readFile(path.join(process.cwd(), 'public/fonts/LINESeedSansTH-Regular.ttf')),
+      readFile(path.join(process.cwd(), 'public/fonts/LINESeedSansTH-Bold.ttf')),
+    ]).then(([regular, bold]) => ({
+      regular: regular.buffer.slice(
+        regular.byteOffset,
+        regular.byteOffset + regular.byteLength
+      ) as ArrayBuffer,
+      bold: bold.buffer.slice(bold.byteOffset, bold.byteOffset + bold.byteLength) as ArrayBuffer,
+    }));
+  }
+  return reportImageFontsPromise;
+}
+
+const IMAGE_WIDTH = 800;
+const IMAGE_ROW_HEIGHT = 34;
+const IMAGE_BASE_HEIGHT = 480;
+
+export async function renderStudentGradeReportImage(report: StudentGradeReport) {
+  const fonts = await loadReportImageFonts();
+  const height = IMAGE_BASE_HEIGHT + report.subjects.length * IMAGE_ROW_HEIGHT;
+
+  const cellStyle = (extra: Record<string, unknown> = {}) => ({
+    display: 'flex',
+    padding: '6px 8px',
+    borderRight: '1px solid #334155',
+    borderBottom: '1px solid #334155',
+    ...extra,
+  });
+
+  const image = new ImageResponse(
+    (
+      <div
+        style={{
+          width: IMAGE_WIDTH,
+          height,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: 32,
+          backgroundColor: '#FFFFFF',
+          fontFamily: 'LINE Seed Sans TH',
+          color: '#111827',
+        }}
+      >
+        <div style={{ display: 'flex', fontSize: 22, fontWeight: 700, justifyContent: 'center' }}>
+          ใบแจ้งผลการเรียน
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            marginTop: 4,
+            fontSize: 15,
+            fontWeight: 700,
+            justifyContent: 'center',
+          }}
+        >
+          {report.schoolName}
+        </div>
+        <div style={{ display: 'flex', marginTop: 4, fontSize: 12, color: '#4B5563', justifyContent: 'center' }}>
+          ภาคเรียนที่ {report.semesterName} ปีการศึกษา {report.academicYear ?? '-'}
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            marginTop: 20,
+            padding: 12,
+            border: '1px solid #CBD5E1',
+            backgroundColor: '#F8FAFC',
+          }}
+        >
+          <div style={{ display: 'flex', marginBottom: 4 }}>
+            <div style={{ display: 'flex', width: 110, fontWeight: 700 }}>ชื่อ–นามสกุล</div>
+            <div style={{ display: 'flex' }}>{report.studentName}</div>
+          </div>
+          <div style={{ display: 'flex', marginBottom: 4 }}>
+            <div style={{ display: 'flex', width: 110, fontWeight: 700 }}>รหัสนักเรียน</div>
+            <div style={{ display: 'flex' }}>{report.studentCode ?? '-'}</div>
+          </div>
+          <div style={{ display: 'flex' }}>
+            <div style={{ display: 'flex', width: 110, fontWeight: 700 }}>ชั้น/ห้อง</div>
+            <div style={{ display: 'flex' }}>
+              {report.gradeLevel ?? '-'} {report.classroomName}
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            marginTop: 16,
+            borderTop: '1px solid #334155',
+            borderLeft: '1px solid #334155',
+          }}
+        >
+          <div style={{ display: 'flex', backgroundColor: '#E2E8F0', fontWeight: 700, fontSize: 11 }}>
+            <div style={cellStyle({ width: 40, justifyContent: 'center' })}>ลำดับ</div>
+            <div style={cellStyle({ width: 70 })}>รหัสวิชา</div>
+            <div style={cellStyle({ flex: 1 })}>รายวิชา</div>
+            <div style={cellStyle({ width: 60, justifyContent: 'center' })}>หน่วยกิต</div>
+            <div style={cellStyle({ width: 60, justifyContent: 'center' })}>คะแนน</div>
+            <div style={cellStyle({ width: 70, justifyContent: 'center' })}>ผลการเรียน</div>
+          </div>
+          {report.subjects.map((subject, index) => (
+            <div key={`${subject.code ?? subject.name}-${index}`} style={{ display: 'flex', fontSize: 11 }}>
+              <div style={cellStyle({ width: 40, justifyContent: 'center' })}>{index + 1}</div>
+              <div style={cellStyle({ width: 70 })}>{subject.code ?? '-'}</div>
+              <div style={cellStyle({ flex: 1 })}>{subject.name}</div>
+              <div style={cellStyle({ width: 60, justifyContent: 'center' })}>
+                {subject.credits.toFixed(1)}
+              </div>
+              <div style={cellStyle({ width: 60, justifyContent: 'center' })}>
+                {subject.score.toFixed(2)}
+              </div>
+              <div style={cellStyle({ width: 70, justifyContent: 'center' })}>{subject.grade}</div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            marginTop: 16,
+            padding: 12,
+            justifyContent: 'space-between',
+            border: '1px solid #CBD5E1',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', fontSize: 11 }}>จำนวนรายวิชา</div>
+            <div style={{ display: 'flex', fontSize: 16, fontWeight: 700 }}>
+              {report.subjects.length}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', fontSize: 11 }}>หน่วยกิตรวม</div>
+            <div style={{ display: 'flex', fontSize: 16, fontWeight: 700 }}>
+              {report.totalCredits.toFixed(1)}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', fontSize: 11 }}>เกรดเฉลี่ย</div>
+            <div style={{ display: 'flex', fontSize: 16, fontWeight: 700 }}>
+              {report.gradePointAverage?.toFixed(2) ?? '-'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 14, fontSize: 11 }}>
+          <div style={{ display: 'flex' }}>
+            คุณลักษณะอันพึงประสงค์:{' '}
+            {report.desirableAttributesLevel === null
+              ? '-'
+              : (ASSESSMENT_LABEL[report.desirableAttributesLevel] ?? '-')}
+          </div>
+          <div style={{ display: 'flex', marginTop: 2 }}>
+            การอ่าน คิดวิเคราะห์ และเขียน:{' '}
+            {report.readingThinkingWritingLevel === null
+              ? '-'
+              : (ASSESSMENT_LABEL[report.readingThinkingWritingLevel] ?? '-')}
+          </div>
+          <div style={{ display: 'flex', marginTop: 2 }}>
+            กิจกรรมพัฒนาผู้เรียน:{' '}
+            {report.activityResult === 'pass'
+              ? 'ผ่าน'
+              : report.activityResult === 'fail'
+                ? 'ไม่ผ่าน'
+                : report.activityResult === 'pending'
+                  ? 'รอประเมิน'
+                  : '-'}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', marginTop: 'auto', fontSize: 9, color: '#64748B', justifyContent: 'center' }}>
+          เอกสารนี้เป็นใบแจ้งผลการเรียนจากระบบ ไม่ใช่ระเบียนแสดงผลการเรียน ปพ.1
+        </div>
+      </div>
+    ),
+    {
+      width: IMAGE_WIDTH,
+      height,
+      fonts: [
+        { name: 'LINE Seed Sans TH', data: fonts.regular, weight: 400, style: 'normal' },
+        { name: 'LINE Seed Sans TH', data: fonts.bold, weight: 700, style: 'normal' },
+      ],
+    }
+  );
+
+  return Buffer.from(await image.arrayBuffer());
 }

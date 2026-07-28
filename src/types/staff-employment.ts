@@ -15,15 +15,16 @@ export const EMPLOYMENT_STATUSES = [
   { value: 'terminated', label: 'พ้นสภาพ' },
 ] as const;
 
-// Schools may add custom staff types. The constants above are the built-in
-// types with special defaults (for example the executive approval workspace).
+// Schools may add custom staff types and employment statuses. The constants
+// above are the built-in options with special defaults (for example the
+// executive approval workspace, or the "active" default on hire).
 export type StaffType = string;
-export type EmploymentStatus = (typeof EMPLOYMENT_STATUSES)[number]['value'];
+export type EmploymentStatus = string;
 
 export function isStaffType(value: unknown): value is StaffType {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
 export function isEmploymentStatus(value: unknown): value is EmploymentStatus {
-  return EMPLOYMENT_STATUSES.some((option) => option.value === value);
+  return typeof value === 'string' && value.trim().length > 0;
 }

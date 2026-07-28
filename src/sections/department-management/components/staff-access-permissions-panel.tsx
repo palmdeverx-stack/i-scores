@@ -11,11 +11,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
+import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import TableContainer from '@mui/material/TableContainer';
 
 import {
   DEPARTMENT_PERMISSIONS,
@@ -48,54 +55,63 @@ function PermissionRows({
   onChange: (key: string, level: AccessLevel | OverrideAccessLevel) => void;
 }) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-      {DEPARTMENT_PERMISSIONS.map((permission, index) => (
-        <Box
-          key={permission.key}
-          sx={{
-            gap: 2,
-            py: 2,
-            display: 'grid',
-            alignItems: 'center',
-            gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) 220px' },
-            borderTop: index ? '1px solid' : 0,
-            borderColor: 'divider',
-          }}
-        >
-          <Box>
-            <Typography variant="subtitle2">{permission.label}</Typography>
-            <Typography variant="body2" sx={{ mt: 0.25, color: 'text.secondary' }}>
-              {permission.description}
-            </Typography>
-            {!isManageableDepartmentPermission(permission.key) && (
-              <Typography variant="caption" sx={{ color: 'warning.main' }}>
-                การสร้าง ลบ และจัดการรหัสผ่านสงวนไว้เฉพาะผู้ดูแลโรงเรียน
-              </Typography>
-            )}
-          </Box>
-          <TextField
-            select
-            size="small"
-            label="ระดับสิทธิ์"
-            value={values[permission.key] ?? (overrideMode ? 'inherit' : 'none')}
-            disabled={disabled}
-            onChange={(event) =>
-              onChange(
-                permission.key,
-                event.target.value as AccessLevel | OverrideAccessLevel
-              )
-            }
-          >
-            {overrideMode && <MenuItem value="inherit">ตามประเภทบุคลากร/ฝ่าย</MenuItem>}
-            <MenuItem value="none">ไม่มีสิทธิ์</MenuItem>
-            <MenuItem value="view">ดูข้อมูล</MenuItem>
-            {isManageableDepartmentPermission(permission.key) && (
-              <MenuItem value="manage">ดูและจัดการ</MenuItem>
-            )}
-          </TextField>
-        </Box>
-      ))}
-    </Box>
+    <TableContainer>
+      <Table sx={{ minWidth: 760 }}>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ width: 220 }}>หน้าระบบ</TableCell>
+            <TableCell>ขอบเขตสิทธิ์</TableCell>
+            <TableCell sx={{ width: 240 }}>ระดับสิทธิ์</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {DEPARTMENT_PERMISSIONS.map((permission) => (
+            <TableRow key={permission.key} hover>
+              <TableCell>
+                <Typography variant="subtitle2">{permission.label}</Typography>
+                {!isManageableDepartmentPermission(permission.key) && (
+                  <Chip
+                    size="small"
+                    variant="soft"
+                    color="warning"
+                    label="ดูข้อมูลเท่านั้น"
+                    sx={{ mt: 0.75 }}
+                  />
+                )}
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  {permission.description}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  value={values[permission.key] ?? (overrideMode ? 'inherit' : 'none')}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    onChange(
+                      permission.key,
+                      event.target.value as AccessLevel | OverrideAccessLevel
+                    )
+                  }
+                  slotProps={{ select: { displayEmpty: true } }}
+                >
+                  {overrideMode && <MenuItem value="inherit">ตามค่าหลัก</MenuItem>}
+                  <MenuItem value="none">ไม่มีสิทธิ์</MenuItem>
+                  <MenuItem value="view">ดูข้อมูล</MenuItem>
+                  {isManageableDepartmentPermission(permission.key) && (
+                    <MenuItem value="manage">ดูและจัดการ</MenuItem>
+                  )}
+                </TextField>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 }
 
@@ -238,7 +254,7 @@ export function StaffAccessPermissionsPanel({ mode }: Props) {
       {mode === 'individual' && !data?.staff.length ? (
         <Alert severity="info">ยังไม่มีครูหรือบุคลากรในโรงเรียน</Alert>
       ) : (
-        <Card variant="outlined" sx={{ px: { xs: 2, sm: 3 }, py: 1 }}>
+        <Card variant="outlined">
           <PermissionRows
             values={values}
             overrideMode={mode === 'individual'}
@@ -246,11 +262,19 @@ export function StaffAccessPermissionsPanel({ mode }: Props) {
             onChange={(key, level) => setValues((current) => ({ ...current, [key]: level }))}
           />
           {saveMutation.error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ m: 2.5 }}>
               {saveMutation.error.message}
             </Alert>
           )}
-          <Box sx={{ py: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <Box
+            sx={{
+              p: 2,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              borderTop: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
             <Button
               variant="contained"
               loading={saveMutation.isPending}

@@ -5,6 +5,7 @@ import { paths } from 'src/routes/paths';
 import {
   RiTeamLine,
   RiBook2Line,
+  RiPulseLine,
   RiIdCardLine,
   RiSchoolLine,
   RiUserAddLine,
@@ -48,10 +49,13 @@ const ICONS = {
   gradeResults: <RiFileChartLine />,
   documents: <RiFileList3Line />,
   accessPermissions: <RiShieldCheckLine />,
-  staffMasters: <RiSettings3Line />,
+  masterData: <RiSettings3Line />,
   staffTypes: <RiTeamLine />,
   positions: <RiIdCardLine />,
   academicRanks: <RiUserStarLine />,
+  employmentStatuses: <RiPulseLine />,
+  learningAreas: <RiBook2Line />,
+  subjectTypes: <RiFileList3Line />,
 };
 
 // ----------------------------------------------------------------------
@@ -124,7 +128,7 @@ export const navData: NavSectionProps['data'] = [
     ],
   },
   {
-    subheader: 'การเรียนการสอน',
+    subheader: 'ตารางสอน',
     items: [
       {
         title: 'ครูประจำวิชา',
@@ -148,6 +152,18 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'schedule.manage',
       },
       {
+        title: 'อนุมัติตารางสอน',
+        path: paths.admin.scheduleApprovals,
+        icon: ICONS.scheduleApprovals,
+        featureKey: 'academic.schedule_workflow',
+        requiresSchoolDirector: true,
+      },
+    ],
+  },
+  {
+    subheader: 'ผลการเรียน',
+    items: [
+      {
         title: 'ตรวจสอบผลการเรียน',
         path: paths.admin.gradeReviews,
         icon: ICONS.gradeReviews,
@@ -160,13 +176,6 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.gradeResults,
         featureKey: 'academic.grade_workflow',
         requiresDepartmentPermission: 'grades.review',
-      },
-      {
-        title: 'อนุมัติตารางสอน',
-        path: paths.admin.scheduleApprovals,
-        icon: ICONS.scheduleApprovals,
-        featureKey: 'academic.schedule_workflow',
-        requiresSchoolDirector: true,
       },
     ],
   },
@@ -193,25 +202,47 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'staff.manage',
       },
       {
-        title: 'ข้อมูลหลักบุคลากร',
+        title: 'ข้อมูลหลัก',
         path: '#',
-        icon: ICONS.staffMasters,
-        featureKey: 'admin.staff_masters',
+        icon: ICONS.masterData,
         children: [
           {
             title: 'ประเภทบุคลากร',
-            path: paths.admin.staffMasters.staffTypes,
+            path: paths.admin.masterData.staffTypes,
             icon: ICONS.staffTypes,
+            featureKey: 'admin.staff_masters',
           },
           {
             title: 'ตำแหน่ง',
-            path: paths.admin.staffMasters.positions,
+            path: paths.admin.masterData.positions,
             icon: ICONS.positions,
+            featureKey: 'admin.staff_masters',
           },
           {
             title: 'วิทยฐานะ',
-            path: paths.admin.staffMasters.academicRanks,
+            path: paths.admin.masterData.academicRanks,
             icon: ICONS.academicRanks,
+            featureKey: 'admin.staff_masters',
+          },
+          {
+            title: 'สถานะปฏิบัติงาน',
+            path: paths.admin.masterData.employmentStatuses,
+            icon: ICONS.employmentStatuses,
+            featureKey: 'admin.staff_masters',
+          },
+          {
+            title: 'กลุ่มสาระการเรียนรู้',
+            path: paths.admin.masterData.learningAreas,
+            icon: ICONS.learningAreas,
+            featureKey: 'admin.subjects',
+            requiresDepartmentPermission: 'subjects.manage',
+          },
+          {
+            title: 'ประเภทรายวิชา',
+            path: paths.admin.masterData.subjectTypes,
+            icon: ICONS.subjectTypes,
+            featureKey: 'admin.subjects',
+            requiresDepartmentPermission: 'subjects.manage',
           },
         ],
       },
@@ -234,6 +265,18 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.student,
         featureKey: 'admin.students',
         requiresDepartmentPermission: 'students.manage',
+        children: [
+          {
+            title: 'นำเข้าข้อมูล',
+            path: paths.admin.student.importData,
+            icon: ICONS.enrollment,
+          },
+          {
+            title: 'ข้อมูลนักเรียน',
+            path: paths.admin.student.list,
+            icon: ICONS.documents,
+          },
+        ],
       },
     ],
   },

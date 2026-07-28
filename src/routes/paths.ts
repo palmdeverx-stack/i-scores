@@ -128,14 +128,18 @@ export const paths = {
     announcements: `${ROOTS.ADMIN}/announcements`,
     lineNotifications: `${ROOTS.ADMIN}/line-notifications`,
     accessPermissions: `${ROOTS.ADMIN}/access-permissions`,
-    staffMasters: {
-      root: `${ROOTS.ADMIN}/staff-masters`,
-      staffTypes: `${ROOTS.ADMIN}/staff-masters/staff-types`,
-      positions: `${ROOTS.ADMIN}/staff-masters/positions`,
-      academicRanks: `${ROOTS.ADMIN}/staff-masters/academic-ranks`,
+    masterData: {
+      staffTypes: `${ROOTS.ADMIN}/master-data/staff-types`,
+      positions: `${ROOTS.ADMIN}/master-data/positions`,
+      academicRanks: `${ROOTS.ADMIN}/master-data/academic-ranks`,
+      employmentStatuses: `${ROOTS.ADMIN}/master-data/employment-statuses`,
+      learningAreas: `${ROOTS.ADMIN}/master-data/learning-areas`,
+      subjectTypes: `${ROOTS.ADMIN}/master-data/subject-types`,
     },
     user: {
       root: `${ROOTS.ADMIN}/user`,
+      new: `${ROOTS.ADMIN}/user/new`,
+      edit: (id: string) => `${ROOTS.ADMIN}/user/${id}/edit`,
       teaching: (id: string) => `${ROOTS.ADMIN}/user/${id}/teaching`,
     },
     department: {
@@ -146,6 +150,8 @@ export const paths = {
     },
     student: {
       root: `${ROOTS.ADMIN}/student`,
+      list: `${ROOTS.ADMIN}/student/list`,
+      importData: `${ROOTS.ADMIN}/student/import`,
     },
     academicYear: {
       root: `${ROOTS.ADMIN}/academic-year`,
@@ -155,6 +161,8 @@ export const paths = {
     },
     subject: {
       root: `${ROOTS.ADMIN}/subject`,
+      new: `${ROOTS.ADMIN}/subject/new`,
+      edit: (id: string) => `${ROOTS.ADMIN}/subject/${id}/edit`,
     },
     teacherAssignment: {
       root: `${ROOTS.ADMIN}/teacher-assignment`,

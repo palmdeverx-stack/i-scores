@@ -622,9 +622,13 @@ export function TeacherProfileView() {
                 },
                 {
                   label: 'สถานะการทำงาน',
-                  value: profile.employment_status
-                    ? EMPLOYMENT_STATUS_LABEL[profile.employment_status]
-                    : '-',
+                  value:
+                    (profile.employment_status_name_en && profile.employment_status_name
+                      ? `${profile.employment_status_name} / ${profile.employment_status_name_en}`
+                      : profile.employment_status_name) ??
+                    (profile.employment_status
+                      ? EMPLOYMENT_STATUS_LABEL[profile.employment_status]
+                      : '-'),
                 },
                 {
                   label: 'วันที่เริ่มงาน',

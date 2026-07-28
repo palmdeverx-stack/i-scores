@@ -244,7 +244,7 @@ export function GradeResultDetailView({
             <Box>
               <Typography variant="h6">การส่งใบแจ้งผลการเรียนรวมทาง LINE</Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                PDF A4 รวมทุกวิชาของนักเรียนในห้องและภาคเรียนนี้
+                รูปภาพผลการเรียนรวมทุกวิชาของนักเรียนในห้องและภาคเรียนนี้
               </Typography>
             </Box>
             <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
@@ -408,8 +408,8 @@ export function GradeResultDetailView({
         <DialogTitle>ยืนยันส่งใบแจ้งผลการเรียนรวมทุกวิชา</DialogTitle>
         <DialogContent>
           <Alert severity="info" sx={{ mb: 2 }}>
-            ระบบจะสร้าง PDF A4 แยกนักเรียนหนึ่งไฟล์ต่อคน
-            และส่งลิงก์ส่วนตัวที่หมดอายุภายใน 7 วันให้ผู้ปกครองที่เชื่อม LINE
+            ระบบจะสร้างรูปภาพใบแจ้งผลการเรียนแยกนักเรียนหนึ่งรูปต่อคน
+            และส่งเข้าแชท LINE ให้ผู้ปกครองที่เชื่อม LINE ไว้โดยตรง ไม่ต้องกดลิงก์
           </Alert>
           <Typography>
             ห้อง {report.classroom.gradeLevel ?? ''} {report.classroom.name} · ภาคเรียนที่{' '}

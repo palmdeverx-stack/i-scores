@@ -46,7 +46,7 @@ const CreateSchema = z
     ]),
     role: z.enum(['teacher', 'student']),
     staffType: z.string().trim().min(1, { error: 'กรุณาเลือกประเภทบุคลากร' }),
-    employmentStatus: z.enum(['active', 'study_leave', 'leave', 'retired', 'terminated']),
+    employmentStatus: z.string().trim().min(1, { error: 'กรุณาเลือกสถานะปฏิบัติงาน' }),
     employmentStartDate: z.string(),
     appointmentDate: z.string(),
     contractEndDate: z.string(),
@@ -90,12 +90,15 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
     queryFn: listStaffMasterItems,
     enabled: open && !isStudentMode,
   });
-  const activeMasterItems = (category: 'staff_type' | 'position' | 'academic_rank') =>
+  const activeMasterItems = (
+    category: 'staff_type' | 'position' | 'academic_rank' | 'employment_status'
+  ) =>
     (masterItemsQuery.data ?? []).filter(
       (item) =>
         item.category === category &&
         (item.is_active ||
           item.code === user?.staff_type ||
+          item.code === user?.employment_status ||
           item.name === user?.position_title ||
           item.name === user?.academic_rank)
     );
@@ -362,7 +365,13 @@ export function CreateUserDialog({ open, isStudentMode, user = null, onClose }: 
                     ))}
                   </Field.Select>
                   <Field.Select name="employmentStatus" label="สถานะ *">
-                    {EMPLOYMENT_STATUSES.map((option) => (
+                    {(activeMasterItems('employment_status').length
+                      ? activeMasterItems('employment_status').map((item) => ({
+                          value: item.code!,
+                          label: item.name_en ? `${item.name} / ${item.name_en}` : item.name,
+                        }))
+                      : EMPLOYMENT_STATUSES
+                    ).map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
                       </MenuItem>

@@ -3,6 +3,7 @@
 import type { UserRow } from '../user-actions';
 
 import { useMemo, useState } from 'react';
+import { usePopover } from 'minimal-shared/hooks';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
@@ -12,7 +13,10 @@ import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Switch from '@mui/material/Switch';
+import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
+import MenuList from '@mui/material/MenuList';
+import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -32,6 +36,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
 import { RemixIcon } from 'src/components/remix-icon';
+import { CustomPopover } from 'src/components/custom-popover';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { listStaffMasterItems } from 'src/sections/staff-master/staff-master-actions';
@@ -40,19 +45,9 @@ import { useAuthContext } from 'src/auth/hooks';
 
 import { STAFF_TYPES, EMPLOYMENT_STATUSES } from 'src/types/staff-employment';
 
-import { CreateUserDialog } from '../components/create-user-dialog';
-import {
-  listUsers,
-  updateUserActive,
-  deleteManagedUser,
-  updateSchoolDirector,
-} from '../user-actions';
+import { listUsers, updateUserActive, deleteManagedUser } from '../user-actions';
 
 // ----------------------------------------------------------------------
-
-function maskPassword(password: string) {
-  return `${'•'.repeat(Math.max(password.length - 2, 4))}${password.slice(-2)}`;
-}
 
 const ROLE_COLOR = {
   master_admin: 'error',
@@ -72,27 +67,29 @@ const STAFF_TYPE_LABEL = Object.fromEntries(
   STAFF_TYPES.map((option) => [option.value, option.label])
 ) as Record<(typeof STAFF_TYPES)[number]['value'], string>;
 
-const EMPLOYMENT_STATUS_LABEL = Object.fromEntries(
+const EMPLOYMENT_STATUS_LABEL: Record<string, string> = Object.fromEntries(
   EMPLOYMENT_STATUSES.map((option) => [option.value, option.label])
-) as Record<(typeof EMPLOYMENT_STATUSES)[number]['value'], string>;
+);
 
-const EMPLOYMENT_STATUS_COLOR = {
+const EMPLOYMENT_STATUS_COLOR: Record<
+  string,
+  'success' | 'info' | 'warning' | 'default' | 'error'
+> = {
   active: 'success',
   study_leave: 'info',
   leave: 'warning',
   retired: 'default',
   terminated: 'error',
-} as const;
+};
 
 export function UserListView() {
   const { user: currentUser } = useAuthContext();
   const isTeacher = currentUser?.role === 'teacher';
   const canManageStaff = currentUser?.role === 'school_admin';
   const table = useTable({ defaultRowsPerPage: 10 });
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const rowMenu = usePopover();
   const [search, setSearch] = useState('');
-  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
-  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [menuUser, setMenuUser] = useState<UserRow | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserRow | null>(null);
   const queryClient = useQueryClient();
 
@@ -115,10 +112,18 @@ export function UserListView() {
       ...Object.fromEntries(
         (masterItemsQuery.data ?? [])
           .filter((item) => item.category === 'staff_type' && item.code)
-          .map((item) => [
-            item.code,
-            item.name_en ? `${item.name} / ${item.name_en}` : item.name,
-          ])
+          .map((item) => [item.code, item.name_en ? `${item.name}` : item.name])
+      ),
+    }),
+    [masterItemsQuery.data]
+  );
+  const employmentStatusLabels = useMemo(
+    () => ({
+      ...EMPLOYMENT_STATUS_LABEL,
+      ...Object.fromEntries(
+        (masterItemsQuery.data ?? [])
+          .filter((item) => item.category === 'employment_status' && item.code)
+          .map((item) => [item.code, item.name_en ? `${item.name} ` : item.name])
       ),
     }),
     [masterItemsQuery.data]
@@ -127,12 +132,6 @@ export function UserListView() {
   const activeMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       updateUserActive(id, isActive),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
-  });
-
-  const directorMutation = useMutation({
-    mutationFn: ({ id, isSchoolDirector }: { id: string; isSchoolDirector: boolean }) =>
-      updateSchoolDirector(id, isSchoolDirector),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   });
 
@@ -161,7 +160,7 @@ export function UserListView() {
         user.position_title,
         user.academic_rank,
         user.staff_type ? staffTypeLabels[user.staff_type] : null,
-        user.employment_status ? EMPLOYMENT_STATUS_LABEL[user.employment_status] : null,
+        user.employment_status ? employmentStatusLabels[user.employment_status] : null,
         ROLE_LABEL[user.role],
       ]
         .filter(Boolean)
@@ -169,21 +168,12 @@ export function UserListView() {
         .toLocaleLowerCase('th')
         .includes(keyword)
     );
-  }, [search, staffTypeLabels, staffUsers]);
+  }, [search, staffTypeLabels, employmentStatusLabels, staffUsers]);
 
   const visibleUsers = useMemo(
     () => rowInPage(filteredUsers, table.page, table.rowsPerPage),
     [filteredUsers, table.page, table.rowsPerPage]
   );
-
-  const copyPassword = async (userId: string, password: string) => {
-    await navigator.clipboard.writeText(password);
-    setCopiedUserId(userId);
-    window.setTimeout(
-      () => setCopiedUserId((current) => (current === userId ? null : current)),
-      2000
-    );
-  };
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
@@ -207,8 +197,9 @@ export function UserListView() {
         </Box>
         {canManageStaff && (
           <Button
+            component={RouterLink}
+            href={paths.admin.user.new}
             variant="contained"
-            onClick={() => setDialogOpen(true)}
             startIcon={<RemixIcon icon="solar:user-plus-bold" />}
           >
             เพิ่มครู/บุคลากร
@@ -258,7 +249,7 @@ export function UserListView() {
             </Typography>
           </Box>
           <TextField
-            size="small"
+            size="medium"
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
@@ -280,13 +271,12 @@ export function UserListView() {
         </Box>
 
         <TableContainer>
-          <Table sx={{ minWidth: 980 }}>
+          <Table sx={{ minWidth: 920 }}>
             <TableHead>
               <TableRow>
-                <TableCell>ชื่อผู้ใช้งาน</TableCell>
                 <TableCell>ชื่อ-นามสกุล</TableCell>
+                <TableCell>ชื่อผู้ใช้งาน</TableCell>
                 <TableCell>อีเมล</TableCell>
-                <TableCell>รหัสผ่าน</TableCell>
                 <TableCell>ประเภทบุคลากร</TableCell>
                 <TableCell>สถานะการทำงาน</TableCell>
                 <TableCell align="center">เข้าใช้งาน</TableCell>
@@ -296,13 +286,13 @@ export function UserListView() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={8}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={7}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!isLoading && !filteredUsers.length && (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={7}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
                     ไม่พบผู้ใช้งาน
@@ -312,10 +302,7 @@ export function UserListView() {
               {visibleUsers.map((user: UserRow) => (
                 <TableRow key={user.id} hover>
                   <TableCell>
-                    <Typography variant="subtitle2">{user.username}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
+                    <Typography variant="subtitle2">
                       {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '-'}
                     </Typography>
                     {(user.first_name_en || user.last_name_en) && (
@@ -324,48 +311,10 @@ export function UserListView() {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell>{user.email ?? '-'}</TableCell>
                   <TableCell>
-                    {user.login_password ? (
-                      <Box sx={{ gap: 0.5, display: 'flex', alignItems: 'center' }}>
-                        <Typography
-                          component="code"
-                          variant="body2"
-                          sx={{ fontFamily: 'monospace', letterSpacing: 0.5 }}
-                        >
-                          {maskPassword(user.login_password)}
-                        </Typography>
-                        <Tooltip title={copiedUserId === user.id ? 'คัดลอกแล้ว' : 'คัดลอกรหัสผ่าน'}>
-                          <IconButton
-                            size="small"
-                            color={copiedUserId === user.id ? 'success' : 'default'}
-                            onClick={() => copyPassword(user.id, user.login_password!)}
-                            aria-label={`คัดลอกรหัสผ่านของ ${user.username}`}
-                          >
-                            <RemixIcon
-                              icon={
-                                copiedUserId === user.id
-                                  ? 'solar:check-circle-bold'
-                                  : 'solar:copy-bold'
-                              }
-                              width={18}
-                            />
-                          </IconButton>
-                        </Tooltip>
-                        {user.must_change_password && (
-                          <Tooltip title="ยังไม่ได้เปลี่ยนรหัสผ่านนี้">
-                            <Label variant="soft" color="warning" sx={{ ml: 0.5 }}>
-                              ยังไม่เปลี่ยน
-                            </Label>
-                          </Tooltip>
-                        )}
-                      </Box>
-                    ) : (
-                      <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                        ไม่มีข้อมูล
-                      </Typography>
-                    )}
+                    <Typography variant="body2">{user.username}</Typography>
                   </TableCell>
+                  <TableCell>{user.email ?? '-'}</TableCell>
                   <TableCell>
                     {user.staff_type ? (
                       <>
@@ -374,7 +323,7 @@ export function UserListView() {
                         </Typography>
                         {(user.position_title || user.academic_rank) && (
                           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            {[user.position_title, user.academic_rank].filter(Boolean).join(' · ')}
+                            {[user.position_title].filter(Boolean).join(' · ')}
                           </Typography>
                         )}
                       </>
@@ -388,9 +337,9 @@ export function UserListView() {
                     {user.employment_status ? (
                       <Label
                         variant="soft"
-                        color={EMPLOYMENT_STATUS_COLOR[user.employment_status]}
+                        color={EMPLOYMENT_STATUS_COLOR[user.employment_status] ?? 'default'}
                       >
-                        {EMPLOYMENT_STATUS_LABEL[user.employment_status]}
+                        {employmentStatusLabels[user.employment_status] ?? user.employment_status}
                       </Label>
                     ) : (
                       '-'
@@ -405,7 +354,7 @@ export function UserListView() {
                         checked={user.is_active !== false}
                         disabled={
                           !canManageStaff ||
-                          activeMutation.isPending && activeMutation.variables?.id === user.id
+                          (activeMutation.isPending && activeMutation.variables?.id === user.id)
                         }
                         onChange={(event) =>
                           activeMutation.mutate({ id: user.id, isActive: event.target.checked })
@@ -415,77 +364,16 @@ export function UserListView() {
                     </Tooltip>
                   </TableCell>
                   <TableCell align="right">
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      {!isTeacher && user.role === 'teacher' && (
-                        <Tooltip
-                          title={
-                            user.staff_type === 'executive'
-                              ? 'ผู้บริหาร / ผู้อำนวยการ — คลิกเพื่อเปลี่ยนเป็นครูผู้สอน'
-                              : 'กำหนดเป็นผู้บริหาร / ผู้อำนวยการ'
-                          }
-                        >
-                          <IconButton
-                            size="small"
-                            color={user.staff_type === 'executive' ? 'warning' : 'default'}
-                            disabled={
-                              directorMutation.isPending &&
-                              directorMutation.variables?.id === user.id
-                            }
-                            onClick={() =>
-                              directorMutation.mutate({
-                                id: user.id,
-                                isSchoolDirector: user.staff_type !== 'executive',
-                              })
-                            }
-                            aria-label={`ประเภทผู้บริหารและสิทธิ์ผู้อำนวยการของ ${user.username}`}
-                          >
-                            <RemixIcon icon="solar:medal-ribbons-star-bold" width={18} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {user.role === 'teacher' && (
-                        <Tooltip title="ดูข้อมูลการสอน">
-                          <IconButton
-                            size="small"
-                            component={RouterLink}
-                            href={
-                              isTeacher
-                                ? paths.teacher.departmentStaff.teaching(user.id)
-                                : paths.admin.user.teaching(user.id)
-                            }
-                            aria-label={`ดูข้อมูลการสอนของ ${user.username}`}
-                          >
-                            <RemixIcon icon="solar:notebook-bold-duotone" width={18} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {canManageStaff && (
-                        <>
-                          <Tooltip title="แก้ไขบัญชี">
-                            <IconButton
-                              size="small"
-                              onClick={() => setEditingUser(user)}
-                              aria-label={`แก้ไข ${user.username}`}
-                            >
-                              <RemixIcon icon="solar:pen-bold" width={18} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="ลบบัญชี">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => {
-                                deleteMutation.reset();
-                                setDeletingUser(user);
-                              }}
-                              aria-label={`ลบ ${user.username}`}
-                            >
-                              <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={(event) => {
+                        setMenuUser(user);
+                        rowMenu.onOpen(event);
+                      }}
+                      aria-label={`ตัวเลือกเพิ่มเติมสำหรับ ${user.first_name ?? user.username}`}
+                    >
+                      <RemixIcon icon="eva:more-vertical-fill" width={20} />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -512,17 +400,54 @@ export function UserListView() {
         />
       </Card>
 
-      <CreateUserDialog
-        open={dialogOpen}
-        isStudentMode={false}
-        onClose={() => setDialogOpen(false)}
-      />
-      <CreateUserDialog
-        open={!!editingUser}
-        isStudentMode={false}
-        user={editingUser}
-        onClose={() => setEditingUser(null)}
-      />
+      <CustomPopover open={rowMenu.open} anchorEl={rowMenu.anchorEl} onClose={rowMenu.onClose}>
+        <MenuList>
+          {menuUser?.role === 'teacher' && (
+            <MenuItem
+              component={RouterLink}
+              href={
+                isTeacher
+                  ? paths.teacher.departmentStaff.teaching(menuUser.id)
+                  : paths.admin.user.teaching(menuUser.id)
+              }
+              onClick={rowMenu.onClose}
+            >
+              <RemixIcon icon="solar:notebook-bold-duotone" width={18} />
+              ดูข้อมูลการสอน
+            </MenuItem>
+          )}
+
+          {canManageStaff && (
+            <MenuItem
+              component={RouterLink}
+              href={paths.admin.user.edit(menuUser?.id ?? '')}
+              onClick={rowMenu.onClose}
+            >
+              <RemixIcon icon="solar:pen-bold" width={18} />
+              แก้ไข
+            </MenuItem>
+          )}
+
+          {canManageStaff && (
+            <>
+              <Divider sx={{ borderStyle: 'dashed' }} />
+              <MenuItem
+                sx={{ color: 'error.main' }}
+                onClick={() => {
+                  if (menuUser) {
+                    deleteMutation.reset();
+                    setDeletingUser(menuUser);
+                  }
+                  rowMenu.onClose();
+                }}
+              >
+                <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+                ลบ
+              </MenuItem>
+            </>
+          )}
+        </MenuList>
+      </CustomPopover>
 
       <Dialog
         open={!!deletingUser}

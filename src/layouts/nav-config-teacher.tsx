@@ -69,7 +69,7 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.school,
       },
       {
-        title: 'วิชาที่สอน',
+        title: 'รายวิชา',
         path: paths.teacher.assignments,
         icon: ICONS.assignments,
         deepMatch: true,

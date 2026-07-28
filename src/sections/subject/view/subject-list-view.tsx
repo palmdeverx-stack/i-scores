@@ -27,27 +27,35 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
 
+import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
+
+import { Label } from 'src/components/label';
 import { RemixIcon } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
+import { listSubjectMasterItems } from 'src/sections/subject-master/subject-master-actions';
 import { listSemesters, listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
 
-import { listSubjects, deleteSubject } from '../subject-actions';
-import { SubjectFormDialog } from '../components/subject-form-dialog';
+import {
+  listSubjects,
+  deleteSubject,
+  activityTypeLabel,
+  STUDENT_DEVELOPMENT_ACTIVITY_CODE,
+} from '../subject-actions';
 
 // ----------------------------------------------------------------------
 
-export function SubjectListView() {
+export function SubjectListView({ basePath = paths.admin.subject.root }: { basePath?: string } = {}) {
   const table = useTable({ defaultRowsPerPage: 5 });
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null);
   const [yearFilter, setYearFilter] = useState('');
   const [semesterFilter, setSemesterFilter] = useState('');
+  const [areaFilter, setAreaFilter] = useState('');
   const queryClient = useQueryClient();
 
   const {
-    data: subjects = [],
+    data: allSubjects = [],
     isLoading,
     isError,
     refetch,
@@ -69,7 +77,20 @@ export function SubjectListView() {
     queryFn: () => listSemesters(yearFilter),
     enabled: !!yearFilter,
   });
+  const { data: masterItems = [] } = useQuery({
+    queryKey: ['subject-master-items'],
+    queryFn: listSubjectMasterItems,
+  });
+  const learningAreas = masterItems.filter((item) => item.category === 'learning_area');
+  const learningAreaLabel = (code: string | null) =>
+    learningAreas.find((item) => item.code === code)?.name ?? code;
+  const subjectTypeLabel = (code: string | null) =>
+    masterItems.find((item) => item.category === 'subject_type' && item.code === code)?.name ??
+    code;
 
+  const subjects = areaFilter
+    ? allSubjects.filter((subject) => subject.learning_area === areaFilter)
+    : allSubjects;
   const visibleSubjects = rowInPage(subjects, table.page, table.rowsPerPage);
 
   const deleteMutation = useMutation({
@@ -80,21 +101,6 @@ export function SubjectListView() {
       setDeletingSubject(null);
     },
   });
-
-  const openCreateDialog = () => {
-    setEditingSubject(null);
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (subject: Subject) => {
-    setEditingSubject(subject);
-    setDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    setDialogOpen(false);
-    setEditingSubject(null);
-  };
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
@@ -117,8 +123,9 @@ export function SubjectListView() {
           </Typography>
         </Box>
         <Button
+          component={RouterLink}
+          href={`${basePath}/new`}
           variant="contained"
-          onClick={openCreateDialog}
           startIcon={<RemixIcon icon="mingcute:add-line" />}
         >
           เพิ่มรายวิชา
@@ -201,6 +208,24 @@ export function SubjectListView() {
                 </MenuItem>
               ))}
             </TextField>
+            <TextField
+              select
+              size="small"
+              label="กลุ่มสาระ"
+              value={areaFilter}
+              onChange={(event) => {
+                setAreaFilter(event.target.value);
+                table.onResetPage();
+              }}
+              sx={{ minWidth: 200 }}
+            >
+              <MenuItem value="">ทุกกลุ่มสาระ</MenuItem>
+              {learningAreas.map((area) => (
+                <MenuItem key={area.id} value={area.code}>
+                  {area.name}
+                </MenuItem>
+              ))}
+            </TextField>
           </Box>
         </Box>
 
@@ -211,7 +236,7 @@ export function SubjectListView() {
                 <TableCell sx={{ width: { sm: 220 } }}>รหัสวิชา</TableCell>
                 <TableCell>รายละเอียดรายวิชา</TableCell>
                 <TableCell sx={{ width: 190 }}> ภาคเรียน / ปี </TableCell>
-                <TableCell sx={{ width: 140 }}>หน่วยกิต</TableCell>
+                <TableCell sx={{ width: 170 }}>หน่วยกิต / ชั่วโมง</TableCell>
                 <TableCell sx={{ width: 140 }} align="right">
                   การจัดการ
                 </TableCell>
@@ -266,6 +291,41 @@ export function SubjectListView() {
                             </Typography>
                           )}
                         </Box>
+                        {(subject.learning_area || subject.subject_type) && (
+                          <Box sx={{ gap: 0.5, mt: 0.5, display: 'flex', flexWrap: 'wrap' }}>
+                            {subject.learning_area && (
+                              <Label
+                                variant="soft"
+                                color={
+                                  subject.learning_area === STUDENT_DEVELOPMENT_ACTIVITY_CODE
+                                    ? 'warning'
+                                    : 'info'
+                                }
+                              >
+                                {learningAreaLabel(subject.learning_area)}
+                                {subject.activity_type
+                                  ? ` · ${activityTypeLabel(subject.activity_type)}`
+                                  : ''}
+                              </Label>
+                            )}
+                            {subject.subject_type && (
+                              <Label
+                                variant="soft"
+                                color={subject.subject_type === 'basic' ? 'default' : 'primary'}
+                              >
+                                {subjectTypeLabel(subject.subject_type)}
+                              </Label>
+                            )}
+                          </Box>
+                        )}
+                        {!!subject.grade_levels.length && (
+                          <Typography
+                            variant="caption"
+                            sx={{ mt: 0.5, display: 'block', color: 'text.secondary' }}
+                          >
+                            ระดับชั้น: {subject.grade_levels.join(', ')}
+                          </Typography>
+                        )}
                         <Typography
                           variant="caption"
                           noWrap
@@ -291,12 +351,20 @@ export function SubjectListView() {
                       {subject.academic_years?.year ?? 'ยังไม่กำหนดปี'}
                     </Typography>
                   </TableCell>
-                  <TableCell>{Number(subject.credits).toLocaleString('th-TH')} หน่วยกิต</TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {Number(subject.credits).toLocaleString('th-TH')} หน่วยกิต
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      {Number(subject.study_hours ?? 0).toLocaleString('th-TH')} ชั่วโมง
+                    </Typography>
+                  </TableCell>
                   <TableCell align="right">
                     <Tooltip title="แก้ไข">
                       <IconButton
                         size="small"
-                        onClick={() => openEditDialog(subject)}
+                        component={RouterLink}
+                        href={`${basePath}/${subject.id}/edit`}
                         aria-label={`แก้ไขวิชา ${subject.name}`}
                       >
                         <RemixIcon icon="solar:pen-bold" width={18} />
@@ -340,14 +408,6 @@ export function SubjectListView() {
           sx={{ borderTop: '1px solid', borderColor: 'divider' }}
         />
       </Card>
-
-      <SubjectFormDialog
-        open={dialogOpen}
-        editingSubject={editingSubject}
-        initialAcademicYearId={yearFilter}
-        initialSemesterId={semesterFilter}
-        onClose={closeDialog}
-      />
 
       <Dialog
         open={!!deletingSubject}

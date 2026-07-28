@@ -471,8 +471,8 @@ export function GradeResultClassroomView({
         <DialogTitle>ส่งผลการเรียนทุกวิชาทาง LINE</DialogTitle>
         <DialogContent>
           <Alert severity="info" sx={{ mb: 2 }}>
-            ระบบจะสร้าง PDF A4 รวมทุกวิชาที่อนุมัติแล้ว แยกนักเรียนหนึ่งไฟล์ต่อคน
-            และส่งให้ผู้ปกครองของนักเรียนคนนั้นทาง LINE
+            ระบบจะสร้างรูปภาพผลการเรียนรวมทุกวิชาที่อนุมัติแล้ว แยกนักเรียนหนึ่งรูปต่อคน
+            และส่งเข้าแชท LINE ให้ผู้ปกครองของนักเรียนคนนั้นโดยตรง
           </Alert>
           <Typography>
             ห้อง {firstItem?.classroom?.grade_level ?? ''} {firstItem?.classroom?.name ?? ''} ·

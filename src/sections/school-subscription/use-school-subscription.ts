@@ -59,7 +59,12 @@ const ROUTE_FEATURES: Record<
 > = {
   school_admin: [
     ['/admin/line-notifications', 'admin.line_notifications'],
-    ['/admin/staff-masters', 'admin.staff_masters'],
+    ['/admin/master-data/staff-types', 'admin.staff_masters'],
+    ['/admin/master-data/positions', 'admin.staff_masters'],
+    ['/admin/master-data/academic-ranks', 'admin.staff_masters'],
+    ['/admin/master-data/employment-statuses', 'admin.staff_masters'],
+    ['/admin/master-data/learning-areas', 'admin.subjects'],
+    ['/admin/master-data/subject-types', 'admin.subjects'],
     ['/admin/access-permissions', 'admin.access_permissions'],
     ['/admin/department-permissions', 'admin.access_permissions'],
     ['/admin/department', 'admin.departments'],

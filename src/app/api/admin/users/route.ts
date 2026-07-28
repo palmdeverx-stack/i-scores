@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { parseGuardianBody } from 'src/lib/student-guardian';
 import { decryptCredential } from 'src/lib/credential-cipher';
 import { createManagedUser } from 'src/lib/create-managed-user';
 import {
@@ -124,10 +125,36 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
+  const guardian =
+    body?.role === 'student' && body.guardian ? parseGuardianBody(body.guardian) : null;
+  if (guardian && 'error' in guardian) {
+    return NextResponse.json({ message: guardian.error }, { status: 400 });
+  }
   const result = await createManagedUser(caller, body);
 
   if (!result.ok) {
     return NextResponse.json({ message: result.message }, { status: result.status });
+  }
+
+  if (guardian && !('error' in guardian)) {
+    const userId = result.user.id as string;
+    const schoolId = result.user.school_id as string | null;
+    if (!schoolId) {
+      await supabaseAdmin.from('app_users').delete().eq('id', userId);
+      return NextResponse.json({ message: 'ไม่พบโรงเรียนของนักเรียน' }, { status: 500 });
+    }
+    const { error: guardianError } = await supabaseAdmin.from('student_guardians').insert({
+      ...guardian.data,
+      student_id: userId,
+      school_id: schoolId,
+    });
+    if (guardianError) {
+      await supabaseAdmin.from('app_users').delete().eq('id', userId);
+      return NextResponse.json(
+        { message: `ไม่สามารถบันทึกข้อมูลผู้ปกครอง: ${guardianError.message}` },
+        { status: 500 }
+      );
+    }
   }
 
   return NextResponse.json(
