@@ -107,6 +107,7 @@ type AppUserRow = {
   accepted_legal_at?: string | null;
   is_school_director?: boolean;
   staff_type?: string | null;
+  position_title?: string | null;
   employment_status?: string | null;
 };
 
@@ -127,6 +128,7 @@ export function toPublicUser(user: AppUserRow) {
     accepted_legal_at: user.accepted_legal_at ?? null,
     is_school_director: user.is_school_director ?? false,
     staff_type: user.staff_type ?? null,
+    position_title: user.position_title ?? null,
     employment_status: user.employment_status ?? null,
   };
 }

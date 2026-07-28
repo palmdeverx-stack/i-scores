@@ -19,6 +19,7 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
+import LinearProgress from '@mui/material/LinearProgress';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { paths } from 'src/routes/paths';
@@ -33,9 +34,20 @@ import { listGradeReviews } from '../grade-review-actions';
 
 // ----------------------------------------------------------------------
 
-function fullName(person: { first_name: string | null; last_name: string | null } | null) {
-  return `${person?.first_name ?? ''} ${person?.last_name ?? ''}`.trim() || '-';
-}
+type ClassroomGroup = {
+  key: string;
+  classroomId: string;
+  semesterId: string;
+  classroomName: string;
+  gradeLevel: string | null;
+  academicYear: string | null;
+  semesterName: string;
+  studentCount: number;
+  subjectCount: number;
+  approvedCount: number;
+  lockedCount: number;
+  latestApprovedAt: string | null;
+};
 
 export function GradeResultsView({
   detailBasePath = paths.admin.gradeResults,
@@ -52,75 +64,106 @@ export function GradeResultsView({
     queryFn: listGradeReviews,
   });
 
-  const approved = useMemo(
-    () => data.filter((item) => ['approved', 'locked'].includes(item.review?.status ?? 'draft')),
-    [data]
-  );
+  const classroomGroups = useMemo(() => {
+    const groups = new Map<string, ClassroomGroup>();
+    data.forEach((item) => {
+      if (!item.classroom?.id || !item.semester?.id) return;
+      const key = `${item.classroom.id}:${item.semester.id}`;
+      const status = item.review?.status ?? 'draft';
+      const approved = ['approved', 'locked'].includes(status);
+      const current = groups.get(key) ?? {
+        key,
+        classroomId: item.classroom.id,
+        semesterId: item.semester.id,
+        classroomName: item.classroom.name,
+        gradeLevel: item.classroom.grade_level,
+        academicYear: item.classroom.academic_year?.year ?? null,
+        semesterName: item.semester.name ?? '-',
+        studentCount: item.student_count,
+        subjectCount: 0,
+        approvedCount: 0,
+        lockedCount: 0,
+        latestApprovedAt: null,
+      };
+      current.subjectCount += 1;
+      current.studentCount = Math.max(current.studentCount, item.student_count);
+      if (approved) current.approvedCount += 1;
+      if (status === 'locked') current.lockedCount += 1;
+      if (
+        approved &&
+        item.review?.approved_at &&
+        (!current.latestApprovedAt || item.review.approved_at > current.latestApprovedAt)
+      ) {
+        current.latestApprovedAt = item.review.approved_at;
+      }
+      groups.set(key, current);
+    });
+    return [...groups.values()]
+      .filter((group) => group.approvedCount > 0)
+      .sort((left, right) => {
+        const year = String(right.academicYear ?? '').localeCompare(
+          String(left.academicYear ?? ''),
+          'th',
+          { numeric: true }
+        );
+        if (year) return year;
+        const term = left.semesterName.localeCompare(right.semesterName, 'th', { numeric: true });
+        if (term) return term;
+        return `${left.gradeLevel ?? ''}${left.classroomName}`.localeCompare(
+          `${right.gradeLevel ?? ''}${right.classroomName}`,
+          'th',
+          { numeric: true }
+        );
+      });
+  }, [data]);
+
   const years = useMemo(
     () =>
-      [
-        ...new Set(
-          approved.flatMap((item) =>
-            item.classroom?.academic_year?.year ? [item.classroom.academic_year.year] : []
-          )
-        ),
-      ]
-        .sort((a, b) => String(b).localeCompare(String(a), 'th', { numeric: true })),
-    [approved]
+      [...new Set(classroomGroups.flatMap((item) => (item.academicYear ? [item.academicYear] : [])))]
+        .sort((a, b) => b.localeCompare(a, 'th', { numeric: true })),
+    [classroomGroups]
   );
   const semesters = useMemo(
     () =>
-      [...new Set(approved.flatMap((item) => (item.semester?.name ? [item.semester.name] : [])))]
-        .sort((a, b) => String(a).localeCompare(String(b), 'th', { numeric: true })),
-    [approved]
+      [...new Set(classroomGroups.map((item) => item.semesterName))].sort((a, b) =>
+        a.localeCompare(b, 'th', { numeric: true })
+      ),
+    [classroomGroups]
   );
   const grades = useMemo(
     () =>
-      [
-        ...new Set(
-          approved.flatMap((item) =>
-            item.classroom?.grade_level ? [item.classroom.grade_level] : []
-          )
-        ),
-      ].sort((a, b) => String(a).localeCompare(String(b), 'th', { numeric: true })),
-    [approved]
+      [...new Set(classroomGroups.flatMap((item) => (item.gradeLevel ? [item.gradeLevel] : [])))]
+        .sort((a, b) => a.localeCompare(b, 'th', { numeric: true })),
+    [classroomGroups]
   );
   const filtered = useMemo(() => {
     const keyword = search.trim().toLocaleLowerCase('th');
-    return approved.filter((item) => {
-      if (academicYear !== 'all' && item.classroom?.academic_year?.year !== academicYear) {
-        return false;
-      }
-      if (semester !== 'all' && item.semester?.name !== semester) return false;
-      if (gradeLevel !== 'all' && item.classroom?.grade_level !== gradeLevel) return false;
+    return classroomGroups.filter((item) => {
+      if (academicYear !== 'all' && item.academicYear !== academicYear) return false;
+      if (semester !== 'all' && item.semesterName !== semester) return false;
+      if (gradeLevel !== 'all' && item.gradeLevel !== gradeLevel) return false;
       if (!keyword) return true;
-      return [
-        item.subject?.code,
-        item.subject?.name,
-        item.classroom?.name,
-        fullName(item.teacher),
-      ]
+      return [item.gradeLevel, item.classroomName, item.academicYear, item.semesterName]
         .filter(Boolean)
         .join(' ')
         .toLocaleLowerCase('th')
         .includes(keyword);
     });
-  }, [academicYear, approved, gradeLevel, search, semester]);
+  }, [academicYear, classroomGroups, gradeLevel, search, semester]);
   const visible = useMemo(
     () => rowInPage(filtered, table.page, table.rowsPerPage),
     [filtered, table.page, table.rowsPerPage]
   );
-
   const resetPage = () => table.onResetPage();
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box sx={{ mb: 4 }}>
         <Typography component="h1" variant="h3">
-          ผลการเรียน
+          ผลการเรียนรายชั้นเรียน
         </Typography>
         <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-          แสดงเฉพาะผลการเรียนที่ผ่านการตรวจสอบและอนุมัติแล้ว พร้อมค้นหาข้อมูลย้อนหลัง
+          เลือกชั้นเรียนและภาคเรียนเพื่อดูผลรายวิชา ใบ ปพ.5 และการส่งให้ผู้ปกครอง
         </Typography>
       </Box>
 
@@ -193,7 +236,7 @@ export function GradeResultsView({
           <TextField
             size="small"
             value={search}
-            placeholder="ค้นหาวิชา ห้องเรียน หรือครู"
+            placeholder="ค้นหาชั้นปีหรือห้องเรียน"
             onChange={(event) => {
               setSearch(event.target.value);
               resetPage();
@@ -211,16 +254,16 @@ export function GradeResultsView({
         </Box>
 
         <TableContainer>
-          <Table sx={{ minWidth: 1100 }}>
+          <Table sx={{ minWidth: 1000 }}>
             <TableHead>
               <TableRow>
                 <TableCell>ปี/ภาคเรียน</TableCell>
                 <TableCell>ชั้นปี/ห้องเรียน</TableCell>
-                <TableCell>รายวิชา</TableCell>
-                <TableCell>ครูผู้สอน</TableCell>
-                <TableCell>วันที่อนุมัติ</TableCell>
-                <TableCell>สถานะ</TableCell>
-                <TableCell align="right">เอกสาร</TableCell>
+                <TableCell align="center">นักเรียน</TableCell>
+                <TableCell>รายวิชาที่อนุมัติ</TableCell>
+                <TableCell>ความพร้อม</TableCell>
+                <TableCell>อนุมัติล่าสุด</TableCell>
+                <TableCell align="right">รายละเอียด</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -236,51 +279,67 @@ export function GradeResultsView({
               {!isLoading && !filtered.length && (
                 <TableRow>
                   <TableCell colSpan={7} sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}>
-                    ไม่พบผลการเรียนที่ผ่านการตรวจสอบ
+                    ยังไม่มีชั้นเรียนที่มีผลการเรียนผ่านการอนุมัติ
                   </TableCell>
                 </TableRow>
               )}
-              {visible.map((item) => (
-                <TableRow key={item.id} hover>
-                  <TableCell>
-                    {item.classroom?.academic_year?.year ?? '-'} / {item.semester?.name ?? '-'}
-                  </TableCell>
-                  <TableCell>
-                    {item.classroom?.grade_level ?? '-'} {item.classroom?.name ?? ''}
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="subtitle2">{item.subject?.name ?? '-'}</Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      {item.subject?.code || 'ไม่มีรหัสวิชา'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{fullName(item.teacher)}</TableCell>
-                  <TableCell>
-                    {item.review?.approved_at
-                      ? fDateTime(item.review.approved_at, 'DD/MM/YYYY HH:mm')
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      variant="soft"
-                      color="success"
-                      label={item.review?.status === 'locked' ? 'ปิดผลแล้ว' : 'อนุมัติแล้ว'}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button
-                      component={RouterLink}
-                      href={`${detailBasePath}/${item.id}`}
-                      size="small"
-                      variant="outlined"
-                      startIcon={<RemixIcon icon="solar:document-text-bold" />}
-                    >
-                      ดูใบ ปพ.5
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {visible.map((item) => {
+                const percent = item.subjectCount
+                  ? Math.round((item.approvedCount / item.subjectCount) * 100)
+                  : 0;
+                const ready = item.approvedCount === item.subjectCount;
+                return (
+                  <TableRow key={item.key} hover>
+                    <TableCell>
+                      {item.academicYear ?? '-'} / {item.semesterName}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="subtitle2">
+                        {item.gradeLevel ?? '-'} {item.classroomName}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">{item.studentCount}</TableCell>
+                    <TableCell sx={{ minWidth: 180 }}>
+                      <Box sx={{ mb: 0.5, display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="caption">
+                          {item.approvedCount}/{item.subjectCount} วิชา
+                        </Typography>
+                        <Typography variant="caption">{percent}%</Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={percent}
+                        color={ready ? 'success' : 'warning'}
+                        sx={{ height: 6, borderRadius: 1 }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        variant="soft"
+                        color={ready ? 'success' : 'warning'}
+                        label={ready ? 'พร้อมส่งผู้ปกครอง' : 'รออนุมัติให้ครบ'}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {item.latestApprovedAt
+                        ? fDateTime(item.latestApprovedAt, 'DD/MM/YYYY HH:mm')
+                        : '-'}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        component={RouterLink}
+                        href={`${detailBasePath}/classroom/${item.classroomId}/${item.semesterId}`}
+                        size="small"
+                        variant="outlined"
+                        endIcon={<RemixIcon icon="eva:arrow-ios-forward-fill" />}
+                      >
+                        ดูรายวิชา
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>

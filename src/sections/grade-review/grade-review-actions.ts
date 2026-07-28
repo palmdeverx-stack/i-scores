@@ -105,3 +105,59 @@ export async function updateStudentAssessment(
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถบันทึกผลประเมินได้');
 }
+
+export type GradeLineDeliveryStatus = 'pending' | 'processing' | 'sent' | 'failed' | 'skipped';
+
+export type GradeLineDeliveryResult = {
+  counts: {
+    total: number;
+    pending: number;
+    sent: number;
+    failed: number;
+    skipped: number;
+  };
+  eligibleStudents: number;
+  linkedStudents: number;
+  subjectCount: number;
+  recipients: Array<{
+    studentId: string;
+    studentName: string;
+    studentCode: string | null;
+    guardianName: string | null;
+    lineConnected: boolean;
+  }>;
+  deliveries: Array<{
+    id: string;
+    status: GradeLineDeliveryStatus;
+    attempts: number;
+    error: string | null;
+    sentAt: string | null;
+    createdAt: string;
+    guardianName: string;
+    studentName: string;
+    studentCode: string | null;
+  }>;
+};
+
+export async function getGradeLineDeliveries(
+  teacherAssignmentId: string
+): Promise<GradeLineDeliveryResult> {
+  const response = await fetch(`/api/grade-reviews/${teacherAssignmentId}/line-deliveries`);
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดประวัติการส่ง LINE ได้');
+  return json;
+}
+
+export async function sendGradeResultsToLine(
+  teacherAssignmentId: string,
+  studentIds?: string[]
+): Promise<GradeLineDeliveryResult> {
+  const response = await fetch(`/api/grade-reviews/${teacherAssignmentId}/line-deliveries`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ studentIds }),
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถส่งผลการเรียนทาง LINE ได้');
+  return json;
+}

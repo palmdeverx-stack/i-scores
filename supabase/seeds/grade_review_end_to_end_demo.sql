@@ -117,6 +117,7 @@ values (
 on conflict (id) do update
 set
   school_id = excluded.school_id,
+  role = 'school_admin',
   password_hash = excluded.password_hash,
   first_name = excluded.first_name,
   last_name = excluded.last_name,
@@ -167,6 +168,7 @@ values (
 on conflict (id) do update
 set
   school_id = excluded.school_id,
+  role = 'teacher',
   password_hash = excluded.password_hash,
   first_name = excluded.first_name,
   last_name = excluded.last_name,
@@ -216,6 +218,7 @@ from generate_series(1, 8) as student_no
 on conflict (id) do update
 set
   school_id = excluded.school_id,
+  role = 'student',
   password_hash = excluded.password_hash,
   first_name = excluded.first_name,
   last_name = excluded.last_name,
@@ -226,6 +229,20 @@ set
   must_change_password = false,
   import_confirmed_at = excluded.import_confirmed_at,
   accepted_legal_at = excluded.accepted_legal_at;
+
+-- Normalize demo identities before the enrollment eligibility trigger runs.
+update public.app_users
+set
+  school_id = 'de000000-0000-4000-8000-000000000001',
+  role = 'student',
+  student_status = 'studying',
+  is_active = true,
+  import_confirmed_at = coalesce(import_confirmed_at, now())
+where id in (
+  select
+    ('de000000-0000-4000-8000-' || lpad(student_no::text, 12, '0'))::uuid
+  from generate_series(1, 8) as student_no
+);
 
 insert into public.academic_years (
   id,

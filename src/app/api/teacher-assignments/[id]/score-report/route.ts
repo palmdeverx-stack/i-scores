@@ -176,6 +176,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   return NextResponse.json({
     report: {
       teacherAssignmentId: id,
+      semesterId: teacherAssignment!.semester_id,
       schoolName: school?.name ?? '',
       schoolLogoUrl: school?.logo_url ?? null,
       teacher: {
@@ -189,6 +190,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         credits: Number(subject?.credits ?? 0),
       },
       classroom: {
+        id: teacherAssignment!.classroom_id,
         name: classroom?.name ?? '',
         gradeLevel: classroom?.grade_level ?? null,
         academicYear: classroom?.academic_years?.year ?? null,

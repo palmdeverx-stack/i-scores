@@ -7,11 +7,17 @@ import type { AssignmentCategory } from 'src/sections/assignment/assignment-acti
 
 export type ScoreReport = {
   teacherAssignmentId: string;
+  semesterId: string;
   schoolName: string;
   schoolLogoUrl: string | null;
   teacher: { firstName: string | null; lastName: string | null; username: string };
   subject: { name: string; code: string | null; credits: number };
-  classroom: { name: string; gradeLevel: string | null; academicYear: string | null };
+  classroom: {
+    id: string;
+    name: string;
+    gradeLevel: string | null;
+    academicYear: string | null;
+  };
   semesterName: string | null;
   assignments: Array<{
     id: string;

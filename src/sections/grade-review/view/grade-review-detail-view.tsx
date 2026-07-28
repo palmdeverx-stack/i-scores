@@ -375,6 +375,27 @@ export function GradeReviewDetailView({
             sx={{ mt: 2 }}
           />
           <Box sx={{ mt: 2, gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+            {['approved', 'locked'].includes(status) && (
+              <Button
+                component={RouterLink}
+                href={
+                  backPath.startsWith('/teacher')
+                    ? paths.teacher.gradeResultDetail(teacherAssignmentId)
+                    : paths.admin.gradeResultDetail(teacherAssignmentId)
+                }
+                color="success"
+                variant="outlined"
+                disabled={!canReview}
+                title={
+                  canReview
+                    ? 'ไปหน้าส่งใบแจ้งผลการเรียนรวมทุกวิชา'
+                    : 'ต้องได้รับสิทธิ์จัดการผลการเรียนจึงจะส่งได้'
+                }
+                startIcon={<RemixIcon icon="ri:line-fill" />}
+              >
+                ส่งทุกวิชาเป็น PDF ทาง LINE
+              </Button>
+            )}
             {status === 'submitted' && canReview && (
               <>
                 <Button

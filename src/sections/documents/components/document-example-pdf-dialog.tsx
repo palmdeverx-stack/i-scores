@@ -65,11 +65,12 @@ const styles = StyleSheet.create({
 
 const SAMPLE_PP5_REPORT: ScoreReport = {
   teacherAssignmentId: 'sample',
+  semesterId: 'sample-semester',
   schoolName: 'โรงเรียนตัวอย่าง',
   schoolLogoUrl: null,
   teacher: { firstName: 'ครู', lastName: 'ตัวอย่าง', username: 'teacher' },
   subject: { name: 'ภาษาไทย', code: 'ท101', credits: 1.5 },
-  classroom: { name: '1', gradeLevel: 'ป.6', academicYear: '2569' },
+  classroom: { id: 'sample-classroom', name: '1', gradeLevel: 'ป.6', academicYear: '2569' },
   semesterName: '1',
   assignments: [
     { id: 'work', title: 'งานระหว่างเรียน', category: 'assignment', fullScore: 30 },

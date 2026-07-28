@@ -78,6 +78,8 @@ export const paths = {
       `${ROOTS.TEACHER}/grade-reviews/grade/${encodeURIComponent(gradeLevel)}`,
     gradeReviewDetail: (id: string) => `${ROOTS.TEACHER}/grade-reviews/${id}`,
     gradeResults: `${ROOTS.TEACHER}/grade-results`,
+    gradeResultClassroom: (classroomId: string, semesterId: string) =>
+      `${ROOTS.TEACHER}/grade-results/classroom/${classroomId}/${semesterId}`,
     gradeResultDetail: (id: string) => `${ROOTS.TEACHER}/grade-results/${id}`,
     documents: {
       root: `${ROOTS.TEACHER}/documents`,
@@ -173,6 +175,8 @@ export const paths = {
       `${ROOTS.ADMIN}/grade-reviews/grade/${encodeURIComponent(gradeLevel)}`,
     gradeReviewDetail: (id: string) => `${ROOTS.ADMIN}/grade-reviews/${id}`,
     gradeResults: `${ROOTS.ADMIN}/grade-results`,
+    gradeResultClassroom: (classroomId: string, semesterId: string) =>
+      `${ROOTS.ADMIN}/grade-results/classroom/${classroomId}/${semesterId}`,
     gradeResultDetail: (id: string) => `${ROOTS.ADMIN}/grade-results/${id}`,
     documents: {
       root: `${ROOTS.ADMIN}/documents`,

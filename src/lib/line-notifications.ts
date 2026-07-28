@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { createHash, randomBytes } from 'node:crypto';
+
 import { supabaseAdmin } from './supabase-admin';
 import { decryptLineCredential } from './line-credentials';
 import { isSubscriptionUsable } from './school-subscription';
@@ -7,8 +9,14 @@ import { isSubscriptionUsable } from './school-subscription';
 // ----------------------------------------------------------------------
 
 type AttendanceStatus = 'present' | 'absent' | 'leave' | 'late';
-type SourceType = 'homeroom_attendance' | 'class_attendance' | 'announcement';
-type EventType = 'absent' | 'leave' | 'late' | 'class_absent' | 'announcement';
+type SourceType = 'homeroom_attendance' | 'class_attendance' | 'announcement' | 'grade_result';
+type EventType =
+  | 'absent'
+  | 'leave'
+  | 'late'
+  | 'class_absent'
+  | 'announcement'
+  | 'grade_result';
 type AttendanceEventType = Exclude<EventType, 'announcement'>;
 
 export type AttendanceNotificationInput = {
@@ -32,6 +40,7 @@ const STATUS_LABEL: Record<EventType, string> = {
   late: 'สาย',
   class_absent: 'ไม่เข้าเรียนรายคาบ',
   announcement: 'ประกาศ',
+  grade_result: 'ผลการเรียน',
 };
 
 function eventTypeFor(
@@ -304,6 +313,286 @@ export async function queueAnnouncementNotifications({
     return [];
   }
   return (data ?? []).map((row) => row.id);
+}
+
+export async function queueGradeResultNotifications({
+  schoolId,
+  teacherAssignmentId,
+  requestedBy,
+  baseUrl,
+  studentIds,
+}: {
+  schoolId: string;
+  teacherAssignmentId: string;
+  requestedBy: string;
+  baseUrl: string;
+  studentIds?: string[];
+}) {
+  const [
+    { data: integration },
+    { data: subscription },
+    { data: school },
+    { data: teacherAssignment },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('school_line_integrations')
+      .select('is_enabled, channel_access_token_encrypted')
+      .eq('school_id', schoolId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('school_subscriptions')
+      .select('status, ends_at, enabled_features, max_line_notifications')
+      .eq('school_id', schoolId)
+      .maybeSingle(),
+    supabaseAdmin.from('schools').select('name').eq('id', schoolId).maybeSingle(),
+    supabaseAdmin
+      .from('teacher_assignments')
+      .select(
+        `id, classroom_id, semester_id,
+         classroom:classrooms!inner(school_id, name, academic_year:academic_years(year)),
+         semester:semesters(name)`
+      )
+      .eq('id', teacherAssignmentId)
+      .eq('classroom.school_id', schoolId)
+      .maybeSingle(),
+  ]);
+
+  if (
+    !integration?.is_enabled ||
+    !integration.channel_access_token_encrypted ||
+    !subscription ||
+    !isSubscriptionUsable(subscription as never) ||
+    !(subscription.enabled_features ?? []).includes('admin.line_notifications')
+  ) {
+    return {
+      batchId: null,
+      deliveryIds: [],
+      eligibleStudents: 0,
+      linkedStudents: 0,
+      subjectCount: 0,
+      ready: false,
+    };
+  }
+  if (!teacherAssignment) {
+    return {
+      batchId: null,
+      deliveryIds: [],
+      eligibleStudents: 0,
+      linkedStudents: 0,
+      subjectCount: 0,
+      ready: true,
+    };
+  }
+
+  const [{ data: subjectAssignments }, { data: enrollments }] = await Promise.all([
+    supabaseAdmin
+      .from('teacher_assignments')
+      .select(
+        `id,
+         subject:subjects(name, code),
+         review:grade_review_submissions(status)`
+      )
+      .eq('classroom_id', teacherAssignment.classroom_id)
+      .eq('semester_id', teacherAssignment.semester_id),
+    supabaseAdmin
+      .from('enrollments')
+      .select(
+        `student_id,
+         student:app_users!enrollments_student_id_fkey!inner(
+           id, username, name_prefix, first_name, last_name, student_code, school_id, role
+         )`
+      )
+      .eq('classroom_id', teacherAssignment.classroom_id)
+      .eq('student.school_id', schoolId)
+      .eq('student.role', 'student'),
+  ]);
+
+  if (!subjectAssignments?.length) {
+    throw new Error('ไม่พบรายวิชาในห้องและภาคเรียนนี้');
+  }
+  const incompleteSubjects = subjectAssignments.filter((item) => {
+    const review = Array.isArray(item.review) ? item.review[0] : item.review;
+    return !review || !['approved', 'locked'].includes(review.status);
+  });
+  if (incompleteSubjects.length) {
+    throw new Error(
+      `ยังส่งไม่ได้ มีผลการเรียนที่ยังไม่อนุมัติ ${incompleteSubjects.length} รายวิชา`
+    );
+  }
+
+  const { data: batch, error: batchError } = await supabaseAdmin
+    .from('grade_result_delivery_batches')
+    .upsert(
+      {
+        school_id: schoolId,
+        classroom_id: teacherAssignment.classroom_id,
+        semester_id: teacherAssignment.semester_id,
+        created_by: requestedBy,
+      },
+      { onConflict: 'school_id,classroom_id,semester_id' }
+    )
+    .select('id')
+    .single();
+  if (batchError || !batch) {
+    throw new Error(batchError?.message ?? 'ไม่สามารถสร้างชุดส่งผลการเรียนได้');
+  }
+
+  const enrolledStudents = (enrollments ?? []).flatMap((enrollment) => {
+    const student = Array.isArray(enrollment.student) ? enrollment.student[0] : enrollment.student;
+    return student ? [student] : [];
+  });
+  const requestedStudentIds = studentIds ? new Set(studentIds) : null;
+  const enrolledStudentIds = new Set(enrolledStudents.map((student) => student.id));
+  if (
+    requestedStudentIds &&
+    [...requestedStudentIds].some((studentId) => !enrolledStudentIds.has(studentId))
+  ) {
+    throw new Error('พบนักเรียนที่เลือกซึ่งไม่ได้อยู่ในชั้นเรียนนี้');
+  }
+  const students = requestedStudentIds
+    ? enrolledStudents.filter((student) => requestedStudentIds.has(student.id))
+    : enrolledStudents;
+  const recipientStudentIds = students.map((student) => student.id);
+  if (!recipientStudentIds.length) {
+    return {
+      batchId: batch.id,
+      deliveryIds: [],
+      eligibleStudents: 0,
+      linkedStudents: 0,
+      subjectCount: subjectAssignments.length,
+      ready: true,
+    };
+  }
+
+  const { data: guardians } = await supabaseAdmin
+      .from('student_guardians')
+      .select('id, student_id, line_user_id, is_primary')
+      .eq('school_id', schoolId)
+      .in('student_id', recipientStudentIds)
+      .not('line_user_id', 'is', null)
+      .eq('line_notifications_enabled', true)
+      .order('is_primary', { ascending: false });
+
+  const guardiansByStudent = new Map<string, typeof guardians>();
+  const recipientKeys = new Set<string>();
+  for (const guardian of guardians ?? []) {
+    if (!guardian.line_user_id) continue;
+    const key = `${guardian.student_id}:${guardian.line_user_id}`;
+    if (recipientKeys.has(key)) continue;
+    recipientKeys.add(key);
+    const values = guardiansByStudent.get(guardian.student_id) ?? [];
+    values.push(guardian);
+    guardiansByStudent.set(guardian.student_id, values);
+  }
+
+  const classroom = Array.isArray(teacherAssignment.classroom)
+    ? teacherAssignment.classroom[0]
+    : teacherAssignment.classroom;
+  const semester = Array.isArray(teacherAssignment.semester)
+    ? teacherAssignment.semester[0]
+    : teacherAssignment.semester;
+  const academicYear = classroom?.academic_year as unknown as
+    | { year: string }
+    | Array<{ year: string }>
+    | null;
+  const year = Array.isArray(academicYear) ? academicYear[0]?.year : academicYear?.year;
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60_000);
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
+  const { data: existingDeliveries } = await supabaseAdmin
+    .from('line_notification_deliveries')
+    .select('guardian_id')
+    .eq('school_id', schoolId)
+    .eq('source_type', 'grade_result')
+    .eq('source_record_id', batch.id);
+  const existingGuardianIds = new Set(
+    (existingDeliveries ?? []).map((delivery) => delivery.guardian_id)
+  );
+  const deliveries: Array<Record<string, unknown>> = [];
+  const shareTokens: Array<Record<string, unknown>> = [];
+
+  for (const student of students) {
+    const studentName =
+      `${student.name_prefix ?? ''}${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() ||
+      student.username;
+    for (const guardian of guardiansByStudent.get(student.id) ?? []) {
+      if (existingGuardianIds.has(guardian.id)) continue;
+      const token = randomBytes(32).toString('base64url');
+      shareTokens.push({
+        batch_id: batch.id,
+        school_id: schoolId,
+        guardian_id: guardian.id,
+        student_id: student.id,
+        token_hash: createHash('sha256').update(token).digest('hex'),
+        expires_at: expiresAt.toISOString(),
+        revoked_at: null,
+        created_by: requestedBy,
+      });
+      const downloadUrl = `${normalizedBaseUrl}/api/guardian/grade-report/${token}`;
+      deliveries.push({
+        school_id: schoolId,
+        guardian_id: guardian.id,
+        student_id: student.id,
+        source_type: 'grade_result',
+        source_record_id: batch.id,
+        event_type: 'grade_result',
+        message_text: [
+          '📘 ใบแจ้งผลการเรียน',
+          school?.name ? `โรงเรียน ${school.name}` : '',
+          `นักเรียน ${studentName}`,
+          student.student_code ? `รหัสนักเรียน ${student.student_code}` : '',
+          classroom?.name ? `ห้อง ${classroom.name}` : '',
+          `ภาคเรียนที่ ${semester?.name ?? '-'} ปีการศึกษา ${year ?? '-'}`,
+          `รวมผลการเรียน ${subjectAssignments.length} รายวิชา`,
+          '',
+          'ดาวน์โหลดใบแจ้งผลการเรียน PDF:',
+          downloadUrl,
+          '',
+          `ลิงก์หมดอายุวันที่ ${new Intl.DateTimeFormat('th-TH', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          }).format(expiresAt)}`,
+        ]
+          .filter((line) => line !== null && line !== undefined)
+          .join('\n'),
+        status: 'pending',
+        attempts: 0,
+        next_attempt_at: new Date().toISOString(),
+        requested_by: requestedBy,
+      });
+    }
+  }
+
+  if (deliveries.length) {
+    const { error: tokenError } = await supabaseAdmin
+      .from('grade_report_share_tokens')
+      .upsert(shareTokens, { onConflict: 'batch_id,guardian_id' });
+    if (tokenError) throw tokenError;
+
+    const { error: deliveryError } = await supabaseAdmin
+      .from('line_notification_deliveries')
+      .upsert(deliveries, {
+        onConflict: 'guardian_id,source_type,source_record_id,event_type',
+        ignoreDuplicates: true,
+      });
+    if (deliveryError) throw deliveryError;
+  }
+
+  const { data: deliveryRows } = await supabaseAdmin
+    .from('line_notification_deliveries')
+    .select('id')
+    .eq('school_id', schoolId)
+    .eq('source_type', 'grade_result')
+    .eq('source_record_id', batch.id);
+
+  return {
+    batchId: batch.id,
+    deliveryIds: (deliveryRows ?? []).map((row) => row.id),
+    eligibleStudents: students.length,
+    linkedStudents: guardiansByStudent.size,
+    subjectCount: subjectAssignments.length,
+    ready: true,
+  };
 }
 
 export async function processPendingLineNotifications(schoolId: string, deliveryIds?: string[]) {

@@ -267,7 +267,7 @@ export function SchoolProfileView({ readOnly = false }: Props) {
           gridTemplateColumns: { xs: '1fr', md: '320px minmax(0, 1fr)' },
         }}
       >
-        <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3 }, height: '100%' }}>
           <Box sx={{ mb: 3 }}>
             <Typography component="h2" variant="h6">
               โลโก้โรงเรียน
@@ -287,9 +287,6 @@ export function SchoolProfileView({ readOnly = false }: Props) {
                   overflow: 'hidden',
                   borderRadius: 3,
                   placeItems: 'center',
-                  bgcolor: 'background.neutral',
-                  border: '1px solid',
-                  borderColor: 'divider',
                 }}
               >
                 {school.logo_url ? (
@@ -332,7 +329,11 @@ export function SchoolProfileView({ readOnly = false }: Props) {
           </Box>
 
           {!readOnly && (
-            <Alert severity="info" icon={<RemixIcon icon="solar:info-circle-bold" />} sx={{ mt: 3 }}>
+            <Alert
+              severity="info"
+              icon={<RemixIcon icon="solar:info-circle-bold" />}
+              sx={{ mt: 3 }}
+            >
               แนะนำรูปสี่เหลี่ยมจัตุรัส พื้นหลังโปร่งใส เพื่อให้แสดงผลได้สวยในทุกจุด
             </Alert>
           )}
@@ -445,7 +446,14 @@ export function SchoolProfileView({ readOnly = false }: Props) {
       </Box>
 
       <Card variant="outlined" sx={{ mt: 3 }}>
-        <Box sx={{ px: { xs: 2.5, sm: 3 }, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box
+          sx={{
+            px: { xs: 2.5, sm: 3 },
+            py: 2.5,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
           <Typography component="h2" variant="h6">
             บอร์ดบุคลากรโรงเรียน
           </Typography>
@@ -550,7 +558,10 @@ export function SchoolProfileView({ readOnly = false }: Props) {
               )}
               {!teachersQuery.isLoading && !teachersQuery.data?.length && (
                 <TableRow>
-                  <TableCell colSpan={5} sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={5}
+                    sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
+                  >
                     ยังไม่มีบุคลากรในโรงเรียนนี้
                   </TableCell>
                 </TableRow>
@@ -656,9 +667,6 @@ function ReadOnlyInfo({ icon, label, value, description }: ReadOnlyInfoProps) {
         p: 2,
         display: 'flex',
         borderRadius: 2,
-        bgcolor: 'background.neutral',
-        border: '1px solid',
-        borderColor: 'divider',
       }}
     >
       <Box

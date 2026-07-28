@@ -60,6 +60,42 @@ export const SCHOOL_FEATURES = [
     description: 'แจ้งขาด ลา สาย และไม่เข้าเรียนรายคาบผ่าน LINE Official Account',
   },
   {
+    key: 'admin.departments',
+    group: 'การตั้งค่าโรงเรียน',
+    label: 'จัดการฝ่าย',
+    description: 'สร้างฝ่าย กำหนดหัวหน้า สมาชิก และมอบหมายงานของแต่ละฝ่าย',
+  },
+  {
+    key: 'admin.access_permissions',
+    group: 'การตั้งค่าโรงเรียน',
+    label: 'สิทธิ์การใช้งาน',
+    description: 'กำหนดสิทธิ์ตามประเภทบุคลากร ฝ่าย และรายบุคคล',
+  },
+  {
+    key: 'admin.staff_masters',
+    group: 'การตั้งค่าโรงเรียน',
+    label: 'ข้อมูลหลักบุคลากร',
+    description: 'จัดการประเภทบุคลากร ตำแหน่ง และวิทยฐานะ',
+  },
+  {
+    key: 'academic.schedule_workflow',
+    group: 'งานวิชาการ',
+    label: 'ตารางสอนและการลงนาม',
+    description: 'จัดตารางสอน ส่งลงนาม ติดตามสถานะ และอนุมัติตารางสอน',
+  },
+  {
+    key: 'academic.grade_workflow',
+    group: 'งานวิชาการ',
+    label: 'ตรวจสอบและรับรองผลการเรียน',
+    description: 'รับคะแนน ตรวจสอบ อนุมัติ และดูผลการเรียนย้อนหลัง',
+  },
+  {
+    key: 'academic.documents',
+    group: 'งานวิชาการ',
+    label: 'เอกสารการศึกษา',
+    description: 'ดูตัวอย่างและจัดทำเอกสาร ปพ. และใบรับรองทางการศึกษา',
+  },
+  {
     key: 'teacher.assignments',
     group: 'ครู',
     label: 'วิชาที่สอน งาน และคะแนน',

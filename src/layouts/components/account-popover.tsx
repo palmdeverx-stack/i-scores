@@ -45,6 +45,13 @@ export type AccountPopoverProps = IconButtonProps & {
   }[];
 };
 
+const POSITION_FALLBACK: Record<string, string> = {
+  master_admin: 'ผู้ดูแลระบบหลัก',
+  school_admin: 'ผู้ดูแลโรงเรียน',
+  teacher: 'ครู/บุคลากร',
+  student: 'นักเรียน',
+};
+
 export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps) {
   const pathname = usePathname();
   const { t } = useTranslate('navbar');
@@ -52,6 +59,7 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
   const { open, anchorEl, onClose, onOpen } = usePopover();
 
   const { user } = useAuthContext();
+  const positionTitle = user?.position_title || POSITION_FALLBACK[user?.role] || '-';
 
   const studentMenu = [
     {
@@ -203,7 +211,7 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
         </Typography>
 
         <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
-          {user?.role}
+          {positionTitle}
         </Typography>
       </Box>
 
