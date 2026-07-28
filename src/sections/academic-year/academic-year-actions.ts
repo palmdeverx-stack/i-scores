@@ -17,6 +17,10 @@ export type Semester = {
   start_date: string | null;
   end_date: string | null;
   is_active: boolean;
+  grade_submission_deadline: string | null;
+  grade_reminder_days: number | null;
+  grade_reminder_notify_in_app: boolean;
+  grade_reminder_notify_line: boolean;
   created_at: string;
 };
 
@@ -89,6 +93,10 @@ export type SaveSemesterParams = {
   startDate: string;
   endDate: string;
   isActive?: boolean;
+  gradeSubmissionDeadline?: string;
+  gradeReminderDays?: number;
+  gradeReminderNotifyInApp?: boolean;
+  gradeReminderNotifyLine?: boolean;
 };
 
 export async function createSemester(params: SaveSemesterParams): Promise<Semester> {

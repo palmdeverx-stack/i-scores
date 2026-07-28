@@ -2,13 +2,10 @@
 
 import type { AcademicYear } from '../academic-year-actions';
 
-import * as z from 'zod';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { usePopover } from 'minimal-shared/hooks';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -16,7 +13,6 @@ import Chip from '@mui/material/Chip';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
@@ -27,61 +23,33 @@ import TableHead from '@mui/material/TableHead';
 import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { RemixIcon } from 'src/components/remix-icon';
-import { Form, Field } from 'src/components/hook-form';
 import { CustomPopover } from 'src/components/custom-popover';
+import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { useAuthContext } from 'src/auth/hooks';
 
-import {
-  listAcademicYears,
-  createAcademicYear,
-  deleteAcademicYear,
-  updateAcademicYear,
-} from '../academic-year-actions';
+import { listAcademicYears } from '../academic-year-actions';
+import { AcademicYearFormDialog } from '../components/academic-year-form-dialog';
+import { AcademicYearDeleteDialog } from '../components/academic-year-delete-dialog';
 
 // ----------------------------------------------------------------------
-
-const CreateSchema = z
-  .object({
-    year: z
-      .string()
-      .trim()
-      .min(1, { error: 'กรุณากรอกปีการศึกษา!' })
-      .regex(/^\d{4}$/, { error: 'กรุณากรอกปีการศึกษาเป็นตัวเลข 4 หลัก!' }),
-    startDate: z.string().min(1, { error: 'กรุณาเลือกวันที่เริ่มต้น!' }),
-    endDate: z.string().min(1, { error: 'กรุณาเลือกวันที่สิ้นสุด!' }),
-    isActive: z.boolean(),
-  })
-  .refine(
-    (data) =>
-      !data.startDate ||
-      !data.endDate ||
-      dayjs(data.endDate).isAfter(data.startDate) ||
-      dayjs(data.endDate).isSame(data.startDate, 'day'),
-    {
-      path: ['endDate'],
-      error: 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น!',
-    }
-  );
 
 export function AcademicYearListView() {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
+  const table = useTable({ defaultRowsPerPage: 10 });
   const rowMenu = usePopover();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [menuYear, setMenuYear] = useState<AcademicYear | null>(null);
   const [editingYear, setEditingYear] = useState<AcademicYear | null>(null);
   const [deletingYear, setDeletingYear] = useState<AcademicYear | null>(null);
-  const queryClient = useQueryClient();
+  const [today] = useState(() => dayjs().startOf('day'));
 
   const {
     data: academicYears = [],
@@ -92,71 +60,22 @@ export function AcademicYearListView() {
     queryKey: ['academic-years'],
     queryFn: listAcademicYears,
   });
-
-  const methods = useForm({
-    resolver: zodResolver(CreateSchema),
-    defaultValues: { year: '', startDate: '', endDate: '', isActive: true },
-  });
-  const { handleSubmit, reset } = methods;
-
-  const saveMutation = useMutation({
-    mutationFn: (data: z.infer<typeof CreateSchema>) =>
-      editingYear
-        ? updateAcademicYear(editingYear.id, {
-            year: data.year,
-            startDate: dayjs(data.startDate).format('YYYY-MM-DD'),
-            endDate: dayjs(data.endDate).format('YYYY-MM-DD'),
-            isActive: data.isActive,
-          })
-        : createAcademicYear({
-            year: data.year,
-            startDate: dayjs(data.startDate).format('YYYY-MM-DD'),
-            endDate: dayjs(data.endDate).format('YYYY-MM-DD'),
-          }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['academic-years'] });
-      setDialogOpen(false);
-      setEditingYear(null);
-      reset({ year: '', startDate: '', endDate: '', isActive: true });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteAcademicYear,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['academic-years'] });
-      setDeletingYear(null);
-    },
-  });
+  const visibleAcademicYears = rowInPage(academicYears, table.page, table.rowsPerPage);
 
   const openCreateDialog = () => {
     setEditingYear(null);
-    reset({ year: '', startDate: '', endDate: '', isActive: true });
-    saveMutation.reset();
     setDialogOpen(true);
   };
 
   const openEditDialog = (year: AcademicYear) => {
     setEditingYear(year);
-    reset({
-      year: year.year,
-      startDate: year.start_date ?? '',
-      endDate: year.end_date ?? '',
-      isActive: year.is_active,
-    });
-    saveMutation.reset();
     setDialogOpen(true);
   };
 
   const closeDialog = () => {
-    if (saveMutation.isPending) return;
     setDialogOpen(false);
     setEditingYear(null);
-    reset({ year: '', startDate: '', endDate: '', isActive: true });
-    saveMutation.reset();
   };
-
-  const onSubmit = handleSubmit((data) => saveMutation.mutate({ ...data, year: data.year.trim() }));
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
@@ -218,8 +137,11 @@ export function AcademicYearListView() {
         />
         <SummaryCard
           icon="solar:check-circle-bold"
-          label="กำลังใช้งาน"
-          value={academicYears.filter((year) => year.is_active).length}
+          label="ปีการศึกษาปัจจุบัน"
+          value={
+            academicYears.filter((year) => getAcademicYearStatus(year, today).value === 'current')
+              .length
+          }
           color="success.main"
         />
         <SummaryCard
@@ -269,50 +191,67 @@ export function AcademicYearListView() {
                 </TableRow>
               )}
 
-              {academicYears.map((year) => (
-                <TableRow key={year.id} hover>
-                  <TableCell>
-                    <Typography variant="subtitle2">{year.year}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    {year.start_date && year.end_date ? (
-                      <Box sx={{ gap: 0.5, display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="body2">{formatThaiDate(year.start_date)}</Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          ถึง {formatThaiDate(year.end_date)}
+              {visibleAcademicYears.map((year) => {
+                const status = getAcademicYearStatus(year, today);
+
+                return (
+                  <TableRow key={year.id} hover>
+                    <TableCell>
+                      <Typography variant="subtitle2">{year.year}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      {year.start_date && year.end_date ? (
+                        <Box sx={{ gap: 0.5, display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="body2">{formatThaiDate(year.start_date)}</Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            ถึง {formatThaiDate(year.end_date)}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+                          ยังไม่กำหนด
                         </Typography>
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: 'text.disabled' }}>
-                        ยังไม่กำหนด
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      variant="soft"
-                      color={year.is_active ? 'success' : 'default'}
-                      label={year.is_active ? 'กำลังใช้งาน' : 'ไม่ได้ใช้งาน'}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={(event) => {
-                        setMenuYear(year);
-                        rowMenu.onOpen(event);
-                      }}
-                      aria-label={`ตัวเลือกเพิ่มเติมสำหรับปีการศึกษา ${year.year}`}
-                    >
-                      <RemixIcon icon="eva:more-vertical-fill" width={20} />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Chip size="small" variant="soft" color={status.color} label={status.label} />
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        onClick={(event) => {
+                          setMenuYear(year);
+                          rowMenu.onOpen(event);
+                        }}
+                        aria-label={`ตัวเลือกเพิ่มเติมสำหรับปีการศึกษา ${year.year}`}
+                      >
+                        <RemixIcon icon="eva:more-vertical-fill" width={20} />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
+
+        <TablePaginationCustom
+          page={table.page}
+          count={academicYears.length}
+          rowsPerPage={table.rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={table.onChangePage}
+          onRowsPerPageChange={table.onChangeRowsPerPage}
+          labelRowsPerPage="แสดงต่อหน้า"
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} จาก ${count}`}
+          getItemAriaLabel={(type) => {
+            if (type === 'first') return 'หน้าแรก';
+            if (type === 'last') return 'หน้าสุดท้าย';
+            if (type === 'next') return 'หน้าถัดไป';
+            return 'หน้าก่อนหน้า';
+          }}
+          sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+        />
       </Card>
 
       <CustomPopover open={rowMenu.open} anchorEl={rowMenu.anchorEl} onClose={rowMenu.onClose}>
@@ -342,10 +281,7 @@ export function AcademicYearListView() {
           <MenuItem
             sx={{ color: 'error.main' }}
             onClick={() => {
-              if (menuYear) {
-                deleteMutation.reset();
-                setDeletingYear(menuYear);
-              }
+              if (menuYear) setDeletingYear(menuYear);
               rowMenu.onClose();
             }}
           >
@@ -355,127 +291,12 @@ export function AcademicYearListView() {
         </MenuList>
       </CustomPopover>
 
-      <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="xs">
-        <Form methods={methods} onSubmit={onSubmit}>
-          <DialogTitle sx={{ pb: 1 }}>
-            <Box
-              sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}
-            >
-              <Box>
-                <Typography component="h2" variant="h6">
-                  {editingYear ? 'แก้ไขปีการศึกษา' : 'เพิ่มปีการศึกษา'}
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                  {editingYear
-                    ? 'ปรับปีและสถานะการใช้งาน'
-                    : 'สร้างปีการศึกษาใหม่สำหรับจัดกลุ่มภาคเรียน'}
-                </Typography>
-              </Box>
-              <IconButton
-                onClick={closeDialog}
-                disabled={saveMutation.isPending}
-                aria-label="ปิดหน้าต่าง"
-              >
-                <RemixIcon icon="mingcute:close-line" />
-              </IconButton>
-            </Box>
-          </DialogTitle>
-
-          <DialogContent sx={{ pt: 2 }}>
-            {saveMutation.error && (
-              <Alert severity="error" sx={{ mb: 2.5 }}>
-                {saveMutation.error.message}
-              </Alert>
-            )}
-            <Field.Text
-              name="year"
-              label="ปีการศึกษา *"
-              placeholder="เช่น 2569"
-              helperText="กรอกเป็นตัวเลข พ.ศ. 4 หลัก"
-              autoFocus
-              slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 4 } }}
-            />
-            <Box
-              sx={{
-                gap: 2,
-                mt: 2.5,
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-              }}
-            >
-              <Field.DatePicker
-                name="startDate"
-                label="วันที่เริ่มต้น *"
-                format="DD/MM/YYYY"
-                slotProps={{ textField: { fullWidth: true, helperText: 'วันเปิดปีการศึกษา' } }}
-              />
-              <Field.DatePicker
-                name="endDate"
-                label="วันที่สิ้นสุด *"
-                format="DD/MM/YYYY"
-                slotProps={{ textField: { fullWidth: true, helperText: 'วันปิดปีการศึกษา' } }}
-              />
-            </Box>
-            {editingYear && (
-              <Field.Switch
-                name="isActive"
-                label="เปิดใช้งานปีการศึกษานี้"
-                helperText="ปีที่ปิดใช้งานจะยังคงอยู่ในระบบ แต่แสดงสถานะไม่ได้ใช้งาน"
-                sx={{ mt: 2 }}
-              />
-            )}
-          </DialogContent>
-
-          <DialogActions>
-            <Button color="inherit" onClick={closeDialog} disabled={saveMutation.isPending}>
-              ยกเลิก
-            </Button>
-            <Button type="submit" variant="contained" loading={saveMutation.isPending}>
-              {editingYear ? 'บันทึกการแก้ไข' : 'เพิ่มปีการศึกษา'}
-            </Button>
-          </DialogActions>
-        </Form>
-      </Dialog>
-
-      <Dialog
-        open={!!deletingYear}
-        onClose={() => !deleteMutation.isPending && setDeletingYear(null)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>ยืนยันการลบปีการศึกษา</DialogTitle>
-        <DialogContent>
-          {deleteMutation.error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {deleteMutation.error.message}
-            </Alert>
-          )}
-          <Typography variant="body2">
-            ต้องการลบปีการศึกษา <strong>{deletingYear?.year}</strong> ใช่หรือไม่?
-          </Typography>
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            ภาคเรียน ห้องเรียน รายชื่อนักเรียน งาน และคะแนนที่เชื่อมโยงอาจถูกลบตามไปด้วย
-            การดำเนินการนี้ย้อนกลับไม่ได้
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            color="inherit"
-            onClick={() => setDeletingYear(null)}
-            disabled={deleteMutation.isPending}
-          >
-            ยกเลิก
-          </Button>
-          <Button
-            color="error"
-            variant="contained"
-            loading={deleteMutation.isPending}
-            onClick={() => deletingYear && deleteMutation.mutate(deletingYear.id)}
-          >
-            ลบปีการศึกษา
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <AcademicYearFormDialog open={dialogOpen} academicYear={editingYear} onClose={closeDialog} />
+      <AcademicYearDeleteDialog
+        academicYear={deletingYear}
+        onClose={() => setDeletingYear(null)}
+        onDeleted={() => table.onUpdatePageDeleteRow(visibleAcademicYears.length)}
+      />
     </Container>
   );
 }
@@ -516,6 +337,22 @@ function SummaryCard({ icon, label, value, color }: SummaryCardProps) {
       </Box>
     </Card>
   );
+}
+
+function getAcademicYearStatus(year: AcademicYear, today: ReturnType<typeof dayjs>) {
+  if (!year.start_date || !year.end_date) {
+    return { value: 'not_set', label: 'ยังไม่กำหนด', color: 'default' } as const;
+  }
+
+  if (today.isBefore(dayjs(year.start_date), 'day')) {
+    return { value: 'upcoming', label: 'ยังไม่เริ่ม', color: 'info' } as const;
+  }
+
+  if (today.isAfter(dayjs(year.end_date), 'day')) {
+    return { value: 'ended', label: 'สิ้นสุดแล้ว', color: 'default' } as const;
+  }
+
+  return { value: 'current', label: 'ปัจจุบัน', color: 'success' } as const;
 }
 
 function formatThaiDate(value: string) {

@@ -49,7 +49,7 @@ export async function GET(request: Request) {
   let query = supabaseAdmin
     .from('app_users')
     .select(
-      'id, username, email, first_name, last_name, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, student_code, national_id, name_prefix, first_name_en, last_name_en, nickname, gender, birth_date, nationality, ethnicity, religion, is_active, password_ciphertext, import_confirmed_at, staff_type, employment_status, employment_start_date, appointment_date, contract_end_date, position_title, academic_rank, is_school_director'
+      'id, username, email, first_name, last_name, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, student_code, national_id, name_prefix, first_name_en, last_name_en, nickname, gender, birth_date, nationality, ethnicity, religion, is_active, password_ciphertext, import_confirmed_at, staff_type, employment_status, employment_start_date, appointment_date, contract_end_date, position_title, academic_rank, is_school_director, line_linked_at, line_display_name'
     )
     .order('created_at', { ascending: false });
 

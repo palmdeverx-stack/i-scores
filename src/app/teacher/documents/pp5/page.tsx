@@ -19,11 +19,11 @@ export default async function Page({ searchParams }: Props) {
   const query = await searchParams;
   const template = getSchoolDocumentTemplate('pp5')!;
   return (
-    <DepartmentPermissionGuard permission="grades.review">
+    <DepartmentPermissionGuard permission="documents.access">
       <DocumentDetailView
         template={template}
         initialPreview={query.preview === '1'}
-        backPath={paths.teacher.documents.root}
+        backPath={paths.teacher.documents.templates}
       />
     </DepartmentPermissionGuard>
   );

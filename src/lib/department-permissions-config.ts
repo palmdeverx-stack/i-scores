@@ -63,6 +63,12 @@ export const DEPARTMENT_PERMISSIONS = [
     description: 'อนุมัติผลการเรียนที่ฝ่ายวิชาการตรวจสอบแล้ว สำหรับผู้บริหารเท่านั้น',
   },
   {
+    key: 'documents.access',
+    label: 'เอกสาร',
+    description: 'สร้างและติดตามเอกสารของตนเอง รวมถึงดูตัวอย่างเอกสารของโรงเรียน',
+    manageable: false,
+  },
+  {
     key: 'academic_years.manage',
     label: 'ปีการศึกษา',
     description: 'สร้าง แก้ไข และเปิด/ปิดใช้งานปีการศึกษาและภาคเรียนของทั้งโรงเรียน',
@@ -96,8 +102,7 @@ export const DEPARTMENT_PERMISSIONS = [
   {
     key: 'staff.manage',
     label: 'บุคลากร',
-    description:
-      'ดูรายชื่อครู/บุคลากรทั้งโรงเรียน โดยไม่แสดงรหัสผ่านและไม่อนุญาตให้จัดการบัญชี',
+    description: 'ดูรายชื่อครู/บุคลากรทั้งโรงเรียน โดยไม่แสดงรหัสผ่านและไม่อนุญาตให้จัดการบัญชี',
     manageable: false,
   },
 ] as const;
@@ -107,8 +112,7 @@ export type DepartmentPermissionKey = (typeof DEPARTMENT_PERMISSIONS)[number]['k
 export const DEPARTMENT_PERMISSION_KEYS = DEPARTMENT_PERMISSIONS.map((item) => item.key);
 export const DEPARTMENT_DELEGABLE_PERMISSIONS = DEPARTMENT_PERMISSIONS.filter(
   (item) =>
-    !item.key.startsWith('teaching.') &&
-    !['schedule.approve', 'grades.approve'].includes(item.key)
+    !item.key.startsWith('teaching.') && !['schedule.approve', 'grades.approve'].includes(item.key)
 );
 
 export function isDepartmentPermissionKey(value: string): value is DepartmentPermissionKey {
@@ -121,8 +125,5 @@ export function isManageableDepartmentPermission(value: DepartmentPermissionKey)
 }
 
 export function isDepartmentDelegablePermission(value: DepartmentPermissionKey): boolean {
-  return (
-    !value.startsWith('teaching.') &&
-    !['schedule.approve', 'grades.approve'].includes(value)
-  );
+  return !value.startsWith('teaching.') && !['schedule.approve', 'grades.approve'].includes(value);
 }

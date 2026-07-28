@@ -3,13 +3,14 @@
 import type { RemixIconName } from 'src/components/remix-icon/icon-map';
 import type { ClassroomTeacher } from 'src/sections/classroom/classroom-actions';
 
-import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
@@ -22,6 +23,7 @@ import { Label } from 'src/components/label';
 import { RemixIcon } from 'src/components/remix-icon';
 
 import { listClassrooms } from 'src/sections/classroom/classroom-actions';
+import { listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -35,7 +37,47 @@ export function EnrollmentOverviewView() {
   const isTeacher = user?.role === 'teacher';
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const [academicYearId, setAcademicYearId] = useState('');
+  const [currentAcademicYearId, setCurrentAcademicYearId] = useState('');
   const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
+
+  const {
+    data: academicYears = [],
+    isLoading: academicYearsLoading,
+    isError: academicYearsError,
+    refetch: refetchAcademicYears,
+  } = useQuery({
+    queryKey: ['academic-years'],
+    queryFn: listAcademicYears,
+  });
+
+  useEffect(() => {
+    if (!academicYears.length) {
+      setCurrentAcademicYearId('');
+      return;
+    }
+
+    const now = new Date();
+    const currentYear = academicYears.find((item) => {
+      if (!item.start_date || !item.end_date) return false;
+
+      const startDate = new Date(`${item.start_date}T00:00:00`);
+      const endDate = new Date(`${item.end_date}T23:59:59`);
+
+      return startDate <= now && now <= endDate;
+    });
+    const gregorianYear = String(now.getFullYear());
+    const buddhistYear = String(now.getFullYear() + 543);
+    const matchingYear = academicYears.find(
+      (item) => item.year === gregorianYear || item.year === buddhistYear
+    );
+    const defaultYear = currentYear ?? matchingYear ?? academicYears[0];
+
+    setCurrentAcademicYearId(currentYear?.id ?? '');
+    setAcademicYearId((current) =>
+      current && academicYears.some((item) => item.id === current) ? current : defaultYear.id
+    );
+  }, [academicYears]);
 
   const {
     data: classrooms = [],
@@ -43,8 +85,9 @@ export function EnrollmentOverviewView() {
     isError: classroomsError,
     refetch: refetchClassrooms,
   } = useQuery({
-    queryKey: ['classrooms'],
-    queryFn: () => listClassrooms(),
+    queryKey: ['classrooms', { academicYearId }],
+    queryFn: () => listClassrooms({ academicYearId }),
+    enabled: !!academicYearId,
   });
   const {
     data: enrollments = [],
@@ -52,8 +95,9 @@ export function EnrollmentOverviewView() {
     isError: enrollmentsError,
     refetch: refetchEnrollments,
   } = useQuery({
-    queryKey: ['enrollments', 'all'],
-    queryFn: () => listEnrollments(),
+    queryKey: ['enrollments', { academicYearId }],
+    queryFn: () => listEnrollments({ academicYearId }),
+    enabled: !!academicYearId,
   });
 
   const classroomCounts = useMemo(() => {
@@ -101,8 +145,10 @@ export function EnrollmentOverviewView() {
     }, []);
   }, [classrooms, search]);
 
-  const isLoading = classroomsLoading || enrollmentsLoading;
-  const isError = classroomsError || enrollmentsError;
+  const isLoading =
+    academicYearsLoading ||
+    (!!academicYearId && (classroomsLoading || enrollmentsLoading));
+  const isError = academicYearsError || classroomsError || enrollmentsError;
   const registeredStudents = new Set(enrollments.map((enrollment) => enrollment.student.id)).size;
   const emptyClassrooms = classrooms.filter(
     (classroom) => !classroomCounts.get(classroom.id)
@@ -128,13 +174,44 @@ export function EnrollmentOverviewView() {
             เลือกชั้นเรียนเพื่อดูรายชื่อและเพิ่มนักเรียนเข้าห้อง
           </Typography>
         </Box>
-        <Button
-          variant="outlined"
-          onClick={() => setPromoteDialogOpen(true)}
-          startIcon={<RemixIcon icon="solar:double-alt-arrow-up-bold-duotone" />}
+        <Box
+          sx={{
+            gap: 1.5,
+            width: { xs: 1, sm: 'auto' },
+            display: 'flex',
+            alignItems: 'center',
+            flexDirection: { xs: 'column', sm: 'row' },
+          }}
         >
-          เลื่อนชั้นยกชุด
-        </Button>
+          <TextField
+            select
+            size="small"
+            label="ปีการศึกษา"
+            value={academicYearId}
+            disabled={academicYearsLoading || !academicYears.length}
+            onChange={(event) => {
+              setAcademicYearId(event.target.value);
+              setSearch('');
+            }}
+            sx={{ width: { xs: 1, sm: 190 } }}
+          >
+            {academicYears.map((academicYear) => (
+              <MenuItem key={academicYear.id} value={academicYear.id}>
+                ปีการศึกษา {academicYear.year}
+                {academicYear.id === currentAcademicYearId ? ' (ปัจจุบัน)' : ''}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Button
+            variant="outlined"
+            disabled={!academicYearId}
+            onClick={() => setPromoteDialogOpen(true)}
+            startIcon={<RemixIcon icon="solar:double-alt-arrow-up-bold-duotone" />}
+            sx={{ width: { xs: 1, sm: 'auto' }, whiteSpace: 'nowrap' }}
+          >
+            เลื่อนชั้นยกชุด
+          </Button>
+        </Box>
       </Box>
 
       {isError && (
@@ -145,6 +222,7 @@ export function EnrollmentOverviewView() {
               color="inherit"
               size="small"
               onClick={() => {
+                refetchAcademicYears();
                 refetchClassrooms();
                 refetchEnrollments();
               }}
@@ -231,7 +309,11 @@ export function EnrollmentOverviewView() {
           <Box sx={{ py: 8, textAlign: 'center', color: 'text.secondary' }}>
             <RemixIcon icon="solar:users-group-rounded-bold-duotone" width={48} />
             <Typography sx={{ mt: 1 }}>
-              {classrooms.length ? 'ไม่พบชั้นเรียนที่ค้นหา' : 'ยังไม่มีชั้นเรียน'}
+              {classrooms.length
+                ? 'ไม่พบชั้นเรียนที่ค้นหา'
+                : academicYears.length
+                  ? 'ยังไม่มีชั้นเรียนในปีการศึกษานี้'
+                  : 'ยังไม่มีปีการศึกษา'}
             </Typography>
           </Box>
         )}

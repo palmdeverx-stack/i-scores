@@ -1,5 +1,7 @@
 'use client';
 
+import type { TeacherLineInvitation } from 'src/sections/teacher-line/teacher-line-actions';
+
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
 import { useState, useEffect } from 'react';
@@ -14,6 +16,7 @@ import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
+import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
@@ -32,6 +35,13 @@ import { UploadAvatar } from 'src/components/upload';
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
+import { TeacherLineDialog } from 'src/sections/teacher-line/components/teacher-line-dialog';
+import {
+  unlinkTeacherLine,
+  getTeacherLineStatus,
+  createTeacherLineInvitation,
+} from 'src/sections/teacher-line/teacher-line-actions';
+
 import { useAuthContext } from 'src/auth/hooks';
 
 import { STAFF_TYPES, EMPLOYMENT_STATUSES } from 'src/types/staff-employment';
@@ -49,16 +59,18 @@ import {
 const ProfileSchema = z.object({
   firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อภาษาไทย' }),
   lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุลภาษาไทย' }),
-  namePrefix: z.string().max(30, { error: 'คำนำหน้าชื่อยาวเกินไป' }),
+  namePrefix: z
+    .string()
+    .trim()
+    .min(1, { error: 'กรุณาเลือกคำนำหน้าชื่อ' })
+    .max(30, { error: 'คำนำหน้าชื่อยาวเกินไป' }),
   firstNameEn: z.string(),
   lastNameEn: z.string(),
   nickname: z.string().max(100, { error: 'ชื่อเล่นยาวเกินไป' }),
   email: z.union([z.literal(''), z.email({ error: 'รูปแบบอีเมลไม่ถูกต้อง' })]),
-  phone: z
-    .string()
-    .refine((value) => !value || /^\+?[0-9][0-9 -]{7,19}$/.test(value), {
-      error: 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง',
-    }),
+  phone: z.string().refine((value) => !value || /^\+?[0-9][0-9 -]{7,19}$/.test(value), {
+    error: 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง',
+  }),
   address: z.string().max(500, { error: 'ที่อยู่ยาวเกิน 500 ตัวอักษร' }),
   username: z.string(),
 });
@@ -96,6 +108,9 @@ export function TeacherProfileView() {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [isPreparingAvatar, setIsPreparingAvatar] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [lineDialogOpen, setLineDialogOpen] = useState(false);
+  const [lineInvitation, setLineInvitation] = useState<TeacherLineInvitation | null>(null);
+  const [lineQrImage, setLineQrImage] = useState('');
 
   useEffect(() => {
     setCurrentTime(new Date());
@@ -184,6 +199,66 @@ export function TeacherProfileView() {
     mutationFn: deleteTeacherAvatar,
     onSuccess: refreshProfile,
   });
+
+  const lineStatusQuery = useQuery({
+    queryKey: ['teacher-line-status'],
+    queryFn: getTeacherLineStatus,
+    refetchInterval: (statusQuery) =>
+      lineDialogOpen && !statusQuery.state.data?.linked ? 2000 : false,
+  });
+  const lineInviteMutation = useMutation({
+    mutationFn: createTeacherLineInvitation,
+    onSuccess: (invitation) => {
+      setLineQrImage('');
+      setLineInvitation(invitation);
+    },
+  });
+  const unlinkLineMutation = useMutation({
+    mutationFn: unlinkTeacherLine,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['teacher-line-status'] });
+      setLineDialogOpen(false);
+      setLineInvitation(null);
+    },
+  });
+
+  const openLineDialog = () => {
+    setLineDialogOpen(true);
+    setLineInvitation(null);
+    setLineQrImage('');
+    if (!lineStatusQuery.data?.linked) lineInviteMutation.mutate();
+  };
+  const closeLineDialog = () => {
+    setLineDialogOpen(false);
+    setLineInvitation(null);
+    setLineQrImage('');
+  };
+
+  useEffect(() => {
+    const payload = lineInvitation?.lineChatUrl;
+    if (!payload) return undefined;
+    let active = true;
+    void import('qrcode')
+      .then(({ default: QRCode }) =>
+        QRCode.toDataURL(payload, {
+          width: 520,
+          margin: 2,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#111827', light: '#FFFFFF' },
+        })
+      )
+      .then((image) => {
+        if (active) setLineQrImage(image);
+      })
+      .catch(() => {
+        if (active) setLineQrImage('');
+      });
+    return () => {
+      active = false;
+    };
+  }, [lineInvitation?.lineChatUrl]);
+
+  const lineConnected = Boolean(lineStatusQuery.data?.linked);
 
   const prepareAvatar = async (file: File) => {
     setAvatarError(null);
@@ -323,7 +398,9 @@ export function TeacherProfileView() {
               {(profile.position_title || profile.academic_rank) && (
                 <Chip
                   size="small"
-                  label={[profile.position_title, profile.academic_rank].filter(Boolean).join(' · ')}
+                  label={[profile.position_title, profile.academic_rank]
+                    .filter(Boolean)
+                    .join(' · ')}
                   sx={(theme) => ({
                     color: 'common.white',
                     bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.16),
@@ -377,7 +454,13 @@ export function TeacherProfileView() {
                     gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
                   }}
                 >
-                  <Field.Text name="namePrefix" label="คำนำหน้าชื่อ" />
+                  <Field.Select name="namePrefix" label="คำนำหน้าชื่อ *">
+                    {(profile.prefix_options ?? []).map((option) => (
+                      <MenuItem key={option.id} value={option.name}>
+                        {option.name_en ? `${option.name} / ${option.name_en}` : option.name}
+                      </MenuItem>
+                    ))}
+                  </Field.Select>
                   <Field.Text name="nickname" label="ชื่อเล่น" />
                   <Field.Text name="firstName" label="ชื่อภาษาไทย *" autoComplete="given-name" />
                   <Field.Text name="lastName" label="นามสกุลภาษาไทย *" autoComplete="family-name" />
@@ -414,12 +497,7 @@ export function TeacherProfileView() {
                     autoComplete="tel"
                   />
                 </Box>
-                <Field.Text
-                  name="address"
-                  label="ที่อยู่สำหรับติดต่อ"
-                  multiline
-                  minRows={3}
-                />
+                <Field.Text name="address" label="ที่อยู่สำหรับติดต่อ" multiline minRows={3} />
                 <Field.Text
                   name="username"
                   label="ชื่อผู้ใช้"
@@ -695,6 +773,42 @@ export function TeacherProfileView() {
 
           <Card variant="outlined" sx={{ p: 3 }}>
             <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+              <Avatar
+                variant="rounded"
+                sx={{
+                  color: lineConnected ? 'success.main' : 'primary.main',
+                  bgcolor: lineConnected ? 'success.lighter' : 'primary.lighter',
+                }}
+              >
+                <RemixIcon icon="ic:round-vpn-key" />
+              </Avatar>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography component="h2" variant="subtitle1">
+                  แจ้งเตือนผ่าน LINE
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
+                  {lineConnected
+                    ? `เชื่อมแล้ว · ${lineStatusQuery.data?.displayName ?? 'บัญชี LINE'}`
+                    : 'ยังไม่เชื่อมต่อ LINE'}
+                </Typography>
+              </Box>
+            </Box>
+            <Button
+              fullWidth
+              color={lineConnected ? 'inherit' : 'success'}
+              variant={lineConnected ? 'outlined' : 'contained'}
+              startIcon={
+                <RemixIcon icon={lineConnected ? 'solar:settings-bold' : 'solar:qr-code-bold'} />
+              }
+              onClick={openLineDialog}
+              sx={{ mt: 2.5 }}
+            >
+              {lineConnected ? 'จัดการการเชื่อม' : 'เชื่อม LINE'}
+            </Button>
+          </Card>
+
+          <Card variant="outlined" sx={{ p: 3 }}>
+            <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
               <Avatar variant="rounded" sx={{ color: 'primary.main', bgcolor: 'primary.lighter' }}>
                 <RemixIcon icon="solar:shield-keyhole-bold-duotone" />
               </Avatar>
@@ -720,6 +834,19 @@ export function TeacherProfileView() {
           </Card>
         </Box>
       </Box>
+
+      <TeacherLineDialog
+        open={lineDialogOpen}
+        invitation={lineInvitation}
+        qrImage={lineQrImage}
+        connected={lineConnected}
+        connectedDisplayName={lineStatusQuery.data?.displayName}
+        creatingInvitation={lineInviteMutation.isPending}
+        unlinking={unlinkLineMutation.isPending}
+        errorMessage={lineInviteMutation.error?.message ?? unlinkLineMutation.error?.message}
+        onClose={closeLineDialog}
+        onUnlink={() => unlinkLineMutation.mutate()}
+      />
     </Container>
   );
 }

@@ -1,25 +1,10 @@
 import { NextResponse } from 'next/server';
-import { timingSafeEqual } from 'node:crypto';
 
+import { isValidCronSecret } from 'src/lib/cron-auth';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { processPendingLineNotifications } from 'src/lib/line-notifications';
 
 // ----------------------------------------------------------------------
-
-function isValidCronSecret(request: Request): boolean {
-  const cronSecret = process.env.CRON_SECRET;
-  const provided = request.headers.get('authorization') ?? '';
-  const expected = cronSecret ? `Bearer ${cronSecret}` : '';
-
-  const providedBuffer = Buffer.from(provided);
-  const expectedBuffer = Buffer.from(expected);
-
-  return (
-    !!cronSecret &&
-    providedBuffer.length === expectedBuffer.length &&
-    timingSafeEqual(providedBuffer, expectedBuffer)
-  );
-}
 
 export async function GET(request: Request) {
   if (!isValidCronSecret(request)) {

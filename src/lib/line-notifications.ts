@@ -89,6 +89,14 @@ export async function queueAttendanceNotifications({
     );
   if (!relevantRecords.length) return [];
 
+  const { data: holiday } = await supabaseAdmin
+    .from('school_holidays')
+    .select('id')
+    .eq('school_id', schoolId)
+    .eq('holiday_date', attendanceDate)
+    .maybeSingle();
+  if (holiday) return [];
+
   const [{ data: integration }, { data: subscription }, { data: school }] = await Promise.all([
     supabaseAdmin
       .from('school_line_integrations')

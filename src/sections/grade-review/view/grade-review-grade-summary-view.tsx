@@ -22,6 +22,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { RemixIcon } from 'src/components/remix-icon';
+import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { listGradeReviews } from '../grade-review-actions';
 
@@ -34,6 +35,7 @@ export function GradeReviewGradeSummaryView({
 }: {
   gradeBasePath?: string;
 }) {
+  const table = useTable({ defaultRowsPerPage: 10 });
   const { data = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['grade-reviews'],
     queryFn: listGradeReviews,
@@ -78,6 +80,10 @@ export function GradeReviewGradeSummaryView({
       left.label.localeCompare(right.label, 'th', { numeric: true, sensitivity: 'base' })
     );
   }, [data]);
+  const visibleGradeGroups = useMemo(
+    () => rowInPage(gradeGroups, table.page, table.rowsPerPage),
+    [gradeGroups, table.page, table.rowsPerPage]
+  );
 
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
@@ -142,7 +148,7 @@ export function GradeReviewGradeSummaryView({
                   </TableCell>
                 </TableRow>
               )}
-              {gradeGroups.map((group) => {
+              {visibleGradeGroups.map((group) => {
                 const percent = group.subjects
                   ? Math.round((group.completed / group.subjects) * 100)
                   : 0;
@@ -185,6 +191,24 @@ export function GradeReviewGradeSummaryView({
             </TableBody>
           </Table>
         </TableContainer>
+
+        <TablePaginationCustom
+          page={table.page}
+          count={gradeGroups.length}
+          rowsPerPage={table.rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={table.onChangePage}
+          onRowsPerPageChange={table.onChangeRowsPerPage}
+          labelRowsPerPage="แสดงต่อหน้า"
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} จาก ${count}`}
+          getItemAriaLabel={(type) => {
+            if (type === 'first') return 'หน้าแรก';
+            if (type === 'last') return 'หน้าสุดท้าย';
+            if (type === 'next') return 'หน้าถัดไป';
+            return 'หน้าก่อนหน้า';
+          }}
+          sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+        />
       </Card>
     </Container>
   );

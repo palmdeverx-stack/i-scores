@@ -19,6 +19,7 @@ import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 
 import { HelperText } from './help-text';
+import { withRequiredAsterisk } from './required-label';
 
 // ----------------------------------------------------------------------
 
@@ -29,6 +30,7 @@ type RHFSelectProps = TextFieldProps & {
 
 export function RHFSelect({
   name,
+  label,
   children,
   helperText,
   slotProps = {},
@@ -62,6 +64,7 @@ export function RHFSelect({
           {...field}
           select
           fullWidth
+          label={withRequiredAsterisk(label)}
           error={!!error}
           helperText={error?.message ?? helperText}
           slotProps={merge(baseSlotProps, slotProps)}

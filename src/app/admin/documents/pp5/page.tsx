@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { paths } from 'src/routes/paths';
+
 import { CONFIG } from 'src/global-config';
 
 import { getSchoolDocumentTemplate } from 'src/sections/documents/document-catalog';
@@ -17,8 +19,12 @@ export default async function Page({ searchParams }: Props) {
   const query = await searchParams;
   const template = getSchoolDocumentTemplate('pp5')!;
   return (
-    <DepartmentPermissionGuard permission="grades.review">
-      <DocumentDetailView template={template} initialPreview={query.preview === '1'} />
+    <DepartmentPermissionGuard permission="documents.access">
+      <DocumentDetailView
+        template={template}
+        initialPreview={query.preview === '1'}
+        backPath={paths.admin.documents.templates}
+      />
     </DepartmentPermissionGuard>
   );
 }

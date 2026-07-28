@@ -46,6 +46,8 @@ export type UserRow = {
   contract_end_date?: string | null;
   position_title?: string | null;
   academic_rank?: string | null;
+  line_linked_at?: string | null;
+  line_display_name?: string | null;
 };
 
 export type CreateUserParams = {

@@ -63,7 +63,9 @@ export function DocumentDetailView({
       >
         <Box>
           <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Typography component="h1" variant="h3">{template.name}</Typography>
+            <Typography component="h1" variant="h3">
+              {template.name}
+            </Typography>
             <Chip color="primary" variant="soft" label={template.code} />
           </Box>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>{template.description}</Typography>
@@ -86,11 +88,15 @@ export function DocumentDetailView({
         }}
       >
         <Card variant="outlined" sx={{ p: 2.5 }}>
-          <Typography variant="overline" sx={{ color: 'text.secondary' }}>รูปแบบเอกสาร</Typography>
+          <Typography variant="overline" sx={{ color: 'text.secondary' }}>
+            รูปแบบเอกสาร
+          </Typography>
           <Typography variant="h6">{template.paper}</Typography>
         </Card>
         <Card variant="outlined" sx={{ p: 2.5 }}>
-          <Typography variant="overline" sx={{ color: 'text.secondary' }}>แหล่งข้อมูล</Typography>
+          <Typography variant="overline" sx={{ color: 'text.secondary' }}>
+            แหล่งข้อมูล
+          </Typography>
           <Typography variant="h6">{template.source}</Typography>
         </Card>
       </Box>
@@ -108,7 +114,13 @@ export function DocumentDetailView({
           {template.sections.map((section, index) => (
             <Box
               key={section}
-              sx={{ p: 2, gap: 1.5, display: 'flex', borderRadius: 1.5, bgcolor: 'background.neutral' }}
+              sx={{
+                p: 2,
+                gap: 1.5,
+                display: 'flex',
+                borderRadius: 1.5,
+                bgcolor: 'background.neutral',
+              }}
             >
               <Box
                 sx={{
@@ -139,11 +151,7 @@ export function DocumentDetailView({
       </Card>
 
       {previewOpen && (
-        <DocumentExamplePdfDialog
-          open
-          template={template}
-          onClose={() => setPreviewOpen(false)}
-        />
+        <DocumentExamplePdfDialog open template={template} onClose={() => setPreviewOpen(false)} />
       )}
     </Container>
   );

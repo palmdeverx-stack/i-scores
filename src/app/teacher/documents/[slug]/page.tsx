@@ -25,11 +25,11 @@ export default async function Page({ params, searchParams }: Props) {
   const template = getSchoolDocumentTemplate(slug);
   if (!template) notFound();
   return (
-    <DepartmentPermissionGuard permission="grades.review">
+    <DepartmentPermissionGuard permission="documents.access">
       <DocumentDetailView
         template={template}
         initialPreview={query.preview === '1'}
-        backPath={paths.teacher.documents.root}
+        backPath={paths.teacher.documents.templates}
       />
     </DepartmentPermissionGuard>
   );

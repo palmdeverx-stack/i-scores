@@ -5,13 +5,26 @@ import type { DateTimePickerProps } from '@mui/x-date-pickers/DateTimePicker';
 import type { PickersTextFieldProps } from '@mui/x-date-pickers/PickersTextField';
 
 import dayjs from 'dayjs';
+import { RiCalendarLine } from '@remixicon/react';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 
+import { withRequiredAsterisk } from './required-label';
+
 // ----------------------------------------------------------------------
+
+// MUI X passes slot components internal props like `ownerState` that a plain
+// icon component doesn't know to drop, so it leaks onto the DOM <svg> as an
+// unrecognized attribute. Strip it before forwarding to the icon.
+function DatePickerOpenIcon({
+  ownerState: _ownerState,
+  ...props
+}: React.ComponentProps<typeof RiCalendarLine> & { ownerState?: unknown }) {
+  return <RiCalendarLine {...props} />;
+}
 
 type DateInput = Dayjs | Date | string | number | null | undefined;
 
@@ -26,12 +39,20 @@ function normalizeDateValue(value: DateInput): Dayjs | null {
 
 type PickerProps<T extends DatePickerProps | TimePickerProps | DateTimePickerProps> = T & {
   name: string;
+  required?: boolean;
   slotProps?: T['slotProps'] & {
     textField?: Partial<PickersTextFieldProps>;
   };
 };
 
-export function RHFDatePicker({ name, slotProps, ...other }: PickerProps<DatePickerProps>) {
+export function RHFDatePicker({
+  name,
+  label,
+  required,
+  slots,
+  slotProps,
+  ...other
+}: PickerProps<DatePickerProps>) {
   const { control } = useFormContext();
 
   return (
@@ -41,6 +62,7 @@ export function RHFDatePicker({ name, slotProps, ...other }: PickerProps<DatePic
       render={({ field, fieldState: { error } }) => (
         <DatePicker
           {...field}
+          label={withRequiredAsterisk(label)}
           value={normalizeDateValue(field.value)}
           onChange={(newValue) => {
             if (!newValue) {
@@ -55,10 +77,12 @@ export function RHFDatePicker({ name, slotProps, ...other }: PickerProps<DatePic
             ...slotProps,
             textField: {
               ...slotProps?.textField,
+              required,
               error: !!error,
               helperText: error?.message ?? slotProps?.textField?.helperText,
             },
           }}
+          slots={{ openPickerIcon: DatePickerOpenIcon, ...slots }}
           {...other}
         />
       )}
@@ -68,7 +92,13 @@ export function RHFDatePicker({ name, slotProps, ...other }: PickerProps<DatePic
 
 // ----------------------------------------------------------------------
 
-export function RHFTimePicker({ name, slotProps, ...other }: PickerProps<TimePickerProps>) {
+export function RHFTimePicker({
+  name,
+  label,
+  required,
+  slotProps,
+  ...other
+}: PickerProps<TimePickerProps>) {
   const { control } = useFormContext();
 
   return (
@@ -78,6 +108,7 @@ export function RHFTimePicker({ name, slotProps, ...other }: PickerProps<TimePic
       render={({ field, fieldState: { error } }) => (
         <TimePicker
           {...field}
+          label={withRequiredAsterisk(label)}
           value={normalizeDateValue(field.value)}
           onChange={(newValue) => {
             if (!newValue) {
@@ -92,6 +123,7 @@ export function RHFTimePicker({ name, slotProps, ...other }: PickerProps<TimePic
             ...slotProps,
             textField: {
               ...slotProps?.textField,
+              required,
               error: !!error,
               helperText: error?.message ?? slotProps?.textField?.helperText,
             },
@@ -105,7 +137,13 @@ export function RHFTimePicker({ name, slotProps, ...other }: PickerProps<TimePic
 
 // ----------------------------------------------------------------------
 
-export function RHFDateTimePicker({ name, slotProps, ...other }: PickerProps<DateTimePickerProps>) {
+export function RHFDateTimePicker({
+  name,
+  label,
+  required,
+  slotProps,
+  ...other
+}: PickerProps<DateTimePickerProps>) {
   const { control } = useFormContext();
 
   return (
@@ -115,6 +153,7 @@ export function RHFDateTimePicker({ name, slotProps, ...other }: PickerProps<Dat
       render={({ field, fieldState: { error } }) => (
         <DateTimePicker
           {...field}
+          label={withRequiredAsterisk(label)}
           value={normalizeDateValue(field.value)}
           onChange={(newValue) => {
             if (!newValue) {
@@ -129,6 +168,7 @@ export function RHFDateTimePicker({ name, slotProps, ...other }: PickerProps<Dat
             ...slotProps,
             textField: {
               ...slotProps?.textField,
+              required,
               error: !!error,
               helperText: error?.message ?? slotProps?.textField?.helperText,
             },

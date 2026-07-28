@@ -48,27 +48,38 @@ async function loadTeacherProfile(teacherId: string, schoolId: string | null) {
 
   if (!teacherResult.data) return null;
 
+  const teacher = teacherResult.data;
   const assignments = assignmentsResult.data;
-  const { data: staffTypeItem } =
-    schoolId && teacherResult.data.staff_type
-      ? await supabaseAdmin
-          .from('staff_master_items')
-          .select('name, name_en')
-          .eq('school_id', schoolId)
-          .eq('category', 'staff_type')
-          .eq('code', teacherResult.data.staff_type)
-          .maybeSingle()
-      : { data: null };
-  const { data: employmentStatusItem } =
-    schoolId && teacherResult.data.employment_status
-      ? await supabaseAdmin
-          .from('staff_master_items')
-          .select('name, name_en')
-          .eq('school_id', schoolId)
-          .eq('category', 'employment_status')
-          .eq('code', teacherResult.data.employment_status)
-          .maybeSingle()
-      : { data: null };
+  const [{ data: staffTypeItem }, { data: employmentStatusItem }, { data: prefixItems }] =
+    await Promise.all([
+      schoolId && teacherResult.data.staff_type
+        ? supabaseAdmin
+            .from('staff_master_items')
+            .select('name, name_en')
+            .eq('school_id', schoolId)
+            .eq('category', 'staff_type')
+            .eq('code', teacherResult.data.staff_type)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      schoolId && teacherResult.data.employment_status
+        ? supabaseAdmin
+            .from('staff_master_items')
+            .select('name, name_en')
+            .eq('school_id', schoolId)
+            .eq('category', 'employment_status')
+            .eq('code', teacherResult.data.employment_status)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      schoolId
+        ? supabaseAdmin
+            .from('staff_master_items')
+            .select('id, name, name_en, is_active')
+            .eq('school_id', schoolId)
+            .eq('category', 'prefix')
+            .order('sort_order')
+            .order('name')
+        : Promise.resolve({ data: [] }),
+    ]);
 
   return {
     ...teacherResult.data,
@@ -76,6 +87,9 @@ async function loadTeacherProfile(teacherId: string, schoolId: string | null) {
     staff_type_name_en: staffTypeItem?.name_en ?? null,
     employment_status_name: employmentStatusItem?.name ?? null,
     employment_status_name_en: employmentStatusItem?.name_en ?? null,
+    prefix_options: (prefixItems ?? []).filter(
+      (item) => item.is_active || item.name === teacher.name_prefix
+    ),
     school: schoolResult.data,
     summary: {
       assignments: assignments.length,
@@ -135,8 +149,11 @@ export async function PUT(request: Request) {
   const phone = typeof body?.phone === 'string' ? body.phone.trim() : '';
   const address = typeof body?.address === 'string' ? body.address.trim() : '';
 
-  if (!firstName || !lastName) {
-    return NextResponse.json({ message: 'กรุณากรอกชื่อและนามสกุล' }, { status: 400 });
+  if (!namePrefix || !firstName || !lastName) {
+    return NextResponse.json(
+      { message: 'กรุณาเลือกคำนำหน้าชื่อและกรอกชื่อ–นามสกุล' },
+      { status: 400 }
+    );
   }
 
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -147,6 +164,22 @@ export async function PUT(request: Request) {
   }
   if (namePrefix.length > 30 || nickname.length > 100 || address.length > 500) {
     return NextResponse.json({ message: 'ข้อมูลโปรไฟล์ยาวเกินกำหนด' }, { status: 400 });
+  }
+  if (caller.schoolId) {
+    const { data: prefixItem } = await supabaseAdmin
+      .from('staff_master_items')
+      .select('id')
+      .eq('school_id', caller.schoolId)
+      .eq('category', 'prefix')
+      .eq('name', namePrefix)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (!prefixItem) {
+      return NextResponse.json(
+        { message: 'คำนำหน้าชื่อไม่ถูกต้องหรือปิดใช้งานแล้ว' },
+        { status: 400 }
+      );
+    }
   }
 
   const { error: updateError } = await supabaseAdmin

@@ -182,10 +182,16 @@ export async function createManagedUser(
 
   if (
     role === 'teacher' &&
-    (!staffType ||
-      !(await isActiveStaffMasterValue(targetSchoolId, 'staff_type', staffType)))
+    (!staffType || !(await isActiveStaffMasterValue(targetSchoolId, 'staff_type', staffType)))
   ) {
     return { ok: false, status: 400, message: 'ประเภทบุคลากรไม่ถูกต้องหรือปิดใช้งานแล้ว' };
+  }
+  if (
+    role === 'teacher' &&
+    (!namePrefix?.trim() ||
+      !(await isActiveStaffMasterValue(targetSchoolId, 'prefix', namePrefix.trim())))
+  ) {
+    return { ok: false, status: 400, message: 'คำนำหน้าชื่อไม่ถูกต้องหรือปิดใช้งานแล้ว' };
   }
   if (
     role === 'teacher' &&
@@ -281,7 +287,7 @@ export async function createManagedUser(
       student_status: role === 'student' ? 'studying' : null,
       student_code: role === 'student' ? studentCode!.trim() : null,
       national_id: role === 'student' ? nationalId?.trim() || null : null,
-      name_prefix: role === 'student' ? namePrefix?.trim() || null : null,
+      name_prefix: role === 'student' || role === 'teacher' ? namePrefix?.trim() || null : null,
       first_name_en: supportsBilingualName ? firstNameEn?.trim() || null : null,
       last_name_en: supportsBilingualName ? lastNameEn?.trim() || null : null,
       nickname: role === 'student' ? nickname?.trim() || null : null,

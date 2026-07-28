@@ -7,12 +7,12 @@ import type { AcademicYear } from 'src/sections/academic-year/academic-year-acti
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Table from '@mui/material/Table';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import { Box, Stack } from '@mui/material';
 import Checkbox from '@mui/material/Checkbox';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
@@ -178,155 +178,164 @@ export function BulkPromoteDialog({ open, onClose, initialClassroomId }: Props) 
         </Box>
       </DialogTitle>
       <DialogContent sx={{ pt: 2 }}>
-        {mutation.error && (
-          <Alert severity="error" sx={{ mb: 2.5 }}>
-            {mutation.error.message}
-          </Alert>
-        )}
+        <Stack sx={{ py: 2 }}>
+          {mutation.error && (
+            <Alert severity="error" sx={{ mb: 2.5 }}>
+              {mutation.error.message}
+            </Alert>
+          )}
 
-        <Box
-          sx={{
-            mb: 3,
-            gap: 2,
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-          }}
-        >
-          <Autocomplete
-            options={classrooms}
-            value={sourceClassroom}
-            getOptionLabel={(option) =>
-              option.academic_years?.year
-                ? `${option.name} · ${option.academic_years.year}`
-                : option.name
-            }
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            onChange={(_, value) => setSourceClassroomId(value?.id ?? '')}
-            noOptionsText="ไม่พบห้องเรียน"
-            renderInput={(params) => <TextField {...params} label="ห้องต้นทาง *" />}
-          />
-          <Autocomplete
-            options={targetYearOptions}
-            value={academicYears.find((year) => year.id === targetAcademicYearId) ?? null}
-            getOptionLabel={(option) => option.year}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            onChange={(_, value) => {
-              setTargetAcademicYearId(value?.id ?? '');
-              setDefaultClassroomId('');
+          <Box
+            sx={{
+              mb: 3,
+              gap: 2,
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
             }}
-            disabled={!sourceClassroomId}
-            noOptionsText="ไม่พบปีการศึกษาปลายทาง"
-            renderInput={(params) => <TextField {...params} label="ปีการศึกษาปลายทาง *" />}
-          />
-          <Autocomplete
-            options={destinationClassrooms}
-            value={defaultClassroom}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            onChange={(_, value) => setDefaultClassroomId(value?.id ?? '')}
-            disabled={!targetAcademicYearId}
-            noOptionsText="ไม่พบห้องเรียนในปีการศึกษานี้"
-            renderInput={(params) => <TextField {...params} label="ห้องปลายทางเริ่มต้น *" />}
-          />
-        </Box>
+          >
+            <Autocomplete
+              options={classrooms}
+              value={sourceClassroom}
+              getOptionLabel={(option) =>
+                option.academic_years?.year
+                  ? `${option.name} · ${option.academic_years.year}`
+                  : option.name
+              }
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              onChange={(_, value) => setSourceClassroomId(value?.id ?? '')}
+              noOptionsText="ไม่พบห้องเรียน"
+              renderInput={(params) => <TextField {...params} label="ห้องต้นทาง *" />}
+            />
+            <Autocomplete
+              options={targetYearOptions}
+              value={academicYears.find((year) => year.id === targetAcademicYearId) ?? null}
+              getOptionLabel={(option) => option.year}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              onChange={(_, value) => {
+                setTargetAcademicYearId(value?.id ?? '');
+                setDefaultClassroomId('');
+              }}
+              disabled={!sourceClassroomId}
+              noOptionsText="ไม่พบปีการศึกษาปลายทาง"
+              renderInput={(params) => <TextField {...params} label="ปีการศึกษาปลายทาง *" />}
+            />
+            <Autocomplete
+              options={destinationClassrooms}
+              value={defaultClassroom}
+              getOptionLabel={(option) => option.name}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              onChange={(_, value) => setDefaultClassroomId(value?.id ?? '')}
+              disabled={!targetAcademicYearId}
+              noOptionsText="ไม่พบห้องเรียนในปีการศึกษานี้"
+              renderInput={(params) => <TextField {...params} label="ห้องปลายทางเริ่มต้น *" />}
+            />
+          </Box>
 
-        {targetAcademicYearId && !destinationClassrooms.length && (
-          <Alert severity="info" sx={{ mb: 2.5 }}>
-            ยังไม่มีห้องเรียนในปีการศึกษานี้ กรุณาสร้างห้องเรียนก่อนเลื่อนชั้น
-          </Alert>
-        )}
+          {targetAcademicYearId && !destinationClassrooms.length && (
+            <Alert severity="info" sx={{ mb: 2.5 }}>
+              ยังไม่มีห้องเรียนในปีการศึกษานี้ กรุณาสร้างห้องเรียนก่อนเลื่อนชั้น
+            </Alert>
+          )}
 
-        {sourceClassroomId && (
-          <>
-            <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-              {rosterLoading
-                ? 'กำลังโหลดรายชื่อนักเรียน...'
-                : `นักเรียนในห้องต้นทาง (${roster.length} คน) · เลือกไป ${includedCount} คน`}
-            </Typography>
-            <TableContainer
-              sx={{ maxHeight: 360, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
-            >
-              <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>นักเรียน</TableCell>
-                    <TableCell>เลขที่เดิม</TableCell>
-                    <TableCell sx={{ minWidth: 220 }}>ห้องปลายทาง</TableCell>
-                    <TableCell align="center">ยกเว้น</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {!rosterLoading && !roster.length && (
+          {sourceClassroomId && (
+            <>
+              <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                {rosterLoading
+                  ? 'กำลังโหลดรายชื่อนักเรียน...'
+                  : `นักเรียนในห้องต้นทาง (${roster.length} คน) · เลือกไป ${includedCount} คน`}
+              </Typography>
+              <TableContainer
+                sx={{
+                  maxHeight: 360,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                }}
+              >
+                <Table size="small" stickyHeader>
+                  <TableHead>
                     <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}
-                      >
-                        ห้องนี้ยังไม่มีนักเรียน
-                      </TableCell>
+                      <TableCell>นักเรียน</TableCell>
+                      <TableCell>เลขที่เดิม</TableCell>
+                      <TableCell sx={{ minWidth: 220 }}>ห้องปลายทาง</TableCell>
+                      <TableCell align="center">ยกเว้น</TableCell>
                     </TableRow>
-                  )}
-                  {roster.map((row) => {
-                    const studentName =
-                      `${row.student.first_name ?? ''} ${row.student.last_name ?? ''}`.trim() ||
-                      row.student.username;
-                    const override = rowOverrides[row.student.id];
-                    const rowClassroom =
-                      destinationClassrooms.find((room) => room.id === override?.classroomId) ??
-                      null;
-
-                    return (
-                      <TableRow key={row.id} hover>
-                        <TableCell>
-                          <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
-                            <Avatar
-                              sx={{
-                                width: 30,
-                                height: 30,
-                                bgcolor: 'primary.lighter',
-                                color: 'primary.main',
-                                typography: 'caption',
-                              }}
-                            >
-                              {studentName.charAt(0).toUpperCase()}
-                            </Avatar>
-                            <Typography variant="body2">{studentName}</Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>{row.student_number ?? '-'}</TableCell>
-                        <TableCell>
-                          <Autocomplete
-                            size="small"
-                            options={destinationClassrooms}
-                            value={rowClassroom}
-                            disabled={!!override?.excluded || !destinationClassrooms.length}
-                            getOptionLabel={(option) => option.name}
-                            isOptionEqualToValue={(option, value) => option.id === value.id}
-                            onChange={(_, value) =>
-                              updateRow(row.student.id, { classroomId: value?.id ?? '' })
-                            }
-                            renderInput={(params) => (
-                              <TextField {...params} placeholder="เลือกห้องเรียน" />
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell align="center">
-                          <Checkbox
-                            checked={!!override?.excluded}
-                            onChange={(event) =>
-                              updateRow(row.student.id, { excluded: event.target.checked })
-                            }
-                            inputProps={{ 'aria-label': `ยกเว้น ${studentName} จากการเลื่อนชั้น` }}
-                          />
+                  </TableHead>
+                  <TableBody>
+                    {!rosterLoading && !roster.length && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}
+                        >
+                          ห้องนี้ยังไม่มีนักเรียน
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </>
-        )}
+                    )}
+                    {roster.map((row) => {
+                      const studentName =
+                        `${row.student.first_name ?? ''} ${row.student.last_name ?? ''}`.trim() ||
+                        row.student.username;
+                      const override = rowOverrides[row.student.id];
+                      const rowClassroom =
+                        destinationClassrooms.find((room) => room.id === override?.classroomId) ??
+                        null;
+
+                      return (
+                        <TableRow key={row.id} hover>
+                          <TableCell>
+                            <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+                              <Avatar
+                                sx={{
+                                  width: 30,
+                                  height: 30,
+                                  bgcolor: 'primary.lighter',
+                                  color: 'primary.main',
+                                  typography: 'caption',
+                                }}
+                              >
+                                {studentName.charAt(0).toUpperCase()}
+                              </Avatar>
+                              <Typography variant="body2">{studentName}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{row.student_number ?? '-'}</TableCell>
+                          <TableCell>
+                            <Autocomplete
+                              size="small"
+                              options={destinationClassrooms}
+                              value={rowClassroom}
+                              disabled={!!override?.excluded || !destinationClassrooms.length}
+                              getOptionLabel={(option) => option.name}
+                              isOptionEqualToValue={(option, value) => option.id === value.id}
+                              onChange={(_, value) =>
+                                updateRow(row.student.id, { classroomId: value?.id ?? '' })
+                              }
+                              renderInput={(params) => (
+                                <TextField {...params} placeholder="เลือกห้องเรียน" />
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell align="center">
+                            <Checkbox
+                              checked={!!override?.excluded}
+                              onChange={(event) =>
+                                updateRow(row.student.id, { excluded: event.target.checked })
+                              }
+                              inputProps={{
+                                'aria-label': `ยกเว้น ${studentName} จากการเลื่อนชั้น`,
+                              }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+        </Stack>
       </DialogContent>
       <DialogActions>
         <Button color="inherit" onClick={handleClose} disabled={mutation.isPending}>

@@ -36,7 +36,9 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabaseAdmin
     .from('semesters')
-    .select('id, name, start_date, end_date, is_active, created_at')
+    .select(
+      'id, name, start_date, end_date, is_active, grade_submission_deadline, grade_reminder_days, grade_reminder_notify_in_app, grade_reminder_notify_line, created_at'
+    )
     .eq('academic_year_id', academicYearId)
     .order('name');
 
@@ -54,11 +56,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { academicYearId, name, startDate, endDate } = await request.json();
+  const {
+    academicYearId,
+    name,
+    startDate,
+    endDate,
+    gradeSubmissionDeadline,
+    gradeReminderDays,
+    gradeReminderNotifyInApp,
+    gradeReminderNotifyLine,
+  } = await request.json();
 
   if (!academicYearId || !name || !startDate || !endDate) {
     return NextResponse.json(
       { message: 'กรุณากรอกชื่อภาคเรียน วันที่เริ่มต้น และวันที่สิ้นสุด' },
+      { status: 400 }
+    );
+  }
+
+  const hasDeadline = typeof gradeSubmissionDeadline === 'string' && gradeSubmissionDeadline;
+  const parsedReminderDays = Number(gradeReminderDays);
+  if (
+    hasDeadline &&
+    (!Number.isInteger(parsedReminderDays) || parsedReminderDays < 1)
+  ) {
+    return NextResponse.json(
+      { message: 'กรุณาระบุจำนวนวันที่เตือนก่อนถึงกำหนดส่ง (อย่างน้อย 1 วัน)' },
       { status: 400 }
     );
   }
@@ -108,8 +131,14 @@ export async function POST(request: Request) {
       name: String(name).trim(),
       start_date: startDate,
       end_date: endDate,
+      grade_submission_deadline: hasDeadline ? gradeSubmissionDeadline : null,
+      grade_reminder_days: hasDeadline ? parsedReminderDays : null,
+      grade_reminder_notify_in_app: gradeReminderNotifyInApp !== false,
+      grade_reminder_notify_line: gradeReminderNotifyLine !== false,
     })
-    .select('id, name, start_date, end_date, is_active, created_at')
+    .select(
+      'id, name, start_date, end_date, is_active, grade_submission_deadline, grade_reminder_days, grade_reminder_notify_in_app, grade_reminder_notify_line, created_at'
+    )
     .single();
 
   if (error || !semester) {

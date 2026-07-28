@@ -7,7 +7,13 @@ import { canViewViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
-const CATEGORIES = ['staff_type', 'position', 'academic_rank', 'employment_status'] as const;
+const CATEGORIES = [
+  'staff_type',
+  'prefix',
+  'position',
+  'academic_rank',
+  'employment_status',
+] as const;
 const CODE_REQUIRED_CATEGORIES: ReadonlyArray<(typeof CATEGORIES)[number]> = [
   'staff_type',
   'employment_status',
@@ -82,7 +88,11 @@ export async function POST(request: Request) {
   if (error || !data) {
     const duplicate = error?.code === '23505';
     return NextResponse.json(
-      { message: duplicate ? 'มีชื่อรายการนี้อยู่แล้ว' : error?.message ?? 'ไม่สามารถเพิ่มรายการได้' },
+      {
+        message: duplicate
+          ? 'มีชื่อรายการนี้อยู่แล้ว'
+          : (error?.message ?? 'ไม่สามารถเพิ่มรายการได้'),
+      },
       { status: duplicate ? 409 : 500 }
     );
   }

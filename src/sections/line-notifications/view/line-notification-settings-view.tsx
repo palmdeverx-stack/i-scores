@@ -18,6 +18,9 @@ import Typography from '@mui/material/Typography';
 import LinearProgress from '@mui/material/LinearProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
+import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
+
 import { RemixIcon } from 'src/components/remix-icon';
 
 import { LineRichMenuCard } from '../components/line-rich-menu-card';
@@ -339,6 +342,23 @@ export function LineNotificationSettingsView() {
           </Card>
 
           <LineRichMenuCard hasAccessToken={integration.hasAccessToken} />
+
+          <Alert
+            severity="info"
+            action={
+              <Button
+                size="small"
+                color="inherit"
+                component={RouterLink}
+                href={paths.admin.schoolHolidays}
+              >
+                จัดการวันหยุด
+              </Button>
+            }
+          >
+            ระบบจะไม่ส่งแจ้งเตือนขาด/ลา/สาย ผ่าน LINE ในวันหยุดโรงเรียน — ตั้งค่าวันหยุดได้ที่เมนู
+            “วันหยุดโรงเรียน”
+          </Alert>
 
           <Card variant="outlined" sx={{ p: { xs: 2.5, md: 3 } }}>
             <Typography variant="h6">เหตุการณ์ที่ส่งแจ้งเตือน</Typography>

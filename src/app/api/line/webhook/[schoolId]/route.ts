@@ -256,6 +256,59 @@ export async function POST(request: Request, { params }: RouteParams) {
       continue;
     }
 
+    const teacherMatch = /^(?:TEACHER|ครู)\s+([A-Z0-9]{8})$/i.exec(messageText);
+    if (teacherMatch) {
+      const teacherTokenHash = createHash('sha256')
+        .update(teacherMatch[1].toUpperCase())
+        .digest('hex');
+      const { data: teacherLink } = await supabaseAdmin
+        .from('teacher_line_link_tokens')
+        .select('id, teacher_id, expires_at, used_at')
+        .eq('school_id', schoolId)
+        .eq('token_hash', teacherTokenHash)
+        .maybeSingle();
+      if (!teacherLink || teacherLink.used_at || teacherLink.expires_at < new Date().toISOString()) {
+        await respond('รหัสเชื่อมบัญชีไม่ถูกต้องหรือหมดอายุแล้ว');
+        continue;
+      }
+
+      let teacherDisplayName: string | null = null;
+      const teacherProfileResponse = await fetch(
+        `https://api.line.me/v2/bot/profile/${event.source.userId}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (teacherProfileResponse.ok) {
+        const profile = (await teacherProfileResponse.json()) as { displayName?: string };
+        teacherDisplayName = profile.displayName ?? null;
+      }
+
+      const { error: teacherLinkError } = await supabaseAdmin
+        .from('app_users')
+        .update({
+          line_user_id: event.source.userId,
+          line_display_name: teacherDisplayName,
+          line_linked_at: new Date().toISOString(),
+          line_notifications_enabled: true,
+        })
+        .eq('id', teacherLink.teacher_id)
+        .eq('school_id', schoolId);
+      if (teacherLinkError) {
+        await respond('เชื่อมบัญชีไม่สำเร็จ กรุณาติดต่อผู้ดูแลโรงเรียน');
+        continue;
+      }
+      await supabaseAdmin
+        .from('teacher_line_link_tokens')
+        .update({ used_at: new Date().toISOString() })
+        .eq('id', teacherLink.id);
+      await respond(
+        [
+          'เชื่อมบัญชี LINE กับโรงเรียนเรียบร้อยแล้ว',
+          'คุณจะได้รับการแจ้งเตือนจากโรงเรียนผ่าน LINE เช่น เตือนกำหนดส่งผลการเรียน',
+        ].join('\n')
+      );
+      continue;
+    }
+
     const match = /^(?:LINK|เชื่อม)\s+([A-Z0-9]{8})$/i.exec(messageText);
     if (!match) continue;
 

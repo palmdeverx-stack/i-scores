@@ -5,6 +5,8 @@ import { transformValue, transformValueOnBlur, transformValueOnChange } from 'mi
 
 import TextField from '@mui/material/TextField';
 
+import { withRequiredAsterisk } from './required-label';
+
 // ----------------------------------------------------------------------
 
 export type RHFTextFieldProps = TextFieldProps & {
@@ -13,6 +15,7 @@ export type RHFTextFieldProps = TextFieldProps & {
 
 export function RHFTextField({
   name,
+  label,
   helperText,
   slotProps,
   type = 'text',
@@ -30,6 +33,7 @@ export function RHFTextField({
         <TextField
           {...field}
           fullWidth
+          label={withRequiredAsterisk(label)}
           value={isNumberType ? transformValue(field.value) : field.value}
           onChange={(event) => {
             const transformedValue = isNumberType

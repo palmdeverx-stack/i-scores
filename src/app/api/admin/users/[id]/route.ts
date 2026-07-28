@@ -18,7 +18,7 @@ import { isStaffType, isEmploymentStatus } from 'src/types/staff-employment';
 type RouteParams = { params: Promise<{ id: string }> };
 
 const USER_SELECT =
-  'id, username, email, first_name, last_name, first_name_en, last_name_en, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, is_active, is_school_director, staff_type, employment_status, employment_start_date, appointment_date, contract_end_date, position_title, academic_rank';
+  'id, username, email, name_prefix, first_name, last_name, first_name_en, last_name_en, avatar_url, role, school_id, school:schools!app_users_school_id_fkey(name), created_at, must_change_password, student_status, is_active, is_school_director, staff_type, employment_status, employment_start_date, appointment_date, contract_end_date, position_title, academic_rank, line_linked_at, line_display_name';
 
 async function getManagedUser(id: string) {
   return supabaseAdmin.from('app_users').select(USER_SELECT).eq('id', id).maybeSingle();
@@ -165,6 +165,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const username = typeof body?.username === 'string' ? body.username.trim() : '';
+  const namePrefix = typeof body?.namePrefix === 'string' ? body.namePrefix.trim() : '';
   const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : '';
   const lastName = typeof body?.lastName === 'string' ? body.lastName.trim() : '';
   const firstNameEn = typeof body?.firstNameEn === 'string' ? body.firstNameEn.trim() : '';
@@ -176,8 +177,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const employmentStartDate =
     typeof body?.employmentStartDate === 'string' ? body.employmentStartDate : '';
   const appointmentDate = typeof body?.appointmentDate === 'string' ? body.appointmentDate : '';
-  const contractEndDate =
-    typeof body?.contractEndDate === 'string' ? body.contractEndDate : '';
+  const contractEndDate = typeof body?.contractEndDate === 'string' ? body.contractEndDate : '';
   const positionTitle = typeof body?.positionTitle === 'string' ? body.positionTitle.trim() : '';
   const academicRank = typeof body?.academicRank === 'string' ? body.academicRank.trim() : '';
   const schoolId =
@@ -227,13 +227,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (
     target.role === 'teacher' &&
     (!(await isActiveStaffMasterValue(schoolId, 'staff_type', staffType)) ||
-      (positionTitle &&
-        !(await isActiveStaffMasterValue(schoolId, 'position', positionTitle))) ||
-      (academicRank &&
-        !(await isActiveStaffMasterValue(schoolId, 'academic_rank', academicRank))))
+      !namePrefix ||
+      !(await isActiveStaffMasterValue(schoolId, 'prefix', namePrefix)) ||
+      (positionTitle && !(await isActiveStaffMasterValue(schoolId, 'position', positionTitle))) ||
+      (academicRank && !(await isActiveStaffMasterValue(schoolId, 'academic_rank', academicRank))))
   ) {
     return NextResponse.json(
-      { message: 'ประเภทบุคลากร ตำแหน่ง หรือวิทยฐานะไม่ถูกต้องหรือปิดใช้งานแล้ว' },
+      {
+        message: 'คำนำหน้าชื่อ ประเภทบุคลากร ตำแหน่ง หรือวิทยฐานะไม่ถูกต้องหรือปิดใช้งานแล้ว',
+      },
       { status: 400 }
     );
   }
@@ -259,6 +261,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     updates.last_name_en = lastNameEn || null;
   }
   if (target.role === 'teacher') {
+    updates.name_prefix = namePrefix;
     updates.staff_type = staffType;
     updates.employment_status = employmentStatus;
     updates.employment_start_date = employmentStartDate || null;

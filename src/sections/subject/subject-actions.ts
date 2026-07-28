@@ -8,6 +8,8 @@
 export type LearningArea = string;
 export type SubjectType = string;
 
+export type SubjectStatus = 'draft' | 'published';
+
 /** Code of the system-seeded "กิจกรรมพัฒนาผู้เรียน" learning area master item. */
 export const STUDENT_DEVELOPMENT_ACTIVITY_CODE = 'student_development_activity';
 
@@ -58,11 +60,14 @@ export type Subject = {
   learning_area: LearningArea | null;
   activity_type: ActivityType | null;
   subject_type: SubjectType | null;
+  education_stage: string | null;
   grade_levels: string[];
-  learning_standards: string[];
-  learning_outcomes: string[];
-  learning_units: string[];
-  indicators: string[];
+  learning_standards: string | null;
+  learning_outcomes: string | null;
+  learning_units: string | null;
+  indicators: string | null;
+  status: SubjectStatus;
+  created_by: string | null;
   created_at: string;
 };
 
@@ -76,14 +81,16 @@ export type SaveSubjectParams = {
   descriptionEn?: string;
   academicYearId: string;
   semesterId: string;
+  status?: SubjectStatus;
   learningArea?: LearningArea;
   activityType?: ActivityType;
   subjectType?: SubjectType;
+  educationStage?: string;
   gradeLevels?: string[];
-  learningStandards?: string[];
-  learningOutcomes?: string[];
-  learningUnits?: string[];
-  indicators?: string[];
+  learningStandards?: string;
+  learningOutcomes?: string;
+  learningUnits?: string;
+  indicators?: string;
 };
 
 export async function listSubjects(filters?: {

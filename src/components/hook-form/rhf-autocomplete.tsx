@@ -9,6 +9,7 @@ import Autocomplete from '@mui/material/Autocomplete';
 import { Box, Chip, Stack, useTheme, ListItem, Typography } from '@mui/material';
 
 import { TruncatedTypography } from '../typography';
+import { withRequiredAsterisk } from './required-label';
 
 // ----------------------------------------------------------------------
 
@@ -217,13 +218,13 @@ export function RHFAutocomplete({
                 placeholder={placeholder}
                 label={
                   <Stack direction="row" spacing={0.75}>
-                    <Box>{label}</Box>
+                    <Box>{withRequiredAsterisk(label)}</Box>
                     {required && (
                       <Box
                         sx={{
                           fontSize: theme.typography.subtitle1,
                           fontWeight: 400,
-                          color: theme.palette.warning.dark,
+                          color: theme.palette.error.main,
                         }}
                       >
                         *
@@ -245,7 +246,7 @@ export function RHFAutocomplete({
                       : theme.palette.common.white,
                   },
                   '& .MuiFormLabel-asterisk': {
-                    color: theme.palette.warning.dark,
+                    color: theme.palette.error.main,
                   },
                   '& .MuiFormHelperText-root.Mui-error': {
                     display: helperText ? 'block' : 'none',

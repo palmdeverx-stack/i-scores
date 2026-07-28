@@ -7,7 +7,7 @@ import { canViewViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
-const CATEGORIES = ['learning_area', 'subject_type'] as const;
+const CATEGORIES = ['learning_area', 'subject_type', 'education_stage'] as const;
 
 function isCategory(value: unknown): value is (typeof CATEGORIES)[number] {
   return typeof value === 'string' && CATEGORIES.includes(value as (typeof CATEGORIES)[number]);

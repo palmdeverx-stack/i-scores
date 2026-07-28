@@ -5,17 +5,17 @@ import type { Semester } from '../academic-year-actions';
 import * as z from 'zod';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import { Box, Stack } from '@mui/material';
 import Tooltip from '@mui/material/Tooltip';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
@@ -53,6 +53,10 @@ const SemesterSchema = z
     startDate: z.string().min(1, { error: 'กรุณาเลือกวันที่เริ่มต้น!' }),
     endDate: z.string().min(1, { error: 'กรุณาเลือกวันที่สิ้นสุด!' }),
     isActive: z.boolean(),
+    gradeSubmissionDeadline: z.string(),
+    gradeReminderDays: z.number(),
+    gradeReminderNotifyInApp: z.boolean(),
+    gradeReminderNotifyLine: z.boolean(),
   })
   .refine(
     (data) =>
@@ -61,9 +65,24 @@ const SemesterSchema = z
       dayjs(data.endDate).isAfter(data.startDate) ||
       dayjs(data.endDate).isSame(data.startDate, 'day'),
     { path: ['endDate'], error: 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น!' }
-  );
+  )
+  .refine((data) => !data.gradeSubmissionDeadline || data.gradeReminderDays >= 1, {
+    path: ['gradeReminderDays'],
+    error: 'กรุณาระบุจำนวนวันที่เตือนอย่างน้อย 1 วัน!',
+  });
 
 type SemesterSchemaType = z.infer<typeof SemesterSchema>;
+
+const DEFAULT_VALUES: SemesterSchemaType = {
+  name: '',
+  startDate: '',
+  endDate: '',
+  isActive: true,
+  gradeSubmissionDeadline: '',
+  gradeReminderDays: 3,
+  gradeReminderNotifyInApp: true,
+  gradeReminderNotifyLine: true,
+};
 
 type Props = {
   academicYearId: string;
@@ -94,9 +113,10 @@ export function SemesterView({ academicYearId }: Props) {
 
   const methods = useForm<SemesterSchemaType>({
     resolver: zodResolver(SemesterSchema),
-    defaultValues: { name: '', startDate: '', endDate: '', isActive: true },
+    defaultValues: DEFAULT_VALUES,
   });
-  const { handleSubmit, reset } = methods;
+  const { handleSubmit, reset, control } = methods;
+  const gradeSubmissionDeadline = useWatch({ control, name: 'gradeSubmissionDeadline' });
 
   const saveMutation = useMutation({
     mutationFn: (data: SemesterSchemaType) => {
@@ -105,6 +125,12 @@ export function SemesterView({ academicYearId }: Props) {
         startDate: dayjs(data.startDate).format('YYYY-MM-DD'),
         endDate: dayjs(data.endDate).format('YYYY-MM-DD'),
         isActive: data.isActive,
+        gradeSubmissionDeadline: data.gradeSubmissionDeadline
+          ? dayjs(data.gradeSubmissionDeadline).format('YYYY-MM-DD')
+          : undefined,
+        gradeReminderDays: data.gradeSubmissionDeadline ? data.gradeReminderDays : undefined,
+        gradeReminderNotifyInApp: data.gradeReminderNotifyInApp,
+        gradeReminderNotifyLine: data.gradeReminderNotifyLine,
       };
 
       return editingSemester
@@ -115,7 +141,7 @@ export function SemesterView({ academicYearId }: Props) {
       await queryClient.invalidateQueries({ queryKey: ['semesters', academicYearId] });
       setDialogOpen(false);
       setEditingSemester(null);
-      reset({ name: '', startDate: '', endDate: '', isActive: true });
+      reset(DEFAULT_VALUES);
     },
   });
 
@@ -129,7 +155,7 @@ export function SemesterView({ academicYearId }: Props) {
 
   const openCreateDialog = () => {
     setEditingSemester(null);
-    reset({ name: '', startDate: '', endDate: '', isActive: true });
+    reset(DEFAULT_VALUES);
     saveMutation.reset();
     setDialogOpen(true);
   };
@@ -141,6 +167,10 @@ export function SemesterView({ academicYearId }: Props) {
       startDate: semester.start_date ?? '',
       endDate: semester.end_date ?? '',
       isActive: semester.is_active,
+      gradeSubmissionDeadline: semester.grade_submission_deadline ?? '',
+      gradeReminderDays: semester.grade_reminder_days ?? 3,
+      gradeReminderNotifyInApp: semester.grade_reminder_notify_in_app,
+      gradeReminderNotifyLine: semester.grade_reminder_notify_line,
     });
     saveMutation.reset();
     setDialogOpen(true);
@@ -150,7 +180,7 @@ export function SemesterView({ academicYearId }: Props) {
     if (saveMutation.isPending) return;
     setDialogOpen(false);
     setEditingSemester(null);
-    reset({ name: '', startDate: '', endDate: '', isActive: true });
+    reset(DEFAULT_VALUES);
     saveMutation.reset();
   };
 
@@ -171,7 +201,9 @@ export function SemesterView({ academicYearId }: Props) {
         <Box>
           <Button
             component={RouterLink}
-            href={isTeacher ? paths.teacher.departmentAcademicYear.root : paths.admin.academicYear.root}
+            href={
+              isTeacher ? paths.teacher.departmentAcademicYear.root : paths.admin.academicYear.root
+            }
             color="inherit"
             size="small"
             startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
@@ -395,54 +427,115 @@ export function SemesterView({ academicYearId }: Props) {
           </DialogTitle>
 
           <DialogContent sx={{ pt: 2 }}>
-            {saveMutation.error && (
-              <Alert severity="error" sx={{ mb: 2.5 }}>
-                {saveMutation.error.message}
-              </Alert>
-            )}
+            <Stack sx={{ py: 2 }}>
+              {saveMutation.error && (
+                <Alert severity="error" sx={{ mb: 2.5 }}>
+                  {saveMutation.error.message}
+                </Alert>
+              )}
 
-            <Field.Text
-              name="name"
-              label="ชื่อภาคเรียน *"
-              placeholder="เช่น ภาคเรียนที่ 1"
-              helperText="ชื่อที่ครูและนักเรียนจะเห็นในระบบ"
-              autoFocus
-            />
+              <Field.Text
+                name="name"
+                label="ชื่อภาคเรียน *"
+                placeholder="เช่น ภาคเรียนที่ 1"
+                helperText="ชื่อที่ครูและนักเรียนจะเห็นในระบบ"
+                autoFocus
+              />
 
-            <Box
-              sx={{
-                gap: 2,
-                mt: 2.5,
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-              }}
-            >
-              <Field.DatePicker
-                name="startDate"
-                label="วันที่เริ่มต้น *"
-                format="DD/MM/YYYY"
-                minDate={academicYear?.start_date ? dayjs(academicYear.start_date) : undefined}
-                maxDate={academicYear?.end_date ? dayjs(academicYear.end_date) : undefined}
-                slotProps={{ textField: { fullWidth: true, helperText: 'วันเปิดภาคเรียน' } }}
-              />
-              <Field.DatePicker
-                name="endDate"
-                label="วันที่สิ้นสุด *"
-                format="DD/MM/YYYY"
-                minDate={academicYear?.start_date ? dayjs(academicYear.start_date) : undefined}
-                maxDate={academicYear?.end_date ? dayjs(academicYear.end_date) : undefined}
-                slotProps={{ textField: { fullWidth: true, helperText: 'วันปิดภาคเรียน' } }}
-              />
-            </Box>
+              <Box
+                sx={{
+                  gap: 2,
+                  mt: 2.5,
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+                }}
+              >
+                <Field.DatePicker
+                  name="startDate"
+                  label="วันที่เริ่มต้น *"
+                  format="DD/MM/YYYY"
+                  minDate={academicYear?.start_date ? dayjs(academicYear.start_date) : undefined}
+                  maxDate={academicYear?.end_date ? dayjs(academicYear.end_date) : undefined}
+                  slotProps={{ textField: { fullWidth: true, helperText: 'วันเปิดภาคเรียน' } }}
+                />
+                <Field.DatePicker
+                  name="endDate"
+                  label="วันที่สิ้นสุด *"
+                  format="DD/MM/YYYY"
+                  minDate={academicYear?.start_date ? dayjs(academicYear.start_date) : undefined}
+                  maxDate={academicYear?.end_date ? dayjs(academicYear.end_date) : undefined}
+                  slotProps={{ textField: { fullWidth: true, helperText: 'วันปิดภาคเรียน' } }}
+                />
+              </Box>
 
-            {editingSemester && (
-              <Field.Switch
-                name="isActive"
-                label="เปิดใช้งานภาคเรียนนี้"
-                helperText="ภาคเรียนที่ปิดใช้งานจะยังคงอยู่ แต่แสดงสถานะไม่ได้ใช้งาน"
-                sx={{ mt: 2.5 }}
-              />
-            )}
+              <Box
+                sx={{
+                  gap: 2,
+                  mt: 2.5,
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: gradeSubmissionDeadline ? 'repeat(2, 1fr)' : '1fr',
+                  },
+                }}
+              >
+                <Field.DatePicker
+                  name="gradeSubmissionDeadline"
+                  label="กำหนดส่งผลการเรียน"
+                  format="DD/MM/YYYY"
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      helperText: 'ไม่บังคับ — เว้นว่างไว้หากยังไม่ต้องการเตือนครู',
+                    },
+                  }}
+                />
+                {gradeSubmissionDeadline && (
+                  <Field.Text
+                    name="gradeReminderDays"
+                    label="เตือนล่วงหน้ากี่วัน *"
+                    type="number"
+                    helperText="นับรวมวันครบกำหนด เช่น 3 = เตือนติดต่อกัน 3 วันก่อนถึงวันครบกำหนด"
+                    slotProps={{ htmlInput: { min: 1, max: 30, step: 1 } }}
+                  />
+                )}
+              </Box>
+
+              {gradeSubmissionDeadline && (
+                <Box
+                  sx={{
+                    mt: 2.5,
+                    p: 2,
+                    gap: 1.5,
+                    display: 'flex',
+                    borderRadius: 1.5,
+                    flexDirection: 'column',
+                    bgcolor: 'background.neutral',
+                  }}
+                >
+                  <Typography variant="subtitle2">ช่องทางการแจ้งเตือน</Typography>
+                  <Field.Switch
+                    name="gradeReminderNotifyInApp"
+                    label="แจ้งเตือนในระบบ"
+                    helperText="ขึ้นกระดิ่งแจ้งเตือนในระบบของครู"
+                  />
+                  <Field.Switch
+                    name="gradeReminderNotifyLine"
+                    label="แจ้งเตือนผ่าน LINE"
+                    helperText="ส่งเฉพาะครูที่เชื่อมบัญชี LINE แล้ว"
+                  />
+                </Box>
+              )}
+
+              {editingSemester && (
+                <Field.Switch
+                  name="isActive"
+                  label="เปิดใช้งานภาคเรียนนี้"
+                  helperText="ภาคเรียนที่ปิดใช้งานจะยังคงอยู่ แต่แสดงสถานะไม่ได้ใช้งาน"
+                  sx={{ mt: 2.5 }}
+                />
+              )}
+            </Stack>
           </DialogContent>
 
           <DialogActions>

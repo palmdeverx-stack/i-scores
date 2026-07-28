@@ -28,9 +28,11 @@ import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
 
 import { paths } from 'src/routes/paths';
+import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
+import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
@@ -40,18 +42,24 @@ import { listSemesters, listAcademicYears } from 'src/sections/academic-year/aca
 import {
   listSubjects,
   deleteSubject,
+  createSubject,
   activityTypeLabel,
+  uploadSubjectImage,
   STUDENT_DEVELOPMENT_ACTIVITY_CODE,
 } from '../subject-actions';
 
 // ----------------------------------------------------------------------
 
-export function SubjectListView({ basePath = paths.admin.subject.root }: { basePath?: string } = {}) {
+export function SubjectListView({
+  basePath = paths.admin.subject.root,
+}: { basePath?: string } = {}) {
+  const router = useRouter();
   const table = useTable({ defaultRowsPerPage: 5 });
   const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null);
   const [yearFilter, setYearFilter] = useState('');
   const [semesterFilter, setSemesterFilter] = useState('');
   const [areaFilter, setAreaFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
   const {
@@ -87,10 +95,19 @@ export function SubjectListView({ basePath = paths.admin.subject.root }: { baseP
   const subjectTypeLabel = (code: string | null) =>
     masterItems.find((item) => item.category === 'subject_type' && item.code === code)?.name ??
     code;
+  const educationStageLabel = (code: string | null) =>
+    masterItems.find((item) => item.category === 'education_stage' && item.code === code)?.name ??
+    code;
 
-  const subjects = areaFilter
-    ? allSubjects.filter((subject) => subject.learning_area === areaFilter)
-    : allSubjects;
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase('th');
+  const subjects = allSubjects
+    .filter((subject) => !areaFilter || subject.learning_area === areaFilter)
+    .filter(
+      (subject) =>
+        !normalizedSearchQuery ||
+        subject.name.toLocaleLowerCase('th').includes(normalizedSearchQuery) ||
+        subject.code?.toLocaleLowerCase().includes(normalizedSearchQuery)
+    );
   const visibleSubjects = rowInPage(subjects, table.page, table.rowsPerPage);
 
   const deleteMutation = useMutation({
@@ -99,6 +116,61 @@ export function SubjectListView({ basePath = paths.admin.subject.root }: { baseP
       table.onUpdatePageDeleteRow(visibleSubjects.length);
       await queryClient.invalidateQueries({ queryKey: ['subjects'] });
       setDeletingSubject(null);
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: async (subject: Subject) => {
+      if (!subject.academic_year_id || !subject.semester_id) {
+        throw new Error('ไม่สามารถคัดลอกวิชาที่ยังไม่กำหนดปีการศึกษาหรือภาคเรียนได้');
+      }
+
+      const newSubject = await createSubject({
+        code: subject.code
+          ? `${subject.code}-COPY`
+          : `SUBJ-${Date.now().toString(36).toUpperCase()}`,
+        name: `${subject.name} (สำเนา)`,
+        nameEn: subject.name_en ? `${subject.name_en} (Copy)` : undefined,
+        credits: subject.credits,
+        studyHours: subject.study_hours,
+        description: subject.description ?? undefined,
+        descriptionEn: subject.description_en ?? undefined,
+        academicYearId: subject.academic_year_id,
+        semesterId: subject.semester_id,
+        learningArea: subject.learning_area ?? undefined,
+        activityType: subject.activity_type ?? undefined,
+        subjectType: subject.subject_type ?? undefined,
+        educationStage: subject.education_stage ?? undefined,
+        gradeLevels: subject.grade_levels,
+        learningStandards: subject.learning_standards ?? undefined,
+        learningOutcomes: subject.learning_outcomes ?? undefined,
+        learningUnits: subject.learning_units ?? undefined,
+        indicators: subject.indicators ?? undefined,
+      });
+
+      if (!subject.image_url) return newSubject;
+
+      try {
+        const imageResponse = await fetch(subject.image_url);
+        if (!imageResponse.ok) throw new Error('ไม่สามารถคัดลอกรูปภาพวิชาได้');
+
+        const blob = await imageResponse.blob();
+        const extension = blob.type === 'image/jpeg' ? 'jpg' : (blob.type.split('/')[1] ?? 'jpg');
+        const file = new File([blob], `subject-image.${extension}`, { type: blob.type });
+
+        return await uploadSubjectImage(newSubject.id, file);
+      } catch (error) {
+        await deleteSubject(newSubject.id);
+        throw error;
+      }
+    },
+    onSuccess: async (newSubject) => {
+      await queryClient.invalidateQueries({ queryKey: ['subjects'] });
+      toast.success(`คัดลอกวิชา "${newSubject.name}" เรียบร้อยแล้ว`);
+      router.push(`${basePath}/${newSubject.id}/edit`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 
@@ -116,7 +188,7 @@ export function SubjectListView({ basePath = paths.admin.subject.root }: { baseP
       >
         <Box>
           <Typography component="h1" variant="h3">
-            รายวิชา
+            วิชาและหลักสูตร
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
             จัดการข้อมูล หน่วยกิต คำอธิบาย และรูปภาพรายวิชาที่เปิดสอนในโรงเรียน
@@ -169,6 +241,19 @@ export function SubjectListView({ basePath = paths.admin.subject.root }: { baseP
             </Typography>
           </Box>
           <Box sx={{ gap: 1.5, display: 'flex', flexDirection: { xs: 'column', sm: 'row' } }}>
+            <TextField
+              size="small"
+              value={searchQuery}
+              placeholder="ค้นหารหัสวิชา หรือชื่อวิชา"
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                table.onResetPage();
+              }}
+              slotProps={{
+                input: { startAdornment: <RemixIcon icon="solar:magnifer-linear" width={18} /> },
+              }}
+              sx={{ minWidth: 220 }}
+            />
             <TextField
               select
               size="small"
@@ -233,11 +318,12 @@ export function SubjectListView({ basePath = paths.admin.subject.root }: { baseP
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: { sm: 220 } }}>รหัสวิชา</TableCell>
+                <TableCell sx={{ width: { sm: 140 } }}>รหัสวิชา</TableCell>
                 <TableCell>รายละเอียดรายวิชา</TableCell>
                 <TableCell sx={{ width: 190 }}> ภาคเรียน / ปี </TableCell>
                 <TableCell sx={{ width: 170 }}>หน่วยกิต / ชั่วโมง</TableCell>
-                <TableCell sx={{ width: 140 }} align="right">
+                <TableCell sx={{ width: 100 }}>สถานะ</TableCell>
+                <TableCell sx={{ width: 170 }} align="right">
                   การจัดการ
                 </TableCell>
               </TableRow>
@@ -279,7 +365,7 @@ export function SubjectListView({ basePath = paths.admin.subject.root }: { baseP
                         <RemixIcon icon="solar:gallery-wide-bold" width={24} />
                       </Avatar>
                       <Box sx={{ minWidth: 0 }}>
-                        <Box sx={{ display: 'flex' }}>
+                        <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
                           <Typography variant="subtitle2">{subject.name}</Typography>
                           {subject.name_en && (
                             <Typography
@@ -291,7 +377,9 @@ export function SubjectListView({ basePath = paths.admin.subject.root }: { baseP
                             </Typography>
                           )}
                         </Box>
-                        {(subject.learning_area || subject.subject_type) && (
+                        {(subject.learning_area ||
+                          subject.subject_type ||
+                          subject.education_stage) && (
                           <Box sx={{ gap: 0.5, mt: 0.5, display: 'flex', flexWrap: 'wrap' }}>
                             {subject.learning_area && (
                               <Label
@@ -314,6 +402,11 @@ export function SubjectListView({ basePath = paths.admin.subject.root }: { baseP
                                 color={subject.subject_type === 'basic' ? 'default' : 'primary'}
                               >
                                 {subjectTypeLabel(subject.subject_type)}
+                              </Label>
+                            )}
+                            {subject.education_stage && (
+                              <Label variant="soft" color="default">
+                                {educationStageLabel(subject.education_stage)}
                               </Label>
                             )}
                           </Box>
@@ -359,6 +452,14 @@ export function SubjectListView({ basePath = paths.admin.subject.root }: { baseP
                       {Number(subject.study_hours ?? 0).toLocaleString('th-TH')} ชั่วโมง
                     </Typography>
                   </TableCell>
+                  <TableCell>
+                    <Label
+                      variant="soft"
+                      color={subject.status === 'published' ? 'success' : 'default'}
+                    >
+                      {subject.status === 'published' ? 'เผยแพร่แล้ว' : 'แบบร่าง'}
+                    </Label>
+                  </TableCell>
                   <TableCell align="right">
                     <Tooltip title="แก้ไข">
                       <IconButton
@@ -368,6 +469,16 @@ export function SubjectListView({ basePath = paths.admin.subject.root }: { baseP
                         aria-label={`แก้ไขวิชา ${subject.name}`}
                       >
                         <RemixIcon icon="solar:pen-bold" width={18} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="คัดลอกวิชา">
+                      <IconButton
+                        size="small"
+                        disabled={duplicateMutation.isPending}
+                        onClick={() => duplicateMutation.mutate(subject)}
+                        aria-label={`คัดลอกวิชา ${subject.name}`}
+                      >
+                        <RemixIcon icon="solar:copy-bold" width={18} />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="ลบ">

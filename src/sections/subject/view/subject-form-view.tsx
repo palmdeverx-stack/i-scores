@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
@@ -43,7 +44,7 @@ import {
 // ----------------------------------------------------------------------
 
 const FormSchema = z.object({
-  code: z.string().trim(),
+  code: z.string().trim().min(1, { error: 'กรุณากรอกรหัสวิชา!' }),
   name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อวิชาภาษาไทย!' }),
   nameEn: z.string().trim(),
   credits: z.number().min(0, { error: 'หน่วยกิตต้องไม่ต่ำกว่า 0!' }).max(99),
@@ -55,9 +56,11 @@ const FormSchema = z.object({
     .max(2000, { error: 'คำอธิบายภาษาอังกฤษต้องไม่เกิน 2,000 ตัวอักษร!' }),
   academicYearId: z.string().min(1, { error: 'กรุณาเลือกปีการศึกษา!' }),
   semesterId: z.string().min(1, { error: 'กรุณาเลือกภาคเรียน!' }),
+  published: z.boolean(),
   learningArea: z.string(),
   activityType: z.string(),
   subjectType: z.string(),
+  educationStage: z.string(),
   gradeLevels: z.array(z.string()),
   learningStandards: z.string().max(20000),
   learningOutcomes: z.string().max(20000),
@@ -84,21 +87,17 @@ const EMPTY_VALUES: FormValues = {
   descriptionEn: '',
   academicYearId: '',
   semesterId: '',
+  published: false,
   learningArea: '',
   activityType: '',
   subjectType: '',
+  educationStage: '',
   gradeLevels: [],
   learningStandards: '',
   learningOutcomes: '',
   learningUnits: '',
   indicators: '',
 };
-
-const toTextItems = (value: string) =>
-  value
-    .split(/\r?\n/)
-    .map((item) => item.trim())
-    .filter(Boolean);
 
 type Props = {
   subjectId?: string;
@@ -126,6 +125,7 @@ export function SubjectFormView({
   const { handleSubmit, reset, setValue, control } = methods;
   const academicYearId = useWatch({ control, name: 'academicYearId' });
   const learningArea = useWatch({ control, name: 'learningArea' });
+  const published = useWatch({ control, name: 'published' });
 
   const subjectQuery = useQuery({
     queryKey: ['subjects', 'detail', subjectId],
@@ -156,27 +156,34 @@ export function SubjectFormView({
       item.category === 'subject_type' &&
       (item.is_active || item.code === editingSubject?.subject_type)
   );
+  const educationStages = masterItems.filter(
+    (item) =>
+      item.category === 'education_stage' &&
+      (item.is_active || item.code === editingSubject?.education_stage)
+  );
 
   const saveMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       const params = {
         name: data.name.trim(),
         nameEn: data.nameEn.trim() || undefined,
-        code: data.code.trim() || undefined,
+        code: data.code.trim(),
         credits: data.credits,
         studyHours: data.studyHours,
         description: data.description.trim() || undefined,
         descriptionEn: data.descriptionEn.trim() || undefined,
         academicYearId: data.academicYearId,
         semesterId: data.semesterId,
+        status: (data.published ? 'published' : 'draft') as 'published' | 'draft',
         learningArea: (data.learningArea || undefined) as LearningArea | undefined,
         activityType: (data.activityType || undefined) as ActivityType | undefined,
         subjectType: (data.subjectType || undefined) as SubjectType | undefined,
+        educationStage: data.educationStage || undefined,
         gradeLevels: data.gradeLevels,
-        learningStandards: toTextItems(data.learningStandards),
-        learningOutcomes: toTextItems(data.learningOutcomes),
-        learningUnits: toTextItems(data.learningUnits),
-        indicators: toTextItems(data.indicators),
+        learningStandards: data.learningStandards.trim() || undefined,
+        learningOutcomes: data.learningOutcomes.trim() || undefined,
+        learningUnits: data.learningUnits.trim() || undefined,
+        indicators: data.indicators.trim() || undefined,
       };
       const subject = editingSubject
         ? await updateSubject(editingSubject.id, params)
@@ -219,14 +226,16 @@ export function SubjectFormView({
             descriptionEn: editingSubject.description_en ?? '',
             academicYearId: editingSubject.academic_year_id ?? '',
             semesterId: editingSubject.semester_id ?? '',
+            published: editingSubject.status === 'published',
             learningArea: editingSubject.learning_area ?? '',
             activityType: editingSubject.activity_type ?? '',
             subjectType: editingSubject.subject_type ?? '',
+            educationStage: editingSubject.education_stage ?? '',
             gradeLevels: editingSubject.grade_levels ?? [],
-            learningStandards: (editingSubject.learning_standards ?? []).join('\n'),
-            learningOutcomes: (editingSubject.learning_outcomes ?? []).join('\n'),
-            learningUnits: (editingSubject.learning_units ?? []).join('\n'),
-            indicators: (editingSubject.indicators ?? []).join('\n'),
+            learningStandards: editingSubject.learning_standards ?? '',
+            learningOutcomes: editingSubject.learning_outcomes ?? '',
+            learningUnits: editingSubject.learning_units ?? '',
+            indicators: editingSubject.indicators ?? '',
           }
         : {
             ...EMPTY_VALUES,
@@ -340,9 +349,9 @@ export function SubjectFormView({
                 >
                   <Field.Text
                     name="code"
-                    label="รหัสวิชา"
+                    label="รหัสวิชา *"
                     placeholder="เช่น MATH101"
-                    helperText="ไม่บังคับ ใช้ช่วยค้นหาและแยกรายวิชา"
+                    helperText="ต้องไม่ซ้ำกับรายวิชาอื่นในภาคเรียนเดียวกัน"
                     autoFocus
                   />
                   <Field.Text
@@ -405,6 +414,18 @@ export function SubjectFormView({
                       </MenuItem>
                     ))}
                   </Field.Select>
+                  <Field.Select
+                    name="educationStage"
+                    label="ช่วงชั้น"
+                    helperText="อ้างอิงข้อมูลหลักช่วงชั้นของโรงเรียน"
+                  >
+                    <MenuItem value="">ไม่ระบุ</MenuItem>
+                    {educationStages.map((stage) => (
+                      <MenuItem key={stage.id} value={stage.code}>
+                        {stage.name}
+                      </MenuItem>
+                    ))}
+                  </Field.Select>
                   {learningArea === STUDENT_DEVELOPMENT_ACTIVITY_CODE && (
                     <Field.Select
                       name="activityType"
@@ -421,13 +442,13 @@ export function SubjectFormView({
                     </Field.Select>
                   )}
                   <Box sx={{ gridColumn: { sm: 'span 2' } }}>
-                    <Field.MultiSelect
+                    <Field.Autocomplete
                       name="gradeLevels"
                       label="ระดับชั้นที่เปิดสอน"
                       placeholder="ไม่ระบุ"
-                      checkbox
-                      chip
                       fullWidth
+                      multiple
+                      keyOption={{ label: 'label', value: 'value' }}
                       options={GRADE_LEVELS.map((level) => ({ label: level, value: level }))}
                       helperText="เลือกได้หลายระดับชั้น เช่น ม.1-ม.3"
                     />
@@ -486,47 +507,37 @@ export function SubjectFormView({
                 <FormSectionTitle
                   number="4"
                   title="โครงสร้างหลักสูตรรายวิชา"
-                  description="กรอกหนึ่งรายการต่อหนึ่งบรรทัด เพื่อใช้จัดทำหลักสูตรและเอกสารการสอน"
+                  description="ใช้เครื่องมือจัดรูปแบบเพื่อพิมพ์รายละเอียดหลักสูตรและเอกสารการสอน"
                   icon="solar:document-text-bold-duotone"
                 />
-                <Field.Text
-                  name="learningStandards"
-                  label="มาตรฐานการเรียนรู้"
-                  placeholder={
-                    'เช่น ท 1.1 ใช้กระบวนการอ่านสร้างความรู้และความคิด\nท 2.1 ใช้กระบวนการเขียนสื่อสาร'
-                  }
-                  helperText="หนึ่งมาตรฐานต่อหนึ่งบรรทัด"
-                  multiline
-                  minRows={4}
-                />
-                <Field.Text
-                  name="learningOutcomes"
-                  label="ผลลัพธ์การเรียนรู้"
-                  placeholder={
-                    'ผู้เรียนสามารถอธิบายแนวคิดสำคัญได้\nผู้เรียนสามารถนำความรู้ไปประยุกต์ใช้ได้'
-                  }
-                  helperText="หนึ่งผลลัพธ์ต่อหนึ่งบรรทัด"
-                  multiline
-                  minRows={4}
-                />
-                <Field.Text
-                  name="learningUnits"
-                  label="หน่วยการเรียนรู้"
-                  placeholder={'หน่วยที่ 1 พื้นฐานและแนวคิดสำคัญ\nหน่วยที่ 2 การนำไปประยุกต์ใช้'}
-                  helperText="หนึ่งหน่วยต่อหนึ่งบรรทัด"
-                  multiline
-                  minRows={4}
-                />
-                <Field.Text
-                  name="indicators"
-                  label="ตัวชี้วัด"
-                  placeholder={
-                    'ท 1.1 ป.1/1 อ่านออกเสียงคำและข้อความสั้น ๆ\nท 1.1 ป.1/2 บอกความหมายของคำ'
-                  }
-                  helperText="หนึ่งตัวชี้วัดต่อหนึ่งบรรทัด"
-                  multiline
-                  minRows={4}
-                />
+                <Stack spacing={0.75}>
+                  <Typography variant="subtitle2">มาตรฐานการเรียนรู้</Typography>
+                  <Field.Editor
+                    name="learningStandards"
+                    placeholder="เช่น ท 1.1 ใช้กระบวนการอ่านสร้างความรู้และความคิด"
+                  />
+                </Stack>
+                <Stack spacing={0.75}>
+                  <Typography variant="subtitle2">ผลลัพธ์การเรียนรู้</Typography>
+                  <Field.Editor
+                    name="learningOutcomes"
+                    placeholder="เช่น ผู้เรียนสามารถอธิบายแนวคิดสำคัญได้"
+                  />
+                </Stack>
+                <Stack spacing={0.75}>
+                  <Typography variant="subtitle2">หน่วยการเรียนรู้</Typography>
+                  <Field.Editor
+                    name="learningUnits"
+                    placeholder="เช่น หน่วยที่ 1 พื้นฐานและแนวคิดสำคัญ"
+                  />
+                </Stack>
+                <Stack spacing={0.75}>
+                  <Typography variant="subtitle2">ตัวชี้วัด</Typography>
+                  <Field.Editor
+                    name="indicators"
+                    placeholder="เช่น ท 1.1 ป.1/1 อ่านออกเสียงคำและข้อความสั้น ๆ"
+                  />
+                </Stack>
               </Box>
             </Card>
 
@@ -538,6 +549,23 @@ export function SubjectFormView({
                 position: { lg: 'sticky' },
               }}
             >
+              {isEdit && (
+                <>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle1">สถานะการเผยแพร่</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      ครูท่านอื่นและผู้บริหารจะเห็นวิชานี้ก็ต่อเมื่อเผยแพร่แล้ว
+                      ก่อนหน้านั้นจะเห็นเฉพาะคุณ
+                    </Typography>
+                  </Box>
+                  <Field.Switch
+                    name="published"
+                    label={published ? 'เผยแพร่แล้ว' : 'แบบร่าง'}
+                    sx={{ mb: 2.5 }}
+                  />
+                  <Divider sx={{ mb: 2.5 }} />
+                </>
+              )}
               <Box sx={{ gap: 1.25, mb: 2.5, display: 'flex', alignItems: 'center' }}>
                 <Box
                   sx={{
@@ -629,12 +657,9 @@ export function SubjectFormView({
                   variant="contained"
                   loading={saveMutation.isPending}
                   disabled={subjectQuery.isLoading || subjectQuery.isError}
-                  startIcon={
-                    <RemixIcon icon={isEdit ? 'solar:diskette-bold' : 'mingcute:add-line'} />
-                  }
                   sx={{ minWidth: 170 }}
                 >
-                  {isEdit ? 'บันทึกการแก้ไข' : 'เพิ่มรายวิชา'}
+                  {isEdit ? 'บันทึกการแก้ไข' : 'บันทึก'}
                 </Button>
               </Box>
             </Box>

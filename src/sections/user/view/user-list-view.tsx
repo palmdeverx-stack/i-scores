@@ -279,6 +279,7 @@ export function UserListView() {
                 <TableCell>อีเมล</TableCell>
                 <TableCell>ประเภทบุคลากร</TableCell>
                 <TableCell>สถานะการทำงาน</TableCell>
+                <TableCell align="center">LINE</TableCell>
                 <TableCell align="center">เข้าใช้งาน</TableCell>
                 <TableCell align="right">การจัดการ</TableCell>
               </TableRow>
@@ -286,13 +287,13 @@ export function UserListView() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={7}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={8}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!isLoading && !filteredUsers.length && (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
                     ไม่พบผู้ใช้งาน
@@ -303,7 +304,8 @@ export function UserListView() {
                 <TableRow key={user.id} hover>
                   <TableCell>
                     <Typography variant="subtitle2">
-                      {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '-'}
+                      {`${user.name_prefix ?? ''}${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() ||
+                        '-'}
                     </Typography>
                     {(user.first_name_en || user.last_name_en) && (
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -341,6 +343,23 @@ export function UserListView() {
                       >
                         {employmentStatusLabels[user.employment_status] ?? user.employment_status}
                       </Label>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                  <TableCell align="center">
+                    {user.role === 'teacher' ? (
+                      user.line_linked_at ? (
+                        <Tooltip title={user.line_display_name ?? 'เชื่อม LINE แล้ว'}>
+                          <Label variant="soft" color="success">
+                            เชื่อมแล้ว
+                          </Label>
+                        </Tooltip>
+                      ) : (
+                        <Label variant="soft" color="default">
+                          ยังไม่เชื่อม
+                        </Label>
+                      )
                     ) : (
                       '-'
                     )}
@@ -428,23 +447,21 @@ export function UserListView() {
             </MenuItem>
           )}
 
+          {canManageStaff && <Divider sx={{ borderStyle: 'dashed' }} />}
           {canManageStaff && (
-            <>
-              <Divider sx={{ borderStyle: 'dashed' }} />
-              <MenuItem
-                sx={{ color: 'error.main' }}
-                onClick={() => {
-                  if (menuUser) {
-                    deleteMutation.reset();
-                    setDeletingUser(menuUser);
-                  }
-                  rowMenu.onClose();
-                }}
-              >
-                <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                ลบ
-              </MenuItem>
-            </>
+            <MenuItem
+              sx={{ color: 'error.main' }}
+              onClick={() => {
+                if (menuUser) {
+                  deleteMutation.reset();
+                  setDeletingUser(menuUser);
+                }
+                rowMenu.onClose();
+              }}
+            >
+              <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+              ลบ
+            </MenuItem>
           )}
         </MenuList>
       </CustomPopover>

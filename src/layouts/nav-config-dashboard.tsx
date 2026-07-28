@@ -8,6 +8,7 @@ import {
   RiPulseLine,
   RiIdCardLine,
   RiSchoolLine,
+  RiStairsLine,
   RiUserAddLine,
   RiCalendarLine,
   RiUserStarLine,
@@ -21,6 +22,7 @@ import {
   RiFileHistoryLine,
   RiShieldCheckLine,
   RiPresentationLine,
+  RiCalendarCloseLine,
   RiCalendarCheckLine,
   RiGraduationCapLine,
   RiOrganizationChart,
@@ -41,6 +43,7 @@ const ICONS = {
   enrollment: <RiUserAddLine />,
   lineNotifications: <RiMessage2Line />,
   announcements: <RiMegaphoneLine />,
+  schoolHolidays: <RiCalendarCloseLine />,
   department: <RiOrganizationChart />,
   scheduleBuilder: <RiCalendarScheduleLine />,
   scheduleSubmissions: <RiFileHistoryLine />,
@@ -56,6 +59,7 @@ const ICONS = {
   employmentStatuses: <RiPulseLine />,
   learningAreas: <RiBook2Line />,
   subjectTypes: <RiFileList3Line />,
+  educationStages: <RiStairsLine />,
 };
 
 // ----------------------------------------------------------------------
@@ -86,6 +90,12 @@ export const navData: NavSectionProps['data'] = [
         featureKey: 'admin.line_notifications',
       },
       {
+        title: 'วันหยุดโรงเรียน',
+        path: paths.admin.schoolHolidays,
+        icon: ICONS.schoolHolidays,
+        requiresDepartmentPermission: 'announcements.manage',
+      },
+      {
         title: 'ข้อมูลโรงเรียน',
         path: paths.admin.school,
         icon: ICONS.school,
@@ -112,7 +122,7 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'classrooms.manage',
       },
       {
-        title: 'รายวิชา',
+        title: 'วิชาและหลักสูตร',
         path: paths.admin.subject.root,
         icon: ICONS.subject,
         featureKey: 'admin.subjects',
@@ -187,7 +197,19 @@ export const navData: NavSectionProps['data'] = [
         path: paths.admin.documents.root,
         icon: ICONS.documents,
         featureKey: 'academic.documents',
-        requiresDepartmentPermission: 'grades.review',
+        requiresDepartmentPermission: 'documents.access',
+        children: [
+          {
+            title: 'เอกสารของฉัน',
+            path: paths.admin.documents.my,
+            icon: ICONS.documents,
+          },
+          {
+            title: 'ตัวอย่างเอกสาร',
+            path: paths.admin.documents.templates,
+            icon: ICONS.gradeReviews,
+          },
+        ],
       },
     ],
   },
@@ -202,6 +224,39 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'staff.manage',
       },
       {
+        title: 'นักเรียน',
+        path: paths.admin.student.root,
+        icon: ICONS.student,
+        featureKey: 'admin.students',
+        requiresDepartmentPermission: 'students.manage',
+        children: [
+          {
+            title: 'นำเข้าข้อมูล',
+            path: paths.admin.student.importData,
+            icon: ICONS.enrollment,
+          },
+          {
+            title: 'ข้อมูลนักเรียน',
+            path: paths.admin.student.list,
+            icon: ICONS.documents,
+          },
+        ],
+      },
+
+      {
+        title: 'จัดการฝ่าย',
+        path: paths.admin.department.root,
+        icon: ICONS.department,
+        deepMatch: true,
+        featureKey: 'admin.departments',
+      },
+      {
+        title: 'สิทธิ์การใช้งาน',
+        path: paths.admin.accessPermissions,
+        icon: ICONS.accessPermissions,
+        featureKey: 'admin.access_permissions',
+      },
+      {
         title: 'ข้อมูลหลัก',
         path: '#',
         icon: ICONS.masterData,
@@ -210,6 +265,12 @@ export const navData: NavSectionProps['data'] = [
             title: 'ประเภทบุคลากร',
             path: paths.admin.masterData.staffTypes,
             icon: ICONS.staffTypes,
+            featureKey: 'admin.staff_masters',
+          },
+          {
+            title: 'คำนำหน้าชื่อ',
+            path: paths.admin.masterData.prefixes,
+            icon: ICONS.positions,
             featureKey: 'admin.staff_masters',
           },
           {
@@ -244,37 +305,12 @@ export const navData: NavSectionProps['data'] = [
             featureKey: 'admin.subjects',
             requiresDepartmentPermission: 'subjects.manage',
           },
-        ],
-      },
-      {
-        title: 'จัดการฝ่าย',
-        path: paths.admin.department.root,
-        icon: ICONS.department,
-        deepMatch: true,
-        featureKey: 'admin.departments',
-      },
-      {
-        title: 'สิทธิ์การใช้งาน',
-        path: paths.admin.accessPermissions,
-        icon: ICONS.accessPermissions,
-        featureKey: 'admin.access_permissions',
-      },
-      {
-        title: 'นักเรียน',
-        path: paths.admin.student.root,
-        icon: ICONS.student,
-        featureKey: 'admin.students',
-        requiresDepartmentPermission: 'students.manage',
-        children: [
           {
-            title: 'นำเข้าข้อมูล',
-            path: paths.admin.student.importData,
-            icon: ICONS.enrollment,
-          },
-          {
-            title: 'ข้อมูลนักเรียน',
-            path: paths.admin.student.list,
-            icon: ICONS.documents,
+            title: 'ช่วงชั้น',
+            path: paths.admin.masterData.educationStages,
+            icon: ICONS.educationStages,
+            featureKey: 'admin.subjects',
+            requiresDepartmentPermission: 'subjects.manage',
           },
         ],
       },

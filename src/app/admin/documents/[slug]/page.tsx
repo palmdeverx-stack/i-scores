@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 
 import { notFound } from 'next/navigation';
 
+import { paths } from 'src/routes/paths';
+
 import { CONFIG } from 'src/global-config';
 
 import { getSchoolDocumentTemplate } from 'src/sections/documents/document-catalog';
@@ -23,8 +25,12 @@ export default async function Page({ params, searchParams }: Props) {
   const template = getSchoolDocumentTemplate(slug);
   if (!template) notFound();
   return (
-    <DepartmentPermissionGuard permission="grades.review">
-      <DocumentDetailView template={template} initialPreview={query.preview === '1'} />
+    <DepartmentPermissionGuard permission="documents.access">
+      <DocumentDetailView
+        template={template}
+        initialPreview={query.preview === '1'}
+        backPath={paths.admin.documents.templates}
+      />
     </DepartmentPermissionGuard>
   );
 }

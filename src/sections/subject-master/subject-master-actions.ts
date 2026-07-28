@@ -1,6 +1,6 @@
 'use client';
 
-export type SubjectMasterCategory = 'learning_area' | 'subject_type';
+export type SubjectMasterCategory = 'learning_area' | 'subject_type' | 'education_stage';
 
 export type SubjectMasterItem = {
   id: string;

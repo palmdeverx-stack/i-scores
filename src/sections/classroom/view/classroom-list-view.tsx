@@ -13,19 +13,17 @@ import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import { Box, Stack } from '@mui/material';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
-import TextField from '@mui/material/TextField';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import Container from '@mui/material/Container';
+import { Box, Grid, Stack } from '@mui/material';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
-import Autocomplete from '@mui/material/Autocomplete';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
@@ -34,6 +32,7 @@ import { today, fIsBetween } from 'src/utils/format-time';
 
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
+import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { listUsers } from 'src/sections/user/user-actions';
 import { listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
@@ -57,6 +56,7 @@ const CreateSchema = z.object({
 });
 
 export function ClassroomListView() {
+  const table = useTable({ defaultRowsPerPage: 10 });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClassroom, setEditingClassroom] = useState<Classroom | null>(null);
   const [deletingClassroom, setDeletingClassroom] = useState<Classroom | null>(null);
@@ -71,6 +71,7 @@ export function ClassroomListView() {
     queryKey: ['classrooms'],
     queryFn: () => listClassrooms(),
   });
+  const visibleClassrooms = rowInPage(classrooms, table.page, table.rowsPerPage);
   const {
     data: academicYears = [],
     isLoading: academicYearsLoading,
@@ -99,15 +100,7 @@ export function ClassroomListView() {
       teacherIds: [] as string[],
     },
   });
-  const {
-    handleSubmit,
-    reset,
-    setValue,
-    watch,
-    formState: { errors },
-  } = methods;
-  const teacherIds = watch('teacherIds');
-  const selectedTeachers = teachers.filter((teacher) => teacherIds.includes(teacher.id));
+  const { handleSubmit, reset } = methods;
 
   const saveMutation = useMutation({
     mutationFn: (data: z.infer<typeof CreateSchema>) => {
@@ -134,6 +127,7 @@ export function ClassroomListView() {
   const deleteMutation = useMutation({
     mutationFn: deleteClassroom,
     onSuccess: async () => {
+      table.onUpdatePageDeleteRow(visibleClassrooms.length);
       await queryClient.invalidateQueries({ queryKey: ['classrooms'] });
       setDeletingClassroom(null);
     },
@@ -257,7 +251,7 @@ export function ClassroomListView() {
                   </TableCell>
                 </TableRow>
               )}
-              {classrooms.map((classroom) => (
+              {visibleClassrooms.map((classroom) => (
                 <TableRow key={classroom.id} hover>
                   <TableCell>
                     <Typography variant="subtitle2">{classroom.name}</Typography>
@@ -316,6 +310,24 @@ export function ClassroomListView() {
             </TableBody>
           </Table>
         </TableContainer>
+
+        <TablePaginationCustom
+          page={table.page}
+          count={classrooms.length}
+          rowsPerPage={table.rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={table.onChangePage}
+          onRowsPerPageChange={table.onChangeRowsPerPage}
+          labelRowsPerPage="แสดงต่อหน้า"
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} จาก ${count}`}
+          getItemAriaLabel={(type) => {
+            if (type === 'first') return 'หน้าแรก';
+            if (type === 'last') return 'หน้าสุดท้าย';
+            if (type === 'next') return 'หน้าถัดไป';
+            return 'หน้าก่อนหน้า';
+          }}
+          sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+        />
       </Card>
 
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
@@ -362,96 +374,86 @@ export function ClassroomListView() {
                 </Alert>
               )}
 
-              <Box
-                sx={{
-                  gap: 2.5,
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-                }}
-              >
-                <Field.Select
-                  name="academicYearId"
-                  label="ปีการศึกษา *"
-                  disabled={academicYearsLoading || academicYearsError}
-                  helperText="ปีการศึกษาที่ห้องนี้เปิดใช้งาน"
-                >
-                  {academicYearsLoading && <MenuItem disabled>กำลังโหลด...</MenuItem>}
-                  {!academicYearsLoading && !academicYears.length && (
-                    <MenuItem disabled>ยังไม่มีปีการศึกษา</MenuItem>
-                  )}
-                  {academicYears.map((year) => (
-                    <MenuItem key={year.id} value={year.id}>
-                      {year.year}{' '}
-                      {fIsBetween(today(), year.start_date, year.end_date) ? '(ปัจจุบัน)' : ''}
-                    </MenuItem>
-                  ))}
-                </Field.Select>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12 }}>
+                  <Field.Select
+                    name="academicYearId"
+                    label="ปีการศึกษา *"
+                    disabled={academicYearsLoading || academicYearsError}
+                    helperText="ปีการศึกษาที่ห้องนี้เปิดใช้งาน"
+                  >
+                    {academicYearsLoading && <MenuItem disabled>กำลังโหลด...</MenuItem>}
+                    {!academicYearsLoading && !academicYears.length && (
+                      <MenuItem disabled>ยังไม่มีปีการศึกษา</MenuItem>
+                    )}
+                    {academicYears.map((year) => (
+                      <MenuItem key={year.id} value={year.id}>
+                        {year.year}{' '}
+                        {fIsBetween(today(), year.start_date, year.end_date) ? '(ปัจจุบัน)' : ''}
+                      </MenuItem>
+                    ))}
+                  </Field.Select>
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Field.Text
+                    name="name"
+                    label="ชื่อห้องเรียนภาษาไทย *"
+                    placeholder="เช่น ม.1/1"
+                    helperText="ชื่อหลักที่ครูและนักเรียนจะเห็น"
+                    autoFocus
+                  />
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Field.Text
+                    name="nameEn"
+                    label="ชื่อห้องเรียนภาษาอังกฤษ"
+                    placeholder="e.g. Grade 7/1"
+                    helperText="ไม่บังคับ"
+                    slotProps={{ htmlInput: { lang: 'en' } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Field.Text
+                    name="gradeLevel"
+                    label="ระดับชั้นภาษาไทย"
+                    placeholder="เช่น มัธยมศึกษาปีที่ 1"
+                    helperText="ไม่บังคับ"
+                  />
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Field.Text
+                    name="gradeLevelEn"
+                    label="ระดับชั้นภาษาอังกฤษ"
+                    placeholder="e.g. Grade 7"
+                    helperText="ไม่บังคับ"
+                    slotProps={{ htmlInput: { lang: 'en' } }}
+                  />
+                </Grid>
 
-                <Field.Text
-                  name="name"
-                  label="ชื่อห้องเรียนภาษาไทย *"
-                  placeholder="เช่น ม.1/1"
-                  helperText="ชื่อหลักที่ครูและนักเรียนจะเห็น"
-                  autoFocus
-                />
-
-                <Field.Text
-                  name="nameEn"
-                  label="ชื่อห้องเรียนภาษาอังกฤษ"
-                  placeholder="e.g. Grade 7/1"
-                  helperText="ไม่บังคับ"
-                  slotProps={{ htmlInput: { lang: 'en' } }}
-                />
-
-                <Field.Text
-                  name="gradeLevel"
-                  label="ระดับชั้นภาษาไทย"
-                  placeholder="เช่น มัธยมศึกษาปีที่ 1"
-                  helperText="ไม่บังคับ"
-                />
-
-                <Field.Text
-                  name="gradeLevelEn"
-                  label="ระดับชั้นภาษาอังกฤษ"
-                  placeholder="e.g. Grade 7"
-                  helperText="ไม่บังคับ"
-                  slotProps={{ htmlInput: { lang: 'en' } }}
-                />
-
-                <Autocomplete
-                  multiple
-                  disableCloseOnSelect
-                  filterSelectedOptions
-                  options={teachers}
-                  value={selectedTeachers}
-                  loading={teachersLoading}
-                  disabled={teachersLoading || teachersError}
-                  getOptionLabel={(teacher) =>
-                    `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim() ||
-                    teacher.username
-                  }
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  onChange={(_, value) =>
-                    setValue(
-                      'teacherIds',
-                      value.map((teacher) => teacher.id),
-                      { shouldDirty: true, shouldValidate: true }
-                    )
-                  }
-                  noOptionsText="ไม่พบรายชื่อครู"
-                  loadingText="กำลังโหลดรายชื่อครู..."
-                  sx={{ gridColumn: { sm: '1 / -1' } }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="ครูประจำชั้น *"
-                      placeholder={selectedTeachers.length ? '' : 'เลือกได้มากกว่า 1 คน'}
-                      error={!!errors.teacherIds}
-                      helperText={errors.teacherIds?.message ?? 'เลือกครูประจำชั้นอย่างน้อย 1 คน'}
-                    />
-                  )}
-                />
-              </Box>
+                <Grid size={{ xs: 12 }}>
+                  <Field.Autocomplete
+                    name="teacherIds"
+                    label="ครูประจำชั้น *"
+                    placeholder="เลือกได้มากกว่า 1 คน"
+                    fullWidth
+                    multiple
+                    filterSelectedOptions
+                    loading={teachersLoading}
+                    disabled={teachersLoading || teachersError}
+                    keyOption={{ label: 'label', value: 'value' }}
+                    options={teachers.map((teacher) => ({
+                      label:
+                        `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim() ||
+                        teacher.username,
+                      value: teacher.id,
+                    }))}
+                    noOptionsText="ไม่พบรายชื่อครู"
+                    loadingText="กำลังโหลดรายชื่อครู..."
+                    helperText="เลือกครูประจำชั้นอย่างน้อย 1 คน"
+                    sx={{ gridColumn: { sm: '1 / -1' } }}
+                  />
+                </Grid>
+              </Grid>
             </Stack>
           </DialogContent>
 

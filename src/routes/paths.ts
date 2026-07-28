@@ -83,6 +83,8 @@ export const paths = {
     gradeResultDetail: (id: string) => `${ROOTS.TEACHER}/grade-results/${id}`,
     documents: {
       root: `${ROOTS.TEACHER}/documents`,
+      my: `${ROOTS.TEACHER}/documents/my`,
+      templates: `${ROOTS.TEACHER}/documents/templates`,
       pp5: `${ROOTS.TEACHER}/documents/pp5`,
       detail: (slug: string) => `${ROOTS.TEACHER}/documents/${slug}`,
     },
@@ -127,14 +129,17 @@ export const paths = {
     guide: `${ROOTS.ADMIN}/guide`,
     announcements: `${ROOTS.ADMIN}/announcements`,
     lineNotifications: `${ROOTS.ADMIN}/line-notifications`,
+    schoolHolidays: `${ROOTS.ADMIN}/school-holidays`,
     accessPermissions: `${ROOTS.ADMIN}/access-permissions`,
     masterData: {
       staffTypes: `${ROOTS.ADMIN}/master-data/staff-types`,
+      prefixes: `${ROOTS.ADMIN}/master-data/prefixes`,
       positions: `${ROOTS.ADMIN}/master-data/positions`,
       academicRanks: `${ROOTS.ADMIN}/master-data/academic-ranks`,
       employmentStatuses: `${ROOTS.ADMIN}/master-data/employment-statuses`,
       learningAreas: `${ROOTS.ADMIN}/master-data/learning-areas`,
       subjectTypes: `${ROOTS.ADMIN}/master-data/subject-types`,
+      educationStages: `${ROOTS.ADMIN}/master-data/education-stages`,
     },
     user: {
       root: `${ROOTS.ADMIN}/user`,
@@ -188,6 +193,8 @@ export const paths = {
     gradeResultDetail: (id: string) => `${ROOTS.ADMIN}/grade-results/${id}`,
     documents: {
       root: `${ROOTS.ADMIN}/documents`,
+      my: `${ROOTS.ADMIN}/documents/my`,
+      templates: `${ROOTS.ADMIN}/documents/templates`,
       pp5: `${ROOTS.ADMIN}/documents/pp5`,
       detail: (slug: string) => `${ROOTS.ADMIN}/documents/${slug}`,
     },

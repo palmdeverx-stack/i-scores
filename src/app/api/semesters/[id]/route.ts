@@ -24,11 +24,32 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
   const { id } = await params;
-  const { name, startDate, endDate, isActive } = await request.json();
+  const {
+    name,
+    startDate,
+    endDate,
+    isActive,
+    gradeSubmissionDeadline,
+    gradeReminderDays,
+    gradeReminderNotifyInApp,
+    gradeReminderNotifyLine,
+  } = await request.json();
 
   if (!name || !startDate || !endDate) {
     return NextResponse.json(
       { message: 'กรุณากรอกชื่อภาคเรียน วันที่เริ่มต้น และวันที่สิ้นสุด' },
+      { status: 400 }
+    );
+  }
+
+  const hasDeadline = typeof gradeSubmissionDeadline === 'string' && gradeSubmissionDeadline;
+  const parsedReminderDays = Number(gradeReminderDays);
+  if (
+    hasDeadline &&
+    (!Number.isInteger(parsedReminderDays) || parsedReminderDays < 1)
+  ) {
+    return NextResponse.json(
+      { message: 'กรุณาระบุจำนวนวันที่เตือนก่อนถึงกำหนดส่ง (อย่างน้อย 1 วัน)' },
       { status: 400 }
     );
   }
@@ -79,10 +100,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       name: String(name).trim(),
       start_date: startDate,
       end_date: endDate,
+      grade_submission_deadline: hasDeadline ? gradeSubmissionDeadline : null,
+      grade_reminder_days: hasDeadline ? parsedReminderDays : null,
+      grade_reminder_notify_in_app: gradeReminderNotifyInApp !== false,
+      grade_reminder_notify_line: gradeReminderNotifyLine !== false,
       ...(typeof isActive === 'boolean' && { is_active: isActive }),
     })
     .eq('id', id)
-    .select('id, name, start_date, end_date, is_active, created_at')
+    .select(
+      'id, name, start_date, end_date, is_active, grade_submission_deadline, grade_reminder_days, grade_reminder_notify_in_app, grade_reminder_notify_line, created_at'
+    )
     .single();
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });

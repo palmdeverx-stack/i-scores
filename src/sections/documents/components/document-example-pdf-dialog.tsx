@@ -92,10 +92,10 @@ const SAMPLE_PP5_REPORT: ScoreReport = {
     firstName: String(firstName),
     lastName: String(lastName),
     nickname: null,
-    specialResult: index === 2 ? 'ร' as const : null,
+    specialResult: index === 2 ? ('ร' as const) : null,
     desirableAttributesLevel: index === 0 ? 3 : 2,
     readingThinkingWritingLevel: index === 2 ? 1 : 2,
-    activityResult: index === 2 ? 'pending' as const : 'pass' as const,
+    activityResult: index === 2 ? ('pending' as const) : ('pass' as const),
     scores: Object.fromEntries(
       ['work', 'quiz', 'midterm', 'final', 'other'].map((id, scoreIndex) => [
         id,
@@ -123,7 +123,9 @@ function ExampleDocument({ template }: { template: SchoolDocumentTemplate }) {
     <Document title={`ตัวอย่าง-${template.code}-${template.name}`}>
       <Page size="A4" orientation={landscape ? 'landscape' : 'portrait'} style={styles.page}>
         <Text style={styles.sample}>ตัวอย่างเอกสาร — ข้อมูลสมมติสำหรับดูรูปแบบ</Text>
-        <Text style={styles.title}>{template.code} {template.name}</Text>
+        <Text style={styles.title}>
+          {template.code} {template.name}
+        </Text>
         <Text style={styles.school}>โรงเรียนตัวอย่าง สำนักงานเขตพื้นที่การศึกษาตัวอย่าง</Text>
         <View style={styles.meta}>
           <Text>เลขที่เอกสาร DOC-2569-0001</Text>
@@ -132,12 +134,23 @@ function ExampleDocument({ template }: { template: SchoolDocumentTemplate }) {
         </View>
         {template.sections.map((section, index) => (
           <View key={section} style={styles.section} wrap={false}>
-            <Text style={styles.sectionTitle}>{index + 1}. {section}</Text>
+            <Text style={styles.sectionTitle}>
+              {index + 1}. {section}
+            </Text>
             <View style={styles.lines}>
-              <Text style={styles.line}>ข้อมูลตัวอย่าง ................................................................................................</Text>
-              <Text style={styles.line}>รายละเอียด .......................................................................................................</Text>
+              <Text style={styles.line}>
+                ข้อมูลตัวอย่าง
+                ................................................................................................
+              </Text>
+              <Text style={styles.line}>
+                รายละเอียด
+                .......................................................................................................
+              </Text>
               {index === 1 && (
-                <Text style={styles.line}>ข้อมูลเพิ่มเติม ...................................................................................................</Text>
+                <Text style={styles.line}>
+                  ข้อมูลเพิ่มเติม
+                  ...................................................................................................
+                </Text>
               )}
             </View>
           </View>
@@ -193,7 +206,9 @@ export default function DocumentExamplePdfDialog({ open, onClose, template }: Pr
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button color="inherit" onClick={onClose}>ปิด</Button>
+        <Button color="inherit" onClick={onClose}>
+          ปิด
+        </Button>
         <PDFDownloadLink
           document={document}
           fileName={`ตัวอย่าง-${template.code}-${template.name}.pdf`}

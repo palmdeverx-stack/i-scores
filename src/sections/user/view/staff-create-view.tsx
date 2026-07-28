@@ -37,6 +37,7 @@ import { createUser, getManagedUser, updateStaffUser } from '../user-actions';
 
 const StaffSchema = z
   .object({
+    namePrefix: z.string().trim().min(1, { error: 'กรุณาเลือกคำนำหน้าชื่อ!' }),
     firstName: z.string().trim().min(1, { error: 'กรุณากรอกชื่อภาษาไทย!' }),
     lastName: z.string().trim().min(1, { error: 'กรุณากรอกนามสกุลภาษาไทย!' }),
     firstNameEn: z.string(),
@@ -69,6 +70,7 @@ const StaffSchema = z
 type StaffFormValues = z.infer<typeof StaffSchema>;
 
 const DEFAULT_VALUES: StaffFormValues = {
+  namePrefix: '',
   firstName: '',
   lastName: '',
   firstNameEn: '',
@@ -123,6 +125,7 @@ export function StaffCreateView({ userId }: { userId?: string } = {}) {
     if (!user) return;
 
     reset({
+      namePrefix: user.name_prefix ?? '',
       firstName: user.first_name ?? '',
       lastName: user.last_name ?? '',
       firstNameEn: user.first_name_en ?? '',
@@ -141,7 +144,7 @@ export function StaffCreateView({ userId }: { userId?: string } = {}) {
   }, [reset, userQuery.data]);
 
   const activeMasterItems = (
-    category: 'staff_type' | 'position' | 'academic_rank' | 'employment_status'
+    category: 'staff_type' | 'prefix' | 'position' | 'academic_rank' | 'employment_status'
   ) =>
     (masterItemsQuery.data ?? []).filter(
       (item) =>
@@ -149,34 +152,35 @@ export function StaffCreateView({ userId }: { userId?: string } = {}) {
         (item.is_active ||
           item.code === userQuery.data?.staff_type ||
           item.code === userQuery.data?.employment_status ||
+          item.name === userQuery.data?.name_prefix ||
           item.name === userQuery.data?.position_title ||
           item.name === userQuery.data?.academic_rank)
     );
 
   const saveMutation = useMutation({
-    mutationFn: (values: StaffFormValues) =>
-      {
-        const params = {
-          firstName: values.firstName.trim(),
-          lastName: values.lastName.trim(),
-          firstNameEn: values.firstNameEn.trim() || undefined,
-          lastNameEn: values.lastNameEn.trim() || undefined,
-          username: values.username.trim(),
-          email: values.email.trim() || undefined,
-          password: values.password || undefined,
-          staffType: values.staffType as StaffType,
-          employmentStatus: values.employmentStatus,
-          employmentStartDate: values.employmentStartDate || undefined,
-          appointmentDate: values.appointmentDate || undefined,
-          contractEndDate: values.contractEndDate || undefined,
-          positionTitle: values.positionTitle.trim() || undefined,
-          academicRank: values.academicRank.trim() || undefined,
-        };
+    mutationFn: (values: StaffFormValues) => {
+      const params = {
+        namePrefix: values.namePrefix.trim(),
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        firstNameEn: values.firstNameEn.trim() || undefined,
+        lastNameEn: values.lastNameEn.trim() || undefined,
+        username: values.username.trim(),
+        email: values.email.trim() || undefined,
+        password: values.password || undefined,
+        staffType: values.staffType as StaffType,
+        employmentStatus: values.employmentStatus,
+        employmentStartDate: values.employmentStartDate || undefined,
+        appointmentDate: values.appointmentDate || undefined,
+        contractEndDate: values.contractEndDate || undefined,
+        positionTitle: values.positionTitle.trim() || undefined,
+        academicRank: values.academicRank.trim() || undefined,
+      };
 
-        return isEdit
-          ? updateStaffUser(userId!, params)
-          : createUser({ ...params, password: values.password, role: 'teacher' });
-      },
+      return isEdit
+        ? updateStaffUser(userId!, params)
+        : createUser({ ...params, password: values.password, role: 'teacher' });
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['users'] });
       router.push(paths.admin.user.root);
@@ -224,6 +228,13 @@ export function StaffCreateView({ userId }: { userId?: string } = {}) {
               description="ชื่อและข้อมูลส่วนตัวของครูหรือบุคลากร"
             />
             <Box sx={fieldGridSx}>
+              <Field.Select name="namePrefix" label="คำนำหน้าชื่อ *">
+                {activeMasterItems('prefix').map((item) => (
+                  <MenuItem key={item.id} value={item.name}>
+                    {item.name_en ? `${item.name} / ${item.name_en}` : item.name}
+                  </MenuItem>
+                ))}
+              </Field.Select>
               <Field.Text name="firstName" label="ชื่อภาษาไทย *" autoFocus />
               <Field.Text name="lastName" label="นามสกุลภาษาไทย *" />
               <Field.Text

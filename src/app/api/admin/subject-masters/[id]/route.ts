@@ -73,7 +73,12 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     );
   }
 
-  const usedColumn = item.category === 'learning_area' ? 'learning_area' : 'subject_type';
+  const usedColumn =
+    item.category === 'learning_area'
+      ? 'learning_area'
+      : item.category === 'education_stage'
+        ? 'education_stage'
+        : 'subject_type';
   const { count } = await supabaseAdmin
     .from('subjects')
     .select('id', { count: 'exact', head: true })

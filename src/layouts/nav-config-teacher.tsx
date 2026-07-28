@@ -165,7 +165,7 @@ export const navData: NavSectionProps['data'] = [
             requiresDepartmentPermission: 'classrooms.manage',
           },
           {
-            title: 'รายวิชา',
+            title: 'วิชาและหลักสูตร',
             path: paths.teacher.departmentSubject,
             icon: ICONS.subject,
             requiresDepartmentPermission: 'subjects.manage',
@@ -201,7 +201,19 @@ export const navData: NavSectionProps['data'] = [
         path: paths.teacher.documents.root,
         icon: ICONS.documents,
         featureKey: 'academic.documents',
-        requiresDepartmentPermission: 'grades.review',
+        requiresDepartmentPermission: 'documents.access',
+        children: [
+          {
+            title: 'เอกสารของฉัน',
+            path: paths.teacher.documents.my,
+            icon: ICONS.documents,
+          },
+          {
+            title: 'ตัวอย่างเอกสาร',
+            path: paths.teacher.documents.templates,
+            icon: ICONS.gradeReviews,
+          },
+        ],
       },
     ],
   },

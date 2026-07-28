@@ -4,14 +4,20 @@ import { supabaseAdmin } from './supabase-admin';
 
 // ----------------------------------------------------------------------
 
-export type StaffMasterCategory = 'staff_type' | 'position' | 'academic_rank';
+export type StaffMasterCategory =
+  | 'staff_type'
+  | 'prefix'
+  | 'position'
+  | 'academic_rank'
+  | 'employment_status';
 
 export async function isActiveStaffMasterValue(
   schoolId: string,
   category: StaffMasterCategory,
   value: string
 ) {
-  const valueColumn = category === 'staff_type' ? 'code' : 'name';
+  const valueColumn =
+    category === 'staff_type' || category === 'employment_status' ? 'code' : 'name';
   const { data } = await supabaseAdmin
     .from('staff_master_items')
     .select('id')

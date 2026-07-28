@@ -60,6 +60,7 @@ const ROUTE_FEATURES: Record<
   school_admin: [
     ['/admin/line-notifications', 'admin.line_notifications'],
     ['/admin/master-data/staff-types', 'admin.staff_masters'],
+    ['/admin/master-data/prefixes', 'admin.staff_masters'],
     ['/admin/master-data/positions', 'admin.staff_masters'],
     ['/admin/master-data/academic-ranks', 'admin.staff_masters'],
     ['/admin/master-data/employment-statuses', 'admin.staff_masters'],
