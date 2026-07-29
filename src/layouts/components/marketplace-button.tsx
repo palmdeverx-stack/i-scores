@@ -25,11 +25,7 @@ export function MarketplaceButton({ sx, ...other }: ButtonProps) {
 
   return (
     <Tooltip
-      title={
-        isConfigured
-          ? 'เปิด Marketplace'
-          : 'ยังไม่ได้กำหนด NEXT_PUBLIC_MARKETPLACE_URL'
-      }
+      title={isConfigured ? 'เปิด Marketplace' : 'ยังไม่ได้กำหนด NEXT_PUBLIC_MARKETPLACE_URL'}
     >
       <Box component="span" sx={{ display: 'inline-flex' }}>
         <Button
