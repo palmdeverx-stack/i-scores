@@ -221,7 +221,10 @@ export async function createManagedUser(
   if (
     (caller.role === 'school_admin' || caller.role === 'teacher') &&
     requiredFeature &&
-    !(await schoolHasFeature(targetSchoolId, requiredFeature))
+    !(await schoolHasFeature(targetSchoolId, requiredFeature, {
+      userId: caller.sub,
+      role: caller.role,
+    }))
   ) {
     return { ok: false, status: 403, message: 'แพ็กเกจโรงเรียนไม่รองรับการสร้างบัญชีประเภทนี้' };
   }

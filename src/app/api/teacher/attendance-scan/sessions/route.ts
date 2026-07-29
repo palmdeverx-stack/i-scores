@@ -19,7 +19,12 @@ export async function POST(request: Request) {
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
-  if (!(await schoolHasFeature(caller.schoolId, 'teacher.qr_attendance'))) {
+  if (
+    !(await schoolHasFeature(caller.schoolId, 'teacher.qr_attendance', {
+      userId: caller.sub,
+      role: 'teacher',
+    }))
+  ) {
     return NextResponse.json({ message: 'แพ็กเกจโรงเรียนไม่รองรับ QR เช็คชื่อ' }, { status: 403 });
   }
 

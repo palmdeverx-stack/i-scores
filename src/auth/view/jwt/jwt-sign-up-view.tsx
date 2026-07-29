@@ -10,6 +10,7 @@ import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 
@@ -25,6 +26,7 @@ import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
 import { FormHead } from '../../components/form-head';
 import { SignUpTerms } from '../../components/sign-up-terms';
+import { GoogleAuthButton } from '../../components/google-auth-button';
 
 // ----------------------------------------------------------------------
 
@@ -167,6 +169,9 @@ export function JwtSignUpView() {
       <Form methods={methods} onSubmit={onSubmit}>
         {renderForm()}
       </Form>
+
+      <Divider sx={{ my: 3 }}>หรือ</Divider>
+      <GoogleAuthButton intent="sign-up" />
 
       <SignUpTerms />
     </>

@@ -3,6 +3,7 @@ import type { NavSectionProps } from 'src/components/nav-section';
 import { paths } from 'src/routes/paths';
 
 import {
+  RiMailLine,
   RiAdminLine,
   RiFlowChart,
   RiBuildingLine,
@@ -18,6 +19,7 @@ const ICONS = {
   schoolAdmin: <RiAdminLine />,
   subscription: <RiPriceTag3Line />,
   systemFlow: <RiFlowChart />,
+  emailSettings: <RiMailLine />,
 };
 
 // ----------------------------------------------------------------------
@@ -47,6 +49,11 @@ export const navData: NavSectionProps['data'] = [
         title: 'ตั้งค่าแพ็กเกจ',
         path: paths.master.subscriptionPlan.root,
         icon: ICONS.subscription,
+      },
+      {
+        title: 'ตั้งค่าการส่งอีเมล',
+        path: paths.master.emailSettings,
+        icon: ICONS.emailSettings,
       },
     ],
   },

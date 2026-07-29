@@ -14,7 +14,13 @@ const MAX_MESSAGE_LENGTH = 1000;
 async function authorize(request: Request, guardianId: string) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
   if (!caller?.schoolId) return null;
-  if (!(await schoolHasFeature(caller.schoolId, 'admin.line_notifications'))) return null;
+  if (
+    !(await schoolHasFeature(caller.schoolId, 'admin.line_notifications', {
+      userId: caller.sub,
+      role: caller.role,
+    }))
+  )
+    return null;
   const { data: guardian } = await supabaseAdmin
     .from('student_guardians')
     .select('id, full_name, student_id, line_user_id')

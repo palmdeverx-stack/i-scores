@@ -51,7 +51,12 @@ export async function POST(request: Request) {
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เชื่อม LINE' }, { status: 403 });
   }
-  if (!(await schoolHasFeature(caller.schoolId, 'admin.line_notifications'))) {
+  if (
+    !(await schoolHasFeature(caller.schoolId, 'admin.line_notifications', {
+      userId: caller.sub,
+      role: 'teacher',
+    }))
+  ) {
     return NextResponse.json(
       { message: 'ผู้ดูแลโรงเรียนยังไม่ได้เปิดการแจ้งเตือน LINE' },
       { status: 409 }

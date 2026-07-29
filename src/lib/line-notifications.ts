@@ -3,8 +3,8 @@ import 'server-only';
 import { createHash, randomBytes } from 'node:crypto';
 
 import { supabaseAdmin } from './supabase-admin';
+import { schoolHasFeature } from './school-subscription';
 import { decryptLineCredential } from './line-credentials';
-import { isSubscriptionUsable } from './school-subscription';
 
 // ----------------------------------------------------------------------
 
@@ -97,7 +97,8 @@ export async function queueAttendanceNotifications({
     .maybeSingle();
   if (holiday) return [];
 
-  const [{ data: integration }, { data: subscription }, { data: school }] = await Promise.all([
+  const [{ data: integration }, { data: subscription }, { data: school }, hasLineFeature] =
+    await Promise.all([
     supabaseAdmin
       .from('school_line_integrations')
       .select(
@@ -110,15 +111,15 @@ export async function queueAttendanceNotifications({
       .select('status, ends_at, enabled_features, max_line_notifications')
       .eq('school_id', schoolId)
       .maybeSingle(),
-    supabaseAdmin.from('schools').select('name').eq('id', schoolId).maybeSingle(),
-  ]);
+      supabaseAdmin.from('schools').select('name').eq('id', schoolId).maybeSingle(),
+      schoolHasFeature(schoolId, 'admin.line_notifications'),
+    ]);
 
   if (
     !integration?.is_enabled ||
     !integration.channel_access_token_encrypted ||
     !subscription ||
-    !isSubscriptionUsable(subscription as never) ||
-    !(subscription.enabled_features ?? []).includes('admin.line_notifications')
+    !hasLineFeature
   ) {
     return [];
   }
@@ -215,7 +216,8 @@ export async function queueAnnouncementNotifications({
 }) {
   if (!classroomIds.length || (!content && !imageUrl)) return [];
 
-  const [{ data: integration }, { data: subscription }, { data: school }] = await Promise.all([
+  const [{ data: integration }, { data: subscription }, { data: school }, hasLineFeature] =
+    await Promise.all([
     supabaseAdmin
       .from('school_line_integrations')
       .select('is_enabled, channel_access_token_encrypted')
@@ -226,15 +228,15 @@ export async function queueAnnouncementNotifications({
       .select('status, ends_at, enabled_features, max_line_notifications')
       .eq('school_id', schoolId)
       .maybeSingle(),
-    supabaseAdmin.from('schools').select('name').eq('id', schoolId).maybeSingle(),
-  ]);
+      supabaseAdmin.from('schools').select('name').eq('id', schoolId).maybeSingle(),
+      schoolHasFeature(schoolId, 'admin.line_notifications'),
+    ]);
 
   if (
     !integration?.is_enabled ||
     !integration.channel_access_token_encrypted ||
     !subscription ||
-    !isSubscriptionUsable(subscription as never) ||
-    !(subscription.enabled_features ?? []).includes('admin.line_notifications')
+    !hasLineFeature
   ) {
     return [];
   }
@@ -341,6 +343,7 @@ export async function queueGradeResultNotifications({
     { data: subscription },
     { data: school },
     { data: teacherAssignment },
+    hasLineFeature,
   ] = await Promise.all([
     supabaseAdmin
       .from('school_line_integrations')
@@ -363,14 +366,14 @@ export async function queueGradeResultNotifications({
       .eq('id', teacherAssignmentId)
       .eq('classroom.school_id', schoolId)
       .maybeSingle(),
+    schoolHasFeature(schoolId, 'admin.line_notifications'),
   ]);
 
   if (
     !integration?.is_enabled ||
     !integration.channel_access_token_encrypted ||
     !subscription ||
-    !isSubscriptionUsable(subscription as never) ||
-    !(subscription.enabled_features ?? []).includes('admin.line_notifications')
+    !hasLineFeature
   ) {
     return {
       batchId: null,
@@ -596,7 +599,7 @@ export async function queueGradeResultNotifications({
 }
 
 export async function processPendingLineNotifications(schoolId: string, deliveryIds?: string[]) {
-  const [{ data: integration }, { data: subscription }] = await Promise.all([
+  const [{ data: integration }, { data: subscription }, hasLineFeature] = await Promise.all([
     supabaseAdmin
       .from('school_line_integrations')
       .select('is_enabled, channel_access_token_encrypted')
@@ -607,13 +610,13 @@ export async function processPendingLineNotifications(schoolId: string, delivery
       .select('status, ends_at, enabled_features, max_line_notifications')
       .eq('school_id', schoolId)
       .maybeSingle(),
+    schoolHasFeature(schoolId, 'admin.line_notifications'),
   ]);
   if (
     !integration?.is_enabled ||
     !integration.channel_access_token_encrypted ||
     !subscription ||
-    !isSubscriptionUsable(subscription as never) ||
-    !(subscription.enabled_features ?? []).includes('admin.line_notifications')
+    !hasLineFeature
   ) {
     return;
   }

@@ -10,7 +10,12 @@ import { encryptLineCredential, decryptLineCredential } from 'src/lib/line-crede
 async function authorize(request: Request) {
   const caller = requireRole(request, ['school_admin']);
   if (!caller?.schoolId) return null;
-  return (await schoolHasFeature(caller.schoolId, 'admin.line_notifications')) ? caller : null;
+  return (await schoolHasFeature(caller.schoolId, 'admin.line_notifications', {
+    userId: caller.sub,
+    role: 'school_admin',
+  }))
+    ? caller
+    : null;
 }
 
 function withTrailingSlash(url: string) {

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { ALL_SCHOOL_FEATURE_KEYS } from 'src/lib/school-subscription-config';
+import { loadEffectiveSchoolEntitlements } from 'src/lib/school-subscription';
 
 // ----------------------------------------------------------------------
 
@@ -33,7 +34,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const [{ data: school }, { data: subscription }, schoolAdmins, teachers, students] =
+  const [{ data: school }, { data: subscription }, entitlements, schoolAdmins, teachers, students] =
     await Promise.all([
       supabaseAdmin
         .from('schools')
@@ -47,6 +48,10 @@ export async function GET(request: Request, { params }: RouteParams) {
         )
         .eq('school_id', id)
         .maybeSingle(),
+      loadEffectiveSchoolEntitlements(id, {
+        userId: caller.sub,
+        role: caller.role,
+      }),
       activeUserCount(id, 'school_admin'),
       activeUserCount(id, 'teacher'),
       activeUserCount(id, 'student'),
@@ -55,14 +60,8 @@ export async function GET(request: Request, { params }: RouteParams) {
   if (!school) {
     return NextResponse.json({ message: 'ไม่พบโรงเรียนนี้' }, { status: 404 });
   }
-  if (!subscription) {
-    return NextResponse.json(
-      { message: 'ยังไม่มีข้อมูลแพ็กเกจ กรุณาใช้งาน migration ล่าสุด' },
-      { status: 404 }
-    );
-  }
-
   if (caller.role !== 'master_admin') {
+    const today = new Date().toISOString().slice(0, 10);
     return NextResponse.json({
       school: {
         id: school.id,
@@ -73,16 +72,27 @@ export async function GET(request: Request, { params }: RouteParams) {
         is_active: school.is_active,
       },
       subscription: {
-        id: subscription.id,
-        school_id: subscription.school_id,
-        plan_name: subscription.plan_name,
-        status: subscription.status,
-        starts_at: subscription.starts_at,
-        ends_at: subscription.ends_at,
-        enabled_features: subscription.enabled_features,
-        updated_at: subscription.updated_at,
+        id: subscription?.id ?? `marketplace:${id}`,
+        school_id: subscription?.school_id ?? id,
+        plan_name: subscription?.plan_name ?? 'Marketplace',
+        status: entitlements.usable ? 'active' : (subscription?.status ?? 'canceled'),
+        starts_at: subscription?.starts_at ?? today,
+        ends_at: entitlements.accessEndsAt?.slice(0, 10) ?? subscription?.ends_at ?? null,
+        enabled_features: entitlements.enabledFeatures,
+        updated_at: subscription?.updated_at ?? new Date().toISOString(),
+      },
+      marketplace: {
+        active_license_count: entitlements.activeLicenses.length,
+        active_purchase_count: entitlements.activePurchases.length,
       },
     });
+  }
+
+  if (!subscription) {
+    return NextResponse.json(
+      { message: 'ยังไม่มีข้อมูลแพ็กเกจ กรุณาใช้งาน migration ล่าสุด' },
+      { status: 404 }
+    );
   }
 
   return NextResponse.json({

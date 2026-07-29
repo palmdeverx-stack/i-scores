@@ -32,15 +32,26 @@ async function removeStoredAvatar(studentId: string) {
   return removeError;
 }
 
-async function canManageStudentAvatar(role: string, schoolId: string) {
-  if (role === 'school_admin') return schoolHasFeature(schoolId, 'admin.students');
-  if (role === 'teacher') return schoolHasFeature(schoolId, 'teacher.manage_enrollments');
+async function canManageStudentAvatar(role: string, schoolId: string, userId: string) {
+  if (role === 'school_admin')
+    return schoolHasFeature(schoolId, 'admin.students', {
+      userId,
+      role: 'school_admin',
+    });
+  if (role === 'teacher')
+    return schoolHasFeature(schoolId, 'teacher.manage_enrollments', {
+      userId,
+      role: 'teacher',
+    });
   return false;
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
-  if (!caller?.schoolId || !(await canManageStudentAvatar(caller.role, caller.schoolId))) {
+  if (
+    !caller?.schoolId ||
+    !(await canManageStudentAvatar(caller.role, caller.schoolId, caller.sub))
+  ) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
@@ -90,7 +101,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
-  if (!caller?.schoolId || !(await canManageStudentAvatar(caller.role, caller.schoolId))) {
+  if (
+    !caller?.schoolId ||
+    !(await canManageStudentAvatar(caller.role, caller.schoolId, caller.sub))
+  ) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 

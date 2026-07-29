@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { isSignInAllowed } from 'src/lib/auth-rate-limit';
-import { isSubscriptionUsable, loadSchoolSubscription } from 'src/lib/school-subscription';
+import { isSchoolAccessUsable } from 'src/lib/school-subscription';
 import {
   signAppToken,
   toPublicUser,
@@ -64,9 +64,9 @@ export async function POST(request: Request) {
       );
     }
   } else if (user.role === 'school_admin' && user.school_id) {
-    const [{ data: school }, subscription] = await Promise.all([
+    const [{ data: school }, schoolAccessUsable] = await Promise.all([
       supabaseAdmin.from('schools').select('code, is_active').eq('id', user.school_id).maybeSingle(),
-      loadSchoolSubscription(user.school_id),
+      isSchoolAccessUsable(user.school_id, { userId: user.id, role: user.role }),
     ]);
 
     if (!school?.is_active) {
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
-    if (!isSubscriptionUsable(subscription)) {
+    if (!schoolAccessUsable) {
       return NextResponse.json(
         { message: 'แพ็กเกจโรงเรียนหมดอายุหรือถูกระงับ กรุณาติดต่อผู้ดูแลระบบ' },
         { status: 403 }

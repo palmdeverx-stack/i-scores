@@ -130,6 +130,35 @@ export async function getManagedUser(id: string): Promise<UserRow> {
   return json.user as UserRow;
 }
 
+export async function inviteMarketplaceUser(email: string) {
+  const response = await fetch('/api/admin/marketplace-invitations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json.message ?? 'ไม่สามารถส่งคำเชิญ Marketplace ได้');
+  }
+
+  return json as {
+    invitation: {
+      id: string;
+      invited_email: string;
+      expires_at: string;
+      email_delivery_status: 'sent';
+      last_sent_at: string;
+    };
+    marketplaceUser: {
+      id: string | null;
+      email: string;
+      displayName: string | null;
+      accountExists: boolean;
+    };
+  };
+}
+
 /** **************************************
  * Create user
  *************************************** */

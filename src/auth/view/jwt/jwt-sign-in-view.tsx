@@ -11,10 +11,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 
-import { useRouter } from 'src/routes/hooks';
+import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { CONFIG } from 'src/global-config';
 
@@ -25,6 +26,7 @@ import { Form, Field } from 'src/components/hook-form';
 import { useAuthContext } from '../../hooks';
 import { FormHead } from '../../components/form-head';
 import { getErrorMessage, getHomePathForRole } from '../../utils';
+import { GoogleAuthButton } from '../../components/google-auth-button';
 import { verifySignInPin, signInWithPassword } from '../../context/jwt';
 
 // ----------------------------------------------------------------------
@@ -46,12 +48,19 @@ export const SignInSchema = z.object({
 
 export function JwtSignInView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const showPassword = useBoolean();
+  const pinRole = searchParams.get('pinRole');
+  const pinChallengeToken = searchParams.get('pinChallengeToken');
   const [pinChallenge, setPinChallenge] = useState<{
     token: string;
     role: 'master_admin' | 'school_admin';
-  } | null>(null);
+  } | null>(
+    pinChallengeToken && (pinRole === 'master_admin' || pinRole === 'school_admin')
+      ? { token: pinChallengeToken, role: pinRole }
+      : null
+  );
 
   const { checkUserSession } = useAuthContext();
 
@@ -106,7 +115,8 @@ export function JwtSignInView() {
   });
 
   const error = pinChallenge ? verifyPinMutation.error : signInMutation.error;
-  const errorMessage = error ? getErrorMessage(error) : null;
+  const errorMessage =
+    (error ? getErrorMessage(error) : null) || searchParams.get('googleError');
 
   const renderForm = () => (
     <Box sx={{ gap: 2.5, display: 'flex', flexDirection: 'column' }}>
@@ -255,6 +265,16 @@ export function JwtSignInView() {
       <Form methods={methods} onSubmit={onSubmit}>
         {renderForm()}
       </Form>
+
+      {!pinChallenge && (
+        <>
+          <Divider sx={{ my: 2.5 }}>หรือ</Divider>
+          <GoogleAuthButton intent="sign-in" />
+          <Alert severity="info" sx={{ mt: 2 }}>
+            Google ใช้สำหรับครูและผู้ดูแลที่มีอีเมลอยู่ในระบบ ส่วนนักเรียนใช้ชื่อผู้ใช้งานและรหัสผ่าน
+          </Alert>
+        </>
+      )}
     </Box>
   );
 }

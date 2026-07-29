@@ -15,7 +15,10 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
   if (
     caller.role === 'teacher' &&
-    !(await schoolHasFeature(caller.schoolId, 'teacher.qr_attendance'))
+    !(await schoolHasFeature(caller.schoolId, 'teacher.qr_attendance', {
+      userId: caller.sub,
+      role: 'teacher',
+    }))
   ) {
     return NextResponse.json({ message: 'แพ็กเกจโรงเรียนไม่รองรับ QR เช็คชื่อ' }, { status: 403 });
   }

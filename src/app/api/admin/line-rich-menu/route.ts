@@ -20,7 +20,13 @@ const LINE_DATA_API = 'https://api-data.line.me/v2/bot';
 async function authorize(request: Request) {
   const caller = requireRole(request, ['school_admin']);
   if (!caller?.schoolId) return null;
-  if (!(await schoolHasFeature(caller.schoolId, 'admin.line_notifications'))) return null;
+  if (
+    !(await schoolHasFeature(caller.schoolId, 'admin.line_notifications', {
+      userId: caller.sub,
+      role: 'school_admin',
+    }))
+  )
+    return null;
 
   const { data: integration } = await supabaseAdmin
     .from('school_line_integrations')

@@ -4,6 +4,7 @@ import { paths } from 'src/routes/paths';
 
 import {
   RiTeamLine,
+  RiKey2Line,
   RiBook2Line,
   RiPulseLine,
   RiIdCardLine,
@@ -60,6 +61,7 @@ const ICONS = {
   learningAreas: <RiBook2Line />,
   subjectTypes: <RiFileList3Line />,
   educationStages: <RiStairsLine />,
+  licenses: <RiKey2Line />,
 };
 
 // ----------------------------------------------------------------------
@@ -101,6 +103,11 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.school,
         featureKey: 'admin.school_profile',
         requiresDepartmentPermission: 'school_profile.view',
+      },
+      {
+        title: 'License โรงเรียน',
+        path: paths.admin.licenses,
+        icon: ICONS.licenses,
       },
     ],
   },

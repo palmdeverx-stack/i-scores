@@ -27,6 +27,7 @@ export const paths = {
       changePassword: `${ROOTS.AUTH}/jwt/change-password`,
       acceptLegal: `${ROOTS.AUTH}/jwt/accept-legal`,
     },
+    googleCallback: `${ROOTS.AUTH}/google/callback`,
   },
   // STUDENT
   student: {
@@ -109,6 +110,7 @@ export const paths = {
   master: {
     root: ROOTS.MASTER,
     systemFlow: `${ROOTS.MASTER}/system-flow`,
+    emailSettings: `${ROOTS.MASTER}/email-settings`,
     school: {
       root: `${ROOTS.MASTER}/school`,
       new: `${ROOTS.MASTER}/school/new`,
@@ -125,6 +127,7 @@ export const paths = {
   // SCHOOL ADMIN
   admin: {
     root: ROOTS.ADMIN,
+    licenses: `${ROOTS.ADMIN}/licenses`,
     school: `${ROOTS.ADMIN}/school`,
     guide: `${ROOTS.ADMIN}/guide`,
     announcements: `${ROOTS.ADMIN}/announcements`,

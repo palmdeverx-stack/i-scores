@@ -35,6 +35,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Label } from 'src/components/label';
+import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 import { CustomPopover } from 'src/components/custom-popover';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
@@ -45,7 +46,12 @@ import { useAuthContext } from 'src/auth/hooks';
 
 import { STAFF_TYPES, EMPLOYMENT_STATUSES } from 'src/types/staff-employment';
 
-import { listUsers, updateUserActive, deleteManagedUser } from '../user-actions';
+import {
+  listUsers,
+  updateUserActive,
+  deleteManagedUser,
+  inviteMarketplaceUser,
+} from '../user-actions';
 
 // ----------------------------------------------------------------------
 
@@ -91,6 +97,8 @@ export function UserListView() {
   const [search, setSearch] = useState('');
   const [menuUser, setMenuUser] = useState<UserRow | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserRow | null>(null);
+  const [marketplaceInviteOpen, setMarketplaceInviteOpen] = useState(false);
+  const [marketplaceEmail, setMarketplaceEmail] = useState('');
   const queryClient = useQueryClient();
 
   const {
@@ -140,6 +148,15 @@ export function UserListView() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['users'] });
       setDeletingUser(null);
+    },
+  });
+
+  const marketplaceInviteMutation = useMutation({
+    mutationFn: inviteMarketplaceUser,
+    onSuccess: ({ marketplaceUser }) => {
+      toast.success(`ส่งคำเชิญไปที่ ${marketplaceUser.email} แล้ว`);
+      setMarketplaceInviteOpen(false);
+      setMarketplaceEmail('');
     },
   });
 
@@ -196,14 +213,26 @@ export function UserListView() {
           </Typography>
         </Box>
         {canManageStaff && (
-          <Button
-            component={RouterLink}
-            href={paths.admin.user.new}
-            variant="contained"
-            startIcon={<RemixIcon icon="solar:user-plus-bold" />}
-          >
-            เพิ่มครู/บุคลากร
-          </Button>
+          <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+            <Button
+              variant="outlined"
+              startIcon={<RemixIcon icon="solar:letter-bold-duotone" />}
+              onClick={() => {
+                marketplaceInviteMutation.reset();
+                setMarketplaceInviteOpen(true);
+              }}
+            >
+              เชิญผู้ใช้ Marketplace
+            </Button>
+            <Button
+              component={RouterLink}
+              href={paths.admin.user.new}
+              variant="contained"
+              startIcon={<RemixIcon icon="solar:user-plus-bold" />}
+            >
+              เพิ่มครู/บุคลากร
+            </Button>
+          </Box>
         )}
       </Box>
 
@@ -465,6 +494,63 @@ export function UserListView() {
           )}
         </MenuList>
       </CustomPopover>
+
+      <Dialog
+        open={marketplaceInviteOpen}
+        onClose={() =>
+          !marketplaceInviteMutation.isPending && setMarketplaceInviteOpen(false)
+        }
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>เชิญผู้ใช้ Marketplace เข้าโรงเรียน</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+            ส่งได้ทุกอีเมล หากผู้รับยังไม่มีบัญชี Marketplace ระบบจะให้สมัครก่อนตอบรับคำเชิญ
+          </Typography>
+          {marketplaceInviteMutation.error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {marketplaceInviteMutation.error.message}
+            </Alert>
+          )}
+          <TextField
+            autoFocus
+            fullWidth
+            type="email"
+            label="อีเมล Marketplace"
+            placeholder="teacher@example.com"
+            value={marketplaceEmail}
+            disabled={marketplaceInviteMutation.isPending}
+            onChange={(event) => setMarketplaceEmail(event.target.value)}
+            onKeyDown={(event) => {
+              if (
+                event.key === 'Enter' &&
+                marketplaceEmail.trim() &&
+                !marketplaceInviteMutation.isPending
+              ) {
+                marketplaceInviteMutation.mutate(marketplaceEmail.trim());
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="inherit"
+            disabled={marketplaceInviteMutation.isPending}
+            onClick={() => setMarketplaceInviteOpen(false)}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            variant="contained"
+            loading={marketplaceInviteMutation.isPending}
+            disabled={!marketplaceEmail.trim()}
+            onClick={() => marketplaceInviteMutation.mutate(marketplaceEmail.trim())}
+          >
+            ส่งคำเชิญ
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={!!deletingUser}

@@ -241,8 +241,14 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
   }
   const [hasGradeFeature, hasLineFeature] = await Promise.all([
-    schoolHasFeature(access.caller.schoolId, 'academic.grade_workflow'),
-    schoolHasFeature(access.caller.schoolId, 'admin.line_notifications'),
+    schoolHasFeature(access.caller.schoolId, 'academic.grade_workflow', {
+      userId: access.caller.sub,
+      role: access.caller.role,
+    }),
+    schoolHasFeature(access.caller.schoolId, 'admin.line_notifications', {
+      userId: access.caller.sub,
+      role: access.caller.role,
+    }),
   ]);
   if (!hasGradeFeature || !hasLineFeature) {
     return NextResponse.json(

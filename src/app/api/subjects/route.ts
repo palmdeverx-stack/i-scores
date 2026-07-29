@@ -128,7 +128,10 @@ export async function POST(request: Request) {
   if (
     caller.role === 'teacher' &&
     !isAdminLike &&
-    !(await schoolHasFeature(caller.schoolId, 'teacher.manage_subjects'))
+    !(await schoolHasFeature(caller.schoolId, 'teacher.manage_subjects', {
+      userId: caller.sub,
+      role: 'teacher',
+    }))
   ) {
     return NextResponse.json(
       { message: 'แพ็กเกจโรงเรียนไม่รองรับการให้ครูสร้างรายวิชา' },

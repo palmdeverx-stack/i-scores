@@ -1,5 +1,7 @@
 'use client';
 
+import { getSupabaseBrowserClient } from 'src/lib/supabase-browser';
+
 // ----------------------------------------------------------------------
 
 export type SignInParams = {
@@ -129,5 +131,8 @@ export const acceptLegal = async (): Promise<AppUser> => {
  * Sign out
  *************************************** */
 export const signOut = async (): Promise<void> => {
-  await fetch('/api/auth/sign-out', { method: 'POST' });
+  await Promise.all([
+    fetch('/api/auth/sign-out', { method: 'POST' }),
+    getSupabaseBrowserClient().auth.signOut(),
+  ]);
 };

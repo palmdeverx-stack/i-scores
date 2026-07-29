@@ -2,6 +2,8 @@ import 'server-only';
 
 import { Resend } from 'resend';
 
+import { supabaseAdmin } from 'src/lib/supabase-admin';
+
 // ----------------------------------------------------------------------
 
 let client: Resend | undefined;
@@ -26,7 +28,7 @@ export async function sendEmail(params: {
   html: string;
 }): Promise<void> {
   const resend = getResendClient();
-  const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const from = (await getResendFromEmail()) || 'onboarding@resend.dev';
 
   const { error } = await resend.emails.send({
     from,
@@ -38,4 +40,19 @@ export async function sendEmail(params: {
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function getResendFromEmail(): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from('system_email_settings')
+    .select('resend_from_email')
+    .eq('singleton', true)
+    .maybeSingle();
+
+  if (!error && data?.resend_from_email) return data.resend_from_email;
+  return process.env.RESEND_FROM_EMAIL?.trim() || null;
+}
+
+export function isResendApiKeyConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY);
 }
