@@ -51,6 +51,7 @@ const FormSchema = z
     eventEnd: z.string(),
     expiresAt: z.string(),
     sendLine: z.boolean(),
+    lineSendAt: z.string(),
   })
   .refine((data) => !data.eventStart || !data.eventEnd || data.eventEnd >= data.eventStart, {
     message: 'วันสิ้นสุดต้องไม่น้อยกว่าวันเริ่มต้น',
@@ -76,6 +77,7 @@ const emptyValues: FormValues = {
   eventEnd: '',
   expiresAt: '',
   sendLine: false,
+  lineSendAt: '',
 };
 
 function toLocalInput(value: string | null) {
@@ -109,7 +111,11 @@ export function TeacherAnnouncementFormDialog({
       await queryClient.invalidateQueries({ queryKey: ['line-notification-settings'] });
       if (result.lineRequested) {
         if (result.lineQueued > 0) {
-          toast.success(`เผยแพร่ประกาศและนำ LINE เข้าคิว ${result.lineQueued} ผู้รับแล้ว`);
+          toast.success(
+            result.lineScheduledAt
+              ? `เผยแพร่ประกาศและตั้งเวลาส่ง LINE ${result.lineQueued} ผู้รับแล้ว`
+              : `เผยแพร่ประกาศและนำ LINE เข้าคิว ${result.lineQueued} ผู้รับแล้ว`
+          );
         } else {
           toast.warning(
             'เผยแพร่ประกาศแล้ว แต่ไม่พบผู้ปกครองที่เชื่อม LINE หรือการแจ้งเตือน LINE ยังไม่พร้อมใช้งาน'
@@ -157,6 +163,7 @@ export function TeacherAnnouncementFormDialog({
             eventEnd: toLocalInput(announcement.event_end),
             expiresAt: toLocalInput(announcement.expires_at),
             sendLine: false,
+            lineSendAt: '',
           }
         : emptyValues
     );
@@ -203,6 +210,10 @@ export function TeacherAnnouncementFormDialog({
       eventEnd: values.eventEnd ? new Date(values.eventEnd).toISOString() : '',
       expiresAt: values.expiresAt ? new Date(values.expiresAt).toISOString() : '',
       sendLine: announcement ? false : values.sendLine,
+      lineSendAt:
+        !announcement && values.sendLine && values.lineSendAt
+          ? new Date(values.lineSendAt).toISOString()
+          : '',
     };
     if (announcement) {
       updateMutation.mutate({
@@ -465,10 +476,10 @@ export function TeacherAnnouncementFormDialog({
             <Box
               sx={{ gap: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}
             >
-              <Field.DatePicker name="eventStart" label="วันเวลาเริ่มกิจกรรม" />
-              <Field.DatePicker name="eventEnd" label="วันเวลาสิ้นสุดกิจกรรม" />
+              <Field.DateTimePicker name="eventStart" label="วันเวลาเริ่มกิจกรรม" ampm={false} />
+              <Field.DateTimePicker name="eventEnd" label="วันเวลาสิ้นสุดกิจกรรม" ampm={false} />
             </Box>
-            <Field.DatePicker name="expiresAt" label="ซ่อนประกาศอัตโนมัติเมื่อ" />
+            <Field.DateTimePicker name="expiresAt" label="ซ่อนประกาศอัตโนมัติเมื่อ" ampm={false} />
 
             {!announcement && (
               <Controller
@@ -500,6 +511,18 @@ export function TeacherAnnouncementFormDialog({
                     }
                   />
                 )}
+              />
+            )}
+            {!announcement && methods.watch('sendLine') && (
+              <Field.DateTimePicker
+                name="lineSendAt"
+                label="กำหนดเวลาส่ง LINE (เวลาไทย)"
+                ampm={false}
+                slotProps={{
+                  textField: {
+                    helperText: 'เว้นว่างเพื่อส่งทันที หรือระบุวันและเวลาที่ต้องการส่ง',
+                  },
+                }}
               />
             )}
           </Box>

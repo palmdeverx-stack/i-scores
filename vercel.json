@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/internal/line-notifications/process",
-      "schedule": "0 0 * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/internal/grade-reminders/process",

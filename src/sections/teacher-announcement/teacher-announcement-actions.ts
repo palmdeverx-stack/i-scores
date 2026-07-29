@@ -36,6 +36,7 @@ export type AnnouncementPayload = {
   eventEnd: string;
   expiresAt: string;
   sendLine: boolean;
+  lineSendAt: string;
 };
 
 export async function getTeacherAnnouncements(): Promise<{
@@ -63,6 +64,7 @@ function announcementFormData(
   formData.set('eventEnd', payload.eventEnd);
   formData.set('expiresAt', payload.expiresAt);
   formData.set('sendLine', String(payload.sendLine));
+  formData.set('lineSendAt', payload.lineSendAt);
   formData.set('removeImage', String(removeImage));
   if (image) formData.set('image', image);
   return formData;

@@ -206,6 +206,7 @@ export async function queueAnnouncementNotifications({
   content,
   imageUrl,
   classroomIds,
+  sendAt,
 }: {
   schoolId: string;
   announcementId: string;
@@ -213,6 +214,7 @@ export async function queueAnnouncementNotifications({
   content: string;
   imageUrl: string | null;
   classroomIds: string[];
+  sendAt?: string | null;
 }) {
   if (!classroomIds.length || (!content && !imageUrl)) return [];
 
@@ -307,7 +309,7 @@ export async function queueAnnouncementNotifications({
     image_url: imageUrl,
     status: 'pending',
     attempts: 0,
-    next_attempt_at: new Date().toISOString(),
+    next_attempt_at: sendAt ?? new Date().toISOString(),
   }));
   if (!deliveries.length) return [];
 

@@ -65,6 +65,10 @@ function parseFormData(formData: FormData) {
     typeof formData.get('expiresAt') === 'string' && formData.get('expiresAt')
       ? String(formData.get('expiresAt'))
       : null;
+  const lineSendAt =
+    typeof formData.get('lineSendAt') === 'string' && formData.get('lineSendAt')
+      ? String(formData.get('lineSendAt'))
+      : null;
   const imageValue = formData.get('image');
   const image = imageValue instanceof File && imageValue.size ? imageValue : null;
 
@@ -77,6 +81,7 @@ function parseFormData(formData: FormData) {
     eventStart,
     eventEnd,
     expiresAt,
+    lineSendAt,
     image,
     sendLine: formData.get('sendLine') === 'true',
   };
@@ -152,6 +157,9 @@ export async function POST(request: Request) {
   if (values.eventStart && values.eventEnd && values.eventEnd < values.eventStart) {
     return NextResponse.json({ message: 'วันสิ้นสุดต้องไม่น้อยกว่าวันเริ่มต้น' }, { status: 400 });
   }
+  if (values.lineSendAt && Number.isNaN(new Date(values.lineSendAt).getTime())) {
+    return NextResponse.json({ message: 'วันเวลาส่ง LINE ไม่ถูกต้อง' }, { status: 400 });
+  }
 
   try {
     const isAdminLike = await canManageViaPermission(caller, 'announcements.manage');
@@ -225,9 +233,13 @@ export async function POST(request: Request) {
         content: values.content,
         imageUrl,
         classroomIds: values.classroomIds,
+        sendAt: values.lineSendAt,
       });
       lineQueued = deliveryIds.length;
-      if (deliveryIds.length) {
+      if (
+        deliveryIds.length &&
+        (!values.lineSendAt || new Date(values.lineSendAt).getTime() <= Date.now())
+      ) {
         after(async () => {
           await processPendingLineNotifications(caller.schoolId!, deliveryIds);
         });
@@ -235,7 +247,16 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { id: announcement.id, imageUrl, lineRequested: values.sendLine, lineQueued },
+      {
+        id: announcement.id,
+        imageUrl,
+        lineRequested: values.sendLine,
+        lineQueued,
+        lineScheduledAt:
+          values.sendLine && values.lineSendAt && new Date(values.lineSendAt).getTime() > Date.now()
+            ? values.lineSendAt
+            : null,
+      },
       { status: 201 }
     );
   } catch (error) {
