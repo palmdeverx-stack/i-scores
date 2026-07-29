@@ -144,6 +144,12 @@ export const SCHOOL_FEATURES = [
     description: 'อนุญาตให้ครูสร้างบัญชีนักเรียนและเพิ่มเข้าห้อง',
   },
   {
+    key: 'teacher.worksheet_ai',
+    group: 'ระบบย่อยสำหรับครู',
+    label: 'Worksheet AI',
+    description: 'สร้างใบงานและสื่อการเรียนรู้ด้วย AI',
+  },
+  {
     key: 'student.subjects',
     group: 'นักเรียน',
     label: 'วิชาเรียน',
@@ -182,6 +188,7 @@ export const STARTER_FEATURE_KEYS: SchoolFeatureKey[] = ALL_SCHOOL_FEATURE_KEYS.
       'teacher.manage_subjects',
       'teacher.manage_classrooms',
       'teacher.manage_enrollments',
+      'teacher.worksheet_ai',
       'student.qr',
     ].includes(key)
 );

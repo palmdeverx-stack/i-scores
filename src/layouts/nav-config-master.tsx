@@ -4,6 +4,7 @@ import { paths } from 'src/routes/paths';
 
 import {
   RiMailLine,
+  RiApps2Line,
   RiAdminLine,
   RiFlowChart,
   RiBuildingLine,
@@ -20,6 +21,7 @@ const ICONS = {
   subscription: <RiPriceTag3Line />,
   systemFlow: <RiFlowChart />,
   emailSettings: <RiMailLine />,
+  apps: <RiApps2Line />,
 };
 
 // ----------------------------------------------------------------------
@@ -54,6 +56,11 @@ export const navData: NavSectionProps['data'] = [
         title: 'ตั้งค่าการส่งอีเมล',
         path: paths.master.emailSettings,
         icon: ICONS.emailSettings,
+      },
+      {
+        title: 'ระบบย่อย E-KRU',
+        path: paths.master.apps,
+        icon: ICONS.apps,
       },
     ],
   },

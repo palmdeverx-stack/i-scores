@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { sendEmail } from 'src/lib/resend';
+import { escapeEmailHtml, renderBrandedEmail } from 'src/lib/branded-email-template';
 
 // ----------------------------------------------------------------------
 
@@ -14,34 +15,36 @@ export async function sendSchoolInviteEmail(params: {
 }): Promise<void> {
   const { to, schoolName, schoolCode, adminUsername, adminPassword, signInUrl } = params;
 
-  const html = `
-    <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
-      <h2 style="margin-bottom: 4px;">ยินดีต้อนรับสู่ระบบ eKru</h2>
-      <p style="color: #555;">โรงเรียน <b>${schoolName}</b> (รหัสโรงเรียน ${schoolCode}) ถูกสร้างเรียบร้อยแล้ว</p>
-      <p style="color: #555;">ใช้ข้อมูลด้านล่างนี้เพื่อเข้าสู่ระบบครั้งแรกในฐานะผู้ดูแลโรงเรียน:</p>
-      <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+  const html = renderBrandedEmail({
+    preheader: `บัญชีผู้ดูแลโรงเรียน ${schoolName} พร้อมใช้งานแล้ว`,
+    title: 'ยินดีต้อนรับสู่ระบบ E-KRU',
+    actionLabel: 'เข้าสู่ระบบ E-KRU',
+    actionUrl: signInUrl,
+    contentHtml: `
+      <p style="margin:0 0 14px;">
+        โรงเรียน <strong style="color:#1f2937;">${escapeEmailHtml(schoolName)}</strong>
+        (รหัสโรงเรียน ${escapeEmailHtml(schoolCode)}) ถูกสร้างเรียบร้อยแล้ว
+      </p>
+      <p style="margin:0 0 14px;">ใช้ข้อมูลต่อไปนี้เพื่อเข้าสู่ระบบครั้งแรกในฐานะผู้ดูแลโรงเรียน</p>
+      <table role="presentation" style="width:100%; border-collapse:collapse; margin:16px 0;
+        background:#f8fafc; border-radius:10px;">
         <tr>
-          <td style="padding: 8px 0; color: #888;">ชื่อผู้ใช้งาน</td>
-          <td style="padding: 8px 0; font-family: monospace; font-size: 15px;">${adminUsername}</td>
+          <td style="padding:12px 14px; color:#7b8798;">ชื่อผู้ใช้งาน</td>
+          <td style="padding:12px 14px; font-family:monospace; color:#1f2937;">${escapeEmailHtml(adminUsername)}</td>
         </tr>
         <tr>
-          <td style="padding: 8px 0; color: #888;">รหัสผ่านชั่วคราว</td>
-          <td style="padding: 8px 0; font-family: monospace; font-size: 15px;">${adminPassword}</td>
+          <td style="padding:12px 14px; color:#7b8798;">รหัสผ่านชั่วคราว</td>
+          <td style="padding:12px 14px; font-family:monospace; color:#1f2937;">${escapeEmailHtml(adminPassword)}</td>
         </tr>
         <tr>
-          <td style="padding: 8px 0; color: #888;">รหัสโรงเรียน (PIN)</td>
-          <td style="padding: 8px 0; font-family: monospace; font-size: 15px;">${schoolCode}</td>
+          <td style="padding:12px 14px; color:#7b8798;">รหัสโรงเรียน (PIN)</td>
+          <td style="padding:12px 14px; font-family:monospace; color:#1f2937;">${escapeEmailHtml(schoolCode)}</td>
         </tr>
       </table>
-      <p style="color: #555;">ระบบจะให้เปลี่ยนรหัสผ่านทันทีที่เข้าสู่ระบบครั้งแรก</p>
-      <p style="margin: 24px 0;">
-        <a href="${signInUrl}" style="background: #1976D2; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none;">
-          เข้าสู่ระบบ
-        </a>
-      </p>
-      <p style="color: #999; font-size: 13px;">หากไม่ได้เป็นผู้ดำเนินการนี้ กรุณาติดต่อผู้ดูแลระบบ</p>
-    </div>
-  `;
+      <p style="margin:0;">ระบบจะให้เปลี่ยนรหัสผ่านทันทีหลังเข้าสู่ระบบครั้งแรก</p>
+    `,
+    footerHtml: 'หากคุณไม่ได้เป็นผู้ดำเนินการนี้ กรุณาติดต่อผู้ดูแลระบบ E-KRU',
+  });
 
   await sendEmail({
     to,
