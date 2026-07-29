@@ -31,7 +31,7 @@ export function EmailSettingsView() {
     mutationFn: updateEmailSettings,
     onSuccess: async (settings) => {
       setFromEmail(settings.resendFromEmail);
-      queryClient.setQueryData(['master-email-settings'], settings);
+      await queryClient.invalidateQueries({ queryKey: ['master-email-settings'] });
       toast.success('บันทึกอีเมลผู้ส่งแล้ว');
     },
     onError: (error: Error) => toast.error(error.message),
@@ -99,6 +99,59 @@ export function EmailSettingsView() {
             : 'ยังไม่พบ RESEND_API_KEY ใน Environment'}
         </Alert>
 
+        <Box
+          sx={{
+            mb: 3,
+            gap: 2,
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+          }}
+        >
+          {[
+            {
+              label: 'ใช้รายเดือน',
+              value: settingsQuery.data?.resendUsage?.monthlyQuota ?? 'ไม่มีข้อมูล',
+              helper: 'ค่าจาก Resend',
+            },
+            {
+              label: 'ใช้รายวัน',
+              value: settingsQuery.data?.resendUsage?.dailyQuota ?? 'ไม่มีข้อมูล',
+              helper: 'แสดงเฉพาะ Free plan',
+            },
+            {
+              label: 'API requests คงเหลือ',
+              value:
+                settingsQuery.data?.resendUsage?.rateLimitRemaining &&
+                settingsQuery.data.resendUsage.rateLimit
+                  ? `${settingsQuery.data.resendUsage.rateLimitRemaining}/${settingsQuery.data.resendUsage.rateLimit}`
+                  : 'ไม่มีข้อมูล',
+              helper: 'ต่อ rate-limit window',
+            },
+          ].map((item) => (
+            <Box
+              key={item.label}
+              sx={{
+                p: 2,
+                border: '1px solid',
+                borderRadius: 1.5,
+                borderColor: 'divider',
+              }}
+            >
+              <Typography variant="h5">{item.value}</Typography>
+              <Typography variant="subtitle2">{item.label}</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {item.helper}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+
+        {settingsQuery.data?.resendUsageError && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            {settingsQuery.data.resendUsageError}
+          </Alert>
+        )}
+
         <TextField
           fullWidth
           label="RESEND_FROM_EMAIL"
@@ -116,6 +169,13 @@ export function EmailSettingsView() {
         )}
 
         <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button
+            color="inherit"
+            disabled={settingsQuery.isFetching}
+            onClick={() => settingsQuery.refetch()}
+          >
+            รีเฟรชการใช้งาน
+          </Button>
           <Button
             size="large"
             variant="contained"

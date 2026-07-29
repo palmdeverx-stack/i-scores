@@ -8,6 +8,15 @@ export type EmailSettings = {
   resendApiKeyConfigured: boolean;
   environmentFallbackConfigured: boolean;
   updatedAt: string | null;
+  resendUsage: {
+    dailyQuota: string | null;
+    monthlyQuota: string | null;
+    rateLimit: string | null;
+    rateLimitRemaining: string | null;
+    rateLimitResetSeconds: string | null;
+    checkedAt: string;
+  } | null;
+  resendUsageError: string | null;
 };
 
 async function parseResponse(response: Response): Promise<EmailSettings> {

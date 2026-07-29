@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { getResendFromEmail, isResendApiKeyConfigured } from 'src/lib/resend';
+import {
+  getResendUsage,
+  getResendFromEmail,
+  isResendApiKeyConfigured,
+} from 'src/lib/resend';
 
 // ----------------------------------------------------------------------
 
@@ -37,12 +41,25 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
+  let resendUsage = null;
+  let resendUsageError = null;
+  if (isResendApiKeyConfigured()) {
+    try {
+      resendUsage = await getResendUsage();
+    } catch (usageError) {
+      resendUsageError =
+        usageError instanceof Error ? usageError.message : 'ไม่สามารถอ่านข้อมูลการใช้งาน Resend ได้';
+    }
+  }
+
   return NextResponse.json({
     resendFromEmail: data?.resend_from_email ?? '',
     effectiveFromEmail: await getResendFromEmail(),
     resendApiKeyConfigured: isResendApiKeyConfigured(),
     environmentFallbackConfigured: Boolean(process.env.RESEND_FROM_EMAIL),
     updatedAt: data?.updated_at ?? null,
+    resendUsage,
+    resendUsageError,
   });
 }
 
@@ -86,5 +103,7 @@ export async function PATCH(request: Request) {
     resendApiKeyConfigured: isResendApiKeyConfigured(),
     environmentFallbackConfigured: Boolean(process.env.RESEND_FROM_EMAIL),
     updatedAt: data.updated_at,
+    resendUsage: null,
+    resendUsageError: null,
   });
 }
