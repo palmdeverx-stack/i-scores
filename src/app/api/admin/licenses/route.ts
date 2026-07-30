@@ -5,6 +5,43 @@ import { supabaseAdmin } from 'src/lib/supabase-admin';
 
 // ----------------------------------------------------------------------
 
+const INVITATION_SELECT =
+  'id, marketplace_user_id, invited_email, membership_role, expires_at, accepted_at, revoked_at, created_at, last_sent_at, email_delivery_status';
+const LEGACY_INVITATION_SELECT =
+  'id, marketplace_user_id, invited_email, membership_role, expires_at, accepted_at, revoked_at, created_at';
+
+async function listSchoolInvitations(schoolId: string) {
+  const result = await supabaseAdmin
+    .from('marketplace_school_invitations')
+    .select(INVITATION_SELECT)
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false });
+
+  const isMissingDeliveryColumn =
+    !!result.error &&
+    (result.error.code === '42703' || result.error.code === 'PGRST204') &&
+    (result.error.message.includes('last_sent_at') ||
+      result.error.message.includes('email_delivery_status'));
+
+  if (!isMissingDeliveryColumn) return result;
+
+  const legacyResult = await supabaseAdmin
+    .from('marketplace_school_invitations')
+    .select(LEGACY_INVITATION_SELECT)
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false });
+
+  return {
+    ...legacyResult,
+    data:
+      legacyResult.data?.map((invitation) => ({
+        ...invitation,
+        last_sent_at: null,
+        email_delivery_status: 'pending' as const,
+      })) ?? null,
+  };
+}
+
 export async function GET(request: Request) {
   const caller = requireRole(request, ['school_admin']);
   if (!caller?.schoolId) {
@@ -47,13 +84,7 @@ export async function GET(request: Request) {
         )
         .eq('school_id', caller.schoolId)
         .order('joined_at', { ascending: false }),
-      supabaseAdmin
-        .from('marketplace_school_invitations')
-        .select(
-          'id, marketplace_user_id, invited_email, membership_role, expires_at, accepted_at, revoked_at, created_at, last_sent_at, email_delivery_status'
-        )
-        .eq('school_id', caller.schoolId)
-        .order('created_at', { ascending: false }),
+      listSchoolInvitations(caller.schoolId),
     ]);
 
   const error =

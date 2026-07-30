@@ -8,8 +8,8 @@ export type SchoolHoliday = {
   holiday_date: string;
   name: string;
   holiday_type: HolidayType;
-  notice_days: number | null;
   announce_mode: HolidayAnnounceMode;
+  announcement_at: string | null;
   announcement_id: string | null;
   created_at: string;
 };
@@ -19,7 +19,7 @@ export type SaveSchoolHolidayParams = {
   name: string;
   holidayType: HolidayType;
   announceMode: HolidayAnnounceMode;
-  noticeDays?: number | null;
+  announcementAt?: string | null;
 };
 
 export async function listSchoolHolidays(): Promise<SchoolHoliday[]> {

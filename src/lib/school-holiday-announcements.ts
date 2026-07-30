@@ -17,16 +17,6 @@ const HOLIDAY_TYPE_PRIORITY: Record<string, 'normal' | 'important' | 'urgent'> =
   special: 'important',
 };
 
-function todayInBangkok(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
-}
-
-function noticeDateFor(holidayDate: string, noticeDays: number): string {
-  const date = new Date(`${holidayDate}T00:00:00+07:00`);
-  date.setDate(date.getDate() - noticeDays);
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(date);
-}
-
 function formatThaiDate(value: string) {
   return new Intl.DateTimeFormat('th-TH', {
     weekday: 'long',
@@ -47,7 +37,7 @@ type HolidayForAnnouncement = {
 /**
  * Creates (and sends to LINE) the announcement for one holiday, and records
  * its id back on the holiday row. Used both by the "ทันที" (immediate) save
- * path and by the "ตั้งเวลา" (scheduled) daily cron.
+ * path and by the "ตั้งเวลา" (scheduled) cron.
  */
 export async function createAnnouncementForHoliday(
   holiday: HolidayForAnnouncement
@@ -124,28 +114,22 @@ export async function createAnnouncementForHoliday(
 }
 
 /**
- * Daily cron: creates announcements for "ตั้งเวลา" (scheduled) holidays whose
- * notice window has opened. "ทันที" (immediate) holidays are announced
+ * Scheduled cron: creates announcements for holidays whose selected
+ * announcement time has arrived. "ทันที" (immediate) holidays are announced
  * synchronously when saved instead — see createAnnouncementForHoliday's
  * other caller in the school-holidays API route.
  */
 export async function processSchoolHolidayAnnouncements() {
-  const today = todayInBangkok();
-
   const { data: holidays } = await supabaseAdmin
     .from('school_holidays')
-    .select('id, school_id, holiday_date, name, holiday_type, notice_days')
+    .select('id, school_id, holiday_date, name, holiday_type')
     .eq('announce_mode', 'scheduled')
     .is('announcement_id', null)
-    .not('notice_days', 'is', null)
-    .gte('holiday_date', today);
-
-  const dueHolidays = (holidays ?? []).filter(
-    (holiday) => today >= noticeDateFor(holiday.holiday_date, holiday.notice_days!)
-  );
+    .not('announcement_at', 'is', null)
+    .lte('announcement_at', new Date().toISOString());
 
   let announcementsCreated = 0;
-  for (const holiday of dueHolidays) {
+  for (const holiday of holidays ?? []) {
     const announcementId = await createAnnouncementForHoliday(holiday);
     if (announcementId) announcementsCreated += 1;
   }

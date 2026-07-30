@@ -56,19 +56,29 @@ const HOLIDAY_TYPE_COLOR: Record<HolidayType, 'info' | 'error' | 'warning'> = {
 
 const ANNOUNCE_MODE_LABEL: Record<HolidayAnnounceMode, string> = {
   immediate: 'ทันที (ประกาศเมื่อบันทึก)',
-  scheduled: 'ตั้งเวลา (แจ้งล่วงหน้าตามจำนวนวัน)',
+  scheduled: 'ตั้งเวลา (เลือกวันที่และเวลา)',
 };
 
-const HolidaySchema = z.object({
-  holidayDate: z.string().min(1, { error: 'กรุณาเลือกวันที่' }),
-  name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อวันหยุด' }),
-  holidayType: z.enum(['regular', 'urgent', 'special']),
-  announceMode: z.enum(['immediate', 'scheduled']),
-  // Field.Text type="number" converts the value to a real number on blur
-  // (minimal-shared's transformValueOnBlur), but leaves it as '' when empty
-  // — so the field is genuinely string | number, not always a string.
-  noticeDays: z.union([z.string(), z.number()]),
-});
+const HolidaySchema = z
+  .object({
+    holidayDate: z.string().min(1, { error: 'กรุณาเลือกวันที่' }),
+    name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อวันหยุด' }),
+    holidayType: z.enum(['regular', 'urgent', 'special']),
+    announceMode: z.enum(['immediate', 'scheduled']),
+    announcementAt: z.string().nullable(),
+  })
+  .superRefine((values, context) => {
+    if (
+      values.announceMode === 'scheduled' &&
+      (!values.announcementAt || !dayjs(values.announcementAt).isValid())
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['announcementAt'],
+        message: 'กรุณาเลือกวันที่และเวลาประกาศ',
+      });
+    }
+  });
 
 type HolidayFormValues = z.infer<typeof HolidaySchema>;
 
@@ -77,7 +87,7 @@ const DEFAULT_VALUES: HolidayFormValues = {
   name: '',
   holidayType: 'regular',
   announceMode: 'scheduled',
-  noticeDays: '',
+  announcementAt: null,
 };
 
 function formatThaiDate(value: string) {
@@ -87,6 +97,16 @@ function formatThaiDate(value: string) {
     month: 'long',
     year: 'numeric',
   }).format(new Date(`${value}T00:00:00+07:00`));
+}
+
+function formatThaiDateTime(value: string) {
+  return new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
 }
 
 export function SchoolHolidaysListView() {
@@ -99,6 +119,7 @@ export function SchoolHolidaysListView() {
     data: holidays = [],
     isLoading,
     isError,
+    error,
     refetch,
   } = useQuery({ queryKey: ['school-holidays'], queryFn: listSchoolHolidays });
 
@@ -111,14 +132,15 @@ export function SchoolHolidaysListView() {
 
   const saveMutation = useMutation({
     mutationFn: (data: HolidayFormValues) => {
-      const noticeDaysText = String(data.noticeDays).trim();
       const params = {
         holidayDate: dayjs(data.holidayDate).format('YYYY-MM-DD'),
         name: data.name.trim(),
         holidayType: data.holidayType,
         announceMode: data.announceMode,
-        noticeDays:
-          data.announceMode === 'scheduled' && noticeDaysText ? Number(noticeDaysText) : null,
+        announcementAt:
+          data.announceMode === 'scheduled' && data.announcementAt
+            ? dayjs(data.announcementAt).toISOString()
+            : null,
       };
       return editingHoliday
         ? updateSchoolHoliday(editingHoliday.id, params)
@@ -154,7 +176,7 @@ export function SchoolHolidaysListView() {
       name: holiday.name,
       holidayType: holiday.holiday_type,
       announceMode: holiday.announce_mode,
-      noticeDays: holiday.notice_days === null ? '' : String(holiday.notice_days),
+      announcementAt: holiday.announcement_at,
     });
     saveMutation.reset();
     setDialogOpen(true);
@@ -209,8 +231,8 @@ export function SchoolHolidaysListView() {
             </Button>
           }
           sx={{ mb: 3 }}
-        >
-          ไม่สามารถโหลดรายการวันหยุดได้
+      >
+          {error?.message ?? 'ไม่สามารถโหลดรายการวันหยุดได้'}
         </Alert>
       )}
 
@@ -268,13 +290,15 @@ export function SchoolHolidaysListView() {
                           {holiday.announcement_id ? 'ประกาศแล้ว' : 'ยังไม่ได้ประกาศ'}
                         </Label>
                       </Box>
-                    ) : holiday.notice_days === null ? (
+                    ) : holiday.announcement_at === null ? (
                       <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                         ไม่ประกาศอัตโนมัติ
                       </Typography>
                     ) : (
                       <Box>
-                        <Typography variant="body2">ล่วงหน้า {holiday.notice_days} วัน</Typography>
+                        <Typography variant="body2">
+                          {formatThaiDateTime(holiday.announcement_at)} น.
+                        </Typography>
                         <Label
                           variant="soft"
                           color={holiday.announcement_id ? 'success' : 'default'}
@@ -343,12 +367,16 @@ export function SchoolHolidaysListView() {
                 ))}
               </Field.Select>
               {announceMode === 'scheduled' && (
-                <Field.Text
-                  name="noticeDays"
-                  label="ประกาศล่วงหน้ากี่วัน"
-                  type="number"
-                  helperText="เว้นว่างไว้ถ้าไม่ต้องการให้ประกาศแจ้งอัตโนมัติ"
-                  slotProps={{ htmlInput: { min: 0, max: 60, step: 1 } }}
+                <Field.DateTimePicker
+                  name="announcementAt"
+                  label="วันที่และเวลาประกาศ *"
+                  ampm={false}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      helperText: 'เลือกวันที่และเวลาที่ต้องการส่งประกาศแจ้งวันหยุด',
+                    },
+                  }}
                 />
               )}
             </Stack>

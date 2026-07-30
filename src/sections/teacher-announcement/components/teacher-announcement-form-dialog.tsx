@@ -13,6 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -351,124 +352,172 @@ export function TeacherAnnouncementFormDialog({
               name="classroomIds"
               control={methods.control}
               render={({ field, fieldState }) => (
-                <FormControl error={!!fieldState.error}>
-                  <Typography variant="subtitle2">กลุ่มเป้าหมาย *</Typography>
-                  <Typography variant="caption" sx={{ mb: 1, color: 'text.secondary' }}>
-                    {mode === 'teacher'
-                      ? 'เลือกทั้งระดับชั้น หรือเลือกเฉพาะห้องที่คุณเป็นครูประจำชั้น'
-                      : 'เลือกทั้งระดับชั้น หรือเลือกเฉพาะบางห้องได้'}
-                  </Typography>
-                  <Box sx={{ gap: 1.5, display: 'grid' }}>
+                <FormControl error={!!fieldState.error} fullWidth>
+                  <Box
+                    sx={{
+                      mb: 1.25,
+                      gap: 1,
+                      display: 'flex',
+                      alignItems: { xs: 'flex-start', sm: 'center' },
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Box>
+                      <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="subtitle2">กลุ่มเป้าหมาย *</Typography>
+                        <Chip
+                          size="small"
+                          color={field.value.length ? 'primary' : 'default'}
+                          label={`เลือกแล้ว ${field.value.length}/${classrooms.length} ห้อง`}
+                        />
+                      </Box>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {mode === 'teacher'
+                          ? 'เลือกห้องที่คุณเป็นครูประจำชั้น'
+                          : 'เลือกทั้งระดับชั้น หรือเลือกเฉพาะบางห้อง'}
+                      </Typography>
+                    </Box>
+                    {!!classrooms.length && (
+                      <Box sx={{ gap: 0.5, display: 'flex', flexShrink: 0 }}>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() =>
+                            field.onChange(classrooms.map((classroom) => classroom.id))
+                          }
+                          disabled={field.value.length === classrooms.length}
+                        >
+                          เลือกทั้งหมด
+                        </Button>
+                        <Button
+                          size="small"
+                          color="inherit"
+                          variant="text"
+                          onClick={() => field.onChange([])}
+                          disabled={!field.value.length}
+                        >
+                          ล้าง
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+
+                  {!!classrooms.length && (
                     <Box
                       sx={{
-                        px: 1.5,
-                        py: 0.75,
-                        borderRadius: 1.5,
-                        color:
-                          field.value.length === classrooms.length
-                            ? 'primary.main'
-                            : 'text.primary',
-                        bgcolor:
-                          field.value.length === classrooms.length
-                            ? 'primary.lighter'
-                            : 'action.hover',
+                        p: 1.25,
+                        gap: 1,
+                        display: 'grid',
+                        maxHeight: 320,
+                        overflowY: 'auto',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: fieldState.error ? 'error.main' : 'divider',
                       }}
                     >
-                      <FormControlLabel
-                        label={
-                          <Box>
-                            <Typography variant="subtitle2">ทั้งหมด</Typography>
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                              {mode === 'teacher'
-                                ? 'เลือกทุกห้องที่คุณเป็นครูประจำชั้น'
-                                : 'เลือกทุกระดับชั้นและทุกห้องในโรงเรียน'}
-                            </Typography>
-                          </Box>
-                        }
-                        control={
-                          <Checkbox
-                            checked={
-                              classrooms.length > 0 && field.value.length === classrooms.length
-                            }
-                            indeterminate={
-                              field.value.length > 0 && field.value.length < classrooms.length
-                            }
-                            onChange={(event) =>
-                              field.onChange(
-                                event.target.checked
-                                  ? classrooms.map((classroom) => classroom.id)
-                                  : []
-                              )
-                            }
-                          />
-                        }
-                      />
-                    </Box>
-                    {gradeGroups.map(([grade, gradeClassrooms]) => {
-                      const gradeIds = gradeClassrooms.map((classroom) => classroom.id);
-                      const selectedCount = gradeIds.filter((id) =>
-                        field.value.includes(id)
-                      ).length;
-                      return (
-                        <Box
-                          key={grade}
-                          sx={{ px: 1.5, py: 1, borderRadius: 1.5, bgcolor: 'action.hover' }}
-                        >
-                          <FormControlLabel
-                            label={
-                              <Typography variant="subtitle2">
-                                {grade} ({selectedCount}/{gradeIds.length} ห้อง)
-                              </Typography>
-                            }
-                            control={
-                              <Checkbox
-                                checked={selectedCount === gradeIds.length}
-                                indeterminate={selectedCount > 0 && selectedCount < gradeIds.length}
-                                onChange={(event) =>
-                                  field.onChange(
-                                    event.target.checked
-                                      ? Array.from(new Set([...field.value, ...gradeIds]))
-                                      : field.value.filter((id) => !gradeIds.includes(id))
-                                  )
-                                }
-                              />
-                            }
-                          />
-                          <FormGroup
+                      {gradeGroups.map(([grade, gradeClassrooms]) => {
+                        const gradeIds = gradeClassrooms.map((classroom) => classroom.id);
+                        const selectedCount = gradeIds.filter((id) =>
+                          field.value.includes(id)
+                        ).length;
+                        const gradeSelected = selectedCount === gradeIds.length;
+
+                        return (
+                          <Box
+                            key={grade}
                             sx={{
-                              pl: 3,
-                              display: 'grid',
-                              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                              p: 1.25,
+                              borderRadius: 1.5,
+                              border: '1px solid',
+                              borderColor: gradeSelected ? 'primary.main' : 'divider',
+                              bgcolor: gradeSelected ? 'primary.lighter' : 'background.paper',
                             }}
                           >
-                            {gradeClassrooms.map((classroom) => (
-                              <FormControlLabel
-                                key={classroom.id}
-                                label={classroom.name}
-                                control={
-                                  <Checkbox
-                                    size="small"
-                                    checked={field.value.includes(classroom.id)}
-                                    onChange={(event) =>
-                                      field.onChange(
-                                        event.target.checked
-                                          ? [...field.value, classroom.id]
-                                          : field.value.filter((id) => id !== classroom.id)
-                                      )
+                            <FormControlLabel
+                              sx={{ m: 0, mb: 0.5 }}
+                              label={
+                                <Box sx={{ gap: 0.75, display: 'flex', alignItems: 'center' }}>
+                                  <Typography variant="subtitle2">{grade}</Typography>
+                                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                    {selectedCount}/{gradeIds.length} ห้อง
+                                  </Typography>
+                                </Box>
+                              }
+                              control={
+                                <Checkbox
+                                  checked={gradeSelected}
+                                  indeterminate={selectedCount > 0 && !gradeSelected}
+                                  onChange={(event) =>
+                                    field.onChange(
+                                      event.target.checked
+                                        ? Array.from(new Set([...field.value, ...gradeIds]))
+                                        : field.value.filter((id) => !gradeIds.includes(id))
+                                    )
+                                  }
+                                />
+                              }
+                            />
+                            <FormGroup
+                              sx={{
+                                gap: 0.75,
+                                display: 'grid',
+                                gridTemplateColumns: {
+                                  xs: '1fr',
+                                  sm: 'repeat(2, minmax(0, 1fr))',
+                                },
+                              }}
+                            >
+                              {gradeClassrooms.map((classroom) => {
+                                const selected = field.value.includes(classroom.id);
+
+                                return (
+                                  <FormControlLabel
+                                    key={classroom.id}
+                                    label={classroom.name}
+                                    sx={{
+                                      m: 0,
+                                      px: 1,
+                                      py: 0.25,
+                                      minWidth: 0,
+                                      borderRadius: 1,
+                                      bgcolor: selected ? 'primary.lighter' : 'action.hover',
+                                      '& .MuiFormControlLabel-label': {
+                                        overflow: 'hidden',
+                                        whiteSpace: 'nowrap',
+                                        textOverflow: 'ellipsis',
+                                      },
+                                    }}
+                                    control={
+                                      <Checkbox
+                                        size="small"
+                                        checked={selected}
+                                        onChange={(event) =>
+                                          field.onChange(
+                                            event.target.checked
+                                              ? [...field.value, classroom.id]
+                                              : field.value.filter((id) => id !== classroom.id)
+                                          )
+                                        }
+                                      />
                                     }
                                   />
-                                }
-                              />
-                            ))}
-                          </FormGroup>
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                  {!classrooms.length && (
-                    <Alert severity="warning">ยังไม่มีห้องเรียนที่รับผิดชอบ</Alert>
+                                );
+                              })}
+                            </FormGroup>
+                          </Box>
+                        );
+                      })}
+                    </Box>
                   )}
-                  <FormHelperText>{fieldState.error?.message}</FormHelperText>
+                  {!classrooms.length && (
+                    <Alert severity="warning">
+                      {mode === 'teacher'
+                        ? 'ยังไม่มีห้องเรียนที่คุณเป็นครูประจำชั้น'
+                        : 'ยังไม่มีห้องเรียนในโรงเรียน'}
+                    </Alert>
+                  )}
+                  <FormHelperText sx={{ mx: 0 }}>{fieldState.error?.message}</FormHelperText>
                 </FormControl>
               )}
             />

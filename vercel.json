@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/internal/school-holiday-announcements/process",
-      "schedule": "0 2 * * *"
+      "schedule": "*/5 * * * *"
     }
   ]
 }

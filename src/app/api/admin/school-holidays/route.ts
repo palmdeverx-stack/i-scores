@@ -18,7 +18,25 @@ function isAnnounceMode(value: unknown): value is (typeof ANNOUNCE_MODES)[number
 }
 
 const HOLIDAY_SELECT =
+  'id, holiday_date, name, holiday_type, announce_mode, announcement_at, announcement_id, created_at';
+const LEGACY_HOLIDAY_SELECT =
   'id, holiday_date, name, holiday_type, notice_days, announce_mode, announcement_id, created_at';
+
+function isMissingAnnouncementAt(error: { code?: string; message: string } | null) {
+  return (
+    !!error &&
+    (error.code === '42703' || error.code === 'PGRST204') &&
+    error.message.includes('announcement_at')
+  );
+}
+
+function legacyAnnouncementAt(holidayDate: string, noticeDays: number | null) {
+  if (noticeDays === null) return null;
+
+  const announcementAt = new Date(`${holidayDate}T09:00:00+07:00`);
+  announcementAt.setUTCDate(announcementAt.getUTCDate() - noticeDays);
+  return announcementAt.toISOString();
+}
 
 export async function GET(request: Request) {
   const caller = requireRole(request, ['school_admin']);
@@ -26,17 +44,40 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const result = await supabaseAdmin
     .from('school_holidays')
     .select(HOLIDAY_SELECT)
     .eq('school_id', caller.schoolId)
     .order('holiday_date');
 
-  if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+  if (!isMissingAnnouncementAt(result.error)) {
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
+    return NextResponse.json({ holidays: result.data });
   }
 
-  return NextResponse.json({ holidays: data });
+  // Keep the list usable while the exact date-time migration is rolling out.
+  // Legacy relative schedules are represented at 09:00 Asia/Bangkok.
+  const legacyResult = await supabaseAdmin
+    .from('school_holidays')
+    .select(LEGACY_HOLIDAY_SELECT)
+    .eq('school_id', caller.schoolId)
+    .order('holiday_date');
+
+  if (legacyResult.error) {
+    return NextResponse.json({ message: legacyResult.error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    holidays: (legacyResult.data ?? []).map((holiday) => ({
+      ...holiday,
+      announcement_at:
+        holiday.announce_mode === 'scheduled'
+          ? legacyAnnouncementAt(holiday.holiday_date, holiday.notice_days)
+          : null,
+    })),
+  });
 }
 
 export async function POST(request: Request) {
@@ -45,7 +86,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { holidayDate, name, holidayType, noticeDays, announceMode } = await request.json();
+  const { holidayDate, name, holidayType, announcementAt, announceMode } = await request.json();
   if (typeof holidayDate !== 'string' || !holidayDate || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ message: 'กรุณาระบุวันที่และชื่อวันหยุด' }, { status: 400 });
   }
@@ -56,12 +97,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'รูปแบบเวลาการประกาศไม่ถูกต้อง' }, { status: 400 });
   }
   const resolvedAnnounceMode = announceMode ?? 'scheduled';
-  const parsedNoticeDays =
-    resolvedAnnounceMode === 'immediate' || noticeDays === null || noticeDays === undefined
-      ? null
-      : Number(noticeDays);
-  if (parsedNoticeDays !== null && (!Number.isInteger(parsedNoticeDays) || parsedNoticeDays < 0)) {
-    return NextResponse.json({ message: 'จำนวนวันแจ้งล่วงหน้าไม่ถูกต้อง' }, { status: 400 });
+  let parsedAnnouncementAt: Date | null = null;
+  if (resolvedAnnounceMode === 'scheduled') {
+    if (typeof announcementAt !== 'string') {
+      return NextResponse.json({ message: 'กรุณาระบุวันที่และเวลาประกาศ' }, { status: 400 });
+    }
+    parsedAnnouncementAt = new Date(announcementAt);
+    if (Number.isNaN(parsedAnnouncementAt.getTime())) {
+      return NextResponse.json({ message: 'กรุณาระบุวันที่และเวลาประกาศ' }, { status: 400 });
+    }
   }
 
   const { data: holiday, error } = await supabaseAdmin
@@ -71,8 +115,8 @@ export async function POST(request: Request) {
       holiday_date: holidayDate,
       name: name.trim(),
       holiday_type: holidayType ?? 'regular',
-      notice_days: parsedNoticeDays,
       announce_mode: resolvedAnnounceMode,
+      announcement_at: parsedAnnouncementAt?.toISOString() ?? null,
     })
     .select(HOLIDAY_SELECT)
     .single();
@@ -80,6 +124,12 @@ export async function POST(request: Request) {
   if (error || !holiday) {
     if (error?.code === '23505') {
       return NextResponse.json({ message: 'มีวันหยุดในวันที่นี้อยู่แล้ว' }, { status: 409 });
+    }
+    if (isMissingAnnouncementAt(error)) {
+      return NextResponse.json(
+        { message: 'ฐานข้อมูลยังไม่รองรับการเลือกวันที่และเวลาประกาศ กรุณาติดตั้ง migration ล่าสุด' },
+        { status: 503 }
+      );
     }
     return NextResponse.json(
       { message: error?.message ?? 'ไม่สามารถเพิ่มวันหยุดได้' },

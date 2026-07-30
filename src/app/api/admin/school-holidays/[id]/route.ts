@@ -20,7 +20,15 @@ function isAnnounceMode(value: unknown): value is (typeof ANNOUNCE_MODES)[number
 }
 
 const HOLIDAY_SELECT =
-  'id, holiday_date, name, holiday_type, notice_days, announce_mode, announcement_id, created_at';
+  'id, holiday_date, name, holiday_type, announce_mode, announcement_at, announcement_id, created_at';
+
+function isMissingAnnouncementAt(error: { code?: string; message: string } | null) {
+  return (
+    !!error &&
+    (error.code === '42703' || error.code === 'PGRST204') &&
+    error.message.includes('announcement_at')
+  );
+}
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin']);
@@ -29,7 +37,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const { holidayDate, name, holidayType, noticeDays, announceMode } = await request.json();
+  const { holidayDate, name, holidayType, announcementAt, announceMode } = await request.json();
   if (typeof holidayDate !== 'string' || !holidayDate || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ message: 'กรุณาระบุวันที่และชื่อวันหยุด' }, { status: 400 });
   }
@@ -40,29 +48,41 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'รูปแบบเวลาการประกาศไม่ถูกต้อง' }, { status: 400 });
   }
   const resolvedAnnounceMode = announceMode ?? 'scheduled';
-  const parsedNoticeDays =
-    resolvedAnnounceMode === 'immediate' || noticeDays === null || noticeDays === undefined
-      ? null
-      : Number(noticeDays);
-  if (parsedNoticeDays !== null && (!Number.isInteger(parsedNoticeDays) || parsedNoticeDays < 0)) {
-    return NextResponse.json({ message: 'จำนวนวันแจ้งล่วงหน้าไม่ถูกต้อง' }, { status: 400 });
+  let parsedAnnouncementAt: Date | null = null;
+  if (resolvedAnnounceMode === 'scheduled') {
+    if (typeof announcementAt !== 'string') {
+      return NextResponse.json({ message: 'กรุณาระบุวันที่และเวลาประกาศ' }, { status: 400 });
+    }
+    parsedAnnouncementAt = new Date(announcementAt);
+    if (Number.isNaN(parsedAnnouncementAt.getTime())) {
+      return NextResponse.json({ message: 'กรุณาระบุวันที่และเวลาประกาศ' }, { status: 400 });
+    }
   }
 
-  const { data: existing } = await supabaseAdmin
+  const { data: existing, error: existingError } = await supabaseAdmin
     .from('school_holidays')
-    .select('holiday_date, notice_days, announce_mode')
+    .select('holiday_date, announcement_at, announce_mode')
     .eq('id', id)
     .eq('school_id', caller.schoolId)
     .maybeSingle();
+  if (isMissingAnnouncementAt(existingError)) {
+    return NextResponse.json(
+      { message: 'ฐานข้อมูลยังไม่รองรับการเลือกวันที่และเวลาประกาศ กรุณาติดตั้ง migration ล่าสุด' },
+      { status: 503 }
+    );
+  }
+  if (existingError) {
+    return NextResponse.json({ message: existingError.message }, { status: 500 });
+  }
   if (!existing) return NextResponse.json({ message: 'ไม่พบวันหยุดนี้' }, { status: 404 });
 
-  // The date, notice window, or announce mode shifted, so any announcement
+  // The holiday date, scheduled time, or announce mode shifted, so any announcement
   // already created for the old schedule is now stale — clear the link and
   // let it be re-announced under the new schedule (the old post itself is
   // left alone; admin can remove it manually from the announcements page).
   const scheduleChanged =
     existing.holiday_date !== holidayDate ||
-    existing.notice_days !== parsedNoticeDays ||
+    new Date(existing.announcement_at ?? 0).getTime() !== (parsedAnnouncementAt?.getTime() ?? 0) ||
     existing.announce_mode !== resolvedAnnounceMode;
 
   const { data: holiday, error } = await supabaseAdmin
@@ -71,8 +91,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       holiday_date: holidayDate,
       name: name.trim(),
       holiday_type: holidayType ?? 'regular',
-      notice_days: parsedNoticeDays,
       announce_mode: resolvedAnnounceMode,
+      announcement_at: parsedAnnouncementAt?.toISOString() ?? null,
       ...(scheduleChanged && { announcement_id: null }),
     })
     .eq('id', id)
@@ -83,6 +103,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (error || !holiday) {
     if (error?.code === '23505') {
       return NextResponse.json({ message: 'มีวันหยุดในวันที่นี้อยู่แล้ว' }, { status: 409 });
+    }
+    if (isMissingAnnouncementAt(error)) {
+      return NextResponse.json(
+        { message: 'ฐานข้อมูลยังไม่รองรับการเลือกวันที่และเวลาประกาศ กรุณาติดตั้ง migration ล่าสุด' },
+        { status: 503 }
+      );
     }
     return NextResponse.json(
       { message: error?.message ?? 'ไม่สามารถแก้ไขวันหยุดได้' },
