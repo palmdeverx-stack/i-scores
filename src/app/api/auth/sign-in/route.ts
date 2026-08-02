@@ -2,9 +2,12 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { isSignInAllowed } from 'src/lib/auth-rate-limit';
 import { writeSecurityAudit } from 'src/lib/security-audit';
 import { isSchoolAccessUsable } from 'src/lib/school-subscription';
+import {
+  isSignInAllowed,
+  AUTH_RATE_LIMIT_RETRY_AFTER_SECONDS,
+} from 'src/lib/auth-rate-limit';
 import {
   signAppToken,
   toPublicUser,
@@ -24,27 +27,42 @@ import {
 export async function POST(request: Request) {
   const { username, password } = await request.json();
 
-  if (!username || !password) {
+  if (
+    typeof username !== 'string' ||
+    !username.trim() ||
+    username.length > 320 ||
+    typeof password !== 'string' ||
+    !password ||
+    password.length > 1024
+  ) {
     return NextResponse.json({ message: 'กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน' }, { status: 400 });
   }
 
-  if (!(await isSignInAllowed(request, username))) {
+  const normalizedUsername = username.trim();
+
+  if (!(await isSignInAllowed(request, normalizedUsername))) {
     await writeSecurityAudit({
       action: 'auth.rate_limited',
       request,
       targetType: 'username',
-      metadata: { username: String(username).toLowerCase() },
+      metadata: { username: normalizedUsername.toLowerCase() },
     });
     return NextResponse.json(
       { message: 'พยายามเข้าสู่ระบบบ่อยเกินไป กรุณาลองใหม่อีกครั้งในภายหลัง' },
-      { status: 429 }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(AUTH_RATE_LIMIT_RETRY_AFTER_SECONDS),
+          'Cache-Control': 'no-store',
+        },
+      }
     );
   }
 
   const { data: user } = await supabaseAdmin
     .from('app_users')
     .select('*')
-    .ilike('username', username)
+    .ilike('username', normalizedUsername)
     .single();
 
   if (!user) {

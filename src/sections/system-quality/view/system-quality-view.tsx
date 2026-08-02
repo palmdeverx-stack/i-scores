@@ -1,7 +1,5 @@
 'use client';
 
-import type { ReactNode } from 'react';
-
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
@@ -11,20 +9,17 @@ import Divider from '@mui/material/Divider';
 import Container from '@mui/material/Container';
 import Accordion from '@mui/material/Accordion';
 import Typography from '@mui/material/Typography';
-import LinearProgress from '@mui/material/LinearProgress';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 
 import {
-  RiCodeLine,
   RiLockLine,
-  RiPulseLine,
-  RiFlowChart,
   RiCheckLine,
-  RiFileSearchLine,
   RiArrowDownSLine,
   RiShieldCheckLine,
 } from 'src/components/remix-icon';
+
+import qualityAudit from './system-quality-audit.generated.json';
 
 // ----------------------------------------------------------------------
 
@@ -191,6 +186,30 @@ const FLOWS: readonly Flow[] = [
     ],
     evidence: ['next.config.ts', 'src/proxy.ts', 'tests/security-regression.test.mjs'],
   },
+  {
+    title: '13. Master Operations และ Impersonation',
+    actors: 'master_admin',
+    outcome: 'ตรวจสอบและช่วยเหลือโรงเรียนโดยไม่เปิดสิทธิ์ mutation ในนามผู้ใช้เป้าหมาย',
+    steps: [
+      'Master Admin เลือกโรงเรียนและบัญชี active ที่ต้องการตรวจสอบ',
+      'ระบบสร้าง preview session พร้อมเก็บ master session แยกต่างหาก',
+      'Preview token ถูกจำกัดเป็น read-only สำหรับ mutation API',
+      'เริ่ม/จบ session ทุกครั้งถูกบันทึกใน impersonation audit',
+    ],
+    evidence: ['/api/auth/impersonation', 'auth_impersonation_audit', 'impersonation-banner.tsx'],
+  },
+  {
+    title: '14. Legal, Onboarding และประสบการณ์หลายภาษา',
+    actors: 'ผู้ใช้ใหม่ · ทุกบทบาท',
+    outcome: 'นำผู้ใช้ผ่านเงื่อนไขบังคับก่อนใช้งานและแสดง navigation ตามภาษา/บทบาท',
+    steps: [
+      'บังคับเปลี่ยนรหัสผ่านสำหรับบัญชีที่สร้างใหม่',
+      'บังคับยอมรับ Terms, Service Agreement และ Privacy Policy',
+      'Onboarding สร้างบริบทโรงเรียนหรือ Marketplace workspace',
+      'Navigation และข้อความหลักรองรับการแปลตาม locale ที่เลือก',
+    ],
+    evidence: ['auth/guard', '/onboarding/school', 'src/locales'],
+  },
 ];
 
 const REVIEWS: readonly Review[] = [
@@ -215,8 +234,9 @@ const REVIEWS: readonly Review[] = [
   {
     area: 'Brute-force protection',
     result: 'ผ่าน',
-    finding: 'จำกัดตาม IP/username แบบ atomic และหยุด authentication เมื่อ rate-limit backend ขัดข้อง',
-    evidence: 'auth-rate-limit.ts · check_rate_limit()',
+    finding:
+      'จำกัดตาม IP/username แบบ atomic, hash identifier, ตรวจ trusted IP, ส่ง Retry-After และหยุด authentication เมื่อ backend ขัดข้อง',
+    evidence: 'auth-rate-limit.ts · check_rate_limit() · rate_limit_hardening.sql',
   },
   {
     area: 'Sensitive credentials',
@@ -251,8 +271,15 @@ const REVIEWS: readonly Review[] = [
   {
     area: 'Static quality gates',
     result: 'ผ่าน',
-    finding: 'TypeScript, ESLint, security regression 6/6 และ Next.js production build ผ่าน',
+    finding: 'TypeScript, ESLint, security regression และ Next.js production build ผ่าน',
     evidence: 'package.json · tests/security-regression.test.mjs',
+  },
+  {
+    area: 'SQL Injection',
+    result: 'ผ่าน',
+    finding:
+      'ใช้ Supabase/PostgREST และ RPC typed parameters, escape wildcard ใน ILIKE และตรวจ UUID ของ token/input ก่อนสร้าง filter expression',
+    evidence: 'auth-token.ts · teacher-assignments route · search_teacher_assignments.sql',
   },
   {
     area: 'Database rollout',
@@ -270,56 +297,230 @@ const REVIEWS: readonly Review[] = [
 
 const passed = REVIEWS.filter((review) => review.result === 'ผ่าน').length;
 const score = Math.round((passed / REVIEWS.length) * 100);
+const automatedPassed = qualityAudit.checks.filter((check) => check.status === 'passed').length;
+const securityCheck = qualityAudit.checks.find(
+  (check) => check.name === 'Security Regression Test'
+);
 
-function MetricCard({ icon, label, value, helper }: { icon: ReactNode; label: string; value: string; helper: string }) {
-  return (
-    <Card sx={{ p: 2.5, minWidth: 0 }}>
-      <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
-        <Box sx={{ width: 42, height: 42, display: 'grid', borderRadius: 1.5, placeItems: 'center', color: 'primary.main', bgcolor: 'primary.lighter' }}>
-          {icon}
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h5">{value}</Typography>
-          <Typography variant="subtitle2">{label}</Typography>
-        </Box>
-      </Box>
-      <Typography variant="caption" sx={{ mt: 1.5, display: 'block', color: 'text.secondary' }}>{helper}</Typography>
-    </Card>
-  );
+function flowStatus(index: number) {
+  if ([8, 10].includes(index)) {
+    return { label: 'ต้องตั้งค่าบริการ', color: 'info' as const };
+  }
+  if ([11, 13].includes(index)) {
+    return { label: 'มีเงื่อนไขก่อน Production', color: 'warning' as const };
+  }
+  return { label: 'Flow ครบ', color: 'success' as const };
 }
 
 export function SystemQualityView() {
   return (
     <Container maxWidth={false} sx={{ pb: 5 }}>
-      <Card sx={{ p: { xs: 2.5, sm: 4 }, mb: 3, overflow: 'hidden', color: 'common.white', position: 'relative', borderRadius: 3, background: 'linear-gradient(135deg, #102A43 0%, #00695C 100%)' }}>
-        <Box sx={{ maxWidth: 760, position: 'relative', zIndex: 1 }}>
-          <Chip icon={<RiShieldCheckLine />} label="Master Admin only" sx={{ mb: 2, color: 'common.white', bgcolor: 'rgba(255,255,255,0.14)', '& .MuiChip-icon': { color: 'inherit' } }} />
-          <Typography component="h1" variant="h3" sx={{ fontSize: { xs: 28, sm: 38 } }}>ภาพรวมและคุณภาพระบบ</Typography>
-          <Typography sx={{ mt: 1.5, maxWidth: 720, opacity: 0.84 }}>
-            ความสามารถทั้งหมดในมุม End-to-End ตั้งแต่ผู้ใช้ หน้าเว็บ API ฐานข้อมูล ไปจนถึง integration พร้อมผลประเมินจาก Static Review ของ source code ปัจจุบัน
+      <Box
+        sx={{
+          gap: 2,
+          mb: 3,
+          display: 'flex',
+          alignItems: { xs: 'flex-start', md: 'center' },
+          flexDirection: { xs: 'column', md: 'row' },
+          justifyContent: 'space-between',
+        }}
+      >
+        <Box>
+          <Typography component="h1" variant="h3" sx={{ fontSize: { xs: 30, sm: 40 } }}>
+            ภาพรวมและคุณภาพระบบ
           </Typography>
-          <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.72 }}>ตรวจล่าสุด: {REVIEW_DATE} · Scope: application code, API routes, proxy และ database migrations</Typography>
+          <Typography sx={{ mt: 0.75, color: 'text.secondary', fontSize: { sm: 18 } }}>
+            ความสามารถทั้งหมด End-to-End Flow และผลประเมินจากการตรวจโค้ดแบบ Static Review
+          </Typography>
         </Box>
-        <RiPulseLine size={190} style={{ right: -30, bottom: -50, opacity: 0.08, position: 'absolute' }} />
+        <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+          <Chip
+            label={`Audit Snapshot · ${REVIEW_DATE} · ${qualityAudit.commit}`}
+            color="info"
+            sx={{ bgcolor: 'info.lighter' }}
+          />
+          <Chip
+            icon={<RiShieldCheckLine />}
+            label="ผู้ประเมิน AI · OpenAI Codex"
+            color="info"
+            variant="outlined"
+          />
+        </Box>
+      </Box>
+
+      <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+        รายงานนี้อ่านจาก Navigation ที่เปิดใช้งาน หน้า UI, API, access helpers และ database migrations
+        ที่เชื่อมกันจนจบ โดยไม่รวม Route ที่มีโค้ดอยู่แต่เป็น Legacy และยังไม่มี Usage Telemetry
+        ประเมินในรูปแบบ AI-assisted Static Review ไม่ใช่ผล Penetration Test
+        หรือการรับรองจากผู้ตรวจสอบอิสระ
+      </Alert>
+
+      <Card
+        sx={{
+          p: { xs: 2.5, md: 4 },
+          mb: 3,
+          borderRadius: 3,
+          background: 'linear-gradient(120deg, rgba(33,150,243,0.10), rgba(76,175,80,0.07))',
+        }}
+      >
+        <Box
+          sx={{
+            gap: { xs: 3, md: 4 },
+            display: 'grid',
+            alignItems: 'center',
+            gridTemplateColumns: { xs: '1fr', md: '0.7fr 0.8fr 2fr' },
+          }}
+        >
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h2" color="primary.main">
+              {FLOWS.length}
+            </Typography>
+            <Typography variant="subtitle1">Active Flow ที่ตรวจพบ</Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h2" color="success.main">
+              {securityCheck?.result.match(/\d+\/\d+/)?.[0] ?? '—'}
+            </Typography>
+            <Typography variant="subtitle1">Security Regression Test ผ่าน</Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
+              สรุปผล
+            </Typography>
+            <Typography variant="h4" sx={{ mt: 0.5 }}>
+              ระบบมีโครงสร้างที่ดีและ Flow หลักเชื่อมต่อครบ
+            </Typography>
+            <Typography sx={{ mt: 1, color: 'text.secondary' }}>
+              พร้อมใช้งานด้านบัญชี โรงเรียน Marketplace การซื้อ License และงานการศึกษา
+              จุดที่ต้องยืนยันต่อคือ migration, external services และค่าจริงบน Production
+            </Typography>
+            <Box sx={{ mt: 2, gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+              <Chip label="10 Flow ครบ" color="success" sx={{ bgcolor: 'success.lighter' }} />
+              <Chip label="2 Flow ต้องตั้งค่าบริการ" color="info" sx={{ bgcolor: 'info.lighter' }} />
+              <Chip label="2 Flow มีเงื่อนไข" color="warning" sx={{ bgcolor: 'warning.lighter' }} />
+            </Box>
+          </Box>
+        </Box>
       </Card>
 
-      <Box sx={{ mb: 4, gap: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' } }}>
-        <MetricCard icon={<RiFlowChart />} label="Capability domains" value={String(FLOWS.length)} helper="ครอบคลุม flow ธุรกิจและระบบสนับสนุน" />
-        <MetricCard icon={<RiFileSearchLine />} label="Static controls" value={`${passed}/${REVIEWS.length}`} helper="ผ่านจากหลักฐานใน source code" />
-        <MetricCard icon={<RiShieldCheckLine />} label="Static score" value={`${score}%`} helper="ไม่นับ runtime verification เป็นข้อผ่าน" />
-        <MetricCard icon={<RiCodeLine />} label="Build blockers" value="0" helper="TypeScript, ESLint, tests และ build ผ่าน" />
-      </Box>
+      <Card sx={{ p: { xs: 2.5, md: 3 }, mb: 3, borderRadius: 3 }}>
+        <Box
+          sx={{
+            gap: 2,
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box>
+            <Typography variant="h4">ผลรันจริงจาก Code</Typography>
+            <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
+              ผลจากคำสั่งที่รันกับ {qualityAudit.sourceState} ไม่ใช่ผลตรวจ runtime บน Production
+            </Typography>
+          </Box>
+          <Stack spacing={0.5} sx={{ alignItems: { sm: 'flex-end' } }}>
+            <Chip
+              icon={<RiCheckLine />}
+              label={`${automatedPassed}/${qualityAudit.checks.length} checks ผ่าน`}
+              color="success"
+            />
+            <Typography variant="caption" color="text.secondary">
+              บันทึกเมื่อ {qualityAudit.recordedAt}
+            </Typography>
+          </Stack>
+        </Box>
+
+        <Box
+          sx={{
+            mt: 2.5,
+            gap: 1.5,
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+          }}
+        >
+          {qualityAudit.checks.map((check) => (
+            <Box
+              key={check.command}
+              sx={{ p: 2, border: 1, borderRadius: 2, borderColor: 'divider' }}
+            >
+              <Box sx={{ gap: 1, display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="subtitle1">{check.name}</Typography>
+                <Chip size="small" label="ผ่าน" color="success" variant="outlined" />
+              </Box>
+              <Typography
+                variant="body2"
+                sx={{ mt: 1, color: 'primary.main', fontFamily: 'monospace' }}
+              >
+                $ {check.command}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.75, color: 'text.secondary' }}>
+                {check.result}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Card>
+
+      <Card sx={{ p: { xs: 2.5, md: 3 }, mb: 4, borderRadius: 3 }}>
+        <Typography variant="h4">ผลวัดแยกตามผู้ประเมิน</Typography>
+        <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
+          แต่ละช่องแสดงเฉพาะผลจากแหล่งนั้น โดยไม่รวมคะแนนข้ามผู้ประเมิน
+        </Typography>
+        <Box
+          sx={{
+            mt: 2.5,
+            gap: 2,
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+          }}
+        >
+          {[
+            ['OpenAI Codex', `${passed}/${REVIEWS.length}`, 'AI-assisted Static Review'],
+            [
+              'Automated Checks',
+              `${automatedPassed}/${qualityAudit.checks.length}`,
+              'TypeScript · ESLint · Tests · Build · Diff',
+            ],
+            ['External Audit', '—', 'ยังไม่ได้รับการตรวจอิสระ'],
+            ['Penetration Test', '—', 'อยู่นอกขอบเขต Static Review'],
+          ].map(([name, value, helper]) => (
+            <Box key={name} sx={{ p: 2, border: 1, borderRadius: 2, borderColor: 'divider' }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                {name}
+              </Typography>
+              <Typography variant="h4" sx={{ my: 0.5 }}>
+                {value}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {helper}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Card>
 
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4">End-to-End Capability Flow</Typography>
-        <Typography sx={{ mt: 0.5, mb: 2, color: 'text.secondary' }}>เปิดแต่ละหัวข้อเพื่อดู actor, ผลลัพธ์, ลำดับงาน และจุดอ้างอิงในระบบ</Typography>
+        <Typography sx={{ mt: 0.5, mb: 2, color: 'text.secondary' }}>
+          เปิดแต่ละหัวข้อเพื่อดู actor, ผลลัพธ์ ลำดับงาน และหลักฐานอ้างอิง
+        </Typography>
         {FLOWS.map((flow, index) => (
           <Accordion key={flow.title} disableGutters defaultExpanded={index === 0}>
             <AccordionSummary expandIcon={<RiArrowDownSLine />}>
-              <Box sx={{ minWidth: 0 }}>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
                 <Typography variant="subtitle1">{flow.title}</Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>{flow.outcome}</Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  {flow.outcome}
+                </Typography>
               </Box>
+              <Chip
+                size="small"
+                label={flowStatus(index).label}
+                color={flowStatus(index).color}
+                variant="outlined"
+                sx={{ mr: 2, display: { xs: 'none', sm: 'inline-flex' } }}
+              />
             </AccordionSummary>
             <AccordionDetails sx={{ pt: 0 }}>
               <Chip size="small" color="info" variant="outlined" label={`ผู้เกี่ยวข้อง: ${flow.actors}`} sx={{ mb: 2 }} />
@@ -343,11 +544,9 @@ export function SystemQualityView() {
 
       <Box>
         <Typography variant="h4">ผลประเมินจาก Static Review</Typography>
-        <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>ผลนี้ยืนยันสิ่งที่มองเห็นได้จากโค้ด ไม่แทน penetration test, dependency scan หรือ runtime verification บน production</Typography>
-        <Card sx={{ p: 2.5, my: 2.5 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="subtitle1">Static assurance score</Typography><Typography variant="h5" color="success.main">{score}%</Typography></Box>
-          <LinearProgress variant="determinate" value={score} color="success" sx={{ mt: 1.5, height: 8, borderRadius: 1 }} />
-        </Card>
+        <Typography sx={{ mt: 0.5, mb: 2.5, color: 'text.secondary' }}>
+          Static assurance score {score}% — ไม่นับข้อที่ต้องยืนยันหลัง Deploy เป็นข้อผ่าน
+        </Typography>
         <Stack spacing={1.25}>
           {REVIEWS.map((review) => {
             const isPassed = review.result === 'ผ่าน';

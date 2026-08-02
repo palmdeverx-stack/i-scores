@@ -6,6 +6,9 @@ import { hasTimetableCapability, revertScheduleApprovalOnEdit } from 'src/lib/sc
 
 // ----------------------------------------------------------------------
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function GET(request: Request) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
 
@@ -16,8 +19,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 12, 1), 50);
   const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
-  const search = searchParams.get('search')?.trim() || null;
+  const search = searchParams.get('search')?.trim().slice(0, 200) || null;
   const classroomId = searchParams.get('classroomId') || null;
+
+  if (classroomId && !UUID_PATTERN.test(classroomId)) {
+    return NextResponse.json({ message: 'Invalid classroomId' }, { status: 400 });
+  }
 
   const { data, error } = await supabaseAdmin.rpc('search_teacher_assignments', {
     p_school_id: caller.schoolId,

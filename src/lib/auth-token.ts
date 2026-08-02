@@ -1,6 +1,6 @@
 import 'server-only';
 
-import jwt from 'jsonwebtoken';
+import jwt, { type JwtPayload } from 'jsonwebtoken';
 
 // ----------------------------------------------------------------------
 
@@ -16,6 +16,15 @@ const pinChallengeSecret = `${secret}:pin-challenge`;
 export const ACCESS_TOKEN_COOKIE = 'access_token';
 export const MASTER_SESSION_COOKIE = 'master_access_token';
 const ACCESS_TOKEN_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SESSION_ROLES: readonly SessionRole[] = [
+  'master_admin',
+  'school_admin',
+  'teacher',
+  'student',
+  'marketplace_user',
+];
 
 export const accessTokenCookieOptions = {
   httpOnly: true,
@@ -54,9 +63,28 @@ export function signAppToken(payload: AppTokenPayload): string {
   return jwt.sign(payload, secret, { expiresIn: '7d' });
 }
 
+function isAppTokenPayload(payload: string | JwtPayload): payload is AppTokenPayload & JwtPayload {
+  return (
+    typeof payload !== 'string' &&
+    typeof payload.sub === 'string' &&
+    UUID_PATTERN.test(payload.sub) &&
+    typeof payload.username === 'string' &&
+    typeof payload.role === 'string' &&
+    SESSION_ROLES.includes(payload.role as SessionRole) &&
+    (payload.schoolId === null ||
+      (typeof payload.schoolId === 'string' && UUID_PATTERN.test(payload.schoolId))) &&
+    (payload.impersonatedBy === undefined ||
+      (typeof payload.impersonatedBy === 'string' && UUID_PATTERN.test(payload.impersonatedBy))) &&
+    (payload.impersonationAuditId === undefined ||
+      (typeof payload.impersonationAuditId === 'string' &&
+        UUID_PATTERN.test(payload.impersonationAuditId)))
+  );
+}
+
 export function verifyAppToken(token: string): AppTokenPayload | null {
   try {
-    return jwt.verify(token, secret) as AppTokenPayload;
+    const payload = jwt.verify(token, secret, { algorithms: ['HS256'] });
+    return isAppTokenPayload(payload) ? payload : null;
   } catch {
     return null;
   }
@@ -70,8 +98,13 @@ export function signPinChallenge(userId: string): string {
 
 export function verifyPinChallenge(token: string): PinChallengePayload | null {
   try {
-    const payload = jwt.verify(token, pinChallengeSecret) as PinChallengePayload;
-    return payload.purpose === 'pin_verification' && payload.sub ? payload : null;
+    const payload = jwt.verify(token, pinChallengeSecret, { algorithms: ['HS256'] });
+    return typeof payload !== 'string' &&
+      payload.purpose === 'pin_verification' &&
+      typeof payload.sub === 'string' &&
+      UUID_PATTERN.test(payload.sub)
+      ? (payload as PinChallengePayload)
+      : null;
   } catch {
     return null;
   }

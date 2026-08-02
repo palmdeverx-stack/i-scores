@@ -1,0 +1,37 @@
+{
+  "recordedAt": "2026-08-03T02:11:27+07:00",
+  "commit": "3801c38",
+  "sourceState": "commit 3801c38 พร้อมการแก้ไขใน working tree",
+  "checks": [
+    {
+      "name": "TypeScript",
+      "command": "yarn tsc --noEmit",
+      "status": "passed",
+      "result": "0 errors · 52.48s"
+    },
+    {
+      "name": "ESLint",
+      "command": "yarn lint",
+      "status": "passed",
+      "result": "0 errors, 0 warnings · 32.81s"
+    },
+    {
+      "name": "Security Regression Test",
+      "command": "yarn test:security",
+      "status": "passed",
+      "result": "9/9 tests passed · 0 failed · 252.51ms"
+    },
+    {
+      "name": "Next.js Production Build",
+      "command": "npm run build",
+      "status": "passed",
+      "result": "184/184 pages generated · compiled in 41.0s"
+    },
+    {
+      "name": "Git Diff Integrity",
+      "command": "git diff --check",
+      "status": "passed",
+      "result": "no whitespace errors"
+    }
+  ]
+}

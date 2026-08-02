@@ -2,8 +2,11 @@ import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { isSignInAllowed } from 'src/lib/auth-rate-limit';
 import { isSchoolAccessUsable } from 'src/lib/school-subscription';
+import {
+  isSignInAllowed,
+  AUTH_RATE_LIMIT_RETRY_AFTER_SECONDS,
+} from 'src/lib/auth-rate-limit';
 import {
   signAppToken,
   toPublicUser,
@@ -38,7 +41,13 @@ export async function POST(request: Request) {
   if (!(await isSignInAllowed(request, `pin:${challenge.sub}`))) {
     return NextResponse.json(
       { message: 'พยายามยืนยัน PIN บ่อยเกินไป กรุณาลองใหม่อีกครั้งในภายหลัง' },
-      { status: 429 }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(AUTH_RATE_LIMIT_RETRY_AFTER_SECONDS),
+          'Cache-Control': 'no-store',
+        },
+      }
     );
   }
 

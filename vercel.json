@@ -1,16 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/internal/line-notifications/process",
-      "schedule": "*/5 * * * *"
+      "path": "/api/internal/cron/daily/morning",
+      "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/internal/grade-reminders/process",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/internal/school-holiday-announcements/process",
-      "schedule": "*/5 * * * *"
+      "path": "/api/internal/cron/daily/afternoon",
+      "schedule": "0 8 * * *"
     }
   ]
 }
