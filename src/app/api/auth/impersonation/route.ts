@@ -114,6 +114,7 @@ export async function POST(request: Request) {
     username: target.username,
     role: target.role,
     schoolId: target.school_id,
+    authProvider: caller.authProvider ?? 'password',
     impersonatedBy: caller.sub,
     impersonationAuditId: audit.id,
     previewAllFeatures: true,

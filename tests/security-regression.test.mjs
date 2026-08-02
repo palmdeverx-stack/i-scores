@@ -14,6 +14,161 @@ test('authentication cookie remains server-only and time-limited', () => {
   assert.match(source, /maxAge:\s*ACCESS_TOKEN_MAX_AGE_SECONDS/);
 });
 
+test('Google authentication exchanges a bearer token for an app session', () => {
+  const route = read('src/app/api/auth/google/route.ts');
+  const meRoute = read('src/app/api/auth/me/route.ts');
+  const changePasswordRoute = read('src/app/api/auth/change-password/route.ts');
+  const teacherProfile = read('src/sections/teacher-profile/view/teacher-profile-view.tsx');
+  const button = read('src/auth/components/google-auth-button.tsx');
+  const callback = read('src/app/auth/google/callback/page.tsx');
+
+  assert.match(route, /headers\.get\('authorization'\)/);
+  assert.match(route, /supabaseAdmin\.auth\.getUser\(accessToken\)/);
+  assert.doesNotMatch(route, /body\?\.accessToken/);
+  assert.match(route, /\.in\('supported_scope', \['individual', 'both'\]\)/);
+  assert.match(route, /SUPABASE_TOKEN_MISSING/);
+  assert.match(route, /SUPABASE_TOKEN_INVALID/);
+  assert.doesNotMatch(route, /console\.(?:log|error)\([^\n]*accessToken/);
+  assert.match(button, /Authorization: `Bearer \$\{data\.session\.access_token\}`/);
+  assert.match(callback, /Authorization: `Bearer \$\{data\.session\.access_token\}`/);
+  assert.match(button, /credentials: 'include'/);
+  assert.match(callback, /credentials: 'include'/);
+  assert.match(button, /await checkUserSession\?\.\(\)/);
+  assert.match(callback, /await checkUserSession\?\.\(\)/);
+  assert.match(route, /authProvider: 'google'/);
+  assert.match(meRoute, /resolveAuthProvider\(payload\.authProvider/);
+  assert.match(meRoute, /auth_provider: authProvider/);
+  assert.match(changePasswordRoute, /payload\.authProvider === 'google'/);
+  assert.match(teacherProfile, /เข้าสู่ระบบด้วย Google/);
+  assert.match(teacherProfile, /บัญชีนี้จัดการรหัสผ่านผ่าน Google/);
+});
+
+test('admin sessions are only issued after PIN verification', () => {
+  const googleRoute = read('src/app/api/auth/google/route.ts');
+  const passwordRoute = read('src/app/api/auth/sign-in/route.ts');
+  const verifyPinRoute = read('src/app/api/auth/verify-pin/route.ts');
+
+  assert.match(googleRoute, /appUser\.role === 'master_admin' \|\| appUser\.role === 'school_admin'/);
+  assert.match(googleRoute, /response\.cookies\.delete\(ACCESS_TOKEN_COOKIE\)/);
+  assert.match(passwordRoute, /response\.cookies\.delete\(ACCESS_TOKEN_COOKIE\)/);
+  assert.match(verifyPinRoute, /response\.cookies\.set\(ACCESS_TOKEN_COOKIE, accessToken/);
+});
+
+test('Google login recovers paid personal licenses that skipped provisioning', () => {
+  const googleRoute = read('src/app/api/auth/google/route.ts');
+  const recovery = read('src/lib/personal-workspace-provisioning.ts');
+
+  assert.match(googleRoute, /recoverPersonalWorkspacePurchases\(authUser\.id\)/);
+  assert.match(recovery, /marketplace_user_licenses/);
+  assert.match(recovery, /marketplace_provision_events/);
+  assert.match(recovery, /provision_personal_workspace_purchase/);
+  assert.match(recovery, /finalizePersonalWorkspace/);
+  assert.doesNotMatch(recovery, /from\('subjects'\)\.upsert/);
+  assert.match(recovery, /\.eq\('auth_user_id', authUserId\)/);
+  assert.match(recovery, /\.eq\('school_id', schoolId\)/);
+});
+
+test('personal workspaces use product branding instead of school branding', () => {
+  const verticalNav = read('src/layouts/dashboard/nav-vertical.tsx');
+  const headerIdentity = read('src/layouts/dashboard/school-header-identity.tsx');
+  const mobileBrand = read('src/layouts/main/school-brand.tsx');
+  const teacherLayout = read('src/app/teacher/layout.tsx');
+  const departmentAccess = read('src/lib/department-permission-access.ts');
+  const studentList = read('src/sections/user/view/student-list-view.tsx');
+
+  assert.match(verticalNav, /isMasterAdmin \|\| user\?\.is_personal_workspace === true/);
+  assert.match(verticalNav, /usesProductIdentity \? \(/);
+  assert.match(headerIdentity, /if \(isPersonalWorkspace\)/);
+  assert.match(headerIdentity, /<Typography variant="subtitle1">eKru<\/Typography>/);
+  assert.match(mobileBrand, /isPersonalWorkspace \|\| !school\?\.logo_url/);
+  assert.match(teacherLayout, /group\.items\.map\(\(item\) =>/);
+  assert.match(teacherLayout, /item\.title === 'นักเรียนของฉัน'/);
+  assert.doesNotMatch(teacherLayout, /departmentAcademicYear|departmentStudent/);
+  assert.match(teacherLayout, /if \(user\?\.is_personal_workspace\) return licensedNav/);
+  assert.match(departmentAccess, /school\?\.workspace_type === 'personal'/);
+  assert.match(departmentAccess, /school\.owner_auth_user_id === teacher\.auth_user_id/);
+  assert.match(departmentAccess, /return \[\.\.\.DEPARTMENT_PERMISSION_KEYS\]/);
+  assert.match(studentList, /manage_permissions \?\? \[\]\)\.includes\('students\.manage'\)/);
+});
+
+test('one identity can switch isolated workspaces and carry personal teacher licenses', () => {
+  const migration = read('supabase/migrations/20260803110000_workspace_switching.sql');
+  const meRoute = read('src/app/api/auth/me/route.ts');
+  const switchRoute = read('src/app/api/auth/switch-workspace/route.ts');
+  const entitlements = read('src/lib/school-subscription.ts');
+  const accountPopover = read('src/layouts/components/account-popover.tsx');
+
+  assert.match(migration, /app_users_auth_user_workspace_key/);
+  assert.match(migration, /accept_marketplace_school_invitation/);
+  assert.match(migration, /auth_user_id = current_marketplace_user\.auth_user_id/);
+  assert.match(meRoute, /active_workspace_profile_id: user\.id/);
+  assert.match(meRoute, /workspaces/);
+  assert.match(switchRoute, /getWorkspaceProfile\(profileId, currentUser\.auth_user_id\)/);
+  assert.match(switchRoute, /response\.cookies\.set\(ACCESS_TOKEN_COOKIE/);
+  assert.match(entitlements, /marketplace_user_licenses/);
+  assert.match(entitlements, /activePersonalLicenses: personalLicenses/);
+  assert.match(accountPopover, /handleWorkspaceSwitch/);
+  assert.match(accountPopover, /พื้นที่ใช้งาน/);
+});
+
+test('editing a subscription plan synchronizes active issued entitlements', () => {
+  const route = read('src/app/api/subscription-plans/[id]/route.ts');
+  const payload = read('src/app/api/subscription-plans/plan-payload.ts');
+  const migration = read('supabase/migrations/20260803120000_sync_plan_entitlements.sql');
+  const reconciliation = read(
+    'supabase/migrations/20260803130000_reconcile_bundle_plan_entitlements.sql'
+  );
+  const teacherNav = read('src/layouts/nav-config-teacher.tsx');
+  const bundleSelector = read(
+    'src/sections/subscription-plan/components/capability-bundle-selector.tsx'
+  );
+  const subscriptionLoader = read('src/lib/school-subscription.ts');
+  const subscriptionHook = read('src/sections/school-subscription/use-school-subscription.ts');
+  const subscriptionActions = read(
+    'src/sections/school-subscription/school-subscription-actions.ts'
+  );
+
+  assert.match(route, /update_subscription_plan_with_entitlements/);
+  assert.match(migration, /for update/);
+  assert.match(migration, /update public\.marketplace_products/);
+  assert.match(migration, /update public\.marketplace_user_licenses/);
+  assert.match(migration, /update public\.marketplace_school_licenses/);
+  assert.match(migration, /update public\.school_subscriptions/);
+  assert.match(migration, /where status = 'active'/);
+  assert.match(migration, /grant execute .*service_role/s);
+  assert.match(reconciliation, /jsonb_array_elements\(plan_record\.source_bundles\)/);
+  assert.match(reconciliation, /update_subscription_plan_with_entitlements/);
+  assert.match(payload, /sourceBundles\.flatMap\(\(snapshot\) => snapshot\.featureKeys\)/);
+  assert.match(bundleSelector, /featureKeysFromPlanBundles\(snapshots\)/);
+  assert.match(bundleSelector, /featureKeysFromPlanBundles\(remaining\)/);
+  assert.doesNotMatch(bundleSelector, /enabledFeatures\.filter/);
+  assert.match(subscriptionLoader, /workspace\?\.workspace_type !== 'personal'/);
+  assert.match(subscriptionHook, /refetchInterval: 15_000/);
+  assert.match(teacherNav, /path: '\/launch\?app=WORKSHEET_AI'/);
+  assert.match(teacherNav, /featureKey: 'teacher\.worksheet_ai'/);
+  assert.match(teacherNav, /title: 'ปีการศึกษาและภาคเรียน'[\s\S]*featureKey: 'admin\.academic_years'/);
+  assert.match(teacherNav, /title: 'นักเรียน'[\s\S]*featureKey: 'admin\.students'/);
+  assert.match(teacherNav, /title: 'ห้องเรียน'[\s\S]*featureKey: 'admin\.classrooms'/);
+  assert.match(teacherNav, /title: 'วิชาและหลักสูตร'[\s\S]*featureKey: 'admin\.subjects'/);
+  assert.match(teacherNav, /title: 'ลงทะเบียนนักเรียน'[\s\S]*featureKey: 'admin\.enrollments'/);
+  assert.match(teacherNav, /title: 'ประกาศทั้งโรงเรียน'[\s\S]*featureKey: 'admin\.announcements'/);
+  assert.match(teacherNav, /title: 'ครู\/บุคลากร'[\s\S]*featureKey: 'admin\.staff'/);
+  assert.match(subscriptionActions, /cache: 'no-store'/);
+});
+
+test('client session requests include cookies and clear a rejected session', () => {
+  const actions = read('src/auth/context/jwt/action.ts');
+  const provider = read('src/auth/context/jwt/auth-provider.tsx');
+  const axiosClient = read('src/lib/axios.ts');
+
+  assert.match(provider, /fetch\('\/api\/auth\/me', \{ credentials: 'include' \}\)/);
+  assert.match(provider, /response\.status === 401 && !isAuthPage/);
+  assert.match(provider, /await signOut\(\)/);
+  assert.match(provider, /window\.location\.replace\(paths\.auth\.jwt\.signIn\)/);
+  assert.match(actions, /credentials: 'include'/);
+  assert.match(axiosClient, /withCredentials: true/);
+});
+
 test('rate limit fails closed on infrastructure errors', () => {
   const source = read('src/lib/auth-rate-limit.ts');
   const errorBranch = source.slice(source.indexOf('if (error)'));
@@ -60,6 +215,10 @@ test('global security headers remain configured', () => {
   ]) {
     assert.match(source, new RegExp(header));
   }
+  assert.match(
+    source,
+    /Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups'/
+  );
 });
 
 test('sensitive storage is private and downloads use short-lived signed URLs', () => {

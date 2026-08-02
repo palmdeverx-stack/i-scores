@@ -33,6 +33,7 @@ import { SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
 import { RemixIcon } from 'src/components/remix-icon';
 
 import { CapabilityBundleSelector } from './capability-bundle-selector';
+import { featureKeysFromPlanBundles } from '../subscription-plan-actions';
 
 // ----------------------------------------------------------------------
 
@@ -63,6 +64,7 @@ function initialForm(plan: SubscriptionPlan | null): SubscriptionPlanInput {
       sortOrder: 0,
     };
   }
+  const sourceBundles = [...plan.source_bundles];
   return {
     code: plan.code,
     name: plan.name,
@@ -72,8 +74,10 @@ function initialForm(plan: SubscriptionPlan | null): SubscriptionPlanInput {
     maxTeachers: plan.max_teachers,
     maxStudents: plan.max_students,
     maxLineNotifications: plan.max_line_notifications,
-    enabledFeatures: [...plan.enabled_features],
-    sourceBundles: [...plan.source_bundles],
+    enabledFeatures: sourceBundles.length
+      ? featureKeysFromPlanBundles(sourceBundles)
+      : [...plan.enabled_features],
+    sourceBundles,
     isActive: plan.is_active,
     sortOrder: plan.sort_order,
   };
@@ -117,6 +121,21 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
         maxLineNotifications: 0,
       }),
     }));
+  };
+
+  const useBundleSelection = () => {
+    setSelectionMode('bundles');
+    setForm((current) => ({
+      ...current,
+      enabledFeatures: current.sourceBundles.length
+        ? featureKeysFromPlanBundles(current.sourceBundles)
+        : [],
+    }));
+  };
+
+  const useAdvancedSelection = () => {
+    setSelectionMode('advanced');
+    setForm((current) => ({ ...current, sourceBundles: [] }));
   };
 
   const toggleFeature = (key: SchoolFeatureKey) => {
@@ -292,7 +311,7 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
           <Button
             variant={selectionMode === 'bundles' ? 'contained' : 'outlined'}
             startIcon={<RemixIcon icon="solar:widget-4-bold" />}
-            onClick={() => setSelectionMode('bundles')}
+            onClick={useBundleSelection}
           >
             เลือกแบบชุด (แนะนำ)
           </Button>
@@ -300,7 +319,7 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
             color="inherit"
             variant={selectionMode === 'advanced' ? 'contained' : 'outlined'}
             startIcon={<RemixIcon icon="solar:tuning-2-bold" />}
-            onClick={() => setSelectionMode('advanced')}
+            onClick={useAdvancedSelection}
           >
             กำหนดรายเมนู
           </Button>

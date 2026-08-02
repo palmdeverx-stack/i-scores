@@ -158,16 +158,14 @@ begin
 
   select * into app_user_record
   from public.app_users
-  where auth_user_id = p_buyer_auth_user_id;
-
-  if app_user_record.id is not null
-    and app_user_record.school_id is not null
-    and app_user_record.school_id <> p_school_id then
-    raise exception 'Buyer is already linked to another workspace';
-  end if;
+  where auth_user_id = p_buyer_auth_user_id
+    and school_id = p_school_id;
 
   if app_user_record.id is null then
-    generated_username := 'marketplace_' || replace(left(p_buyer_auth_user_id::text, 8), '-', '');
+    generated_username := 'workspace_'
+      || replace(left(p_buyer_auth_user_id::text, 8), '-', '')
+      || '_'
+      || replace(left(p_school_id::text, 8), '-', '');
     insert into public.app_users (
       username, password_hash, email, first_name, last_name, role, school_id,
       is_active, auth_user_id, auth_login_email, auth_role, auth_migrated_at
@@ -189,7 +187,7 @@ begin
     returning * into app_user_record;
   else
     update public.app_users
-    set school_id = p_school_id, role = 'teacher', auth_role = 'teacher', is_active = true
+    set role = 'teacher', auth_role = 'teacher', is_active = true
     where id = app_user_record.id
     returning * into app_user_record;
   end if;
@@ -277,4 +275,3 @@ revoke all on function public.provision_personal_workspace_purchase(
 grant execute on function public.provision_personal_workspace_purchase(
   uuid, uuid, text, text[], timestamptz, uuid
 ) to service_role;
-

@@ -8,8 +8,6 @@ import { parsePlanPayload } from '../plan-payload';
 // ----------------------------------------------------------------------
 
 type RouteParams = { params: Promise<{ id: string }> };
-const PLAN_FIELDS =
-  'id, code, name, description, target_scope, billing_cycle, price, currency, max_school_admins, max_teachers, max_students, max_line_notifications, enabled_features, source_bundles, is_active, sort_order, created_at, updated_at';
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['master_admin']);
@@ -33,12 +31,27 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'รหัสแพ็กเกจนี้ถูกใช้แล้ว' }, { status: 409 });
   }
 
-  const { data: plan, error } = await supabaseAdmin
-    .from('subscription_plans')
-    .update(payload)
-    .eq('id', id)
-    .select(PLAN_FIELDS)
-    .maybeSingle();
+  const { data: plan, error } = await supabaseAdmin.rpc(
+    'update_subscription_plan_with_entitlements',
+    {
+      p_plan_id: id,
+      p_code: payload.code,
+      p_name: payload.name,
+      p_description: payload.description,
+      p_target_scope: payload.target_scope,
+      p_billing_cycle: payload.billing_cycle,
+      p_price: payload.price,
+      p_currency: payload.currency,
+      p_max_school_admins: payload.max_school_admins,
+      p_max_teachers: payload.max_teachers,
+      p_max_students: payload.max_students,
+      p_max_line_notifications: payload.max_line_notifications,
+      p_enabled_features: payload.enabled_features,
+      p_source_bundles: payload.source_bundles,
+      p_is_active: payload.is_active,
+      p_sort_order: payload.sort_order,
+    }
+  );
 
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
@@ -46,7 +59,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!plan) {
     return NextResponse.json({ message: 'ไม่พบแพ็กเกจนี้' }, { status: 404 });
   }
-  return NextResponse.json({ plan });
+  const updatedPlan = Array.isArray(plan) ? plan[0] : plan;
+  return NextResponse.json({ plan: updatedPlan });
 }
 
 export async function DELETE(request: Request, { params }: RouteParams) {

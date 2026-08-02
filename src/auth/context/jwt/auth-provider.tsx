@@ -5,6 +5,9 @@ import type { AuthState } from '../../types';
 import { useSetState } from 'minimal-shared/hooks';
 import { useMemo, useEffect, useCallback } from 'react';
 
+import { paths } from 'src/routes/paths';
+
+import { signOut } from './action';
 import { AuthContext } from '../auth-context';
 
 // ----------------------------------------------------------------------
@@ -18,10 +21,15 @@ export function AuthProvider({ children }: Props) {
 
   const checkUserSession = useCallback(async (): Promise<void> => {
     try {
-      const response = await fetch('/api/auth/me');
+      const response = await fetch('/api/auth/me', { credentials: 'include' });
 
       if (!response.ok) {
         setState({ user: null, loading: false });
+        const isAuthPage = window.location.pathname.startsWith('/auth/');
+        if (response.status === 401 && !isAuthPage) {
+          await signOut();
+          window.location.replace(paths.auth.jwt.signIn);
+        }
         return;
       }
 

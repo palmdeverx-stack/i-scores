@@ -41,12 +41,14 @@ export const masterSessionCookieOptions = {
 
 export type AppRole = 'master_admin' | 'school_admin' | 'teacher' | 'student';
 export type SessionRole = AppRole | 'marketplace_user';
+export type AuthProvider = 'password' | 'google';
 
 export type AppTokenPayload = {
   sub: string;
   username: string;
   role: SessionRole;
   schoolId: string | null;
+  authProvider?: AuthProvider;
   impersonatedBy?: string;
   impersonationAuditId?: string;
   previewAllFeatures?: boolean;
@@ -57,6 +59,7 @@ export type AppTokenPayload = {
 type PinChallengePayload = {
   sub: string;
   purpose: 'pin_verification';
+  authProvider?: AuthProvider;
 };
 
 export function signAppToken(payload: AppTokenPayload): string {
@@ -73,6 +76,9 @@ function isAppTokenPayload(payload: string | JwtPayload): payload is AppTokenPay
     SESSION_ROLES.includes(payload.role as SessionRole) &&
     (payload.schoolId === null ||
       (typeof payload.schoolId === 'string' && UUID_PATTERN.test(payload.schoolId))) &&
+    (payload.authProvider === undefined ||
+      payload.authProvider === 'password' ||
+      payload.authProvider === 'google') &&
     (payload.impersonatedBy === undefined ||
       (typeof payload.impersonatedBy === 'string' && UUID_PATTERN.test(payload.impersonatedBy))) &&
     (payload.impersonationAuditId === undefined ||
@@ -90,10 +96,15 @@ export function verifyAppToken(token: string): AppTokenPayload | null {
   }
 }
 
-export function signPinChallenge(userId: string): string {
-  return jwt.sign({ sub: userId, purpose: 'pin_verification' }, pinChallengeSecret, {
-    expiresIn: '5m',
-  });
+export function signPinChallenge(
+  userId: string,
+  authProvider: AuthProvider = 'password'
+): string {
+  return jwt.sign(
+    { sub: userId, purpose: 'pin_verification', authProvider },
+    pinChallengeSecret,
+    { expiresIn: '5m' }
+  );
 }
 
 export function verifyPinChallenge(token: string): PinChallengePayload | null {
@@ -102,7 +113,10 @@ export function verifyPinChallenge(token: string): PinChallengePayload | null {
     return typeof payload !== 'string' &&
       payload.purpose === 'pin_verification' &&
       typeof payload.sub === 'string' &&
-      UUID_PATTERN.test(payload.sub)
+      UUID_PATTERN.test(payload.sub) &&
+      (payload.authProvider === undefined ||
+        payload.authProvider === 'password' ||
+        payload.authProvider === 'google')
       ? (payload as PinChallengePayload)
       : null;
   } catch {

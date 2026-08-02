@@ -26,6 +26,7 @@ import { SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
 import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 
+import { featureKeysFromPlanBundles } from '../subscription-plan-actions';
 import { listCapabilityBundles, createCapabilityBundle } from '../capability-bundle-actions';
 
 // ----------------------------------------------------------------------
@@ -73,27 +74,16 @@ export function CapabilityBundleSelector({
 
   const applyBundle = (bundle: CapabilityBundle) => {
     const otherSnapshots = sourceBundles.filter((snapshot) => snapshot.id !== bundle.id);
-    const previous = sourceBundles.find((snapshot) => snapshot.id === bundle.id);
-    const previousKeys = new Set(previous?.featureKeys ?? []);
-    const nextKeys = new Set(bundle.feature_keys);
-    const features = enabledFeatures.filter(
-      (feature) => !previousKeys.has(feature) || nextKeys.has(feature)
-    );
-    onChange(Array.from(new Set([...features, ...bundle.feature_keys])), [
+    const snapshots = [
       ...otherSnapshots,
       snapshotOf(bundle),
-    ]);
+    ];
+    onChange(featureKeysFromPlanBundles(snapshots), snapshots);
   };
 
   const removeBundle = (snapshot: PlanBundleSnapshot) => {
     const remaining = sourceBundles.filter((item) => item.id !== snapshot.id);
-    const retainedByOtherBundle = new Set(remaining.flatMap((item) => item.featureKeys));
-    onChange(
-      enabledFeatures.filter(
-        (feature) => !snapshot.featureKeys.includes(feature) || retainedByOtherBundle.has(feature)
-      ),
-      remaining
-    );
+    onChange(featureKeysFromPlanBundles(remaining), remaining);
   };
 
   const createMutation = useMutation({
@@ -323,7 +313,7 @@ function BundleDiff({
       <Alert severity={added.length ? 'success' : 'info'}>เพิ่ม {added.length} เมนู</Alert>
       <Alert severity={removed.length ? 'warning' : 'info'}>นำออก {removed.length} เมนู</Alert>
       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-        ระบบจะเปลี่ยนเฉพาะเมนูจาก snapshot ของชุดนี้ เมนูจากชุดอื่นจะยังคงอยู่
+        ระบบจะคำนวณสิทธิ์ใหม่จากชุดที่เลือกทั้งหมด เมนูที่ถูกนำออกจากทุกชุดจะถูกปิดด้วย
       </Typography>
     </Box>
   );

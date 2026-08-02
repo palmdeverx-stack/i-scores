@@ -36,9 +36,18 @@ export type AppUser = {
   accepted_legal_at: string | null;
 };
 
+export type SwitchWorkspaceResult =
+  | { role: AppUser['role']; requiresPin?: false }
+  | {
+      requiresPin: true;
+      pinChallengeToken: string;
+      role: 'master_admin' | 'school_admin';
+    };
+
 async function postJson(url: string, body: unknown) {
   const response = await fetch(url, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
@@ -99,6 +108,7 @@ export const signUp = async ({
 export const changePassword = async (newPassword: string): Promise<AppUser> => {
   const response = await fetch('/api/auth/change-password', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ newPassword }),
   });
@@ -116,7 +126,10 @@ export const changePassword = async (newPassword: string): Promise<AppUser> => {
  * Accept terms of service / privacy policy (forced on first use for every role)
  *************************************** */
 export const acceptLegal = async (): Promise<AppUser> => {
-  const response = await fetch('/api/auth/accept-legal', { method: 'POST' });
+  const response = await fetch('/api/auth/accept-legal', {
+    method: 'POST',
+    credentials: 'include',
+  });
 
   const json = await response.json();
 
@@ -128,11 +141,17 @@ export const acceptLegal = async (): Promise<AppUser> => {
 };
 
 /** **************************************
+ * Switch the active application workspace
+ *************************************** */
+export const switchWorkspace = async (profileId: string): Promise<SwitchWorkspaceResult> =>
+  postJson('/api/auth/switch-workspace', { profileId });
+
+/** **************************************
  * Sign out
  *************************************** */
 export const signOut = async (): Promise<void> => {
-  await Promise.all([
-    fetch('/api/auth/sign-out', { method: 'POST' }),
-    getSupabaseBrowserClient().auth.signOut(),
+  await Promise.allSettled([
+    fetch('/api/auth/sign-out', { method: 'POST', credentials: 'include' }),
+    getSupabaseBrowserClient().auth.signOut({ scope: 'local' }),
   ]);
 };

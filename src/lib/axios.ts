@@ -8,6 +8,7 @@ import { CONFIG } from 'src/global-config';
 
 const axiosInstance = axios.create({
   baseURL: CONFIG.serverUrl,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

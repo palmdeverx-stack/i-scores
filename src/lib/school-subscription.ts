@@ -30,13 +30,46 @@ export type SchoolEntitlementContext = {
   role?: 'master_admin' | 'school_admin' | 'teacher' | 'student';
 };
 
+async function loadPersonalLicenses(userId: string | null | undefined, now: string) {
+  if (!userId) return [];
+  const { data: appUser } = await supabaseAdmin
+    .from('app_users')
+    .select('auth_user_id')
+    .eq('id', userId)
+    .maybeSingle();
+  if (!appUser?.auth_user_id) return [];
+
+  const { data: marketplaceUser } = await supabaseAdmin
+    .from('marketplace_users')
+    .select('id')
+    .eq('auth_user_id', appUser.auth_user_id)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (!marketplaceUser) return [];
+
+  const { data } = await supabaseAdmin
+    .from('marketplace_user_licenses')
+    .select('id, feature_keys, starts_at, expires_at, status, product_id')
+    .eq('buyer_id', marketplaceUser.id)
+    .eq('status', 'active')
+    .lte('starts_at', now)
+    .gt('expires_at', now);
+  return data ?? [];
+}
+
 export async function loadEffectiveSchoolEntitlements(
   schoolId: string,
   context: SchoolEntitlementContext = {}
 ) {
   const now = new Date().toISOString();
-  const [subscription, { data: licenses }, { data: purchases }] = await Promise.all([
+  const [subscription, { data: workspace }, { data: licenses }, { data: purchases }, personalLicenses] =
+    await Promise.all([
     loadSchoolSubscription(schoolId),
+    supabaseAdmin
+      .from('schools')
+      .select('workspace_type')
+      .eq('id', schoolId)
+      .maybeSingle(),
     supabaseAdmin
       .from('marketplace_school_licenses')
       .select(
@@ -51,8 +84,11 @@ export async function loadEffectiveSchoolEntitlements(
       .select('feature_key, expires_at')
       .eq('school_id', schoolId)
       .gt('expires_at', now),
-  ]);
+      context.role === 'teacher' ? loadPersonalLicenses(context.userId, now) : Promise.resolve([]),
+    ]);
 
+  const usesSchoolSubscription =
+    workspace?.workspace_type !== 'personal' && isSubscriptionUsable(subscription);
   const activeLicenses = licenses ?? [];
   let assignedLicenseIds = new Set<string>();
   if (context.role === 'teacher' && context.userId && activeLicenses.length > 0) {
@@ -69,7 +105,7 @@ export async function loadEffectiveSchoolEntitlements(
   }
 
   const enabledFeatures = new Set<SchoolFeatureKey>();
-  if (isSubscriptionUsable(subscription)) {
+  if (usesSchoolSubscription) {
     for (const feature of subscription?.enabled_features ?? []) {
       enabledFeatures.add(feature as SchoolFeatureKey);
     }
@@ -89,23 +125,31 @@ export async function loadEffectiveSchoolEntitlements(
       enabledFeatures.add(feature as SchoolFeatureKey);
     }
   }
+  for (const license of personalLicenses) {
+    for (const feature of license.feature_keys ?? []) {
+      enabledFeatures.add(feature as SchoolFeatureKey);
+    }
+  }
 
   const expirations = [
-    ...(isSubscriptionUsable(subscription) && subscription?.ends_at
+    ...(usesSchoolSubscription && subscription?.ends_at
       ? [new Date(`${subscription.ends_at}T23:59:59.999Z`).getTime()]
       : []),
     ...accessibleLicenses.map((license) => new Date(license.expires_at).getTime()),
+    ...personalLicenses.map((license) => new Date(license.expires_at).getTime()),
     ...(purchases ?? []).map((purchase) => new Date(purchase.expires_at).getTime()),
   ].filter(Number.isFinite);
 
   return {
     subscription,
     activeLicenses: accessibleLicenses,
+    activePersonalLicenses: personalLicenses,
     activePurchases: purchases ?? [],
     enabledFeatures: [...enabledFeatures],
     usable:
-      isSubscriptionUsable(subscription) ||
+      usesSchoolSubscription ||
       accessibleLicenses.length > 0 ||
+      personalLicenses.length > 0 ||
       (purchases?.length ?? 0) > 0,
     accessEndsAt: expirations.length
       ? new Date(Math.max(...expirations)).toISOString()

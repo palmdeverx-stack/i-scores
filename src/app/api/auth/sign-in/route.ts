@@ -178,11 +178,13 @@ export async function POST(request: Request) {
       targetId: user.id,
       metadata: { requiresPin: true },
     });
-    return NextResponse.json({
+    const response = NextResponse.json({
       requiresPin: true,
       pinChallengeToken: signPinChallenge(user.id),
       role: user.role,
     });
+    response.cookies.delete(ACCESS_TOKEN_COOKIE);
+    return response;
   }
 
   const accessToken = signAppToken({
@@ -190,6 +192,7 @@ export async function POST(request: Request) {
     username: user.username,
     role: user.role,
     schoolId: user.school_id,
+    authProvider: 'password',
   });
 
   const response = NextResponse.json({ user: toPublicUser(user) });

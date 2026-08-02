@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { getSupabaseBrowserClient } from 'src/lib/supabase-browser';
 
+import { useAuthContext } from 'src/auth/hooks';
 import { getHomePathForRole } from 'src/auth/utils';
 
 // ----------------------------------------------------------------------
@@ -19,6 +20,7 @@ import { getHomePathForRole } from 'src/auth/utils';
 export default function GoogleAuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { checkUserSession } = useAuthContext();
   const started = useRef(false);
 
   useEffect(() => {
@@ -36,17 +38,16 @@ export default function GoogleAuthCallbackPage() {
 
         const response = await fetch('/api/auth/google', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            accessToken: data.session.access_token,
-            intent: searchParams.get('intent') === 'sign-up' ? 'sign-up' : 'sign-in',
-          }),
+          credentials: 'include',
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
         });
         const result = await response.json();
         if (!response.ok) {
           await supabase.auth.signOut();
           throw new Error(result.message ?? 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
         }
+
+        await supabase.auth.signOut({ scope: 'local' });
 
         if (result.marketplaceOnly) {
           if (!result.redirectUrl) {
@@ -64,6 +65,7 @@ export default function GoogleAuthCallbackPage() {
           return;
         }
 
+        await checkUserSession?.();
         router.replace(getHomePathForRole(result.user?.role));
       } catch (callbackError) {
         const message =
@@ -77,7 +79,7 @@ export default function GoogleAuthCallbackPage() {
     };
 
     void completeGoogleAuth();
-  }, [router, searchParams]);
+  }, [checkUserSession, router, searchParams]);
 
   return (
     <Box

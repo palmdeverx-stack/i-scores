@@ -31,7 +31,9 @@ export async function hasTimetableCapability(
 ): Promise<boolean> {
   const { data: personalOwner } = await supabaseAdmin
     .from('app_users')
-    .select('auth_user_id, school:schools!inner(workspace_type, owner_auth_user_id)')
+    .select(
+      'auth_user_id, school:schools!app_users_school_id_fkey!inner(workspace_type, owner_auth_user_id)'
+    )
     .eq('id', teacherId)
     .eq('school_id', schoolId)
     .maybeSingle();

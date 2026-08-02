@@ -29,6 +29,8 @@ import { Form, Field } from 'src/components/hook-form';
 import { listSubjectMasterItems } from 'src/sections/subject-master/subject-master-actions';
 import { listSemesters, listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import {
   getSubject,
   GRADE_LEVELS,
@@ -113,7 +115,9 @@ export function SubjectFormView({
   initialSemesterId = '',
 }: Props = {}) {
   const router = useRouter();
+  const { user } = useAuthContext();
   const isEdit = !!subjectId;
+  const isPersonalWorkspace = user?.is_personal_workspace === true;
   const queryClient = useQueryClient();
   const [subjectImage, setSubjectImage] = useState<File | string | null>(null);
   const [imageRemoved, setImageRemoved] = useState(false);
@@ -124,6 +128,7 @@ export function SubjectFormView({
   });
   const { handleSubmit, reset, setValue, control } = methods;
   const academicYearId = useWatch({ control, name: 'academicYearId' });
+  const semesterId = useWatch({ control, name: 'semesterId' });
   const learningArea = useWatch({ control, name: 'learningArea' });
   const published = useWatch({ control, name: 'published' });
 
@@ -247,10 +252,22 @@ export function SubjectFormView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingSubject, initialAcademicYearId, initialSemesterId, isEdit, reset]);
 
+  useEffect(() => {
+    if (!isEdit && isPersonalWorkspace && !academicYearId && academicYears.length === 1) {
+      setValue('academicYearId', academicYears[0].id);
+    }
+  }, [academicYearId, academicYears, isEdit, isPersonalWorkspace, setValue]);
+
+  useEffect(() => {
+    if (!isEdit && isPersonalWorkspace && academicYearId && !semesterId && semesters.length === 1) {
+      setValue('semesterId', semesters[0].id);
+    }
+  }, [academicYearId, isEdit, isPersonalWorkspace, semesterId, semesters, setValue]);
+
   const onSubmit = handleSubmit((data) => saveMutation.mutate(data));
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Button
         component={RouterLink}
         href={basePath}
@@ -268,7 +285,9 @@ export function SubjectFormView({
       <Typography sx={{ mt: 1, mb: 4, color: 'text.secondary' }}>
         {isEdit
           ? 'ปรับข้อมูลหลักสูตร หน่วยกิต คำอธิบาย และรูปภาพรายวิชา'
-          : 'เพิ่มรายละเอียดวิชาใหม่เข้าสู่รายการของโรงเรียน'}
+          : isPersonalWorkspace
+            ? 'เพิ่มรายละเอียดวิชาใหม่เข้าสู่พื้นที่ส่วนตัวของคุณ'
+            : 'เพิ่มรายละเอียดวิชาใหม่เข้าสู่รายการของโรงเรียน'}
       </Typography>
 
       {subjectQuery.isError && (

@@ -11,6 +11,7 @@ import { useRouter } from 'src/routes/hooks';
 import { CONFIG } from 'src/global-config';
 import { getSupabaseBrowserClient } from 'src/lib/supabase-browser';
 
+import { useAuthContext } from 'src/auth/hooks';
 import { getHomePathForRole } from 'src/auth/utils';
 
 // ----------------------------------------------------------------------
@@ -82,6 +83,7 @@ type GoogleAuthButtonProps = {
 
 export function GoogleAuthButton({ intent, onError }: GoogleAuthButtonProps) {
   const router = useRouter();
+  const { checkUserSession } = useAuthContext();
   const buttonRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
 
@@ -108,17 +110,16 @@ export function GoogleAuthButton({ intent, onError }: GoogleAuthButtonProps) {
 
         const response = await fetch('/api/auth/google', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            accessToken: data.session.access_token,
-            intent,
-          }),
+          credentials: 'include',
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
         });
         const result = await response.json();
         if (!response.ok) {
           await supabase.auth.signOut();
           throw new Error(result.message ?? 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
         }
+
+        await supabase.auth.signOut({ scope: 'local' });
 
         if (result.marketplaceOnly) {
           if (!result.redirectUrl) throw new Error('ยังไม่ได้กำหนด URL ของ Marketplace');
@@ -134,6 +135,7 @@ export function GoogleAuthButton({ intent, onError }: GoogleAuthButtonProps) {
           return;
         }
 
+        await checkUserSession?.();
         router.replace(getHomePathForRole(result.user?.role));
       } catch (googleError) {
         onError(
@@ -179,7 +181,7 @@ export function GoogleAuthButton({ intent, onError }: GoogleAuthButtonProps) {
     return () => {
       cancelled = true;
     };
-  }, [intent, onError, router]);
+  }, [checkUserSession, intent, onError, router]);
 
   return (
     <Box

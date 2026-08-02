@@ -15,7 +15,10 @@ export function useSchoolSubscription(schoolId?: string | null) {
     queryKey: ['school-subscription-access', schoolId],
     queryFn: () => getSchoolSubscriptionAccess(schoolId!),
     enabled: !!schoolId,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: 'always',
   });
 }
 
@@ -87,6 +90,15 @@ const ROUTE_FEATURES: Record<
     ['/admin/gradebook', 'admin.teacher_assignments'],
   ],
   teacher: [
+    ['/teacher/department-work/announcements', 'admin.announcements'],
+    ['/teacher/department-work/academic-year', 'admin.academic_years'],
+    ['/teacher/department-work/enrollment', 'admin.enrollments'],
+    ['/teacher/department-work/classroom', 'admin.classrooms'],
+    ['/teacher/department-work/subject', 'admin.subjects'],
+    ['/teacher/department-work/student', 'admin.students'],
+    ['/teacher/department-work/user', 'admin.staff'],
+    ['/teacher/department', 'admin.departments'],
+    ['/teacher/school', 'admin.school_profile'],
     ['/teacher/schedule-submissions', 'academic.schedule_workflow'],
     ['/teacher/schedule-approvals', 'academic.schedule_workflow'],
     ['/teacher/schedule-builder', 'academic.schedule_workflow'],

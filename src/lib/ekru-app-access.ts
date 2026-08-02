@@ -14,6 +14,7 @@ export type EkruAppAccess = {
   requiredFeatureKey: string;
   workspaceId: string;
   scope: 'individual' | 'school';
+  entitlementScope: 'individual' | 'school';
   schoolId: string | null;
 };
 
@@ -90,12 +91,15 @@ export async function resolveEkruAppAccess(
       ? { data: null }
       : await supabaseAdmin
           .from('app_users')
-          .select('id, auth_user_id, school_id, role, is_active, school:schools(workspace_type)')
+          .select(
+            'id, auth_user_id, school_id, role, is_active, school:schools!app_users_school_id_fkey(workspace_type)'
+          )
           .eq('id', caller.sub)
           .maybeSingle();
   if (caller.role !== 'marketplace_user' && (!appUser?.is_active || !appUser.auth_user_id)) {
     return { allowed: false, reason: 'บัญชีนี้ยังไม่เชื่อมกับ Supabase Auth' };
   }
+  const appUserSchool = Array.isArray(appUser?.school) ? appUser.school[0] : appUser?.school;
 
   const marketplaceQuery = supabaseAdmin
     .from('marketplace_users')
@@ -121,11 +125,15 @@ export async function resolveEkruAppAccess(
       .limit(1)
       .maybeSingle();
     if (personalLicense) {
+      const usesSchoolData =
+        app.supported_scope === 'both' &&
+        !!appUser?.school_id &&
+        appUserSchool?.workspace_type === 'school';
       const workspaceId = await findOrCreateWorkspace({
         appId: app.id,
         authUserId: marketplaceUser.auth_user_id,
-        schoolId: null,
-        scope: 'individual',
+        schoolId: usesSchoolData ? appUser.school_id : null,
+        scope: usesSchoolData ? 'school' : 'individual',
       });
       if (!workspaceId) return { allowed: false, reason: 'ไม่สามารถเปิด Workspace ได้' };
       return {
@@ -137,8 +145,9 @@ export async function resolveEkruAppAccess(
           launchPath: app.launch_path,
           requiredFeatureKey: app.required_feature_key,
           workspaceId,
-          scope: 'individual',
-          schoolId: null,
+          scope: usesSchoolData ? 'school' : 'individual',
+          entitlementScope: 'individual',
+          schoolId: usesSchoolData ? appUser.school_id : null,
         },
       };
     }
@@ -147,7 +156,6 @@ export async function resolveEkruAppAccess(
   if (!appUser?.school_id || app.supported_scope === 'individual') {
     return { allowed: false, reason: 'ไม่พบ License ที่ใช้งานได้สำหรับระบบนี้' };
   }
-  const appUserSchool = Array.isArray(appUser.school) ? appUser.school[0] : appUser.school;
   if (app.code === 'PERSONAL_SUITE' && appUserSchool?.workspace_type !== 'personal') {
     return { allowed: false, reason: 'ระบบนี้เปิดได้เฉพาะพื้นที่ส่วนบุคคล' };
   }
@@ -217,6 +225,7 @@ export async function resolveEkruAppAccess(
       requiredFeatureKey: app.required_feature_key,
       workspaceId,
       scope: 'school',
+      entitlementScope: 'school',
       schoolId: appUser.school_id,
     },
   };

@@ -104,6 +104,7 @@ export async function POST(request: Request) {
     username: user.username,
     role: user.role,
     schoolId: user.school_id,
+    authProvider: challenge.authProvider ?? 'password',
   });
 
   const response = NextResponse.json({ user: toPublicUser(user) });

@@ -74,7 +74,10 @@ export function SubscriptionPlanView() {
     mutationFn: ({ plan, input }: { plan: SubscriptionPlan; input: SubscriptionPlanInput }) =>
       updateSubscriptionPlan(plan.id, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['subscription-plans'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['subscription-plans'] }),
+        queryClient.invalidateQueries({ queryKey: ['school-subscription-access'] }),
+      ]);
       setFormOpen(false);
       setEditingPlan(null);
     },

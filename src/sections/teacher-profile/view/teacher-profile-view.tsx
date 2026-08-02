@@ -103,7 +103,9 @@ function employmentDate(value: string | null) {
 
 export function TeacherProfileView() {
   const queryClient = useQueryClient();
-  const { checkUserSession } = useAuthContext();
+  const { user, checkUserSession } = useAuthContext();
+  const isPersonalWorkspace = user?.is_personal_workspace === true;
+  const isGoogleSignIn = user?.auth_provider === 'google';
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [isPreparingAvatar, setIsPreparingAvatar] = useState(false);
@@ -681,67 +683,69 @@ export function TeacherProfileView() {
             )}
           </Card>
 
-          <Card variant="outlined" sx={{ p: 3 }}>
-            <Typography component="h2" variant="h6">
-              ข้อมูลการทำงาน
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5, mb: 2.5, color: 'text.secondary' }}>
-              ผู้ดูแลโรงเรียนเป็นผู้กำหนด หากข้อมูลไม่ถูกต้องกรุณาติดต่อผู้ดูแล
-            </Typography>
-            <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
-              {[
-                {
-                  label: 'ประเภทบุคลากร',
-                  value:
-                    (profile.staff_type_name_en && profile.staff_type_name
-                      ? `${profile.staff_type_name} / ${profile.staff_type_name_en}`
-                      : profile.staff_type_name) ??
-                    (profile.staff_type ? STAFF_TYPE_LABEL[profile.staff_type] : '-'),
-                },
-                {
-                  label: 'สถานะการทำงาน',
-                  value:
-                    (profile.employment_status_name_en && profile.employment_status_name
-                      ? `${profile.employment_status_name} / ${profile.employment_status_name_en}`
-                      : profile.employment_status_name) ??
-                    (profile.employment_status
-                      ? EMPLOYMENT_STATUS_LABEL[profile.employment_status]
-                      : '-'),
-                },
-                {
-                  label: 'วันที่เริ่มงาน',
-                  value: employmentDate(profile.employment_start_date),
-                },
-                {
-                  label: 'วันที่บรรจุ',
-                  value: employmentDate(profile.appointment_date),
-                },
-                {
-                  label: 'วันที่สิ้นสุดสัญญา',
-                  value: employmentDate(profile.contract_end_date),
-                },
-                { label: 'ตำแหน่ง', value: profile.position_title || '-' },
-                { label: 'วิทยฐานะ', value: profile.academic_rank || '-' },
-              ].map((item) => (
-                <Box
-                  key={item.label}
-                  sx={{
-                    gap: 1,
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {item.label}
-                  </Typography>
-                  <Typography variant="subtitle2" sx={{ textAlign: 'right' }}>
-                    {item.value}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </Card>
+          {!isPersonalWorkspace && (
+            <Card variant="outlined" sx={{ p: 3 }}>
+              <Typography component="h2" variant="h6">
+                ข้อมูลการทำงาน
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5, mb: 2.5, color: 'text.secondary' }}>
+                ผู้ดูแลโรงเรียนเป็นผู้กำหนด หากข้อมูลไม่ถูกต้องกรุณาติดต่อผู้ดูแล
+              </Typography>
+              <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
+                {[
+                  {
+                    label: 'ประเภทบุคลากร',
+                    value:
+                      (profile.staff_type_name_en && profile.staff_type_name
+                        ? `${profile.staff_type_name} / ${profile.staff_type_name_en}`
+                        : profile.staff_type_name) ??
+                      (profile.staff_type ? STAFF_TYPE_LABEL[profile.staff_type] : '-'),
+                  },
+                  {
+                    label: 'สถานะการทำงาน',
+                    value:
+                      (profile.employment_status_name_en && profile.employment_status_name
+                        ? `${profile.employment_status_name} / ${profile.employment_status_name_en}`
+                        : profile.employment_status_name) ??
+                      (profile.employment_status
+                        ? EMPLOYMENT_STATUS_LABEL[profile.employment_status]
+                        : '-'),
+                  },
+                  {
+                    label: 'วันที่เริ่มงาน',
+                    value: employmentDate(profile.employment_start_date),
+                  },
+                  {
+                    label: 'วันที่บรรจุ',
+                    value: employmentDate(profile.appointment_date),
+                  },
+                  {
+                    label: 'วันที่สิ้นสุดสัญญา',
+                    value: employmentDate(profile.contract_end_date),
+                  },
+                  { label: 'ตำแหน่ง', value: profile.position_title || '-' },
+                  { label: 'วิทยฐานะ', value: profile.academic_rank || '-' },
+                ].map((item) => (
+                  <Box
+                    key={item.label}
+                    sx={{
+                      gap: 1,
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {item.label}
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ textAlign: 'right' }}>
+                      {item.value}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Card>
+          )}
 
           <Card variant="outlined" sx={{ p: 3 }}>
             <Typography component="h2" variant="h6" sx={{ mb: 2.5 }}>
@@ -765,8 +769,10 @@ export function TeacherProfileView() {
               />
               <SummaryFact
                 icon="solar:home-angle-bold-duotone"
-                label="โรงเรียน"
-                value={profile.school?.name ?? 'ยังไม่มีข้อมูล'}
+                label={isPersonalWorkspace ? 'พื้นที่ใช้งาน' : 'โรงเรียน'}
+                value={
+                  isPersonalWorkspace ? 'พื้นที่ส่วนตัว' : (profile.school?.name ?? 'ยังไม่มีข้อมูล')
+                }
               />
             </Box>
           </Card>
@@ -817,20 +823,26 @@ export function TeacherProfileView() {
                   ความปลอดภัยของบัญชี
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  เป็นสมาชิกตั้งแต่ {memberSince}
+                  {isGoogleSignIn ? 'เข้าสู่ระบบด้วย Google' : `เป็นสมาชิกตั้งแต่ ${memberSince}`}
                 </Typography>
               </Box>
             </Box>
-            <Button
-              fullWidth
-              component={RouterLink}
-              href={paths.auth.jwt.changePassword}
-              variant="outlined"
-              startIcon={<RemixIcon icon="ic:round-vpn-key" />}
-              sx={{ mt: 2.5 }}
-            >
-              เปลี่ยนรหัสผ่าน
-            </Button>
+            {isGoogleSignIn ? (
+              <Alert severity="info" sx={{ mt: 2.5 }}>
+                บัญชีนี้จัดการรหัสผ่านผ่าน Google
+              </Alert>
+            ) : (
+              <Button
+                fullWidth
+                component={RouterLink}
+                href={paths.auth.jwt.changePassword}
+                variant="outlined"
+                startIcon={<RemixIcon icon="ic:round-vpn-key" />}
+                sx={{ mt: 2.5 }}
+              >
+                เปลี่ยนรหัสผ่าน
+              </Button>
+            )}
           </Card>
         </Box>
       </Box>

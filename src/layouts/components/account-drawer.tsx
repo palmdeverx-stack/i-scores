@@ -72,7 +72,10 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
   const isAdmin = user?.role === 'school_admin' || user?.role === 'master_admin';
   const avatarUrl = user?.avatar_url ?? user?.photoURL;
   const displayName = user?.displayName || user?.username || 'ผู้ใช้งาน';
-  const rawRoleLabel = ROLE_LABEL[user?.role] ?? 'ผู้ใช้งาน';
+  const rawRoleLabel =
+    user?.is_personal_workspace || user?.role === 'marketplace_user'
+      ? 'E-KRU Marketplace'
+      : (ROLE_LABEL[user?.role] ?? 'ผู้ใช้งาน');
   const roleLabel = t(rawRoleLabel, { defaultValue: rawRoleLabel });
 
   const adminMenu: NonNullable<AccountDrawerProps['data']> =
@@ -149,7 +152,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
 
   const teacherMenu: NonNullable<AccountDrawerProps['data']> = [
     {
-      label: 'หน้าหลักครู',
+      label: 'หน้าหลัก',
       href: paths.teacher.root,
       icon: <RiHome5Line />,
     },
@@ -186,9 +189,10 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
   ];
 
   const roleMenuData = isAdmin ? adminMenu : user?.role === 'teacher' ? teacherMenu : data;
-  const menuData = user?.impersonation?.active
-    ? roleMenuData.filter((item) => item.href !== paths.auth.jwt.changePassword)
-    : roleMenuData;
+  const menuData =
+    user?.impersonation?.active || user?.auth_provider === 'google'
+      ? roleMenuData.filter((item) => item.href !== paths.auth.jwt.changePassword)
+      : roleMenuData;
 
   return (
     <>

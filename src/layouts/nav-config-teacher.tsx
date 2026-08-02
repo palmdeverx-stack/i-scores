@@ -3,6 +3,7 @@ import type { NavSectionProps } from 'src/components/nav-section';
 import { paths } from 'src/routes/paths';
 
 import {
+  RemixIcon,
   RiTeamLine,
   RiBook2Line,
   RiGroupLine,
@@ -46,6 +47,7 @@ const ICONS = {
   gradeReviews: <RiFileSearchLine />,
   gradeResults: <RiFileChartLine />,
   documents: <RiFileList3Line />,
+  worksheetAi: <RemixIcon icon="solar:magic-stick-3-bold-duotone" />,
 };
 
 // ----------------------------------------------------------------------
@@ -67,6 +69,7 @@ export const navData: NavSectionProps['data'] = [
         title: 'ข้อมูลโรงเรียน',
         path: paths.teacher.school,
         icon: ICONS.school,
+        featureKey: 'admin.school_profile',
       },
       {
         title: 'สร้างรายวิชา',
@@ -125,6 +128,12 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'teaching.announcements',
       },
       {
+        title: 'Worksheet AI',
+        path: '/launch?app=WORKSHEET_AI',
+        icon: ICONS.worksheetAi,
+        featureKey: 'teacher.worksheet_ai',
+      },
+      {
         title: 'งานฝ่าย',
         path: '#',
         icon: ICONS.department,
@@ -133,6 +142,7 @@ export const navData: NavSectionProps['data'] = [
             title: 'งานฝ่ายของฉัน',
             path: paths.teacher.department,
             icon: ICONS.department,
+            featureKey: 'admin.departments',
             requiresDepartment: true,
           },
           {
@@ -171,45 +181,52 @@ export const navData: NavSectionProps['data'] = [
             requiresDepartmentPermission: 'grades.review',
           },
           {
-            title: 'ปีการศึกษา',
+            title: 'ปีการศึกษาและภาคเรียน',
             path: paths.teacher.departmentAcademicYear.root,
             icon: ICONS.academicYear,
+            featureKey: 'admin.academic_years',
             requiresDepartmentPermission: 'academic_years.manage',
           },
           {
             title: 'ห้องเรียน',
             path: paths.teacher.departmentClassroom,
             icon: ICONS.classroom,
+            featureKey: 'admin.classrooms',
             requiresDepartmentPermission: 'classrooms.manage',
           },
           {
             title: 'วิชาและหลักสูตร',
             path: paths.teacher.departmentSubject,
             icon: ICONS.subject,
+            featureKey: 'admin.subjects',
             requiresDepartmentPermission: 'subjects.manage',
           },
           {
             title: 'ลงทะเบียนนักเรียน',
             path: paths.teacher.departmentEnrollment.root,
             icon: ICONS.studentAdd,
+            featureKey: 'admin.enrollments',
             requiresDepartmentPermission: 'enrollments.manage',
           },
           {
             title: 'ประกาศทั้งโรงเรียน',
             path: paths.teacher.departmentAnnouncements,
             icon: ICONS.announcements,
+            featureKey: 'admin.announcements',
             requiresDepartmentPermission: 'announcements.manage',
           },
           {
-            title: 'นักเรียนทั้งหมด',
+            title: 'นักเรียน',
             path: paths.teacher.departmentStudent,
             icon: ICONS.allStudents,
+            featureKey: 'admin.students',
             requiresDepartmentPermission: 'students.manage',
           },
           {
             title: 'ครู/บุคลากร',
             path: paths.teacher.departmentStaff.root,
             icon: ICONS.department,
+            featureKey: 'admin.staff',
             requiresDepartmentPermission: 'staff.manage',
           },
         ],

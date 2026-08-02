@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { listUserWorkspaces } from 'src/lib/user-workspaces';
 import { toPublicUser, verifyAppToken, getRequestToken } from 'src/lib/auth-token';
 import { DEPARTMENT_PERMISSION_KEYS } from 'src/lib/department-permissions-config';
 import {
@@ -9,6 +10,18 @@ import {
 } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
+
+async function resolveAuthProvider(
+  sessionProvider: 'password' | 'google' | undefined,
+  authUserId: string | null | undefined
+) {
+  if (sessionProvider || !authUserId) return sessionProvider ?? 'password';
+  const { data } = await supabaseAdmin.auth.admin.getUserById(authUserId);
+  const providers = data.user?.identities?.map((identity) => identity.provider) ?? [];
+  return data.user?.app_metadata.provider === 'google' || providers.includes('google')
+    ? 'google'
+    : 'password';
+}
 
 export async function GET(request: Request) {
   const token = getRequestToken(request);
@@ -21,18 +34,23 @@ export async function GET(request: Request) {
   if (payload.role === 'marketplace_user') {
     const { data: marketplaceUser } = await supabaseAdmin
       .from('marketplace_users')
-      .select('id, username, email, first_name, last_name, role, is_active, created_at')
+      .select('id, username, email, first_name, last_name, role, is_active, created_at, auth_user_id')
       .eq('id', payload.sub)
       .maybeSingle();
     if (!marketplaceUser?.is_active) {
       return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
+    const authProvider = await resolveAuthProvider(
+      payload.authProvider,
+      marketplaceUser.auth_user_id
+    );
 
     return NextResponse.json({
       user: {
         ...marketplaceUser,
         role: 'marketplace_user',
         school_id: null,
+        auth_provider: authProvider,
       },
     });
   }
@@ -49,11 +67,13 @@ export async function GET(request: Request) {
   if (!user || user.is_active === false || studentCannotAccess) {
     return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
   }
+  const authProvider = await resolveAuthProvider(payload.authProvider, user.auth_user_id);
 
   let departments: { id: string; name: string; role_in_department: 'head' | 'member' }[] = [];
   let departmentPermissions: string[] = [];
   let managePermissions: string[] = [];
   let isPersonalWorkspace = false;
+  const workspaces = user.auth_user_id ? await listUserWorkspaces(user.auth_user_id) : [];
   if (user.role === 'teacher') {
     const { data: workspace } = user.school_id
       ? await supabaseAdmin
@@ -106,6 +126,9 @@ export async function GET(request: Request) {
         : departmentPermissions,
       manage_permissions: payload.previewAllFeatures ? DEPARTMENT_PERMISSION_KEYS : managePermissions,
       is_personal_workspace: isPersonalWorkspace,
+      auth_provider: authProvider,
+      active_workspace_profile_id: user.id,
+      workspaces,
     },
   });
 }

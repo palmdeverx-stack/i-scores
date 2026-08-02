@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { isSchoolAccessUsable } from 'src/lib/school-subscription';
 import { syncLinkedStaffAuth, defaultStaffAuthRole } from 'src/lib/staff-supabase-auth';
+import { recoverPersonalWorkspacePurchases } from 'src/lib/personal-workspace-provisioning';
 import {
   signAppToken,
   toPublicUser,
@@ -131,6 +132,7 @@ async function marketplaceLandingPath(marketplaceUserId: string) {
       .from('ekru_apps')
       .select('code')
       .eq('is_active', true)
+      .in('supported_scope', ['individual', 'both'])
       .in('required_feature_key', featureKeys)
       .order('code')
       .limit(1)
@@ -142,16 +144,42 @@ async function marketplaceLandingPath(marketplaceUserId: string) {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
-  const accessToken = typeof body?.accessToken === 'string' ? body.accessToken : '';
+  const authorization = request.headers.get('authorization') ?? '';
+  const accessToken = authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? '';
   if (!accessToken) {
-    return NextResponse.json({ message: 'ไม่พบ Google access token' }, { status: 400 });
+    console.error('[auth/google] Missing bearer token', {
+      hasAuthorizationHeader: Boolean(authorization),
+      authorizationScheme: authorization.split(/\s+/, 1)[0] || null,
+    });
+    return NextResponse.json(
+      {
+        code: 'SUPABASE_TOKEN_MISSING',
+        message: 'ไม่พบ Supabase access token',
+      },
+      { status: 401 }
+    );
   }
 
   const { data, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
   const authUser = data.user;
   if (authError || !authUser) {
-    return NextResponse.json({ message: 'Google session ไม่ถูกต้องหรือหมดอายุ' }, { status: 401 });
+    console.error('[auth/google] Supabase token validation failed', {
+      status: authError?.status ?? null,
+      code: authError?.code ?? null,
+      message: authError?.message ?? 'User missing from Supabase response',
+      tokenLength: accessToken.length,
+      tokenSegments: accessToken.split('.').length,
+    });
+    return NextResponse.json(
+      {
+        code: 'SUPABASE_TOKEN_INVALID',
+        message:
+          process.env.NODE_ENV === 'development' && authError?.message
+            ? `Google session ไม่ถูกต้อง: ${authError.message}`
+            : 'Google session ไม่ถูกต้องหรือหมดอายุ',
+      },
+      { status: 401 }
+    );
   }
 
   const profile = googleProfile(authUser);
@@ -177,11 +205,35 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: linkedUser } = await supabaseAdmin
+  try {
+    await recoverPersonalWorkspacePurchases(authUser.id);
+  } catch (recoveryError) {
+    console.error('[auth/google] Personal workspace recovery failed', {
+      authUserId: authUser.id,
+      message: recoveryError instanceof Error ? recoveryError.message : String(recoveryError),
+    });
+    return NextResponse.json(
+      {
+        code: 'PERSONAL_WORKSPACE_PROVISION_FAILED',
+        message:
+          recoveryError instanceof Error
+            ? recoveryError.message
+            : 'ไม่สามารถสร้างพื้นที่ส่วนตัวจาก License ได้',
+      },
+      { status: 409 }
+    );
+  }
+
+  const { data: linkedUsers } = await supabaseAdmin
     .from('app_users')
-    .select('*')
+    .select('*, school:schools!app_users_school_id_fkey(workspace_type, owner_auth_user_id)')
     .eq('auth_user_id', authUser.id)
-    .maybeSingle();
+    .eq('is_active', true);
+
+  const linkedUser = (linkedUsers ?? []).find((candidate) => {
+    const school = Array.isArray(candidate.school) ? candidate.school[0] : candidate.school;
+    return school?.workspace_type === 'personal' && school.owner_auth_user_id === authUser.id;
+  }) ?? linkedUsers?.[0];
 
   let appUser = linkedUser;
   if (!appUser) {
@@ -239,6 +291,7 @@ export async function POST(request: Request) {
       username: profile.username || profile.email,
       role: 'marketplace_user',
       schoolId: null,
+      authProvider: 'google',
     });
     const response = NextResponse.json({
       marketplaceOnly: true,
@@ -269,12 +322,11 @@ export async function POST(request: Request) {
     );
   }
 
-  let isPersonalWorkspace = false;
   if (appUser.role !== 'master_admin') {
     const [{ data: school }, schoolAccessUsable] = await Promise.all([
       supabaseAdmin
         .from('schools')
-        .select('is_active, workspace_type')
+        .select('is_active')
         .eq('id', appUser.school_id)
         .maybeSingle(),
       isSchoolAccessUsable(appUser.school_id, {
@@ -288,7 +340,6 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
-    isPersonalWorkspace = school.workspace_type === 'personal';
   }
 
   const authSync = await syncLinkedStaffAuth(appUser, { isActive: true });
@@ -299,15 +350,14 @@ export async function POST(request: Request) {
     );
   }
 
-  if (
-    appUser.role === 'master_admin' ||
-    (appUser.role === 'school_admin' && !isPersonalWorkspace)
-  ) {
-    return NextResponse.json({
+  if (appUser.role === 'master_admin' || appUser.role === 'school_admin') {
+    const response = NextResponse.json({
       requiresPin: true,
-      pinChallengeToken: signPinChallenge(appUser.id),
+      pinChallengeToken: signPinChallenge(appUser.id, 'google'),
       role: appUser.role,
     });
+    response.cookies.delete(ACCESS_TOKEN_COOKIE);
+    return response;
   }
 
   const accessAppToken = signAppToken({
@@ -315,6 +365,7 @@ export async function POST(request: Request) {
     username: appUser.username,
     role: appUser.role,
     schoolId: appUser.school_id,
+    authProvider: 'google',
   });
   const response = NextResponse.json({ user: toPublicUser(appUser) });
   response.cookies.set(ACCESS_TOKEN_COOKIE, accessAppToken, accessTokenCookieOptions);

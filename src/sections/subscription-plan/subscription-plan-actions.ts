@@ -51,6 +51,12 @@ export type SubscriptionPlanInput = {
   sortOrder: number;
 };
 
+export function featureKeysFromPlanBundles(sourceBundles: PlanBundleSnapshot[]) {
+  return Array.from(
+    new Set(sourceBundles.flatMap((snapshot) => snapshot.featureKeys))
+  ) as SchoolFeatureKey[];
+}
+
 async function parseResponse<T>(response: Response, fallbackMessage: string): Promise<T> {
   const json = await response.json().catch(() => null);
   if (!response.ok) throw new Error(json?.message ?? fallbackMessage);

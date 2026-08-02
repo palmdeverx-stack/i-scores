@@ -153,7 +153,7 @@ export function HomeroomAttendanceHistoryView() {
     students.find((enrollment) => enrollment.student.id === studentId) ?? null;
 
   return (
-    <Container maxWidth="xl" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 4,

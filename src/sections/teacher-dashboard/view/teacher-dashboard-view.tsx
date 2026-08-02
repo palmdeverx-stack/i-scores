@@ -18,13 +18,16 @@ import Typography from '@mui/material/Typography';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { RemixIcon ,
+import {
+  RemixIcon,
   RiMore2Line,
   RiBriefcaseLine,
   RiFileCheckLine,
   RiPresentationLine,
   RiCalendarScheduleLine,
 } from 'src/components/remix-icon';
+
+import { useAuthContext } from 'src/auth/hooks';
 
 import { RecentAssignments } from '../components/recent-assignments';
 import {
@@ -83,6 +86,8 @@ function timeToMinutes(value: string) {
 }
 
 export function TeacherDashboardView() {
+  const { user } = useAuthContext();
+  const isPersonalWorkspace = user?.is_personal_workspace === true;
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['teacher-dashboard', 'summary'],
     queryFn: getTeacherDashboardSummary,
@@ -121,7 +126,7 @@ export function TeacherDashboardView() {
   }).format(new Date());
 
   return (
-    <Container maxWidth="xl" sx={{ px: { xs: 1.5, sm: 3 }, pb: { xs: 3, sm: 5 } }}>
+    <Container maxWidth={false} sx={{ px: { xs: 1.5, sm: 3 }, pb: { xs: 3, sm: 5 } }}>
       <Card
         sx={{
           mb: { xs: 2, sm: 3 },
@@ -163,14 +168,14 @@ export function TeacherDashboardView() {
                 color: varAlpha(theme.vars.palette.common.whiteChannel, 0.78),
               })}
             >
-              แดชบอร์ดครู
+              หน้าหลัก
             </Typography>
             <Typography
               component="h1"
               variant="h3"
               sx={{ mt: 0.25, fontSize: { xs: '1.65rem', sm: '2rem', md: '2.5rem' } }}
             >
-              สวัสดี ครู{teacherName}
+              สวัสดี {isPersonalWorkspace ? teacherName : `ครู${teacherName}`}
             </Typography>
             <Typography
               variant="body2"
@@ -184,7 +189,9 @@ export function TeacherDashboardView() {
             <Box sx={{ gap: 0.75, mt: 1.5, display: 'flex', flexWrap: 'wrap' }}>
               <Chip
                 size="small"
-                label={data.school?.name ?? 'ยังไม่มีข้อมูลโรงเรียน'}
+                label={
+                  isPersonalWorkspace ? 'พื้นที่ส่วนตัว' : (data.school?.name ?? 'ยังไม่มีข้อมูลโรงเรียน')
+                }
                 sx={(theme) => ({
                   color: 'common.white',
                   bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.15),

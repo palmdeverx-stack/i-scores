@@ -82,7 +82,7 @@ export async function getSchoolSubscription(schoolId: string): Promise<SchoolSub
 export async function getSchoolSubscriptionAccess(
   schoolId: string
 ): Promise<SchoolSubscriptionAccessData> {
-  const response = await fetch(`/api/schools/${schoolId}/subscription`, {});
+  const response = await fetch(`/api/schools/${schoolId}/subscription`, { cache: 'no-store' });
   const json = await response.json();
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถตรวจสอบแพ็กเกจโรงเรียนได้');
   return json;

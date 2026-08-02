@@ -36,8 +36,11 @@ import { SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
 import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 
-import { createSubscriptionPlan } from '../subscription-plan-actions';
 import { CapabilityBundleSelector } from '../components/capability-bundle-selector';
+import {
+  createSubscriptionPlan,
+  featureKeysFromPlanBundles,
+} from '../subscription-plan-actions';
 
 // ----------------------------------------------------------------------
 
@@ -201,6 +204,21 @@ export function SubscriptionPlanCreateView() {
         maxLineNotifications: hasLineNotifications ? current.maxLineNotifications || 300 : 0,
       };
     });
+  };
+
+  const useBundleSelection = () => {
+    setSelectionMode('bundles');
+    setForm((current) => ({
+      ...current,
+      enabledFeatures: current.sourceBundles.length
+        ? featureKeysFromPlanBundles(current.sourceBundles)
+        : [],
+    }));
+  };
+
+  const useAdvancedSelection = () => {
+    setSelectionMode('advanced');
+    setForm((current) => ({ ...current, sourceBundles: [] }));
   };
 
   return (
@@ -384,7 +402,7 @@ export function SubscriptionPlanCreateView() {
             <Button
               variant={selectionMode === 'bundles' ? 'contained' : 'outlined'}
               startIcon={<RemixIcon icon="solar:widget-4-bold" />}
-              onClick={() => setSelectionMode('bundles')}
+              onClick={useBundleSelection}
             >
               เลือกแบบชุด (แนะนำ)
             </Button>
@@ -392,7 +410,7 @@ export function SubscriptionPlanCreateView() {
               color="inherit"
               variant={selectionMode === 'advanced' ? 'contained' : 'outlined'}
               startIcon={<RemixIcon icon="solar:tuning-2-bold" />}
-              onClick={() => setSelectionMode('advanced')}
+              onClick={useAdvancedSelection}
             >
               กำหนดรายเมนู
             </Button>

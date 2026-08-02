@@ -19,30 +19,32 @@ import { getHomePathForRole } from 'src/auth/utils/role-home-path';
 
 export function useMainSchoolBrand() {
   const { user } = useAuthContext();
+  const isPersonalWorkspace = user?.is_personal_workspace === true;
   const schoolId = typeof user?.school_id === 'string' ? user.school_id : '';
   const schoolQuery = useQuery({
     queryKey: ['nav-school', schoolId],
     queryFn: () => getSchool(schoolId),
-    enabled: !!schoolId,
+    enabled: !!schoolId && !isPersonalWorkspace,
     staleTime: 5 * 60 * 1000,
   });
 
   return {
     user,
     school: schoolQuery.data ?? null,
-    isLoading: !!schoolId && schoolQuery.isLoading,
+    isPersonalWorkspace,
+    isLoading: !!schoolId && !isPersonalWorkspace && schoolQuery.isLoading,
   };
 }
 
 export function MainSchoolLogo({ size = 40 }: { size?: number }) {
-  const { user, school, isLoading } = useMainSchoolBrand();
+  const { user, school, isLoading, isPersonalWorkspace } = useMainSchoolBrand();
   const href = user ? getHomePathForRole(user.role) : '/';
 
   if (isLoading) {
     return <Skeleton variant="rounded" width={size} height={size} />;
   }
 
-  if (!school?.logo_url) {
+  if (isPersonalWorkspace || !school?.logo_url) {
     return <Logo href={href} sx={{ width: size, height: size }} />;
   }
 

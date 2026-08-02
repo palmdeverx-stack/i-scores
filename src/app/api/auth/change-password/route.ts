@@ -20,6 +20,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
   }
 
+  if (payload.authProvider === 'google') {
+    return NextResponse.json(
+      { message: 'บัญชีนี้เข้าสู่ระบบด้วย Google จึงไม่สามารถเปลี่ยนรหัสผ่านในระบบได้' },
+      { status: 400 }
+    );
+  }
+
   const { newPassword } = await request.json();
 
   if (!newPassword || String(newPassword).length < 6) {

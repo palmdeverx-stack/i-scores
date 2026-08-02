@@ -52,17 +52,18 @@ export function NavVertical({
 }: NavVerticalProps) {
   const { user } = useAuthContext();
   const isMasterAdmin = user?.role === 'master_admin';
+  const usesProductIdentity = isMasterAdmin || user?.is_personal_workspace === true;
   const schoolId = typeof user?.school_id === 'string' ? user.school_id : '';
   const { data: school, isLoading } = useQuery({
     queryKey: ['nav-school', schoolId],
     queryFn: () => getSchool(schoolId),
-    enabled: !!schoolId && !isMasterAdmin,
+    enabled: !!schoolId && !usesProductIdentity,
   });
 
   const renderNavVertical = () => (
     <>
       {slots?.topArea ??
-        (isMasterAdmin ? (
+        (usesProductIdentity ? (
           <ProductIdentity />
         ) : school ? (
           <Box display="flex" alignItems="center" sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
@@ -112,7 +113,7 @@ export function NavVertical({
     <>
       {slots?.topArea ?? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 2.5 }}>
-          {!isMasterAdmin && school ? (
+          {!usesProductIdentity && school ? (
             <Avatar
               src={school.logo_url ?? undefined}
               alt={school.name}
@@ -179,10 +180,10 @@ function ProductIdentity() {
       <Logo />
       <Stack ml={2} sx={{ minWidth: 0 }}>
         <TruncatedTypography variant="subtitle1" line={1}>
-          eKru
+          E-KRU
         </TruncatedTypography>
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {t('brand.scoreSystem')}
+          {t('brand.educationManagementSystem')}
         </Typography>
       </Stack>
     </Box>

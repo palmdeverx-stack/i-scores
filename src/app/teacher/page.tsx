@@ -8,7 +8,7 @@ import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
 
-export const metadata: Metadata = { title: `แดชบอร์ดครู - ${CONFIG.appName}` };
+export const metadata: Metadata = { title: `หน้าหลัก - ${CONFIG.appName}` };
 
 export default function Page() {
   return (

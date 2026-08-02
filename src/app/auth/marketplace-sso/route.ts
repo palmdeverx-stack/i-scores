@@ -58,18 +58,24 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(paths.page403, request.url));
   }
 
-  const [{ data: appUser }, { data: marketplaceUser }] = await Promise.all([
+  const [{ data: appUsers }, { data: marketplaceUser }] = await Promise.all([
     supabaseAdmin
       .from('app_users')
-      .select('id, username, role, school_id, is_active')
+      .select(
+        'id, username, role, school_id, is_active, school:schools!app_users_school_id_fkey(workspace_type, owner_auth_user_id)'
+      )
       .eq('auth_user_id', payload.sub)
-      .maybeSingle(),
+      .eq('is_active', true),
     supabaseAdmin
       .from('marketplace_users')
       .select('id, is_active')
       .eq('auth_user_id', payload.sub)
       .maybeSingle(),
   ]);
+  const appUser = (appUsers ?? []).find((candidate) => {
+    const school = Array.isArray(candidate.school) ? candidate.school[0] : candidate.school;
+    return school?.workspace_type === 'personal' && school.owner_auth_user_id === payload.sub;
+  }) ?? appUsers?.[0];
   if (!appUser?.is_active || !marketplaceUser?.is_active) {
     return NextResponse.redirect(new URL(paths.page403, request.url));
   }
@@ -97,4 +103,3 @@ export async function GET(request: Request) {
   response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, accessTokenCookieOptions);
   return response;
 }
-

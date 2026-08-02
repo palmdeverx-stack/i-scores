@@ -21,6 +21,7 @@ export function SchoolSubscriptionGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuthContext();
   const subscriptionQuery = useSchoolSubscription(user?.school_id);
+  const workspaceLabel = user?.is_personal_workspace ? 'พื้นที่ส่วนตัว' : 'โรงเรียน';
 
   if (!user?.school_id || user.role === 'master_admin') return children;
 
@@ -43,7 +44,7 @@ export function SchoolSubscriptionGuard({ children }: { children: ReactNode }) {
             </Button>
           }
         >
-          ไม่สามารถตรวจสอบแพ็กเกจของโรงเรียนได้
+          ไม่สามารถตรวจสอบแพ็กเกจของ{workspaceLabel}ได้
         </Alert>
       </Container>
     );
@@ -58,8 +59,8 @@ export function SchoolSubscriptionGuard({ children }: { children: ReactNode }) {
     return (
       <Container maxWidth="md" sx={{ py: 5 }}>
         <Alert severity="error">
-          <Typography variant="subtitle1">แพ็กเกจโรงเรียนไม่พร้อมใช้งาน</Typography>
-          กรุณาติดต่อผู้ดูแลระบบเพื่อตรวจสอบการชำระเงินหรือวันหมดอายุ
+          <Typography variant="subtitle1">แพ็กเกจ{workspaceLabel}ไม่พร้อมใช้งาน</Typography>
+          กรุณาตรวจสอบ License การชำระเงิน หรือวันหมดอายุ
         </Alert>
       </Container>
     );
@@ -75,7 +76,7 @@ export function SchoolSubscriptionGuard({ children }: { children: ReactNode }) {
       <Container maxWidth="md" sx={{ py: 5 }}>
         <Alert severity="warning">
           <Typography variant="subtitle1">แพ็กเกจนี้ไม่รองรับเมนูดังกล่าว</Typography>
-          กรุณาติดต่อผู้ดูแลโรงเรียนหรืออัปเกรดแพ็กเกจเพื่อเปิดใช้งาน
+          กรุณาอัปเกรดแพ็กเกจเพื่อเปิดใช้งาน
         </Alert>
       </Container>
     );

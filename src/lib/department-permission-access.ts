@@ -5,6 +5,7 @@ import type { DepartmentPermissionKey } from './department-permissions-config';
 import { supabaseAdmin } from './supabase-admin';
 import {
   isDepartmentPermissionKey,
+  DEPARTMENT_PERMISSION_KEYS,
   isDepartmentDelegablePermission,
   isManageableDepartmentPermission,
 } from './department-permissions-config';
@@ -23,6 +24,29 @@ async function loadMembership(teacherId: string, schoolId: string) {
     return null;
   }
   return membership;
+}
+
+async function isPersonalWorkspaceOwner(teacherId: string, schoolId: string) {
+  const [{ data: teacher }, { data: school }] = await Promise.all([
+    supabaseAdmin
+      .from('app_users')
+      .select('auth_user_id')
+      .eq('id', teacherId)
+      .eq('school_id', schoolId)
+      .eq('role', 'teacher')
+      .maybeSingle(),
+    supabaseAdmin
+      .from('schools')
+      .select('workspace_type, owner_auth_user_id')
+      .eq('id', schoolId)
+      .maybeSingle(),
+  ]);
+
+  return (
+    !!teacher?.auth_user_id &&
+    school?.workspace_type === 'personal' &&
+    school.owner_auth_user_id === teacher.auth_user_id
+  );
 }
 
 type AccessLevel = 'none' | 'view' | 'manage';
@@ -104,6 +128,10 @@ export async function getDepartmentGrantedPermissions(
   teacherId: string,
   schoolId: string
 ): Promise<DepartmentPermissionKey[]> {
+  if (await isPersonalWorkspaceOwner(teacherId, schoolId)) {
+    return [...DEPARTMENT_PERMISSION_KEYS];
+  }
+
   const [membership, staffAccess] = await Promise.all([
     loadMembership(teacherId, schoolId),
     loadStaffAccess(teacherId, schoolId),
@@ -148,6 +176,10 @@ export async function getEffectiveDepartmentPermissions(
   teacherId: string,
   schoolId: string
 ): Promise<DepartmentPermissionKey[]> {
+  if (await isPersonalWorkspaceOwner(teacherId, schoolId)) {
+    return [...DEPARTMENT_PERMISSION_KEYS];
+  }
+
   const [membership, staffAccess] = await Promise.all([
     loadMembership(teacherId, schoolId),
     loadStaffAccess(teacherId, schoolId),

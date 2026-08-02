@@ -33,22 +33,34 @@ export default function Layout({ children }: Props) {
   const subscriptionQuery = useSchoolSubscription(user?.school_id);
   const navData = useMemo(
     () => {
-      const filtered = filterNavByDepartment(
-        filterDashboardNav(
-          teacherNavData,
-          subscriptionQuery.data?.subscription.enabled_features ?? []
-        ),
+      const workspaceNav = user?.is_personal_workspace
+        ? teacherNavData.map((group) => ({
+            ...group,
+            subheader: group.subheader === 'ภาพรวม' ? 'พื้นที่ส่วนตัว' : group.subheader,
+            items: group.items.map((item) =>
+              item.title === 'นักเรียนของฉัน' ? { ...item, title: 'ผู้เรียน' } : item
+            ),
+          }))
+        : teacherNavData;
+      const licensedNav = filterDashboardNav(
+        workspaceNav,
+        subscriptionQuery.data?.subscription.enabled_features ?? []
+      );
+      if (user?.is_personal_workspace) return licensedNav;
+
+      return filterNavByDepartment(
+        licensedNav,
         user?.departments ?? [],
         user?.department_permissions ?? [],
         !!user?.is_school_director
       );
-      return filtered;
     },
     [
       subscriptionQuery.data?.subscription.enabled_features,
       user?.departments,
       user?.department_permissions,
       user?.is_school_director,
+      user?.is_personal_workspace,
     ]
   );
 

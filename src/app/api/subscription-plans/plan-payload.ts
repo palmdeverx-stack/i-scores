@@ -110,6 +110,10 @@ export function parsePlanPayload(body: unknown): PlanPayload | null {
     return null;
   }
 
+  const normalizedEnabledFeatures = sourceBundles.length
+    ? sourceBundles.flatMap((snapshot) => snapshot.featureKeys)
+    : enabledFeatures;
+
   return {
     code,
     name,
@@ -124,7 +128,7 @@ export function parsePlanPayload(body: unknown): PlanPayload | null {
     max_teachers: hasUsageQuotas ? maxTeachers : 0,
     max_students: hasUsageQuotas ? maxStudents : 0,
     max_line_notifications: hasUsageQuotas ? maxLineNotifications : 0,
-    enabled_features: Array.from(new Set(enabledFeatures)),
+    enabled_features: Array.from(new Set(normalizedEnabledFeatures)),
     source_bundles: sourceBundles,
     is_active: isActive,
     sort_order: sortOrder,

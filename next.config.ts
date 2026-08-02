@@ -20,7 +20,9 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: "base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",
   },
-  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+  // Google Identity Services needs to keep the opener relationship for its
+  // popup fallback when FedCM is unavailable or disabled.
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
   { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

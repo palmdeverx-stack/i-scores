@@ -87,7 +87,9 @@ export function StudentListView({
   const detailPath = (id: string) => `${basePath}/${id}`;
   const editPath = (id: string) => `${basePath}/${id}/edit`;
   const { user: currentUser } = useAuthContext();
-  const canManageStudents = currentUser?.role === 'school_admin';
+  const canManageStudents =
+    currentUser?.role === 'school_admin' ||
+    (currentUser?.manage_permissions ?? []).includes('students.manage');
   const table = useTable({ defaultRowsPerPage: 10 });
   const rowMenu = usePopover();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
