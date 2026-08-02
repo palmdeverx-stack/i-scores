@@ -292,6 +292,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     try {
       const attachments = [];
       for (const file of files) {
+        const attachmentId = crypto.randomUUID();
         const extension = FILE_EXTENSIONS[file.type];
         const classroom = teacherAssignment!.classrooms as unknown as { school_id: string };
         const storagePath = `${classroom.school_id}/${assignment.id}/${crypto.randomUUID()}.${extension}`;
@@ -301,13 +302,11 @@ export async function POST(request: Request, { params }: RouteParams) {
         if (uploadError) throw new Error(uploadError.message);
 
         uploadedPaths.push(storagePath);
-        const {
-          data: { publicUrl },
-        } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(storagePath);
         attachments.push({
+          id: attachmentId,
           assignment_id: assignment.id,
           file_name: file.name,
-          file_url: publicUrl,
+          file_url: `/api/assignments/attachments/${attachmentId}/download`,
           storage_path: storagePath,
           mime_type: file.type,
           file_size: file.size,

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { signApprovalUrls } from 'src/lib/private-storage';
 import { createNotifications } from 'src/lib/notifications';
 import { decodeSignatureDataUrl } from 'src/lib/signature-image';
 import { canApproveSchedule, canManageClassroomSchedule } from 'src/lib/schedule-access';
@@ -40,13 +41,15 @@ export async function GET(request: Request, { params }: RouteParams) {
   const { data: approval } = await supabaseAdmin
     .from('classroom_schedule_approvals')
     .select(
-      'status, submitted_at, approved_at, canceled_at, submitter_signature_url, submitter_signature_signed_at'
+      'status, submitted_at, approved_at, canceled_at, signature_path, submitter_signature_url, submitter_signature_path, submitter_signature_signed_at'
     )
     .eq('classroom_id', id)
     .eq('semester_id', semesterId)
     .maybeSingle();
 
-  return NextResponse.json({ approval: approval ?? { status: 'draft' } });
+  return NextResponse.json({
+    approval: approval ? await signApprovalUrls(approval) : { status: 'draft' },
+  });
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
@@ -104,11 +107,6 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ message: signatureError.message }, { status: 500 });
     }
 
-    const {
-      data: { publicUrl: submitterSignatureUrl },
-    } = supabaseAdmin.storage
-      .from('schedule-approval-signatures')
-      .getPublicUrl(submitterSignaturePath);
     const submittedAt = new Date().toISOString();
 
     const { data: approval, error } = await supabaseAdmin
@@ -128,13 +126,14 @@ export async function POST(request: Request, { params }: RouteParams) {
           canceled_at: null,
           signature_url: null,
           signature_signed_at: null,
-          submitter_signature_url: `${submitterSignatureUrl}?v=${Date.now()}`,
+          submitter_signature_url: `/private/signatures/${approvalId}/submitter`,
+          submitter_signature_path: submitterSignaturePath,
           submitter_signature_signed_at: submittedAt,
         },
         { onConflict: 'classroom_id,semester_id' }
       )
       .select(
-        'status, submitted_at, approved_at, canceled_at, submitter_signature_url, submitter_signature_signed_at'
+        'status, submitted_at, approved_at, canceled_at, signature_path, submitter_signature_url, submitter_signature_path, submitter_signature_signed_at'
       )
       .single();
 
@@ -176,7 +175,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }))
     );
 
-    return NextResponse.json({ approval });
+    return NextResponse.json({ approval: await signApprovalUrls(approval) });
   }
 
   if (action === 'cancel') {
@@ -250,9 +249,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: signatureError.message }, { status: 500 });
   }
 
-  const {
-    data: { publicUrl: signatureUrl },
-  } = supabaseAdmin.storage.from('schedule-approval-signatures').getPublicUrl(signaturePath);
   const approvedAt = new Date().toISOString();
 
   const { data: approval, error } = await supabaseAdmin
@@ -263,12 +259,13 @@ export async function POST(request: Request, { params }: RouteParams) {
       approved_at: approvedAt,
       canceled_by: null,
       canceled_at: null,
-      signature_url: `${signatureUrl}?v=${Date.now()}`,
+      signature_url: `/private/signatures/${current.id}/approver`,
+      signature_path: signaturePath,
       signature_signed_at: approvedAt,
     })
     .eq('classroom_id', id)
     .eq('semester_id', semesterId)
-    .select('status, submitted_at, approved_at, canceled_at, signature_url, signature_signed_at')
+    .select('status, submitted_at, approved_at, canceled_at, signature_url, signature_path, signature_signed_at, submitter_signature_url, submitter_signature_path')
     .single();
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
@@ -289,5 +286,5 @@ export async function POST(request: Request, { params }: RouteParams) {
     }))
   );
 
-  return NextResponse.json({ approval });
+  return NextResponse.json({ approval: await signApprovalUrls(approval) });
 }

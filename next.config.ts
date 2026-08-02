@@ -15,6 +15,20 @@ import type { NextConfig } from 'next';
  */
 const isStaticExport = false;
 
+const securityHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value: "base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",
+  },
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+  { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+];
+
 // ----------------------------------------------------------------------
 
 const nextConfig: NextConfig = {
@@ -25,6 +39,9 @@ const nextConfig: NextConfig = {
   output: isStaticExport ? 'export' : undefined,
   env: {
     BUILD_STATIC_EXPORT: JSON.stringify(isStaticExport),
+  },
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
   },
   // Without --turbopack (next dev)
   webpack(config, { isServer }) {

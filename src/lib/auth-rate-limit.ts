@@ -27,15 +27,15 @@ async function checkRateLimit(
 
   if (error) {
     console.error('Rate limit check failed', error);
-    return true;
+    return false;
   }
 
   return data as boolean;
 }
 
 /**
- * Fails open on infra errors: a broken rate-limit check shouldn't lock
- * everyone out of sign-in.
+ * Fails closed on infrastructure errors. Authentication must not continue
+ * when brute-force protection cannot make an authoritative decision.
  */
 export async function isSignInAllowed(request: Request, username: string): Promise<boolean> {
   const ip = getClientIp(request);

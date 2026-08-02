@@ -28,12 +28,12 @@ import { MenuButton } from '../components/menu-button';
 import { DashboardBottomNav } from './dashboard-bottom-nav';
 import { AccountDrawer } from '../components/account-drawer';
 import { AccountPopover } from '../components/account-popover';
-import { ImpersonationBanner } from '../components/impersonation-banner';
 import { LanguagePopover } from '../components/language-popover';
 import { MarketplaceButton } from '../components/marketplace-button';
 import { NotificationsMenu } from '../components/notifications-menu';
 import { navData as dashboardNavData } from '../nav-config-dashboard';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
+import { ImpersonationBanner } from '../components/impersonation-banner';
 import { MainSection, layoutClasses, HeaderSection, LayoutSection } from '../core';
 
 // ----------------------------------------------------------------------

@@ -24,7 +24,7 @@ export function StudentAssignmentList({ assignments, generatedAt }: Props) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const rowsPerPage = 10;
   const now = new Date(generatedAt).getTime();
 
   const filtered = useMemo(() => {

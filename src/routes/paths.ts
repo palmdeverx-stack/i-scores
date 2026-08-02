@@ -111,6 +111,7 @@ export const paths = {
   master: {
     root: ROOTS.MASTER,
     systemFlow: `${ROOTS.MASTER}/system-flow`,
+    systemQuality: `${ROOTS.MASTER}/system-quality`,
     emailSettings: `${ROOTS.MASTER}/email-settings`,
     apps: `${ROOTS.MASTER}/apps`,
     school: {

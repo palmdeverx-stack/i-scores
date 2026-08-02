@@ -4,6 +4,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { paths } from 'src/routes/paths';
 
+import { isActiveSession } from 'src/lib/session-security';
+import { writeSecurityAudit } from 'src/lib/security-audit';
+import { isCrossSiteMutation } from 'src/lib/request-security';
 import { verifyAppToken, ACCESS_TOKEN_COOKIE } from 'src/lib/auth-token';
 import { loadEffectiveSchoolEntitlements } from 'src/lib/school-subscription';
 
@@ -75,11 +78,37 @@ export async function proxy(request: NextRequest) {
 
   const token = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
   const caller = token ? verifyAppToken(token) : null;
+  if (isCrossSiteMutation(request)) {
+    await writeSecurityAudit({
+      action: 'request.cross_site_blocked',
+      actorUserId: caller?.sub,
+      schoolId: caller?.schoolId,
+      request,
+      metadata: { method: request.method, pathname },
+    });
+    return NextResponse.json({ message: 'Cross-site request blocked' }, { status: 403 });
+  }
+
   if (!caller) {
     if (isApi) return NextResponse.next();
     const signInUrl = new URL(paths.auth.jwt.signIn, request.url);
     signInUrl.searchParams.set('returnTo', pathname);
     return NextResponse.redirect(signInUrl);
+  }
+
+  if (!(await isActiveSession(caller))) {
+    await writeSecurityAudit({
+      action: 'session.rejected',
+      actorUserId: caller.sub,
+      schoolId: caller.schoolId,
+      request,
+      metadata: { role: caller.role, pathname },
+    });
+    const response = isApi
+      ? NextResponse.json({ message: 'Session ถูกยกเลิกหรือบัญชีถูกปิดใช้งาน' }, { status: 401 })
+      : NextResponse.redirect(new URL(paths.auth.jwt.signIn, request.url));
+    response.cookies.delete(ACCESS_TOKEN_COOKIE);
+    return response;
   }
 
   if (area && !area.roles.includes(caller.role as AppRole)) {

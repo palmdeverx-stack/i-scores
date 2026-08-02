@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { writeSecurityAudit } from 'src/lib/security-audit';
 
 // ----------------------------------------------------------------------
 
@@ -133,6 +134,17 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       { message: error?.message ?? 'ไม่สามารถอัปเดตข้อมูลโรงเรียนได้' },
       { status: 500 }
     );
+  }
+
+  if (isActive !== undefined) {
+    await writeSecurityAudit({
+      action: isActive ? 'school.activated' : 'school.deactivated',
+      actorUserId: caller.sub,
+      schoolId: id,
+      request,
+      targetType: 'school',
+      targetId: id,
+    });
   }
 
   return NextResponse.json({ school });

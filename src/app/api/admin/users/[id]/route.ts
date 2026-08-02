@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { writeSecurityAudit } from 'src/lib/security-audit';
 import { encryptCredential } from 'src/lib/credential-cipher';
 import { isActiveStaffMasterValue } from 'src/lib/staff-master';
 import { syncLinkedStaffAuth } from 'src/lib/staff-supabase-auth';
@@ -141,6 +142,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         { status: 500 }
       );
     }
+    await writeSecurityAudit({
+      action: body.isActive ? 'account.activated' : 'account.deactivated',
+      actorUserId: caller.sub,
+      schoolId: target.school_id,
+      request,
+      targetType: 'app_user',
+      targetId: id,
+      metadata: { role: target.role },
+    });
     return NextResponse.json({ user });
   }
 

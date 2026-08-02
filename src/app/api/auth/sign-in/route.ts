@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { isSignInAllowed } from 'src/lib/auth-rate-limit';
+import { writeSecurityAudit } from 'src/lib/security-audit';
 import { isSchoolAccessUsable } from 'src/lib/school-subscription';
 import {
   signAppToken,
@@ -28,6 +29,12 @@ export async function POST(request: Request) {
   }
 
   if (!(await isSignInAllowed(request, username))) {
+    await writeSecurityAudit({
+      action: 'auth.rate_limited',
+      request,
+      targetType: 'username',
+      metadata: { username: String(username).toLowerCase() },
+    });
     return NextResponse.json(
       { message: 'พยายามเข้าสู่ระบบบ่อยเกินไป กรุณาลองใหม่อีกครั้งในภายหลัง' },
       { status: 429 }
@@ -41,6 +48,12 @@ export async function POST(request: Request) {
     .single();
 
   if (!user) {
+    await writeSecurityAudit({
+      action: 'auth.sign_in_failed',
+      request,
+      targetType: 'username',
+      metadata: { reason: 'invalid_credentials' },
+    });
     return NextResponse.json({ message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
   }
 
@@ -83,6 +96,15 @@ export async function POST(request: Request) {
   }
 
   if (!passwordMatches) {
+    await writeSecurityAudit({
+      action: 'auth.sign_in_failed',
+      actorUserId: user.id,
+      schoolId: user.school_id,
+      request,
+      targetType: 'app_user',
+      targetId: user.id,
+      metadata: { reason: 'invalid_credentials' },
+    });
     return NextResponse.json({ message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
   }
 
@@ -90,6 +112,15 @@ export async function POST(request: Request) {
     user.role === 'student' && (user.student_status ?? 'studying') !== 'studying';
 
   if (user.is_active === false || studentCannotAccess) {
+    await writeSecurityAudit({
+      action: 'auth.sign_in_blocked',
+      actorUserId: user.id,
+      schoolId: user.school_id,
+      request,
+      targetType: 'app_user',
+      targetId: user.id,
+      metadata: { reason: studentCannotAccess ? 'student_status' : 'account_inactive' },
+    });
     return NextResponse.json(
       {
         message: studentCannotAccess
@@ -120,6 +151,15 @@ export async function POST(request: Request) {
   }
 
   if (user.role === 'master_admin' || user.role === 'school_admin') {
+    await writeSecurityAudit({
+      action: 'auth.password_verified',
+      actorUserId: user.id,
+      schoolId: user.school_id,
+      request,
+      targetType: 'app_user',
+      targetId: user.id,
+      metadata: { requiresPin: true },
+    });
     return NextResponse.json({
       requiresPin: true,
       pinChallengeToken: signPinChallenge(user.id),
@@ -136,5 +176,14 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({ user: toPublicUser(user) });
   response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, accessTokenCookieOptions);
+  await writeSecurityAudit({
+    action: 'auth.sign_in_succeeded',
+    actorUserId: user.id,
+    schoolId: user.school_id,
+    request,
+    targetType: 'app_user',
+    targetId: user.id,
+    metadata: { role: user.role },
+  });
   return response;
 }

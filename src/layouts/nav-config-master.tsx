@@ -10,6 +10,7 @@ import {
   RiBuildingLine,
   RiDashboardLine,
   RiPriceTag3Line,
+  RiShieldCheckLine,
 } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
@@ -20,6 +21,7 @@ const ICONS = {
   schoolAdmin: <RiAdminLine />,
   subscription: <RiPriceTag3Line />,
   systemFlow: <RiFlowChart />,
+  systemQuality: <RiShieldCheckLine />,
   emailSettings: <RiMailLine />,
   apps: <RiApps2Line />,
 };
@@ -32,7 +34,14 @@ const ICONS = {
 export const navData: NavSectionProps['data'] = [
   {
     subheader: 'ภาพรวม',
-    items: [{ title: 'ภาพรวมระบบ', path: paths.master.root, icon: ICONS.dashboard }],
+    items: [
+      { title: 'ภาพรวมระบบ', path: paths.master.root, icon: ICONS.dashboard },
+      {
+        title: 'ภาพรวมและคุณภาพระบบ',
+        path: paths.master.systemQuality,
+        icon: ICONS.systemQuality,
+      },
+    ],
   },
   {
     subheader: 'การจัดการระบบ',

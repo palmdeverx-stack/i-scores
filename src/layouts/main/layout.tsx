@@ -18,7 +18,6 @@ import { NavDesktop } from './nav/desktop';
 import { Footer, HomeFooter } from './footer';
 import { MainSchoolLogo } from './school-brand';
 import { MenuButton } from '../components/menu-button';
-import { ImpersonationBanner } from '../components/impersonation-banner';
 import { navData as mainNavData } from '../nav-config-main';
 import { SignInButton } from '../components/sign-in-button';
 import { AccountPopover } from '../components/account-popover';
@@ -26,6 +25,7 @@ import { LanguagePopover } from '../components/language-popover';
 import { StudentBottomNav } from './nav/mobile/student-bottom-nav';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
 import { MarketplaceButton } from '../components/marketplace-button';
+import { ImpersonationBanner } from '../components/impersonation-banner';
 
 // ----------------------------------------------------------------------
 

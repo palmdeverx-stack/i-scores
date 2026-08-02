@@ -41,6 +41,8 @@ export type AppTokenPayload = {
   impersonatedBy?: string;
   impersonationAuditId?: string;
   previewAllFeatures?: boolean;
+  iat?: number;
+  exp?: number;
 };
 
 type PinChallengePayload = {
