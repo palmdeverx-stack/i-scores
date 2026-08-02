@@ -40,7 +40,7 @@ export async function loadEffectiveSchoolEntitlements(
     supabaseAdmin
       .from('marketplace_school_licenses')
       .select(
-        'id, license_scope, feature_keys, seat_count, starts_at, expires_at, status, product_id'
+        'id, license_scope, feature_keys, seat_count, max_school_admins, max_teachers, max_students, starts_at, expires_at, status, product_id'
       )
       .eq('school_id', schoolId)
       .eq('status', 'active')
@@ -134,17 +134,22 @@ export async function checkSchoolSeatLimit(
   role: 'school_admin' | 'teacher' | 'student'
 ) {
   const entitlements = await loadEffectiveSchoolEntitlements(schoolId);
-  const { subscription } = entitlements;
+  const { subscription, activeLicenses } = entitlements;
   if (!entitlements.usable) {
     return { allowed: false, message: 'แพ็กเกจโรงเรียนหมดอายุหรือถูกระงับ' };
   }
 
-  const limit =
+  const limitKey =
     role === 'school_admin'
-      ? (subscription?.max_school_admins ?? 0)
+      ? 'max_school_admins'
       : role === 'teacher'
-        ? (subscription?.max_teachers ?? 0)
-        : (subscription?.max_students ?? 0);
+        ? 'max_teachers'
+        : 'max_students';
+  const limits = [
+    ...(isSubscriptionUsable(subscription) ? [subscription![limitKey]] : []),
+    ...activeLicenses.map((license) => license[limitKey] ?? 0),
+  ];
+  const limit = limits.includes(0) ? 0 : limits.reduce((total, value) => total + value, 0);
   if (limit === 0) return { allowed: true, limit, count: 0 };
 
   const { count } = await supabaseAdmin

@@ -6,7 +6,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -18,24 +21,39 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
+
+import { SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
+
 import { Label } from 'src/components/label';
 import { RemixIcon } from 'src/components/remix-icon';
 
 import { SubscriptionPlanFormDialog } from '../components/subscription-plan-form-dialog';
 import {
   listSubscriptionPlans,
-  createSubscriptionPlan,
   updateSubscriptionPlan,
   deleteSubscriptionPlan,
 } from '../subscription-plan-actions';
 
 // ----------------------------------------------------------------------
 
-const CYCLE_LABEL = {
-  monthly: 'รายเดือน',
-  yearly: 'รายปี',
-  custom: 'ตามสัญญา',
+const TARGET_SCOPE_LABEL = {
+  individual: 'บุคคล',
+  school: 'โรงเรียน',
+  both: 'บุคคลและโรงเรียน',
 };
+
+const FEATURE_BY_KEY = new Map(SCHOOL_FEATURES.map((feature) => [feature.key, feature]));
+
+type PlanFilter = 'all' | SubscriptionPlan['target_scope'];
+
+function planQueryErrorMessage(error: Error) {
+  if (error.message.includes("'target_scope'") && error.message.includes('schema cache')) {
+    return 'ฐานข้อมูลยังไม่ได้อัปเดตโครงสร้างแพ็กเกจ กรุณารัน migration 20260802020000_subscription_plan_target_scope.sql แล้วรีโหลด Supabase schema cache';
+  }
+  return error.message;
+}
 
 function quotaLabel(value: number) {
   return value === 0 ? 'ไม่จำกัด' : value.toLocaleString('th-TH');
@@ -46,19 +64,15 @@ export function SubscriptionPlanView() {
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deletingPlan, setDeletingPlan] = useState<SubscriptionPlan | null>(null);
+  const [planFilter, setPlanFilter] = useState<PlanFilter>('all');
 
   const plansQuery = useQuery({
     queryKey: ['subscription-plans'],
     queryFn: () => listSubscriptionPlans(true),
   });
   const saveMutation = useMutation({
-    mutationFn: ({
-      plan,
-      input,
-    }: {
-      plan: SubscriptionPlan | null;
-      input: SubscriptionPlanInput;
-    }) => (plan ? updateSubscriptionPlan(plan.id, input) : createSubscriptionPlan(input)),
+    mutationFn: ({ plan, input }: { plan: SubscriptionPlan; input: SubscriptionPlanInput }) =>
+      updateSubscriptionPlan(plan.id, input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['subscription-plans'] });
       setFormOpen(false);
@@ -75,7 +89,15 @@ export function SubscriptionPlanView() {
 
   const plans = plansQuery.data ?? [];
   const activePlans = plans.filter((plan) => plan.is_active);
+  const filteredPlans =
+    planFilter === 'all' ? plans : plans.filter((plan) => plan.target_scope === planFilter);
   const enabledFeatureCount = new Set(activePlans.flatMap((plan) => plan.enabled_features)).size;
+  const filterCounts = {
+    all: plans.length,
+    individual: plans.filter((plan) => plan.target_scope === 'individual').length,
+    school: plans.filter((plan) => plan.target_scope === 'school').length,
+    both: plans.filter((plan) => plan.target_scope === 'both').length,
+  };
 
   return (
     <Container maxWidth="xl" sx={{ pb: 7 }}>
@@ -94,22 +116,31 @@ export function SubscriptionPlanView() {
             ตั้งค่าแพ็กเกจ
           </Typography>
           <Typography sx={{ mt: 0.75, color: 'text.secondary' }}>
-            สร้างแพ็กเกจกลาง กำหนดราคา โควตา และความสามารถสำหรับนำไปใช้กับแต่ละโรงเรียน
+            สร้างแพ็กเกจกลางสำหรับบุคคล โรงเรียน หรือใช้ร่วมกันทั้งสองแบบ
           </Typography>
         </Box>
         <Button
           size="large"
           variant="contained"
+          component={RouterLink}
+          href={paths.master.subscriptionPlan.new}
           startIcon={<RemixIcon icon="mingcute:add-line" />}
-          onClick={() => {
-            saveMutation.reset();
-            setEditingPlan(null);
-            setFormOpen(true);
-          }}
         >
           สร้างแพ็กเกจ
         </Button>
       </Box>
+
+      <Alert
+        severity="info"
+        icon={<RemixIcon icon="solar:layers-minimalistic-bold-duotone" width={24} />}
+        sx={{ mb: 3, alignItems: 'center' }}
+      >
+        <Typography variant="subtitle2">แพ็กเกจบุคคลทำงานแบบรวมสิทธิ์</Typography>
+        <Typography variant="body2">
+          ผู้ซื้อสามารถมีหลายแพ็กเกจได้ ระบบจะแสดงเมนูที่ได้รับทั้งหมดในพื้นที่ส่วนตัวเดียวกัน
+          และเมนูที่ซ้ำจะแสดงเพียงครั้งเดียว
+        </Typography>
+      </Alert>
 
       <Box
         sx={{
@@ -165,7 +196,7 @@ export function SubscriptionPlanView() {
             </Button>
           }
         >
-          {plansQuery.error.message}
+          {planQueryErrorMessage(plansQuery.error)}
         </Alert>
       )}
       {!plansQuery.isLoading && !plansQuery.isError && plans.length === 0 && (
@@ -175,19 +206,45 @@ export function SubscriptionPlanView() {
             ยังไม่มีแพ็กเกจ
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            สร้างแพ็กเกจแรกเพื่อเริ่มกำหนดสิทธิ์ให้โรงเรียน
+            สร้างแพ็กเกจแรกเพื่อเริ่มกำหนดสิทธิ์ให้ผู้ใช้งาน
           </Typography>
         </Box>
       )}
+
+      {!plansQuery.isLoading && !plansQuery.isError && plans.length > 0 ? (
+        <Box sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs
+            value={planFilter}
+            onChange={(_, value: PlanFilter) => setPlanFilter(value)}
+            variant="scrollable"
+            scrollButtons="auto"
+            aria-label="กรองแพ็กเกจตามกลุ่มผู้ซื้อ"
+          >
+            <Tab value="all" label={`ทั้งหมด ${filterCounts.all}`} />
+            <Tab value="individual" label={`บุคคล ${filterCounts.individual}`} />
+            <Tab value="school" label={`โรงเรียน ${filterCounts.school}`} />
+            <Tab value="both" label={`ทั้งสองแบบ ${filterCounts.both}`} />
+          </Tabs>
+        </Box>
+      ) : null}
+
+      {!plansQuery.isLoading && !plansQuery.isError && plans.length > 0 && filteredPlans.length === 0 ? (
+        <Box sx={{ py: 8, textAlign: 'center' }}>
+          <Typography variant="h6">ยังไม่มีแพ็กเกจในกลุ่มนี้</Typography>
+          <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+            เลือกกลุ่มอื่น หรือสร้างแพ็กเกจใหม่
+          </Typography>
+        </Box>
+      ) : null}
 
       <Box
         sx={{
           gap: 2.5,
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: 'repeat(3, minmax(0, 1fr))' },
+          gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' },
         }}
       >
-        {plans.map((plan) => (
+        {filteredPlans.map((plan) => (
           <Card
             key={plan.id}
             variant="outlined"
@@ -204,47 +261,101 @@ export function SubscriptionPlanView() {
                   <Label color={plan.is_active ? 'success' : 'default'}>
                     {plan.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
                   </Label>
+                  <Label color={plan.target_scope === 'individual' ? 'info' : 'default'}>
+                    {TARGET_SCOPE_LABEL[plan.target_scope]}
+                  </Label>
                 </Box>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   {plan.code} · ลำดับ {plan.sort_order}
                 </Typography>
               </Box>
-              <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-                <Typography variant="h4">
-                  {Number(plan.price) === 0
-                    ? 'ตามสัญญา'
-                    : `฿${Number(plan.price).toLocaleString('th-TH')}`}
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  {CYCLE_LABEL[plan.billing_cycle]}
-                </Typography>
-              </Box>
+              <Chip size="small" variant="outlined" label="ราคาอยู่ที่ Marketplace" />
             </Box>
 
             <Typography variant="body2" sx={{ mt: 2, minHeight: 42, color: 'text.secondary' }}>
               {plan.description || 'ไม่มีคำอธิบาย'}
             </Typography>
 
-            <Divider sx={{ my: 2.5 }} />
-            <Box
-              sx={{
-                gap: 2,
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-              }}
-            >
-              {[
-                ['ผู้ดูแล', plan.max_school_admins],
-                ['ครู', plan.max_teachers],
-                ['นักเรียน', plan.max_students],
-              ].map(([label, value]) => (
-                <Box key={label}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {label}
-                  </Typography>
-                  <Typography variant="subtitle1">{quotaLabel(Number(value))}</Typography>
+            {plan.target_scope === 'individual' ? (
+              <Box
+                sx={{
+                  mt: 2,
+                  px: 1.5,
+                  py: 1,
+                  gap: 1,
+                  display: 'flex',
+                  borderRadius: 1,
+                  alignItems: 'center',
+                  color: 'info.dark',
+                  bgcolor: 'info.lighter',
+                }}
+              >
+                <RemixIcon icon="solar:layers-bold-duotone" width={20} />
+                <Typography variant="caption">
+                  รวมสิทธิ์และข้อมูลกับแพ็กเกจบุคคลอื่นในพื้นที่เดียวกัน
+                </Typography>
+              </Box>
+            ) : null}
+
+            {plan.target_scope !== 'individual' ? (
+              <>
+                <Divider sx={{ my: 2.5 }} />
+                <Box
+                  sx={{
+                    gap: 2,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                  }}
+                >
+                  {[
+                    ['ผู้ดูแล', plan.max_school_admins],
+                    ['ครู', plan.max_teachers],
+                    ['นักเรียน', plan.max_students],
+                  ].map(([label, value]) => (
+                    <Box key={label}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {label}
+                      </Typography>
+                      <Typography variant="subtitle1">{quotaLabel(Number(value))}</Typography>
+                    </Box>
+                  ))}
                 </Box>
-              ))}
+              </>
+            ) : null}
+
+            <Divider sx={{ my: 2.5 }} />
+
+            <Box>
+              <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
+                <Typography variant="subtitle2">เมนูและความสามารถ</Typography>
+                <Chip size="small" label={`${plan.enabled_features.length} เมนู`} />
+              </Box>
+              {plan.source_bundles.length ? (
+                <Box sx={{ gap: 0.75, mt: 1.25, display: 'flex', flexWrap: 'wrap' }}>
+                  {plan.source_bundles.map((bundle) => (
+                    <Chip
+                      key={`${bundle.id}:${bundle.version}`}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      label={`${bundle.name} · v${bundle.version}`}
+                    />
+                  ))}
+                </Box>
+              ) : null}
+              <Box sx={{ gap: 0.75, mt: 1.25, display: 'flex', flexWrap: 'wrap' }}>
+                {plan.enabled_features.slice(0, 6).map((featureKey) => (
+                  <Chip
+                    key={featureKey}
+                    size="small"
+                    variant="outlined"
+                    label={FEATURE_BY_KEY.get(featureKey)?.label ?? featureKey}
+                  />
+                ))}
+                {plan.enabled_features.length > 6 ? (
+                  <Chip size="small" label={`+${plan.enabled_features.length - 6} เมนู`} />
+                ) : null}
+              </Box>
             </Box>
 
             <Box
@@ -256,9 +367,22 @@ export function SubscriptionPlanView() {
                 justifyContent: 'space-between',
               }}
             >
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                เปิด {plan.enabled_features.length} ความสามารถ
-              </Typography>
+              <Box>
+                {plan.target_scope !== 'individual' ? (
+                  <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                    LINE:{' '}
+                    {plan.enabled_features.includes('admin.line_notifications')
+                      ? plan.max_line_notifications === 0
+                        ? 'ไม่จำกัด'
+                        : `${quotaLabel(plan.max_line_notifications)} ครั้ง/เดือน`
+                      : 'ไม่ใช้'}
+                  </Typography>
+                ) : (
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    ไม่มีโควตาผู้ใช้งาน
+                  </Typography>
+                )}
+              </Box>
               <Box>
                 <Button
                   size="small"
@@ -298,7 +422,7 @@ export function SubscriptionPlanView() {
             setFormOpen(false);
             setEditingPlan(null);
           }}
-          onSubmit={(input) => saveMutation.mutate({ plan: editingPlan, input })}
+          onSubmit={(input) => editingPlan && saveMutation.mutate({ plan: editingPlan, input })}
         />
       )}
 
@@ -307,7 +431,7 @@ export function SubscriptionPlanView() {
         <DialogContent>
           <Typography>
             แพ็กเกจ “{deletingPlan?.name}” จะหายจากรายการ
-            แต่โรงเรียนที่เคยใช้แพ็กเกจนี้จะยังคงค่าเดิม
+            แต่ผู้ใช้งานหรือโรงเรียนที่เคยใช้แพ็กเกจนี้จะยังคงค่าเดิม
           </Typography>
           {deleteMutation.isError && (
             <Alert severity="error" sx={{ mt: 2 }}>

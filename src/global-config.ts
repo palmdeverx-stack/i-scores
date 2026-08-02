@@ -14,6 +14,7 @@ export type ConfigValue = {
   auth: {
     redirectPath: string;
   };
+  google: { clientId: string };
   supabase: { url: string; key: string };
 };
 
@@ -31,6 +32,9 @@ export const CONFIG: ConfigValue = {
    */
   auth: {
     redirectPath: paths.admin.root,
+  },
+  google: {
+    clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '',
   },
   /**
    * Supabase

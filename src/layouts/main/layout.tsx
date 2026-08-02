@@ -8,7 +8,6 @@ import type { MainSectionProps, HeaderSectionProps, LayoutSectionProps } from '.
 import { useBoolean } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
-import Alert from '@mui/material/Alert';
 
 import { usePathname } from 'src/routes/hooks';
 
@@ -19,6 +18,7 @@ import { NavDesktop } from './nav/desktop';
 import { Footer, HomeFooter } from './footer';
 import { MainSchoolLogo } from './school-brand';
 import { MenuButton } from '../components/menu-button';
+import { ImpersonationBanner } from '../components/impersonation-banner';
 import { navData as mainNavData } from '../nav-config-main';
 import { SignInButton } from '../components/sign-in-button';
 import { AccountPopover } from '../components/account-popover';
@@ -64,9 +64,7 @@ export function MainLayout({
   const renderHeader = () => {
     const headerSlots: HeaderSectionProps['slots'] = {
       topArea: (
-        <Alert severity="info" sx={{ display: 'none', borderRadius: 0 }}>
-          This is an info Alert.
-        </Alert>
+        <ImpersonationBanner />
       ),
       leftArea: (
         <>

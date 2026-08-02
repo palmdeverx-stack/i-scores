@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const token = getRequestToken(request);
   const payload = token ? verifyAppToken(token) : null;
 
-  if (!payload) {
+  if (!payload || payload.impersonatedBy) {
     return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
   }
 

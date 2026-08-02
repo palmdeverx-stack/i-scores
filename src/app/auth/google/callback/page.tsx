@@ -30,8 +30,8 @@ export default function GoogleAuthCallbackPage() {
         const code = searchParams.get('code');
         if (!code) throw new Error(searchParams.get('error_description') ?? 'ไม่พบ OAuth code');
 
-        const { data, error } =
-          await getSupabaseBrowserClient().auth.exchangeCodeForSession(code);
+        const supabase = getSupabaseBrowserClient();
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
         if (error || !data.session) throw error ?? new Error('ไม่พบ Google session');
 
         const response = await fetch('/api/auth/google', {
@@ -43,7 +43,10 @@ export default function GoogleAuthCallbackPage() {
           }),
         });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.message ?? 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
+        if (!response.ok) {
+          await supabase.auth.signOut();
+          throw new Error(result.message ?? 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
+        }
 
         if (result.marketplaceOnly) {
           if (!result.redirectUrl) {
@@ -94,4 +97,3 @@ export default function GoogleAuthCallbackPage() {
     </Box>
   );
 }
-

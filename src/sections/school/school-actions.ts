@@ -48,6 +48,19 @@ export type CreateSchoolResult = {
   message?: string;
 };
 
+export type ImpersonationTarget = {
+  id: string;
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: 'school_admin' | 'teacher' | 'student';
+};
+
+export type ImpersonationOptions = {
+  school: { id: string; name: string; is_active: boolean };
+  targets: ImpersonationTarget[];
+};
+
 export async function listSchools(): Promise<School[]> {
   const response = await fetch('/api/schools', {});
   const json = await response.json();
@@ -115,6 +128,28 @@ export async function deleteSchool(id: string): Promise<void> {
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to delete school');
+}
+
+export async function getImpersonationOptions(schoolId: string): Promise<ImpersonationOptions> {
+  const response = await fetch(`/api/auth/impersonation?schoolId=${encodeURIComponent(schoolId)}`);
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดบัญชีสำหรับดูในนามได้');
+
+  return json;
+}
+
+export async function startImpersonation(targetUserId: string): Promise<{ redirectUrl: string }> {
+  const response = await fetch('/api/auth/impersonation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targetUserId }),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถเข้าสู่ระบบในนามได้');
+
+  return json;
 }
 
 export async function uploadSchoolLogo(id: string, file: File): Promise<SchoolProfile> {

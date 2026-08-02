@@ -1,6 +1,7 @@
 'use client';
 
 import * as z from 'zod';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useBoolean } from 'minimal-shared/hooks';
 import { useMutation } from '@tanstack/react-query';
@@ -47,6 +48,7 @@ export const SignUpSchema = z.object({
 
 export function JwtSignUpView() {
   const router = useRouter();
+  const [googleError, setGoogleError] = useState('');
 
   const showPassword = useBoolean();
 
@@ -76,6 +78,7 @@ export function JwtSignUpView() {
   });
 
   const onSubmit = handleSubmit(async (data) => {
+    setGoogleError('');
     signUpMutation.mutate({
       username: data.username,
       password: data.password,
@@ -85,7 +88,8 @@ export function JwtSignUpView() {
     });
   });
 
-  const errorMessage = signUpMutation.error ? getErrorMessage(signUpMutation.error) : null;
+  const errorMessage =
+    googleError || (signUpMutation.error ? getErrorMessage(signUpMutation.error) : null);
 
   const renderForm = () => (
     <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
@@ -171,7 +175,7 @@ export function JwtSignUpView() {
       </Form>
 
       <Divider sx={{ my: 3 }}>หรือ</Divider>
-      <GoogleAuthButton intent="sign-up" />
+      <GoogleAuthButton intent="sign-up" onError={setGoogleError} />
 
       <SignUpTerms />
     </>

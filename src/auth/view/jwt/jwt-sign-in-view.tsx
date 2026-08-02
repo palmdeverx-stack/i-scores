@@ -53,6 +53,7 @@ export function JwtSignInView() {
   const showPassword = useBoolean();
   const pinRole = searchParams.get('pinRole');
   const pinChallengeToken = searchParams.get('pinChallengeToken');
+  const [googleError, setGoogleError] = useState('');
   const [pinChallenge, setPinChallenge] = useState<{
     token: string;
     role: 'master_admin' | 'school_admin';
@@ -102,6 +103,7 @@ export function JwtSignInView() {
   });
 
   const onSubmit = handleSubmit(async (data) => {
+    setGoogleError('');
     if (pinChallenge) {
       if (!/^\d{8}$/.test(data.pin)) {
         methods.setError('pin', { message: 'PIN ต้องเป็นตัวเลข 8 หลัก' });
@@ -116,7 +118,7 @@ export function JwtSignInView() {
 
   const error = pinChallenge ? verifyPinMutation.error : signInMutation.error;
   const errorMessage =
-    (error ? getErrorMessage(error) : null) || searchParams.get('googleError');
+    googleError || (error ? getErrorMessage(error) : null) || searchParams.get('googleError');
 
   const renderForm = () => (
     <Box sx={{ gap: 2.5, display: 'flex', flexDirection: 'column' }}>
@@ -269,10 +271,10 @@ export function JwtSignInView() {
       {!pinChallenge && (
         <>
           <Divider sx={{ my: 2.5 }}>หรือ</Divider>
-          <GoogleAuthButton intent="sign-in" />
-          <Alert severity="info" sx={{ mt: 2 }}>
+          <GoogleAuthButton intent="sign-in" onError={setGoogleError} />
+          {/* <Alert severity="info" sx={{ mt: 2 }}>
             Google ใช้สำหรับครูและผู้ดูแลที่มีอีเมลอยู่ในระบบ ส่วนนักเรียนใช้ชื่อผู้ใช้งานและรหัสผ่าน
-          </Alert>
+          </Alert> */}
         </>
       )}
     </Box>

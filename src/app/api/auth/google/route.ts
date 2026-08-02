@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 
-import { CONFIG } from 'src/global-config';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { isSchoolAccessUsable } from 'src/lib/school-subscription';
 import { syncLinkedStaffAuth, defaultStaffAuthRole } from 'src/lib/staff-supabase-auth';
@@ -65,7 +64,26 @@ async function ensureMarketplaceProfile(
     .maybeSingle();
   if (byEmail) {
     if (byEmail.auth_user_id !== authUser.id) {
-      throw new Error('อีเมลนี้เชื่อมกับบัญชี Marketplace อื่นอยู่แล้ว');
+      const { data: previousAuth } = await supabaseAdmin.auth.admin.getUserById(
+        byEmail.auth_user_id
+      );
+      if (previousAuth.user) {
+        throw new Error('อีเมลนี้เชื่อมกับบัญชี Marketplace อื่นอยู่แล้ว');
+      }
+
+      const { data: recoveredProfile, error: recoverError } = await supabaseAdmin
+        .from('marketplace_users')
+        .update({ auth_user_id: authUser.id })
+        .eq('id', byEmail.id)
+        .eq('auth_user_id', byEmail.auth_user_id)
+        .select('id, auth_user_id, email')
+        .maybeSingle();
+      if (recoverError || !recoveredProfile) {
+        throw new Error(
+          recoverError?.message ?? 'ไม่สามารถกู้คืนการเชื่อมบัญชี Marketplace ได้'
+        );
+      }
+      return recoveredProfile;
     }
     return byEmail;
   }
@@ -95,6 +113,34 @@ async function ensureMarketplaceProfile(
   return data;
 }
 
+async function marketplaceLandingPath(marketplaceUserId: string) {
+  const now = new Date().toISOString();
+  const { data: licenses } = await supabaseAdmin
+    .from('marketplace_user_licenses')
+    .select('feature_keys')
+    .eq('buyer_id', marketplaceUserId)
+    .eq('status', 'active')
+    .lte('starts_at', now)
+    .gt('expires_at', now);
+  const featureKeys = [
+    ...new Set((licenses ?? []).flatMap((license) => license.feature_keys ?? [])),
+  ];
+
+  if (featureKeys.length > 0) {
+    const { data: app } = await supabaseAdmin
+      .from('ekru_apps')
+      .select('code')
+      .eq('is_active', true)
+      .in('required_feature_key', featureKeys)
+      .order('code')
+      .limit(1)
+      .maybeSingle();
+    if (app) return `/launch?app=${encodeURIComponent(app.code)}`;
+  }
+
+  return null;
+}
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const accessToken = typeof body?.accessToken === 'string' ? body.accessToken : '';
@@ -116,8 +162,9 @@ export async function POST(request: Request) {
     );
   }
 
+  let marketplaceProfile;
   try {
-    await ensureMarketplaceProfile(authUser, profile);
+    marketplaceProfile = await ensureMarketplaceProfile(authUser, profile);
   } catch (profileError) {
     return NextResponse.json(
       {
@@ -179,16 +226,41 @@ export async function POST(request: Request) {
   }
 
   if (!appUser) {
-    return NextResponse.json({
-      marketplaceOnly: true,
-      redirectUrl: CONFIG.marketplaceUrl,
+    const redirectUrl = await marketplaceLandingPath(marketplaceProfile.id);
+    if (!redirectUrl) {
+      return NextResponse.json(
+        { message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' },
+        { status: 401 }
+      );
+    }
+
+    const accessAppToken = signAppToken({
+      sub: marketplaceProfile.id,
+      username: profile.username || profile.email,
+      role: 'marketplace_user',
+      schoolId: null,
     });
+    const response = NextResponse.json({
+      marketplaceOnly: true,
+      redirectUrl,
+      user: {
+        id: marketplaceProfile.id,
+        username: profile.username || profile.email,
+        email: profile.email,
+        first_name: profile.firstName || null,
+        last_name: profile.lastName || null,
+        role: 'marketplace_user',
+        school_id: null,
+      },
+    });
+    response.cookies.set(ACCESS_TOKEN_COOKIE, accessAppToken, accessTokenCookieOptions);
+    return response;
   }
   if (appUser.role === 'student') {
-    return NextResponse.json({
-      marketplaceOnly: true,
-      redirectUrl: CONFIG.marketplaceUrl,
-    });
+    return NextResponse.json(
+      { message: 'บัญชีนักเรียนไม่รองรับการเข้าสู่ระบบด้วย Google' },
+      { status: 403 }
+    );
   }
   if (appUser.is_active === false) {
     return NextResponse.json(
@@ -197,9 +269,14 @@ export async function POST(request: Request) {
     );
   }
 
+  let isPersonalWorkspace = false;
   if (appUser.role !== 'master_admin') {
     const [{ data: school }, schoolAccessUsable] = await Promise.all([
-      supabaseAdmin.from('schools').select('is_active').eq('id', appUser.school_id).maybeSingle(),
+      supabaseAdmin
+        .from('schools')
+        .select('is_active, workspace_type')
+        .eq('id', appUser.school_id)
+        .maybeSingle(),
       isSchoolAccessUsable(appUser.school_id, {
         userId: appUser.id,
         role: appUser.role,
@@ -211,6 +288,7 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
+    isPersonalWorkspace = school.workspace_type === 'personal';
   }
 
   const authSync = await syncLinkedStaffAuth(appUser, { isActive: true });
@@ -221,7 +299,10 @@ export async function POST(request: Request) {
     );
   }
 
-  if (appUser.role === 'master_admin' || appUser.role === 'school_admin') {
+  if (
+    appUser.role === 'master_admin' ||
+    (appUser.role === 'school_admin' && !isPersonalWorkspace)
+  ) {
     return NextResponse.json({
       requiresPin: true,
       pinChallengeToken: signPinChallenge(appUser.id),

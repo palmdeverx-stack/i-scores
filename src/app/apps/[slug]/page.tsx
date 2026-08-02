@@ -29,6 +29,12 @@ export default async function Page({ params, searchParams }: Props) {
   if (!result.allowed || (query.workspaceId && query.workspaceId !== result.access.workspaceId)) {
     redirect(paths.page403);
   }
+  if (result.access.appCode === 'PERSONAL_WORKSPACE' && caller.role === 'school_admin') {
+    redirect(paths.admin.root);
+  }
+  if (result.access.appCode.startsWith('PERSONAL_') && caller.role === 'teacher') {
+    redirect(paths.teacher.root);
+  }
 
   return (
     <Container maxWidth="md" sx={{ py: 8 }}>

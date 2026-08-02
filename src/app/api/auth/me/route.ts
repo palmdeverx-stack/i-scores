@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { toPublicUser, verifyAppToken, getRequestToken } from 'src/lib/auth-token';
+import { DEPARTMENT_PERMISSION_KEYS } from 'src/lib/department-permissions-config';
 import {
   getDepartmentGrantedPermissions,
   getEffectiveDepartmentPermissions,
@@ -15,6 +16,25 @@ export async function GET(request: Request) {
 
   if (!payload) {
     return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
+  }
+
+  if (payload.role === 'marketplace_user') {
+    const { data: marketplaceUser } = await supabaseAdmin
+      .from('marketplace_users')
+      .select('id, username, email, first_name, last_name, role, is_active, created_at')
+      .eq('id', payload.sub)
+      .maybeSingle();
+    if (!marketplaceUser?.is_active) {
+      return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
+    }
+
+    return NextResponse.json({
+      user: {
+        ...marketplaceUser,
+        role: 'marketplace_user',
+        school_id: null,
+      },
+    });
   }
 
   const { data: user } = await supabaseAdmin
@@ -33,7 +53,18 @@ export async function GET(request: Request) {
   let departments: { id: string; name: string; role_in_department: 'head' | 'member' }[] = [];
   let departmentPermissions: string[] = [];
   let managePermissions: string[] = [];
+  let isPersonalWorkspace = false;
   if (user.role === 'teacher') {
+    const { data: workspace } = user.school_id
+      ? await supabaseAdmin
+          .from('schools')
+          .select('workspace_type, owner_auth_user_id')
+          .eq('id', user.school_id)
+          .maybeSingle()
+      : { data: null };
+    isPersonalWorkspace =
+      workspace?.workspace_type === 'personal' &&
+      workspace.owner_auth_user_id === user.auth_user_id;
     const { data: membership } = await supabaseAdmin
       .from('department_members')
       .select('role_in_department, department:departments(id, name)')
@@ -43,7 +74,10 @@ export async function GET(request: Request) {
       name: (row.department as unknown as { id: string; name: string }).name,
       role_in_department: row.role_in_department as 'head' | 'member',
     }));
-    if (user.school_id) {
+    if (isPersonalWorkspace) {
+      departmentPermissions = [...DEPARTMENT_PERMISSION_KEYS];
+      managePermissions = [...DEPARTMENT_PERMISSION_KEYS];
+    } else if (user.school_id) {
       // View and manage levels combine department grants, staff-type presets,
       // and per-person overrides. Writes are still checked server-side.
       [departmentPermissions, managePermissions] = await Promise.all([
@@ -56,9 +90,22 @@ export async function GET(request: Request) {
   return NextResponse.json({
     user: {
       ...toPublicUser(user),
+      ...(payload.impersonatedBy && {
+        must_change_password: false,
+        accepted_legal_at: user.accepted_legal_at ?? new Date(0).toISOString(),
+        is_school_director: true,
+        impersonation: {
+          active: true,
+          readOnly: true,
+          previewAllFeatures: payload.previewAllFeatures === true,
+        },
+      }),
       departments,
-      department_permissions: departmentPermissions,
-      manage_permissions: managePermissions,
+      department_permissions: payload.previewAllFeatures
+        ? DEPARTMENT_PERMISSION_KEYS
+        : departmentPermissions,
+      manage_permissions: payload.previewAllFeatures ? DEPARTMENT_PERMISSION_KEYS : managePermissions,
+      is_personal_workspace: isPersonalWorkspace,
     },
   });
 }

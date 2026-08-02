@@ -8,7 +8,6 @@ import { merge } from 'es-toolkit';
 import { useBoolean } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
-import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
 import { iconButtonClasses } from '@mui/material/IconButton';
 
@@ -29,6 +28,7 @@ import { MenuButton } from '../components/menu-button';
 import { DashboardBottomNav } from './dashboard-bottom-nav';
 import { AccountDrawer } from '../components/account-drawer';
 import { AccountPopover } from '../components/account-popover';
+import { ImpersonationBanner } from '../components/impersonation-banner';
 import { LanguagePopover } from '../components/language-popover';
 import { MarketplaceButton } from '../components/marketplace-button';
 import { NotificationsMenu } from '../components/notifications-menu';
@@ -106,9 +106,7 @@ export function DashboardLayout({
 
     const headerSlots: HeaderSectionProps['slots'] = {
       topArea: (
-        <Alert severity="info" sx={{ display: 'none', borderRadius: 0 }}>
-          This is an info Alert.
-        </Alert>
+        <ImpersonationBanner />
       ),
       bottomArea:
         isNavHorizontal || tabletHorizontalNav ? (

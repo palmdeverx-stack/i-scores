@@ -14,7 +14,12 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(paths.page404, request.url));
   }
 
-  const caller = requireRole(request, ['master_admin', 'school_admin', 'teacher']);
+  const caller = requireRole(request, [
+    'master_admin',
+    'school_admin',
+    'teacher',
+    'marketplace_user',
+  ]);
   if (!caller) {
     const signInUrl = new URL(paths.auth.jwt.signIn, request.url);
     signInUrl.searchParams.set('returnTo', `${url.pathname}${url.search}`);

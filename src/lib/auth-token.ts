@@ -14,6 +14,7 @@ const secret: string = rawSecret;
 const pinChallengeSecret = `${secret}:pin-challenge`;
 
 export const ACCESS_TOKEN_COOKIE = 'access_token';
+export const MASTER_SESSION_COOKIE = 'master_access_token';
 const ACCESS_TOKEN_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 
 export const accessTokenCookieOptions = {
@@ -24,13 +25,22 @@ export const accessTokenCookieOptions = {
   maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
 };
 
+export const masterSessionCookieOptions = {
+  ...accessTokenCookieOptions,
+  maxAge: 2 * 60 * 60,
+};
+
 export type AppRole = 'master_admin' | 'school_admin' | 'teacher' | 'student';
+export type SessionRole = AppRole | 'marketplace_user';
 
 export type AppTokenPayload = {
   sub: string;
   username: string;
-  role: AppRole;
+  role: SessionRole;
   schoolId: string | null;
+  impersonatedBy?: string;
+  impersonationAuditId?: string;
+  previewAllFeatures?: boolean;
 };
 
 type PinChallengePayload = {
@@ -84,12 +94,28 @@ export function getRequestToken(request: Request): string | null {
   return getCookieValue(request, ACCESS_TOKEN_COOKIE);
 }
 
+export function getMasterSessionToken(request: Request): string | null {
+  return getCookieValue(request, MASTER_SESSION_COOKIE);
+}
+
 /** Returns the caller's token payload if it's authenticated and has one of `roles`, else null. */
-export function requireRole(request: Request, roles: AppRole[]): AppTokenPayload | null {
+export function requireRole<T extends SessionRole>(
+  request: Request,
+  roles: T[]
+): (AppTokenPayload & { role: T }) | null {
   const token = getRequestToken(request);
   const payload = token ? verifyAppToken(token) : null;
 
-  return payload && roles.includes(payload.role) ? payload : null;
+  if (
+    payload?.impersonatedBy &&
+    !['GET', 'HEAD', 'OPTIONS'].includes(request.method.toUpperCase())
+  ) {
+    return null;
+  }
+
+  return payload && roles.includes(payload.role as T)
+    ? (payload as AppTokenPayload & { role: T })
+    : null;
 }
 
 type AppUserRow = {

@@ -17,6 +17,7 @@ export const paths = {
   page403: '/error/403',
   page404: '/error/404',
   page500: '/error/500',
+  licenseExpired: '/license-expired',
   components: '/components',
   docs: 'https://docs.minimals.cc/',
   // AUTH
@@ -123,6 +124,7 @@ export const paths = {
     },
     subscriptionPlan: {
       root: `${ROOTS.MASTER}/subscription-plan`,
+      new: `${ROOTS.MASTER}/subscription-plan/new`,
     },
   },
   // SCHOOL ADMIN

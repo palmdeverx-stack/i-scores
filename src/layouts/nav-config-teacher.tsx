@@ -69,6 +69,24 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.school,
       },
       {
+        title: 'สร้างรายวิชา',
+        path: paths.teacher.subjectNew,
+        icon: ICONS.subject,
+        featureKey: 'teacher.manage_subjects',
+      },
+      {
+        title: 'สร้างกลุ่มเรียน',
+        path: paths.teacher.classroomNew,
+        icon: ICONS.classroom,
+        featureKey: 'teacher.manage_classrooms',
+      },
+      {
+        title: 'เพิ่มผู้เรียน',
+        path: paths.teacher.enrollmentNew,
+        icon: ICONS.studentAdd,
+        featureKey: 'teacher.manage_enrollments',
+      },
+      {
         title: 'รายวิชา',
         path: paths.teacher.assignments,
         icon: ICONS.assignments,

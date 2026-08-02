@@ -5,7 +5,7 @@ import type { SchoolFeatureKey } from 'src/lib/school-subscription-config';
 // ----------------------------------------------------------------------
 
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'suspended' | 'canceled';
-export type BillingCycle = 'monthly' | 'yearly' | 'custom';
+export type BillingCycle = 'monthly' | 'yearly' | 'one_time' | 'custom';
 
 export type SchoolSubscription = {
   id: string;

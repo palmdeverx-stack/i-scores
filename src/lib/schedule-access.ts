@@ -25,7 +25,25 @@ export async function canApproveSchedule(caller: AppTokenPayload): Promise<boole
  * True if `teacherId` has been delegated schedule-management for the whole
  * school via the 'schedule.manage' department permission.
  */
-export function hasTimetableCapability(teacherId: string, schoolId: string): Promise<boolean> {
+export async function hasTimetableCapability(
+  teacherId: string,
+  schoolId: string
+): Promise<boolean> {
+  const { data: personalOwner } = await supabaseAdmin
+    .from('app_users')
+    .select('auth_user_id, school:schools!inner(workspace_type, owner_auth_user_id)')
+    .eq('id', teacherId)
+    .eq('school_id', schoolId)
+    .maybeSingle();
+  const school = Array.isArray(personalOwner?.school)
+    ? personalOwner.school[0]
+    : personalOwner?.school;
+  if (
+    school?.workspace_type === 'personal' &&
+    school.owner_auth_user_id === personalOwner?.auth_user_id
+  ) {
+    return true;
+  }
   return hasDepartmentPermission(teacherId, schoolId, 'schedule.manage');
 }
 

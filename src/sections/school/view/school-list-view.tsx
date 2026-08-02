@@ -34,14 +34,28 @@ import { RouterLink } from 'src/routes/components';
 
 import { RemixIcon } from 'src/components/remix-icon';
 
-import { listSchools, deleteSchool, updateSchool, toggleSchoolActive } from '../school-actions';
+import {
+  listSchools,
+  deleteSchool,
+  updateSchool,
+  startImpersonation,
+  toggleSchoolActive,
+  getImpersonationOptions,
+} from '../school-actions';
 
 // ----------------------------------------------------------------------
+
+const IMPERSONATION_ROLE_LABELS = {
+  school_admin: 'ผู้ดูแลโรงเรียน',
+  teacher: 'ครูผู้สอน',
+  student: 'นักเรียน',
+} as const;
 
 export function SchoolListView() {
   const [search, setSearch] = useState('');
   const [editingSchool, setEditingSchool] = useState<School | null>(null);
   const [deletingSchool, setDeletingSchool] = useState<School | null>(null);
+  const [impersonatingSchool, setImpersonatingSchool] = useState<School | null>(null);
   const [editName, setEditName] = useState('');
   const [editNameEn, setEditNameEn] = useState('');
   const [editCode, setEditCode] = useState('');
@@ -84,6 +98,17 @@ export function SchoolListView() {
       await queryClient.invalidateQueries({ queryKey: ['schools'] });
       setDeletingSchool(null);
     },
+  });
+
+  const impersonationQuery = useQuery({
+    queryKey: ['impersonation-options', impersonatingSchool?.id],
+    queryFn: () => getImpersonationOptions(impersonatingSchool!.id),
+    enabled: !!impersonatingSchool,
+  });
+
+  const impersonationMutation = useMutation({
+    mutationFn: startImpersonation,
+    onSuccess: ({ redirectUrl }) => window.location.assign(redirectUrl),
   });
 
   const openEditDialog = (school: School) => {
@@ -392,6 +417,22 @@ export function SchoolListView() {
                   </TableCell>
                   <TableCell align="right">
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <Tooltip title="เข้าสู่ระบบในนาม (ดูอย่างเดียว)">
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="secondary"
+                            disabled={!school.is_active}
+                            onClick={() => {
+                              impersonationMutation.reset();
+                              setImpersonatingSchool(school);
+                            }}
+                            aria-label={`เข้าสู่ระบบในนาม ${school.name}`}
+                          >
+                            <RemixIcon icon="solar:login-3-bold" width={18} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                       <Tooltip title="แพ็กเกจและสิทธิ์ใช้งาน">
                         <IconButton
                           component={RouterLink}
@@ -433,6 +474,90 @@ export function SchoolListView() {
           </Table>
         </TableContainer>
       </Card>
+
+      <Dialog
+        open={!!impersonatingSchool}
+        onClose={() => !impersonationMutation.isPending && setImpersonatingSchool(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>เข้าสู่ระบบในนาม</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+            เลือกมุมมองของ “{impersonatingSchool?.name}” ระบบจะเปิดทุก Feature
+            ในโหมดดูอย่างเดียว
+          </Typography>
+
+          {impersonationQuery.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {impersonationQuery.error.message}
+            </Alert>
+          )}
+          {impersonationMutation.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {impersonationMutation.error.message}
+            </Alert>
+          )}
+
+          {impersonationQuery.isLoading ? (
+            <Typography sx={{ py: 3, textAlign: 'center', color: 'text.secondary' }}>
+              กำลังโหลดบัญชี...
+            </Typography>
+          ) : (
+            <Box sx={{ gap: 1.25, display: 'grid' }}>
+              {(impersonationQuery.data?.targets ?? []).map((target) => {
+                const displayName = [target.first_name, target.last_name]
+                  .filter(Boolean)
+                  .join(' ');
+                return (
+                  <Button
+                    key={target.id}
+                    fullWidth
+                    variant="outlined"
+                    color="inherit"
+                    loading={
+                      impersonationMutation.isPending &&
+                      impersonationMutation.variables === target.id
+                    }
+                    disabled={impersonationMutation.isPending}
+                    onClick={() => impersonationMutation.mutate(target.id)}
+                    sx={{ p: 1.5, justifyContent: 'space-between' }}
+                  >
+                    <Box component="span" sx={{ textAlign: 'left' }}>
+                      <Typography component="span" variant="subtitle2" sx={{ display: 'block' }}>
+                        {IMPERSONATION_ROLE_LABELS[target.role]}
+                      </Typography>
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        sx={{ display: 'block', color: 'text.secondary' }}
+                      >
+                        {displayName || target.username} · @{target.username}
+                      </Typography>
+                    </Box>
+                    <RemixIcon icon="solar:arrow-right-linear" width={20} />
+                  </Button>
+                );
+              })}
+
+              {!impersonationQuery.isLoading &&
+                !impersonationQuery.isError &&
+                !impersonationQuery.data?.targets.length && (
+                  <Alert severity="warning">ยังไม่มีบัญชีที่พร้อมให้ดูในนาม</Alert>
+                )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="inherit"
+            disabled={impersonationMutation.isPending}
+            onClick={() => setImpersonatingSchool(null)}
+          >
+            ยกเลิก
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={!!editingSchool}

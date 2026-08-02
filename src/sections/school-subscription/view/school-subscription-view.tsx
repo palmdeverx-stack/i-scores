@@ -59,6 +59,7 @@ const STATUS_COLOR: Record<
 const BILLING_CYCLE_LABEL: Record<BillingCycle, string> = {
   monthly: 'เดือน',
   yearly: 'ปี',
+  one_time: 'ครั้งเดียว',
   custom: 'ตามสัญญา',
 };
 
@@ -167,6 +168,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
             planName: template.name,
             price: Number(template.price),
             billingCycle: template.billing_cycle,
+            endsAt: template.billing_cycle === 'one_time' ? null : current.endsAt,
             maxSchoolAdmins: template.max_school_admins,
             maxTeachers: template.max_teachers,
             maxStudents: template.max_students,
@@ -304,10 +306,14 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
             </Typography>
             <Typography variant="h4" sx={{ mt: 2 }}>
               {Number(template.price)
-                ? `฿${Number(template.price).toLocaleString('th-TH')}/${
-                    BILLING_CYCLE_LABEL[template.billing_cycle]
-                  }`
-                : 'ราคาตามสัญญา'}
+                ? template.billing_cycle === 'one_time'
+                  ? `฿${Number(template.price).toLocaleString('th-TH')} จ่ายครั้งเดียว`
+                  : `฿${Number(template.price).toLocaleString('th-TH')}/${
+                      BILLING_CYCLE_LABEL[template.billing_cycle]
+                    }`
+                : template.billing_cycle === 'custom'
+                  ? 'ราคาตามสัญญา'
+                  : 'ฟรี'}
             </Typography>
             <Button
               fullWidth
@@ -364,10 +370,22 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
                 size="small"
                 label="รอบเรียกเก็บ"
                 value={form.billingCycle}
-                onChange={(event) => setField('billingCycle', event.target.value as BillingCycle)}
+                onChange={(event) => {
+                  const billingCycle = event.target.value as BillingCycle;
+                  setForm((current) =>
+                    current
+                      ? {
+                          ...current,
+                          billingCycle,
+                          endsAt: billingCycle === 'one_time' ? null : current.endsAt,
+                        }
+                      : current
+                  );
+                }}
               >
                 <MenuItem value="monthly">รายเดือน</MenuItem>
                 <MenuItem value="yearly">รายปี</MenuItem>
+                <MenuItem value="one_time">ซื้อขาด (จ่ายครั้งเดียว)</MenuItem>
                 <MenuItem value="custom">ตามสัญญา</MenuItem>
               </TextField>
               <TextField
@@ -389,6 +407,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
               />
               <DatePicker
                 label="วันสิ้นสุด"
+                disabled={form.billingCycle === 'one_time'}
                 value={form.endsAt ? dayjs(form.endsAt) : null}
                 onChange={(value) =>
                   setField('endsAt', value?.isValid() ? value.format('YYYY-MM-DD') : null)
@@ -396,7 +415,13 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
                 format="DD/MM/YYYY"
                 slotProps={{
                   field: { clearable: true },
-                  textField: { size: 'small', helperText: 'เว้นว่าง = ไม่หมดอายุ' },
+                  textField: {
+                    size: 'small',
+                    helperText:
+                      form.billingCycle === 'one_time'
+                        ? 'ซื้อขาดไม่มีวันหมดอายุ'
+                        : 'เว้นว่าง = ไม่หมดอายุ',
+                  },
                 }}
               />
             </Box>

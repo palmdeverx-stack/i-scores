@@ -9,7 +9,7 @@ import { loadEffectiveSchoolEntitlements } from 'src/lib/school-subscription';
 
 type RouteParams = { params: Promise<{ id: string }> };
 const STATUSES = ['trialing', 'active', 'past_due', 'suspended', 'canceled'] as const;
-const BILLING_CYCLES = ['monthly', 'yearly', 'custom'] as const;
+const BILLING_CYCLES = ['monthly', 'yearly', 'one_time', 'custom'] as const;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const FEATURE_KEYS = new Set<string>(ALL_SCHOOL_FEATURE_KEYS);
 
@@ -62,6 +62,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
   if (caller.role !== 'master_admin') {
     const today = new Date().toISOString().slice(0, 10);
+    const previewAllFeatures = caller.previewAllFeatures === true;
     return NextResponse.json({
       school: {
         id: school.id,
@@ -74,11 +75,21 @@ export async function GET(request: Request, { params }: RouteParams) {
       subscription: {
         id: subscription?.id ?? `marketplace:${id}`,
         school_id: subscription?.school_id ?? id,
-        plan_name: subscription?.plan_name ?? 'Marketplace',
-        status: entitlements.usable ? 'active' : (subscription?.status ?? 'canceled'),
+        plan_name: previewAllFeatures
+          ? 'Master Preview — ทุกฟีเจอร์'
+          : (subscription?.plan_name ?? 'Marketplace'),
+        status: previewAllFeatures
+          ? 'active'
+          : entitlements.usable
+            ? 'active'
+            : (subscription?.status ?? 'canceled'),
         starts_at: subscription?.starts_at ?? today,
-        ends_at: entitlements.accessEndsAt?.slice(0, 10) ?? subscription?.ends_at ?? null,
-        enabled_features: entitlements.enabledFeatures,
+        ends_at: previewAllFeatures
+          ? null
+          : (entitlements.accessEndsAt?.slice(0, 10) ?? subscription?.ends_at ?? null),
+        enabled_features: previewAllFeatures
+          ? ALL_SCHOOL_FEATURE_KEYS
+          : entitlements.enabledFeatures,
         updated_at: subscription?.updated_at ?? new Date().toISOString(),
       },
       marketplace: {
@@ -115,7 +126,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const billingCycle = body?.billingCycle;
   const price = Number(body?.price);
   const startsAt = body?.startsAt;
-  const endsAt = body?.endsAt || null;
+  const requestedEndsAt = body?.endsAt || null;
+  const endsAt = billingCycle === 'one_time' ? null : requestedEndsAt;
   const maxSchoolAdmins = Number(body?.maxSchoolAdmins);
   const maxTeachers = Number(body?.maxTeachers);
   const maxStudents = Number(body?.maxStudents);

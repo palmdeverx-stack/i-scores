@@ -85,20 +85,25 @@ export async function resolveEkruAppAccess(
     : await appQuery.eq('launch_path', identifier.launchPath).maybeSingle();
   if (!app) return { allowed: false, reason: 'ไม่พบระบบย่อยหรือระบบถูกปิดใช้งาน' };
 
-  const { data: appUser } = await supabaseAdmin
-    .from('app_users')
-    .select('id, auth_user_id, school_id, role, is_active')
-    .eq('id', caller.sub)
-    .maybeSingle();
-  if (!appUser?.is_active || !appUser.auth_user_id) {
+  const { data: appUser } =
+    caller.role === 'marketplace_user'
+      ? { data: null }
+      : await supabaseAdmin
+          .from('app_users')
+          .select('id, auth_user_id, school_id, role, is_active, school:schools(workspace_type)')
+          .eq('id', caller.sub)
+          .maybeSingle();
+  if (caller.role !== 'marketplace_user' && (!appUser?.is_active || !appUser.auth_user_id)) {
     return { allowed: false, reason: 'บัญชีนี้ยังไม่เชื่อมกับ Supabase Auth' };
   }
 
-  const { data: marketplaceUser } = await supabaseAdmin
+  const marketplaceQuery = supabaseAdmin
     .from('marketplace_users')
-    .select('id, is_active')
-    .eq('auth_user_id', appUser.auth_user_id)
-    .maybeSingle();
+    .select('id, auth_user_id, is_active');
+  const { data: marketplaceUser } =
+    caller.role === 'marketplace_user'
+      ? await marketplaceQuery.eq('id', caller.sub).maybeSingle()
+      : await marketplaceQuery.eq('auth_user_id', appUser!.auth_user_id).maybeSingle();
   if (!marketplaceUser?.is_active) {
     return { allowed: false, reason: 'ไม่พบบัญชี Marketplace ที่ใช้งานอยู่' };
   }
@@ -118,7 +123,7 @@ export async function resolveEkruAppAccess(
     if (personalLicense) {
       const workspaceId = await findOrCreateWorkspace({
         appId: app.id,
-        authUserId: appUser.auth_user_id,
+        authUserId: marketplaceUser.auth_user_id,
         schoolId: null,
         scope: 'individual',
       });
@@ -139,8 +144,12 @@ export async function resolveEkruAppAccess(
     }
   }
 
-  if (!appUser.school_id || app.supported_scope === 'individual') {
+  if (!appUser?.school_id || app.supported_scope === 'individual') {
     return { allowed: false, reason: 'ไม่พบ License ที่ใช้งานได้สำหรับระบบนี้' };
+  }
+  const appUserSchool = Array.isArray(appUser.school) ? appUser.school[0] : appUser.school;
+  if (app.code === 'PERSONAL_SUITE' && appUserSchool?.workspace_type !== 'personal') {
+    return { allowed: false, reason: 'ระบบนี้เปิดได้เฉพาะพื้นที่ส่วนบุคคล' };
   }
 
   const { data: membership } = await supabaseAdmin
@@ -153,14 +162,17 @@ export async function resolveEkruAppAccess(
     return { allowed: false, reason: 'บัญชีนี้ไม่ได้เป็นสมาชิก Marketplace ของโรงเรียน' };
   }
 
-  const { data: schoolLicenses } = await supabaseAdmin
+  let schoolLicenseQuery = supabaseAdmin
     .from('marketplace_school_licenses')
     .select('id, license_scope')
     .eq('school_id', appUser.school_id)
     .eq('status', 'active')
     .lte('starts_at', now)
-    .gt('expires_at', now)
-    .contains('feature_keys', [app.required_feature_key]);
+    .gt('expires_at', now);
+  if (app.code !== 'PERSONAL_SUITE') {
+    schoolLicenseQuery = schoolLicenseQuery.contains('feature_keys', [app.required_feature_key]);
+  }
+  const { data: schoolLicenses } = await schoolLicenseQuery;
 
   let validSchoolLicense = (schoolLicenses ?? []).find(
     (license) => license.license_scope === 'school'
@@ -189,7 +201,7 @@ export async function resolveEkruAppAccess(
 
   const workspaceId = await findOrCreateWorkspace({
     appId: app.id,
-    authUserId: appUser.auth_user_id,
+    authUserId: marketplaceUser.auth_user_id,
     schoolId: appUser.school_id,
     scope: 'school',
   });

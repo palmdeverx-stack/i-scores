@@ -4,13 +4,23 @@ import type { SchoolFeatureKey } from 'src/lib/school-subscription-config';
 
 // ----------------------------------------------------------------------
 
-export type SubscriptionPlanBillingCycle = 'monthly' | 'yearly' | 'custom';
+export type SubscriptionPlanBillingCycle = 'monthly' | 'yearly' | 'one_time' | 'custom';
+export type SubscriptionPlanTargetScope = 'individual' | 'school' | 'both';
+
+export type PlanBundleSnapshot = {
+  id: string;
+  code: string;
+  name: string;
+  version: number;
+  featureKeys: SchoolFeatureKey[];
+};
 
 export type SubscriptionPlan = {
   id: string;
   code: string;
   name: string;
   description: string | null;
+  target_scope: SubscriptionPlanTargetScope;
   billing_cycle: SubscriptionPlanBillingCycle;
   price: number;
   currency: string;
@@ -19,6 +29,7 @@ export type SubscriptionPlan = {
   max_students: number;
   max_line_notifications: number;
   enabled_features: SchoolFeatureKey[];
+  source_bundles: PlanBundleSnapshot[];
   is_active: boolean;
   sort_order: number;
   created_at: string;
@@ -29,13 +40,13 @@ export type SubscriptionPlanInput = {
   code: string;
   name: string;
   description: string;
-  billingCycle: SubscriptionPlanBillingCycle;
-  price: number;
+  targetScope: SubscriptionPlanTargetScope;
   maxSchoolAdmins: number;
   maxTeachers: number;
   maxStudents: number;
   maxLineNotifications: number;
   enabledFeatures: SchoolFeatureKey[];
+  sourceBundles: PlanBundleSnapshot[];
   isActive: boolean;
   sortOrder: number;
 };

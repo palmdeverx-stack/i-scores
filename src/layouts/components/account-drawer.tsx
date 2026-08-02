@@ -185,7 +185,10 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
     },
   ];
 
-  const menuData = isAdmin ? adminMenu : user?.role === 'teacher' ? teacherMenu : data;
+  const roleMenuData = isAdmin ? adminMenu : user?.role === 'teacher' ? teacherMenu : data;
+  const menuData = user?.impersonation?.active
+    ? roleMenuData.filter((item) => item.href !== paths.auth.jwt.changePassword)
+    : roleMenuData;
 
   return (
     <>
