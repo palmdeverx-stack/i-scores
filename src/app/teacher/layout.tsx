@@ -5,10 +5,11 @@ import { useMemo } from 'react';
 import { navData as teacherNavData } from 'src/layouts/nav-config-teacher';
 import { DashboardLayout, SchoolHeaderIdentity } from 'src/layouts/dashboard';
 
+import { SchoolSubscriptionGuard } from 'src/sections/school-subscription/school-subscription-guard';
 import {
+  dedupeTeacherNav,
   filterNavByDepartment,
 } from 'src/sections/teacher-department/filter-nav-by-department';
-import { SchoolSubscriptionGuard } from 'src/sections/school-subscription/school-subscription-guard';
 import {
   filterDashboardNav,
   useSchoolSubscription,
@@ -46,13 +47,15 @@ export default function Layout({ children }: Props) {
         workspaceNav,
         subscriptionQuery.data?.subscription.enabled_features ?? []
       );
-      if (user?.is_personal_workspace) return licensedNav;
+      if (user?.is_personal_workspace) return dedupeTeacherNav(licensedNav);
 
-      return filterNavByDepartment(
-        licensedNav,
-        user?.departments ?? [],
-        user?.department_permissions ?? [],
-        !!user?.is_school_director
+      return dedupeTeacherNav(
+        filterNavByDepartment(
+          licensedNav,
+          user?.departments ?? [],
+          user?.department_permissions ?? [],
+          !!user?.is_school_director
+        )
       );
     },
     [

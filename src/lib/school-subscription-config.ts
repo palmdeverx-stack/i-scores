@@ -181,6 +181,13 @@ export const ALL_SCHOOL_FEATURE_KEYS = SCHOOL_FEATURES.map(
   (feature) => feature.key
 ) as SchoolFeatureKey[];
 
+// NOTE: Worksheet AI is intentionally hidden from master-admin package controls
+// until the feature is production-ready. Keep it in SCHOOL_FEATURES so existing
+// licenses and direct entitlement checks continue to work without data loss.
+export const MASTER_ADMIN_SCHOOL_FEATURES = SCHOOL_FEATURES.filter(
+  (feature) => feature.key !== 'teacher.worksheet_ai'
+);
+
 export const STARTER_FEATURE_KEYS: SchoolFeatureKey[] = ALL_SCHOOL_FEATURE_KEYS.filter(
   (key) =>
     ![

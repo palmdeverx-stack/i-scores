@@ -1,3 +1,5 @@
+import GlobalStyles from '@mui/material/GlobalStyles';
+
 import { languageOptions } from 'src/locales';
 import { AuthSplitLayout } from 'src/layouts/auth-split';
 import { LanguagePopover } from 'src/layouts/components/language-popover';
@@ -13,42 +15,64 @@ type Props = {
 export default function Layout({ children }: Props) {
   return (
     <GuestGuard>
-      <AuthSplitLayout
-        sx={{
-          minHeight: '100dvh',
-          backgroundSize: 'cover',
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: { xs: '42% center', md: 'center' },
-          backgroundImage: 'url("/assets/background/bg-images.png")',
-        }}
-        slotProps={{
-          header: {
-            slots: {
-              rightArea: (
-                <LanguagePopover
-                  showTranslateIcon
-                  data={languageOptions}
-                  sx={{
-                    color: 'common.white',
-                    bgcolor: 'rgba(255, 255, 255, 0.12)',
-                    '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.22)' },
-                  }}
-                />
-              ),
+      <>
+        <GlobalStyles
+          styles={{
+            html: {
+              minHeight: '100%',
+              backgroundColor: '#5B9EF5',
+              backgroundSize: 'cover',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: '42% center',
+              backgroundAttachment: 'fixed',
+              backgroundImage: 'url("/assets/background/bg-images.png")',
+              overscrollBehaviorY: 'none',
+              '@media (min-width: 900px)': { backgroundPosition: 'center' },
             },
-            sx: { color: 'common.white' },
-          },
-          content: {
-            sx: {
-              px: { xs: 2, sm: 4, md: 8 },
-              py: { xs: 10, md: 12 },
-              alignItems: 'center',
+            body: {
+              minHeight: '100%',
+              backgroundColor: 'transparent',
+              overscrollBehaviorY: 'none',
             },
-          },
-        }}
-      >
-        {children}
-      </AuthSplitLayout>
+          }}
+        />
+        <AuthSplitLayout
+          sx={{
+            minHeight: '100dvh',
+            backgroundSize: 'cover',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: { xs: '42% center', md: 'center' },
+            backgroundImage: 'url("/assets/background/bg-images.png")',
+          }}
+          slotProps={{
+            header: {
+              slots: {
+                rightArea: (
+                  <LanguagePopover
+                    showTranslateIcon
+                    data={languageOptions}
+                    sx={{
+                      color: 'common.white',
+                      bgcolor: 'rgba(255, 255, 255, 0.12)',
+                      '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.22)' },
+                    }}
+                  />
+                ),
+              },
+              sx: { color: 'common.white' },
+            },
+            content: {
+              sx: {
+                px: { xs: 2, sm: 4, md: 8 },
+                py: { xs: 10, md: 12 },
+                alignItems: 'center',
+              },
+            },
+          }}
+        >
+          {children}
+        </AuthSplitLayout>
+      </>
     </GuestGuard>
   );
 }

@@ -31,20 +31,19 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
+import { MASTER_ADMIN_SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
 
 import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 
 import { CapabilityBundleSelector } from '../components/capability-bundle-selector';
-import {
-  createSubscriptionPlan,
-  featureKeysFromPlanBundles,
-} from '../subscription-plan-actions';
+import { createSubscriptionPlan, featureKeysFromPlanBundles } from '../subscription-plan-actions';
 
 // ----------------------------------------------------------------------
 
-const FEATURE_GROUPS = Array.from(new Set(SCHOOL_FEATURES.map((feature) => feature.group)));
+const FEATURE_GROUPS = Array.from(
+  new Set(MASTER_ADMIN_SCHOOL_FEATURES.map((feature) => feature.group))
+);
 const LINE_FEATURE_KEY: SchoolFeatureKey = 'admin.line_notifications';
 
 const EMPTY_FORM: SubscriptionPlanInput = {
@@ -111,7 +110,12 @@ export function SubscriptionPlanCreateView() {
   const [selectionMode, setSelectionMode] = useState<'bundles' | 'advanced'>('bundles');
 
   const lineNotificationsEnabled = form.enabledFeatures.includes(LINE_FEATURE_KEY);
-  const groupFeatures = SCHOOL_FEATURES.filter((feature) => feature.group === featureGroup);
+  const groupFeatures = MASTER_ADMIN_SCHOOL_FEATURES.filter(
+    (feature) => feature.group === featureGroup
+  );
+  const configurableEnabledFeatureCount = MASTER_ADMIN_SCHOOL_FEATURES.filter((feature) =>
+    form.enabledFeatures.includes(feature.key)
+  ).length;
   const groupKeys = groupFeatures.map((feature) => feature.key);
   const allGroupEnabled = groupKeys.every((key) => form.enabledFeatures.includes(key));
   const isValid = Boolean(
@@ -193,7 +197,7 @@ export function SubscriptionPlanCreateView() {
 
   const toggleFeatureGroup = () => {
     setForm((current) => {
-      const currentKeys = new Set(groupKeys);
+      const currentKeys = new Set<SchoolFeatureKey>(groupKeys);
       const enabledFeatures = allGroupEnabled
         ? current.enabledFeatures.filter((key) => !currentKeys.has(key))
         : Array.from(new Set([...current.enabledFeatures, ...groupKeys]));
@@ -396,7 +400,11 @@ export function SubscriptionPlanCreateView() {
           description="เลือก Feature ที่ผู้ซื้อแพ็กเกจจะได้รับ เมนูฟรีไม่จำเป็นต้องเลือกในส่วนนี้"
         >
           <Alert severity={form.enabledFeatures.length ? 'success' : 'info'} sx={{ mb: 2.5 }}>
-            เลือกแล้ว {form.sourceBundles.length} ชุด · {form.enabledFeatures.length} เมนู
+            เลือกแล้ว {form.sourceBundles.length} ชุด · {configurableEnabledFeatureCount} เมนู
+          </Alert>
+          <Alert severity="warning" variant="outlined" sx={{ mb: 2.5 }}>
+            หมายเหตุ: Worksheet AI ยังอยู่ระหว่างพัฒนา จึงซ่อนจากตัวเลือกแพ็กเกจชั่วคราว
+            โดยสิทธิ์ที่เคยบันทึกไว้จะไม่ถูกลบ
           </Alert>
           <Box sx={{ gap: 1, mb: 3, display: 'flex', flexWrap: 'wrap' }}>
             <Button
@@ -440,7 +448,8 @@ export function SubscriptionPlanCreateView() {
                 }}
               >
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  เลือกแล้ว {form.enabledFeatures.length} จาก {SCHOOL_FEATURES.length} รายการ
+                  เลือกแล้ว {configurableEnabledFeatureCount} จาก{' '}
+                  {MASTER_ADMIN_SCHOOL_FEATURES.length} รายการ
                 </Typography>
                 <Button size="small" onClick={toggleFeatureGroup}>
                   {allGroupEnabled ? 'ปิดทั้งหมดในกลุ่ม' : 'เปิดทั้งหมดในกลุ่ม'}
@@ -458,7 +467,7 @@ export function SubscriptionPlanCreateView() {
                     key={group}
                     value={group}
                     label={`${group} (${
-                      SCHOOL_FEATURES.filter(
+                      MASTER_ADMIN_SCHOOL_FEATURES.filter(
                         (feature) =>
                           feature.group === group && form.enabledFeatures.includes(feature.key)
                       ).length

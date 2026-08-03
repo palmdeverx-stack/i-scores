@@ -10,6 +10,8 @@ import { paths } from 'src/routes/paths';
 import { resolveEkruAppAccess } from 'src/lib/ekru-app-access';
 import { verifyAppToken, ACCESS_TOKEN_COOKIE } from 'src/lib/auth-token';
 
+import { WorksheetAiView } from 'src/sections/worksheet-ai/view/worksheet-ai-view';
+
 // ----------------------------------------------------------------------
 
 type Props = {
@@ -34,6 +36,9 @@ export default async function Page({ params, searchParams }: Props) {
   }
   if (result.access.appCode.startsWith('PERSONAL_') && caller.role === 'teacher') {
     redirect(paths.teacher.root);
+  }
+  if (result.access.appCode === 'WORKSHEET_AI') {
+    return <WorksheetAiView workspaceId={result.access.workspaceId} />;
   }
 
   return (

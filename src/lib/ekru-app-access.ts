@@ -18,9 +18,7 @@ export type EkruAppAccess = {
   schoolId: string | null;
 };
 
-type AccessResult =
-  | { allowed: true; access: EkruAppAccess }
-  | { allowed: false; reason: string };
+type AccessResult = { allowed: true; access: EkruAppAccess } | { allowed: false; reason: string };
 
 async function findOrCreateWorkspace(params: {
   appId: string;
@@ -85,6 +83,9 @@ export async function resolveEkruAppAccess(
     ? await appQuery.eq('code', identifier.code.toUpperCase()).maybeSingle()
     : await appQuery.eq('launch_path', identifier.launchPath).maybeSingle();
   if (!app) return { allowed: false, reason: 'ไม่พบระบบย่อยหรือระบบถูกปิดใช้งาน' };
+  if (app.code === 'WORKSHEET_AI' && caller.role !== 'master_admin') {
+    return { allowed: false, reason: 'Worksheet AI เปิดให้เฉพาะผู้ดูแลระบบระหว่างการพัฒนา' };
+  }
 
   const { data: appUser } =
     caller.role === 'marketplace_user'
@@ -100,6 +101,33 @@ export async function resolveEkruAppAccess(
     return { allowed: false, reason: 'บัญชีนี้ยังไม่เชื่อมกับ Supabase Auth' };
   }
   const appUserSchool = Array.isArray(appUser?.school) ? appUser.school[0] : appUser?.school;
+
+  // Development-only access: master admins can iterate on Worksheet AI without
+  // issuing a Marketplace license. Other roles are rejected above, including
+  // when they try to open the launch URL directly.
+  if (app.code === 'WORKSHEET_AI' && caller.role === 'master_admin') {
+    const workspaceId = await findOrCreateWorkspace({
+      appId: app.id,
+      authUserId: appUser!.auth_user_id,
+      schoolId: null,
+      scope: 'individual',
+    });
+    if (!workspaceId) return { allowed: false, reason: 'ไม่สามารถเปิด Workspace ได้' };
+    return {
+      allowed: true,
+      access: {
+        appId: app.id,
+        appCode: app.code,
+        appName: app.name,
+        launchPath: app.launch_path,
+        requiredFeatureKey: app.required_feature_key,
+        workspaceId,
+        scope: 'individual',
+        entitlementScope: 'individual',
+        schoolId: null,
+      },
+    };
+  }
 
   const marketplaceQuery = supabaseAdmin
     .from('marketplace_users')

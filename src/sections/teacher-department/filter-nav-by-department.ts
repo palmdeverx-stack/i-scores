@@ -8,6 +8,48 @@ export type DepartmentMembership = {
   role_in_department: 'head' | 'member';
 };
 
+const REDUNDANT_TEACHER_FEATURES = new Map([
+  ['admin.subjects', 'teacher.manage_subjects'],
+  ['admin.classrooms', 'teacher.manage_classrooms'],
+  ['admin.enrollments', 'teacher.manage_enrollments'],
+]);
+
+/**
+ * Removes creation-only shortcuts when the visible navigation already contains
+ * the corresponding management page, which also provides the same create flow.
+ */
+export function dedupeTeacherNav(data: NavSectionProps['data']): NavSectionProps['data'] {
+  const visibleFeatureKeys = new Set<string>();
+
+  const collectFeatureKeys = (items: NavItemDataProps[]) => {
+    items.forEach((item) => {
+      if (item.featureKey) visibleFeatureKeys.add(item.featureKey);
+      if (item.children) collectFeatureKeys(item.children);
+    });
+  };
+
+  data.forEach((group) => collectFeatureKeys(group.items));
+
+  const redundantFeatureKeys = new Set(
+    [...REDUNDANT_TEACHER_FEATURES.entries()]
+      .filter(([managementFeature]) => visibleFeatureKeys.has(managementFeature))
+      .map(([, shortcutFeature]) => shortcutFeature)
+  );
+
+  const filterItems = (items: NavItemDataProps[]): NavItemDataProps[] =>
+    items.flatMap((item) => {
+      if (item.featureKey && redundantFeatureKeys.has(item.featureKey)) return [];
+      if (!item.children) return [item];
+
+      const children = filterItems(item.children);
+      return children.length ? [{ ...item, children }] : [];
+    });
+
+  return data
+    .map((group) => ({ ...group, items: filterItems(group.items) }))
+    .filter((group) => group.items.length > 0);
+}
+
 /**
  * Filters a nav tree for a teacher viewer: items with no department/permission
  * requirement stay visible by default, items that declare one are only kept
@@ -39,21 +81,7 @@ export function filterNavByDepartment(
       const children = filterItems(item.children);
       if (!children.length) return [];
 
-      const containsApprovalsOnly =
-        item.title === 'งานฝ่าย' &&
-        children.every((child) =>
-          ['schedule.approve', 'grades.approve'].includes(
-            child.requiresDepartmentPermission ?? ''
-          )
-        );
-
-      return [
-        {
-          ...item,
-          title: containsApprovalsOnly ? 'รายการอนุมัติ' : item.title,
-          children,
-        },
-      ];
+      return [{ ...item, children }];
     });
 
   return data

@@ -3,6 +3,7 @@ import type { NavSectionProps } from 'src/components/nav-section';
 import { paths } from 'src/routes/paths';
 
 import {
+  RemixIcon,
   RiMailLine,
   RiApps2Line,
   RiAdminLine,
@@ -24,6 +25,7 @@ const ICONS = {
   systemQuality: <RiShieldCheckLine />,
   emailSettings: <RiMailLine />,
   apps: <RiApps2Line />,
+  worksheetAi: <RemixIcon icon="solar:magic-stick-3-bold-duotone" />,
 };
 
 // ----------------------------------------------------------------------
@@ -70,6 +72,11 @@ export const navData: NavSectionProps['data'] = [
         title: 'ระบบย่อย E-KRU',
         path: paths.master.apps,
         icon: ICONS.apps,
+      },
+      {
+        title: 'Worksheet AI (พัฒนา)',
+        path: '/launch?app=WORKSHEET_AI',
+        icon: ICONS.worksheetAi,
       },
     ],
   },

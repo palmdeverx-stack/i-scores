@@ -28,7 +28,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-import { SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
+import { MASTER_ADMIN_SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
 
 import { RemixIcon } from 'src/components/remix-icon';
 
@@ -90,8 +90,13 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
     plan?.source_bundles.length ? 'bundles' : 'advanced'
   );
 
-  const groups = Array.from(new Set(SCHOOL_FEATURES.map((feature) => feature.group)));
-  const groupFeatures = SCHOOL_FEATURES.filter((feature) => feature.group === featureGroup);
+  const groups = Array.from(new Set(MASTER_ADMIN_SCHOOL_FEATURES.map((feature) => feature.group)));
+  const groupFeatures = MASTER_ADMIN_SCHOOL_FEATURES.filter(
+    (feature) => feature.group === featureGroup
+  );
+  const configurableEnabledFeatureCount = MASTER_ADMIN_SCHOOL_FEATURES.filter((feature) =>
+    form.enabledFeatures.includes(feature.key)
+  ).length;
   const groupKeys = groupFeatures.map((feature) => feature.key);
   const allGroupEnabled = groupKeys.every((key) => form.enabledFeatures.includes(key));
   const lineNotificationsEnabled = form.enabledFeatures.includes(LINE_FEATURE_KEY);
@@ -305,7 +310,11 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
 
         <Divider sx={{ my: 3 }} />
         <Alert severity={form.enabledFeatures.length ? 'success' : 'info'} sx={{ mb: 2.5 }}>
-          เลือกแล้ว {form.sourceBundles.length} ชุด · {form.enabledFeatures.length} เมนู
+          เลือกแล้ว {form.sourceBundles.length} ชุด · {configurableEnabledFeatureCount} เมนู
+        </Alert>
+        <Alert severity="warning" variant="outlined" sx={{ mb: 2.5 }}>
+          หมายเหตุ: Worksheet AI ยังอยู่ระหว่างพัฒนา จึงซ่อนจากตัวเลือกแพ็กเกจชั่วคราว
+          โดยสิทธิ์ที่เคยบันทึกไว้จะไม่ถูกลบ
         </Alert>
         <Box sx={{ gap: 1, mb: 3, display: 'flex', flexWrap: 'wrap' }}>
           <Button
@@ -349,12 +358,13 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
               }}
             >
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                เลือกแล้ว {form.enabledFeatures.length} จาก {SCHOOL_FEATURES.length} รายการ
+                เลือกแล้ว {configurableEnabledFeatureCount} จาก{' '}
+                {MASTER_ADMIN_SCHOOL_FEATURES.length} รายการ
               </Typography>
               <Button
                 size="small"
                 onClick={() => {
-                  const currentKeys = new Set(groupKeys);
+                  const currentKeys = new Set<SchoolFeatureKey>(groupKeys);
                   setField(
                     'enabledFeatures',
                     allGroupEnabled
@@ -378,7 +388,7 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
                   key={group}
                   value={group}
                   label={`${group} (${
-                    SCHOOL_FEATURES.filter(
+                    MASTER_ADMIN_SCHOOL_FEATURES.filter(
                       (feature) =>
                         feature.group === group && form.enabledFeatures.includes(feature.key)
                     ).length

@@ -48,7 +48,10 @@ test('admin sessions are only issued after PIN verification', () => {
   const passwordRoute = read('src/app/api/auth/sign-in/route.ts');
   const verifyPinRoute = read('src/app/api/auth/verify-pin/route.ts');
 
-  assert.match(googleRoute, /appUser\.role === 'master_admin' \|\| appUser\.role === 'school_admin'/);
+  assert.match(
+    googleRoute,
+    /appUser\.role === 'master_admin' \|\| appUser\.role === 'school_admin'/
+  );
   assert.match(googleRoute, /response\.cookies\.delete\(ACCESS_TOKEN_COOKIE\)/);
   assert.match(passwordRoute, /response\.cookies\.delete\(ACCESS_TOKEN_COOKIE\)/);
   assert.match(verifyPinRoute, /response\.cookies\.set\(ACCESS_TOKEN_COOKIE, accessToken/);
@@ -84,7 +87,10 @@ test('personal workspaces use product branding instead of school branding', () =
   assert.match(teacherLayout, /group\.items\.map\(\(item\) =>/);
   assert.match(teacherLayout, /item\.title === 'นักเรียนของฉัน'/);
   assert.doesNotMatch(teacherLayout, /departmentAcademicYear|departmentStudent/);
-  assert.match(teacherLayout, /if \(user\?\.is_personal_workspace\) return licensedNav/);
+  assert.match(
+    teacherLayout,
+    /if \(user\?\.is_personal_workspace\) return dedupeTeacherNav\(licensedNav\)/
+  );
   assert.match(departmentAccess, /school\?\.workspace_type === 'personal'/);
   assert.match(departmentAccess, /school\.owner_auth_user_id === teacher\.auth_user_id/);
   assert.match(departmentAccess, /return \[\.\.\.DEPARTMENT_PERMISSION_KEYS\]/);
@@ -144,9 +150,10 @@ test('editing a subscription plan synchronizes active issued entitlements', () =
   assert.doesNotMatch(bundleSelector, /enabledFeatures\.filter/);
   assert.match(subscriptionLoader, /workspace\?\.workspace_type !== 'personal'/);
   assert.match(subscriptionHook, /refetchInterval: 15_000/);
-  assert.match(teacherNav, /path: '\/launch\?app=WORKSHEET_AI'/);
-  assert.match(teacherNav, /featureKey: 'teacher\.worksheet_ai'/);
-  assert.match(teacherNav, /title: 'ปีการศึกษาและภาคเรียน'[\s\S]*featureKey: 'admin\.academic_years'/);
+  assert.match(
+    teacherNav,
+    /title: 'ปีการศึกษาและภาคเรียน'[\s\S]*featureKey: 'admin\.academic_years'/
+  );
   assert.match(teacherNav, /title: 'นักเรียน'[\s\S]*featureKey: 'admin\.students'/);
   assert.match(teacherNav, /title: 'ห้องเรียน'[\s\S]*featureKey: 'admin\.classrooms'/);
   assert.match(teacherNav, /title: 'วิชาและหลักสูตร'[\s\S]*featureKey: 'admin\.subjects'/);
@@ -154,6 +161,29 @@ test('editing a subscription plan synchronizes active issued entitlements', () =
   assert.match(teacherNav, /title: 'ประกาศทั้งโรงเรียน'[\s\S]*featureKey: 'admin\.announcements'/);
   assert.match(teacherNav, /title: 'ครู\/บุคลากร'[\s\S]*featureKey: 'admin\.staff'/);
   assert.match(subscriptionActions, /cache: 'no-store'/);
+});
+
+test('unfinished Worksheet AI stays hidden from master-admin package controls', () => {
+  const featureConfig = read('src/lib/school-subscription-config.ts');
+  const teacherNav = read('src/layouts/nav-config-teacher.tsx');
+  const masterNav = read('src/layouts/nav-config-master.tsx');
+  const appAccess = read('src/lib/ekru-app-access.ts');
+  const createView = read('src/sections/subscription-plan/view/subscription-plan-create-view.tsx');
+  const editDialog = read(
+    'src/sections/subscription-plan/components/subscription-plan-form-dialog.tsx'
+  );
+
+  assert.match(featureConfig, /MASTER_ADMIN_SCHOOL_FEATURES = SCHOOL_FEATURES\.filter/);
+  assert.match(featureConfig, /feature\.key !== 'teacher\.worksheet_ai'/);
+  assert.match(createView, /MASTER_ADMIN_SCHOOL_FEATURES/);
+  assert.match(editDialog, /MASTER_ADMIN_SCHOOL_FEATURES/);
+  assert.match(createView, /Worksheet AI ยังอยู่ระหว่างพัฒนา/);
+  assert.match(editDialog, /Worksheet AI ยังอยู่ระหว่างพัฒนา/);
+  assert.doesNotMatch(teacherNav, /WORKSHEET_AI/);
+  assert.match(masterNav, /title: 'Worksheet AI \(พัฒนา\)'/);
+  assert.match(masterNav, /path: '\/launch\?app=WORKSHEET_AI'/);
+  assert.match(appAccess, /app\.code === 'WORKSHEET_AI' && caller\.role !== 'master_admin'/);
+  assert.match(appAccess, /app\.code === 'WORKSHEET_AI' && caller\.role === 'master_admin'/);
 });
 
 test('client session requests include cookies and clear a rejected session', () => {
@@ -215,10 +245,7 @@ test('global security headers remain configured', () => {
   ]) {
     assert.match(source, new RegExp(header));
   }
-  assert.match(
-    source,
-    /Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups'/
-  );
+  assert.match(source, /Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups'/);
 });
 
 test('sensitive storage is private and downloads use short-lived signed URLs', () => {
@@ -241,9 +268,7 @@ test('session revocation and security audit schema remain present', () => {
 test('database access remains parameterized and SQL injection guarded', () => {
   const authToken = read('src/lib/auth-token.ts');
   const assignmentRoute = read('src/app/api/teacher-assignments/route.ts');
-  const searchFunction = read(
-    'supabase/migrations/20260724010000_search_teacher_assignments.sql'
-  );
+  const searchFunction = read('supabase/migrations/20260724010000_search_teacher_assignments.sql');
   const sourceFiles = fs
     .readdirSync(path.join(root, 'src'), { recursive: true })
     .filter((file) => /\.(?:ts|tsx|js|jsx)$/.test(file))
