@@ -312,3 +312,33 @@ test('Vercel Hobby cron stays within limits and isolates sequential task failure
   assert.match(tasks, /try \{[\s\S]*await task\.run\(\)[\s\S]*\} catch \(taskError\)/);
   assert.doesNotMatch(tasks, /Promise\.all\(/);
 });
+
+test('lesson plans remain school-scoped with owner and academic-review boundaries', () => {
+  const migration = read('supabase/migrations/20260803140000_lesson_plans.sql');
+  const access = read('src/lib/lesson-plan-access.ts');
+  const collectionRoute = read('src/app/api/lesson-plans/route.ts');
+  const detailRoute = read('src/app/api/lesson-plans/[id]/route.ts');
+  const statusRoute = read('src/app/api/lesson-plans/[id]/status/route.ts');
+  const teacherNav = read('src/layouts/nav-config-teacher.tsx');
+  const adminNav = read('src/layouts/nav-config-dashboard.tsx');
+
+  assert.match(migration, /create table if not exists public\.lesson_plans/);
+  assert.match(migration, /create table if not exists public\.lesson_plan_versions/);
+  assert.match(migration, /create table if not exists public\.lesson_plan_events/);
+  assert.match(migration, /enable row level security/g);
+  assert.match(migration, /lesson_plans\.review/);
+  assert.match(access, /plan\.school_id !== caller\.schoolId/);
+  assert.match(access, /plan\?\.teacher_id === caller\.sub/);
+  assert.match(collectionRoute, /query\.eq\('teacher_id', caller\.sub\)/);
+  assert.match(collectionRoute, /assignment\.teacher_id !== caller\.sub/);
+  assert.match(detailRoute, /ownsLessonPlan\(caller, plan\)/);
+  assert.match(detailRoute, /\.eq\('teacher_id', caller\.sub\)/);
+  assert.match(statusRoute, /canReviewLessonPlans\(caller, true\)/);
+  assert.match(statusRoute, /action === 'revision' && !note/);
+  assert.match(
+    teacherNav,
+    /title: 'แผนการสอน'[\s\S]*requiresDepartmentPermission: 'teaching\.assignments'/
+  );
+  assert.match(teacherNav, /title: 'ตรวจแผนการสอน'[\s\S]*'lesson_plans\.review'/);
+  assert.match(adminNav, /title: 'ตรวจแผนการสอน'[\s\S]*'lesson_plans\.review'/);
+});

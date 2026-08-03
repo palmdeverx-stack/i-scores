@@ -62,6 +62,13 @@ export const paths = {
     assignmentNew: (id: string) => `${ROOTS.TEACHER}/assignments/${id}/new`,
     quizNew: (id: string) => `${ROOTS.TEACHER}/assignments/${id}/quiz/new`,
     gradebook: (assignmentId: string) => `${ROOTS.TEACHER}/gradebook/${assignmentId}`,
+    lessonPlans: {
+      root: `${ROOTS.TEACHER}/lesson-plans`,
+      new: `${ROOTS.TEACHER}/lesson-plans/new`,
+      templates: `${ROOTS.TEACHER}/lesson-plans/templates`,
+      edit: (id: string) => `${ROOTS.TEACHER}/lesson-plans/${id}/edit`,
+    },
+    lessonPlanReviews: `${ROOTS.TEACHER}/lesson-plan-reviews`,
     subjectNew: `${ROOTS.TEACHER}/subject/new`,
     classroomNew: `${ROOTS.TEACHER}/classroom/new`,
     enrollmentNew: `${ROOTS.TEACHER}/enrollment/new`,
@@ -183,6 +190,7 @@ export const paths = {
       quizNew: (id: string) => `${ROOTS.ADMIN}/teacher-assignment/${id}/quiz/new`,
     },
     gradebook: (assignmentId: string) => `${ROOTS.ADMIN}/gradebook/${assignmentId}`,
+    lessonPlanReviews: `${ROOTS.ADMIN}/lesson-plan-reviews`,
     scheduleBuilder: `${ROOTS.ADMIN}/schedule-builder`,
     scheduleSubmission: (classroomId: string, semesterId: string) =>
       `${ROOTS.ADMIN}/schedule-builder/${classroomId}/${semesterId}/sign`,

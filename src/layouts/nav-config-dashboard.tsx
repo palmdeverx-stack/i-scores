@@ -148,6 +148,12 @@ export const navData: NavSectionProps['data'] = [
     subheader: 'ตารางสอน',
     items: [
       {
+        title: 'ตรวจแผนการสอน',
+        path: paths.admin.lessonPlanReviews,
+        icon: ICONS.gradeReviews,
+        requiresDepartmentPermission: 'lesson_plans.review',
+      },
+      {
         title: 'ครูประจำวิชา',
         path: paths.admin.teacherAssignment.root,
         icon: ICONS.teacherAssignment,

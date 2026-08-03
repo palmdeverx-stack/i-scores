@@ -96,6 +96,25 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'teaching.assignments',
       },
       {
+        title: 'แผนการสอน',
+        path: paths.teacher.lessonPlans.root,
+        icon: ICONS.documents,
+        deepMatch: true,
+        requiresDepartmentPermission: 'teaching.assignments',
+        children: [
+          {
+            title: 'แผนการสอนของฉัน',
+            path: paths.teacher.lessonPlans.root,
+            icon: ICONS.documents,
+          },
+          {
+            title: 'เทมเพลตแผนการสอน',
+            path: paths.teacher.lessonPlans.templates,
+            icon: ICONS.gradeReviews,
+          },
+        ],
+      },
+      {
         title: 'นักเรียนของฉัน',
         path: paths.teacher.students,
         icon: ICONS.students,
@@ -159,6 +178,12 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.gradeReviews,
         featureKey: 'academic.grade_workflow',
         requiresDepartmentPermission: 'grades.approve',
+      },
+      {
+        title: 'ตรวจแผนการสอน',
+        path: paths.teacher.lessonPlanReviews,
+        icon: ICONS.gradeReviews,
+        requiresDepartmentPermission: 'lesson_plans.review',
       },
       {
         title: 'ผลการเรียน',
