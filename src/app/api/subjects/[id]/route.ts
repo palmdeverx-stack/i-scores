@@ -3,89 +3,27 @@ import { NextResponse } from 'next/server';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { canManageViaPermission } from 'src/lib/department-permission-access';
+import { subjectCatalogInputSchema } from 'src/features/subject-catalog/schema';
+import { getVisibleCurriculum } from 'src/features/curriculum/server/curriculum-service';
+import {
+  SubjectClassificationError,
+  parseSubjectClassification,
+} from 'src/features/curriculum/server/parse-subject-classification';
+import {
+  syncIndicators,
+  syncLearningUnits,
+  syncLearningOutcomes,
+  subjectVisibilityFilter,
+} from 'src/features/subject-catalog/server/subject-catalog-service';
 
 // ----------------------------------------------------------------------
-
-const VALID_LEARNING_AREAS = [
-  'thai',
-  'mathematics',
-  'science_technology',
-  'social_studies',
-  'health_pe',
-  'art',
-  'occupations_technology',
-  'foreign_language',
-  'student_development_activity',
-];
-const VALID_ACTIVITY_TYPES = ['guidance', 'scout_cadet', 'club', 'social_service'];
-const VALID_SUBJECT_TYPES = ['basic', 'additional', 'activity'];
-const VALID_EDUCATION_STAGES = ['primary', 'lower_secondary', 'upper_secondary'];
-const VALID_GRADE_LEVELS = [
-  'ป.1',
-  'ป.2',
-  'ป.3',
-  'ป.4',
-  'ป.5',
-  'ป.6',
-  'ม.1',
-  'ม.2',
-  'ม.3',
-  'ม.4',
-  'ม.5',
-  'ม.6',
-];
-
-function parseCurriculumFields(body: Record<string, unknown>) {
-  const learningArea =
-    typeof body.learningArea === 'string' && VALID_LEARNING_AREAS.includes(body.learningArea)
-      ? body.learningArea
-      : null;
-  const activityType =
-    learningArea === 'student_development_activity' &&
-    typeof body.activityType === 'string' &&
-    VALID_ACTIVITY_TYPES.includes(body.activityType)
-      ? body.activityType
-      : null;
-  const subjectType =
-    typeof body.subjectType === 'string' && VALID_SUBJECT_TYPES.includes(body.subjectType)
-      ? body.subjectType
-      : null;
-  const educationStage =
-    typeof body.educationStage === 'string' &&
-    VALID_EDUCATION_STAGES.includes(body.educationStage)
-      ? body.educationStage
-      : null;
-  const gradeLevels = Array.isArray(body.gradeLevels)
-    ? body.gradeLevels.filter(
-        (level): level is string =>
-          typeof level === 'string' && VALID_GRADE_LEVELS.includes(level)
-      )
-    : [];
-
-  const parseRichText = (value: unknown) => {
-    const text = typeof value === 'string' ? value.trim() : '';
-    return text ? text.slice(0, 20000) : null;
-  };
-
-  return {
-    learningArea,
-    activityType,
-    subjectType,
-    educationStage,
-    gradeLevels,
-    learningStandards: parseRichText(body.learningStandards),
-    learningOutcomes: parseRichText(body.learningOutcomes),
-    learningUnits: parseRichText(body.learningUnits),
-    indicators: parseRichText(body.indicators),
-  };
-}
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
 
-  if (!caller || !(await canManageViaPermission(caller, 'subjects.manage'))) {
+  if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
@@ -93,10 +31,10 @@ export async function GET(request: Request, { params }: RouteParams) {
   let selectQuery = supabaseAdmin
     .from('subjects')
     .select(
-      'id, code, name, name_en, credits, study_hours, description, description_en, image_url, academic_year_id, semester_id, academic_years(year), semesters(name), learning_area, activity_type, subject_type, education_stage, grade_levels, learning_standards, learning_outcomes, learning_units, indicators, status, created_by, created_at'
+      'id, curriculum_id, code, name, name_en, credits, study_hours, description, description_en, image_url, academic_year_id, semester_id, academic_years(year), semesters(name), learning_area, activity_type, subject_type, education_stage, grade_levels, learning_standard_code, learning_standards, learning_outcomes, learning_units, indicators, scope, status, created_by, created_at, curriculum:curricula(id, school_id, owner_id, code, name, version, curriculum_type, scope, status)'
     )
     .eq('id', id)
-    .eq('school_id', caller.schoolId);
+    .or(subjectVisibilityFilter(caller));
 
   // school_admin can see every subject regardless of status; teachers only
   // see published subjects plus their own drafts.
@@ -109,18 +47,53 @@ export async function GET(request: Request, { params }: RouteParams) {
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ message: 'ไม่พบรายวิชานี้' }, { status: 404 });
 
-  return NextResponse.json({ subject: data });
+  const [indicatorResult, outcomeResult, unitResult] = await Promise.all([
+    supabaseAdmin.from('curriculum_indicators').select('id, subject_id, code, description, learning_standard').eq('subject_id', id).order('code'),
+    supabaseAdmin.from('subject_learning_outcomes').select('id, subject_id, code, description, sequence').eq('subject_id', id).order('sequence'),
+    supabaseAdmin.from('subject_learning_units').select('id, subject_id, code, name, description, sequence, estimated_periods').eq('subject_id', id).order('sequence'),
+  ]);
+  const relatedError = indicatorResult.error ?? outcomeResult.error ?? unitResult.error;
+  if (relatedError) return NextResponse.json({ message: relatedError.message }, { status: 500 });
+
+  return NextResponse.json({
+    subject: { ...data, curriculum_indicators: indicatorResult.data ?? [], learning_outcomes_structured: outcomeResult.data ?? [], learning_units_structured: unitResult.data ?? [] },
+  });
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
 
-  if (!caller || !(await canManageViaPermission(caller, 'subjects.manage'))) {
+  if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
   const { id } = await params;
+  const { data: current } = await supabaseAdmin
+    .from('subjects')
+    .select('id, scope, school_id, created_by')
+    .eq('id', id)
+    .or(subjectVisibilityFilter(caller))
+    .maybeSingle();
+  if (!current) return NextResponse.json({ message: 'ไม่พบรายวิชานี้' }, { status: 404 });
+
+  const canEdit =
+    current.scope === 'school'
+      ? current.school_id === caller.schoolId &&
+        (await canManageViaPermission(caller, 'subjects.manage'))
+      : ['personal', 'public'].includes(current.scope) && current.created_by === caller.sub;
+  if (!canEdit)
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์แก้ไขรายวิชานี้' }, { status: 403 });
+
   const body = await request.json();
+  let classification;
+  try {
+    classification = await parseSubjectClassification(caller, body);
+  } catch (classificationError) {
+    if (classificationError instanceof SubjectClassificationError) {
+      return NextResponse.json({ message: classificationError.message }, { status: 400 });
+    }
+    throw classificationError;
+  }
   const {
     code,
     name,
@@ -136,19 +109,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const parsedStudyHours = Number(studyHours);
 
   if (
-    typeof code !== 'string' ||
-    !code.trim() ||
     typeof name !== 'string' ||
     !name.trim() ||
-    !academicYearId ||
-    !semesterId ||
+    (current.scope === 'school' && (!academicYearId || !semesterId)) ||
     !Number.isFinite(parsedCredits) ||
     parsedCredits < 0 ||
     !Number.isFinite(parsedStudyHours) ||
     parsedStudyHours < 0
   ) {
     return NextResponse.json(
-      { message: 'กรุณากรอกรหัสวิชา ชื่อ หน่วยกิต ชั่วโมงเรียน ปีการศึกษา และภาคเรียนให้ครบถ้วน' },
+      { message: 'กรุณากรอกชื่อ หน่วยกิต ชั่วโมงเรียน ปีการศึกษา และภาคเรียนให้ครบถ้วน' },
       { status: 400 }
     );
   }
@@ -159,28 +129,51 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     subjectType,
     educationStage,
     gradeLevels,
+    learningStandardCode,
     learningStandards,
     learningOutcomes,
     learningUnits,
     indicators,
-  } = parseCurriculumFields(body);
+  } = classification;
   const status = body.status === 'published' ? 'published' : 'draft';
 
-  const { data: semester } = await supabaseAdmin
-    .from('semesters')
-    .select('id, academic_years!inner(school_id)')
-    .eq('id', semesterId)
-    .eq('academic_year_id', academicYearId)
-    .eq('academic_years.school_id', caller.schoolId)
-    .maybeSingle();
+  if (current.scope === 'school') {
+    const { data: semester } = await supabaseAdmin
+      .from('semesters')
+      .select('id, academic_years!inner(school_id)')
+      .eq('id', semesterId)
+      .eq('academic_year_id', academicYearId)
+      .eq('academic_years.school_id', caller.schoolId)
+      .maybeSingle();
 
-  if (!semester) {
-    return NextResponse.json({ message: 'ไม่พบภาคเรียนในปีการศึกษาที่เลือก' }, { status: 400 });
+    if (!semester) {
+      return NextResponse.json({ message: 'ไม่พบภาคเรียนในปีการศึกษาที่เลือก' }, { status: 400 });
+    }
+  }
+
+  const parsedIndicators = subjectCatalogInputSchema.shape.indicators.safeParse(
+    body.curriculumIndicators ?? []
+  );
+  if (!parsedIndicators.success) {
+    return NextResponse.json(
+      { message: parsedIndicators.error.issues[0]?.message ?? 'ข้อมูลตัวชี้วัดไม่ถูกต้อง' },
+      { status: 400 }
+    );
+  }
+  const curriculumId = typeof body.curriculumId === 'string' ? body.curriculumId : null;
+  if (curriculumId && !(await getVisibleCurriculum(caller, curriculumId))) {
+    return NextResponse.json({ message: 'ไม่พบหลักสูตรที่เลือก' }, { status: 400 });
+  }
+  const parsedOutcomes = subjectCatalogInputSchema.shape.learningOutcomesStructured.safeParse(body.learningOutcomesStructured ?? []);
+  const parsedUnits = subjectCatalogInputSchema.shape.learningUnitsStructured.safeParse(body.learningUnitsStructured ?? []);
+  if (!parsedOutcomes.success || !parsedUnits.success) {
+    return NextResponse.json({ message: 'ข้อมูลผลลัพธ์หรือหน่วยการเรียนรู้ไม่ถูกต้อง' }, { status: 400 });
   }
 
   let updateQuery = supabaseAdmin
     .from('subjects')
     .update({
+      curriculum_id: curriculumId,
       name: name.trim(),
       name_en: typeof nameEn === 'string' && nameEn.trim() ? nameEn.trim() : null,
       code: typeof code === 'string' && code.trim() ? code.trim() : null,
@@ -190,21 +183,21 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         typeof description === 'string' && description.trim() ? description.trim() : null,
       description_en:
         typeof descriptionEn === 'string' && descriptionEn.trim() ? descriptionEn.trim() : null,
-      academic_year_id: academicYearId,
-      semester_id: semesterId,
+      academic_year_id: current.scope === 'school' ? academicYearId : null,
+      semester_id: current.scope === 'school' ? semesterId : null,
       status,
       learning_area: learningArea,
       activity_type: activityType,
       subject_type: subjectType,
       education_stage: educationStage,
       grade_levels: gradeLevels,
+      learning_standard_code: learningStandardCode,
       learning_standards: learningStandards,
       learning_outcomes: learningOutcomes,
       learning_units: learningUnits,
       indicators,
     })
-    .eq('id', id)
-    .eq('school_id', caller.schoolId);
+    .eq('id', id);
 
   // school_admin can edit every subject regardless of status; teachers only
   // reach published subjects plus their own drafts.
@@ -214,7 +207,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const { data, error } = await updateQuery
     .select(
-      'id, code, name, name_en, credits, study_hours, description, description_en, image_url, academic_year_id, semester_id, academic_years(year), semesters(name), learning_area, activity_type, subject_type, education_stage, grade_levels, learning_standards, learning_outcomes, learning_units, indicators, status, created_by, created_at'
+      'id, curriculum_id, code, name, name_en, credits, study_hours, description, description_en, image_url, academic_year_id, semester_id, academic_years(year), semesters(name), learning_area, activity_type, subject_type, education_stage, grade_levels, learning_standard_code, learning_standards, learning_outcomes, learning_units, indicators, scope, status, created_by, created_at, curriculum:curricula(id, school_id, owner_id, code, name, version, curriculum_type, scope, status)'
     )
     .maybeSingle();
 
@@ -227,22 +220,51 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ message: 'ไม่พบรายวิชานี้' }, { status: 404 });
 
-  return NextResponse.json({ subject: data });
+  try {
+    await Promise.all([
+      syncIndicators(id, parsedIndicators.data, current.scope === 'school' ? caller.schoolId : null),
+      syncLearningOutcomes(id, parsedOutcomes.data),
+      syncLearningUnits(id, parsedUnits.data),
+    ]);
+  } catch (indicatorError) {
+    return NextResponse.json(
+      {
+        message:
+          indicatorError instanceof Error ? indicatorError.message : 'บันทึกตัวชี้วัดไม่สำเร็จ',
+      },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    subject: { ...data, scope: current.scope, curriculum_indicators: parsedIndicators.data, learning_outcomes_structured: parsedOutcomes.data, learning_units_structured: parsedUnits.data },
+  });
 }
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
 
-  if (!caller || !(await canManageViaPermission(caller, 'subjects.manage'))) {
+  if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
   const { id } = await params;
-  let deleteQuery = supabaseAdmin
+  const { data: current } = await supabaseAdmin
     .from('subjects')
-    .delete()
+    .select('id, scope, school_id, created_by')
     .eq('id', id)
-    .eq('school_id', caller.schoolId);
+    .or(subjectVisibilityFilter(caller))
+    .maybeSingle();
+  if (!current) return NextResponse.json({ message: 'ไม่พบรายวิชานี้' }, { status: 404 });
+
+  const canDelete =
+    current.scope === 'school'
+      ? current.school_id === caller.schoolId &&
+        (await canManageViaPermission(caller, 'subjects.manage'))
+      : ['personal', 'public'].includes(current.scope) && current.created_by === caller.sub;
+  if (!canDelete) return NextResponse.json({ message: 'ไม่มีสิทธิ์ลบรายวิชานี้' }, { status: 403 });
+
+  let deleteQuery = supabaseAdmin.from('subjects').delete().eq('id', id);
 
   // school_admin can delete every subject regardless of status; teachers
   // only reach published subjects plus their own drafts.
@@ -255,7 +277,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ message: 'ไม่พบรายวิชานี้' }, { status: 404 });
 
-  const folder = `${caller.schoolId}/${id}`;
+  const folder = `${current.school_id ?? caller.sub}/${id}`;
   const { data: files } = await supabaseAdmin.storage.from('subject-images').list(folder);
   if (files?.length) {
     await supabaseAdmin.storage

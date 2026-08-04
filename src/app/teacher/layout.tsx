@@ -38,9 +38,13 @@ export default function Layout({ children }: Props) {
         ? teacherNavData.map((group) => ({
             ...group,
             subheader: group.subheader === 'ภาพรวม' ? 'พื้นที่ส่วนตัว' : group.subheader,
-            items: group.items.map((item) =>
-              item.title === 'นักเรียนของฉัน' ? { ...item, title: 'ผู้เรียน' } : item
-            ),
+            items: group.items
+              .filter((item) => item.title !== 'ตรวจแผนการสอน')
+              .map((item) =>
+                item.title === 'ปีการศึกษาและภาคเรียน'
+                  ? { ...item, featureKey: undefined }
+                  : item
+              ),
           }))
         : teacherNavData;
       const licensedNav = filterDashboardNav(

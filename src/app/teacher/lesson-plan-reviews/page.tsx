@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: `ตรวจแผนการสอ
 
 export default function Page() {
   return (
-    <DepartmentPermissionGuard permission="lesson_plans.review">
+    <DepartmentPermissionGuard permission="lesson_plans.review" schoolWorkspaceOnly>
       <LessonPlanReviewListView />
     </DepartmentPermissionGuard>
   );

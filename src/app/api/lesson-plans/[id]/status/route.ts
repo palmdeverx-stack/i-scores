@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { isPersonalWorkspaceOwner } from 'src/lib/department-permission-access';
 import { ownsLessonPlan, loadLessonPlan, canReviewLessonPlans } from 'src/lib/lesson-plan-access';
 
 // ----------------------------------------------------------------------
@@ -29,6 +30,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const plan = caller ? await loadLessonPlan(id) : null;
   if (!caller?.schoolId || !plan || plan.school_id !== caller.schoolId) {
     return NextResponse.json({ message: 'ไม่พบแผนการสอน' }, { status: 404 });
+  }
+  if (
+    caller.role === 'teacher' &&
+    (await isPersonalWorkspaceOwner(caller.sub, caller.schoolId))
+  ) {
+    return NextResponse.json(
+      { message: 'พื้นที่ส่วนตัวไม่มีขั้นตอนส่งตรวจแผนการสอน' },
+      { status: 403 }
+    );
   }
 
   const body = await request.json();

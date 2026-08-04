@@ -1,6 +1,11 @@
 'use client';
 
-export type SubjectMasterCategory = 'learning_area' | 'subject_type' | 'education_stage';
+export type SubjectMasterCategory =
+  | 'learning_area'
+  | 'subject_type'
+  | 'education_stage'
+  | 'grade_level'
+  | 'activity_type';
 
 export type SubjectMasterItem = {
   id: string;
@@ -8,6 +13,7 @@ export type SubjectMasterItem = {
   code: string;
   name: string;
   name_en: string | null;
+  parent_code: string | null;
   sort_order: number;
   is_active: boolean;
   is_system: boolean;
@@ -21,8 +27,10 @@ async function readResponse(response: Response) {
   return json;
 }
 
-export async function listSubjectMasterItems(): Promise<SubjectMasterItem[]> {
-  const response = await fetch('/api/admin/subject-masters');
+export async function listSubjectMasterItems(
+  source: 'school' | 'global' = 'school'
+): Promise<SubjectMasterItem[]> {
+  const response = await fetch(`/api/admin/subject-masters?source=${source}`);
   const json = await readResponse(response);
   return json.items;
 }

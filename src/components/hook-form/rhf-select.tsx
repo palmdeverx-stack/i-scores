@@ -64,6 +64,7 @@ export function RHFSelect({
           {...field}
           select
           fullWidth
+          value={field.value ?? ''}
           label={withRequiredAsterisk(label)}
           error={!!error}
           helperText={error?.message ?? helperText}

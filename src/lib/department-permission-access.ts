@@ -26,7 +26,7 @@ async function loadMembership(teacherId: string, schoolId: string) {
   return membership;
 }
 
-async function isPersonalWorkspaceOwner(teacherId: string, schoolId: string) {
+export async function isPersonalWorkspaceOwner(teacherId: string, schoolId: string) {
   const [{ data: teacher }, { data: school }] = await Promise.all([
     supabaseAdmin
       .from('app_users')

@@ -8,6 +8,10 @@ import {
   lessonPlanSnapshot,
   canReviewLessonPlans,
 } from 'src/lib/lesson-plan-access';
+import {
+  CurriculumReferenceError,
+  resolveCurriculumReference,
+} from 'src/features/curriculum/server/resolve-curriculum-reference';
 
 import {
   parseLessonPlanPayload,
@@ -77,10 +81,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ไม่พบรายวิชาที่คุณได้รับมอบหมาย' }, { status: 404 });
   }
 
+  const assignmentSubjectId = String(assignment.subject_id);
+  const classroomGrade = (assignment.classrooms as unknown as { grade_level: string | null })
+    ?.grade_level;
+  let curriculum;
+  try {
+    curriculum = await resolveCurriculumReference(
+      caller,
+      {
+        curriculumId: payload.curriculum_id,
+        subjectId: payload.subject_id,
+        unitId: payload.unit_id,
+        gradeLevels: payload.grade_levels.length
+          ? payload.grade_levels
+          : classroomGrade
+            ? [classroomGrade]
+            : [],
+        indicatorIds: payload.indicator_ids,
+        learningOutcomeIds: payload.learning_outcome_ids,
+      },
+      assignmentSubjectId
+    );
+  } catch (curriculumError) {
+    if (curriculumError instanceof CurriculumReferenceError) {
+      return NextResponse.json({ message: curriculumError.message }, { status: 400 });
+    }
+    throw curriculumError;
+  }
+
   const { data: plan, error } = await supabaseAdmin
     .from('lesson_plans')
     .insert({
       ...payload,
+      subject_id: curriculum.subjectId,
+      curriculum_id: curriculum.curriculumId,
+      unit_id: curriculum.unitId,
+      grade_levels: curriculum.gradeLevels,
+      indicator_ids: curriculum.indicatorIds,
+      learning_outcome_ids: curriculum.learningOutcomeIds,
       school_id: caller.schoolId,
       teacher_id: caller.sub,
       saved_tabs:

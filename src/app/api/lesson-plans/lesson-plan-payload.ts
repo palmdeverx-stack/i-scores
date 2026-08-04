@@ -6,6 +6,10 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export const LESSON_PLAN_DRAFT_TAB_COLUMNS: Record<string, string[]> = {
   'lesson-plan-general': [
     'teacher_assignment_id',
+    'subject_id',
+    'curriculum_id',
+    'unit_id',
+    'grade_levels',
     'title',
     'unit_number',
     'unit_name',
@@ -13,7 +17,7 @@ export const LESSON_PLAN_DRAFT_TAB_COLUMNS: Record<string, string[]> = {
     'start_date',
     'end_date',
   ],
-  'lesson-plan-standards': ['learning_standards', 'indicators'],
+  'lesson-plan-standards': ['subject_id', 'indicator_ids', 'learning_outcome_ids', 'learning_standards', 'indicators'],
   'lesson-plan-objectives': ['learning_objectives'],
   'lesson-plan-essential': ['essential_content'],
   'lesson-plan-characteristics': ['desired_characteristics'],
@@ -27,6 +31,17 @@ export const LESSON_PLAN_DRAFT_TAB_COLUMNS: Record<string, string[]> = {
 const text = (value: unknown, max: number) =>
   typeof value === 'string' ? value.trim().slice(0, max) : '';
 const optionalText = (value: unknown, max: number) => text(value, max) || null;
+const stringArray = (value: unknown, max: number) =>
+  Array.isArray(value)
+    ? [
+        ...new Set(
+          value
+            .filter((item): item is string => typeof item === 'string')
+            .map((item) => item.trim())
+            .filter(Boolean)
+        ),
+      ].slice(0, max)
+    : [];
 
 export type LessonPlanPayload = ReturnType<typeof parseLessonPlanPayload>;
 
@@ -43,6 +58,12 @@ export function parseLessonPlanPayload(
   const durationPeriods = Number(value.durationPeriods);
   const startDate = optionalText(value.startDate, 10);
   const endDate = optionalText(value.endDate, 10);
+  const subjectId = text(value.subjectId, 36);
+  const curriculumId = text(value.curriculumId, 36);
+  const unitId = text(value.unitId, 36);
+  const gradeLevels = stringArray(value.gradeLevels, 30);
+  const indicatorIds = stringArray(value.indicatorIds, 300);
+  const learningOutcomeIds = stringArray(value.learningOutcomeIds, 300);
 
   if (
     !UUID_PATTERN.test(teacherAssignmentId) ||
@@ -55,13 +76,24 @@ export function parseLessonPlanPayload(
     durationPeriods > 200 ||
     (startDate && !DATE_PATTERN.test(startDate)) ||
     (endDate && !DATE_PATTERN.test(endDate)) ||
-    (startDate && endDate && startDate > endDate)
+    (startDate && endDate && startDate > endDate) ||
+    (subjectId && !UUID_PATTERN.test(subjectId)) ||
+    (curriculumId && !UUID_PATTERN.test(curriculumId)) ||
+    (unitId && !UUID_PATTERN.test(unitId)) ||
+    indicatorIds.some((id) => !UUID_PATTERN.test(id)) ||
+    learningOutcomeIds.some((id) => !UUID_PATTERN.test(id))
   ) {
     return null;
   }
 
   return {
     teacher_assignment_id: teacherAssignmentId,
+    subject_id: subjectId || null,
+    curriculum_id: curriculumId || null,
+    unit_id: unitId || null,
+    grade_levels: gradeLevels,
+    indicator_ids: indicatorIds,
+    learning_outcome_ids: learningOutcomeIds,
     title,
     unit_number: unitNumber,
     unit_name: unitName,

@@ -1,5 +1,13 @@
 'use client';
 
+import type {
+  Curriculum,
+  CurriculumIndicator,
+  SubjectLearningUnit,
+  CurriculumSubjectScope,
+  SubjectLearningOutcome,
+} from 'src/features/curriculum/types';
+
 // ----------------------------------------------------------------------
 
 // Learning areas and subject types are now school-managed master data — see
@@ -9,6 +17,8 @@ export type LearningArea = string;
 export type SubjectType = string;
 
 export type SubjectStatus = 'draft' | 'published';
+export type SubjectScope = CurriculumSubjectScope;
+export type { CurriculumIndicator };
 
 /** Code of the system-seeded "กิจกรรมพัฒนาผู้เรียน" learning area master item. */
 export const STUDENT_DEVELOPMENT_ACTIVITY_CODE = 'student_development_activity';
@@ -45,6 +55,7 @@ export function activityTypeLabel(value: ActivityType | null) {
 
 export type Subject = {
   id: string;
+  curriculum_id: string | null;
   code: string | null;
   name: string;
   name_en: string | null;
@@ -62,16 +73,25 @@ export type Subject = {
   subject_type: SubjectType | null;
   education_stage: string | null;
   grade_levels: string[];
+  learning_standard_code: string | null;
   learning_standards: string | null;
   learning_outcomes: string | null;
   learning_units: string | null;
   indicators: string | null;
   status: SubjectStatus;
+  scope: SubjectScope;
   created_by: string | null;
   created_at: string;
+  curriculum_indicators: CurriculumIndicator[];
+  curriculum: Curriculum | null;
+  learning_outcomes_structured: SubjectLearningOutcome[];
+  learning_units_structured: SubjectLearningUnit[];
+  can_edit?: boolean;
 };
 
 export type SaveSubjectParams = {
+  curriculumId?: string;
+  scope?: 'school' | 'personal' | 'public';
   code?: string;
   name: string;
   nameEn?: string;
@@ -79,18 +99,37 @@ export type SaveSubjectParams = {
   studyHours: number;
   description?: string;
   descriptionEn?: string;
-  academicYearId: string;
-  semesterId: string;
+  academicYearId?: string;
+  semesterId?: string;
   status?: SubjectStatus;
   learningArea?: LearningArea;
   activityType?: ActivityType;
   subjectType?: SubjectType;
   educationStage?: string;
   gradeLevels?: string[];
+  learningStandardCode?: string;
   learningStandards?: string;
   learningOutcomes?: string;
   learningUnits?: string;
   indicators?: string;
+  curriculumIndicators?: Array<{
+    id?: string;
+    code: string;
+    description: string;
+    learningStandard?: string;
+  }>;
+  learningOutcomesStructured?: Array<{
+    id?: string;
+    code?: string;
+    description: string;
+  }>;
+  learningUnitsStructured?: Array<{
+    id?: string;
+    code?: string;
+    name: string;
+    description?: string;
+    estimatedPeriods?: number;
+  }>;
 };
 
 export async function listSubjects(filters?: {

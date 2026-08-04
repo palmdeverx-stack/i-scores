@@ -1,5 +1,14 @@
 'use client';
 
+import type {
+  Curriculum,
+  CurriculumReference,
+  CurriculumIndicator,
+  SubjectLearningUnit,
+  CurriculumSubjectScope,
+  SubjectLearningOutcome,
+} from 'src/features/curriculum/types';
+
 // ----------------------------------------------------------------------
 
 export type LessonPlanStatus = 'draft' | 'submitted' | 'revision' | 'approved' | 'archived';
@@ -23,6 +32,15 @@ export type LessonPlanAssignment = {
     learning_outcomes?: string | null;
     indicators?: string | null;
     learning_units?: string | null;
+    learning_area?: string | null;
+    grade_levels?: string[];
+    learning_standard_code?: string | null;
+    scope?: CurriculumSubjectScope;
+    curriculum_indicators: CurriculumIndicator[];
+    curriculum_id: string | null;
+    curriculum: Curriculum | null;
+    learning_outcomes_structured: SubjectLearningOutcome[];
+    learning_units_structured: SubjectLearningUnit[];
   } | null;
   classroom: {
     id: string;
@@ -38,6 +56,12 @@ export type LessonPlan = {
   school_id: string;
   teacher_id: string;
   teacher_assignment_id: string;
+  subject_id: string | null;
+  curriculum_id: string | null;
+  unit_id: string | null;
+  grade_levels: string[];
+  indicator_ids: string[];
+  learning_outcome_ids: string[];
   copied_from_id: string | null;
   title: string;
   unit_number: number;
@@ -82,7 +106,7 @@ export type LessonPlan = {
   }>;
 };
 
-export type LessonPlanInput = {
+export type LessonPlanInput = CurriculumReference & {
   teacherAssignmentId: string;
   title: string;
   unitNumber: number;

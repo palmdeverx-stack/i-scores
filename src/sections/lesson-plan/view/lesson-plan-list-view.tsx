@@ -29,6 +29,8 @@ import { RouterLink } from 'src/routes/components';
 import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import {
   copyLessonPlan,
   listLessonPlans,
@@ -67,14 +69,14 @@ function assignmentLabel(plan: LessonPlan) {
     .join(' · ');
 }
 
-function teacherLabel(plan: LessonPlan) {
-  return (
-    [plan.teacher?.first_name, plan.teacher?.last_name].filter(Boolean).join(' ') || 'ครูผู้สอน'
-  );
-}
-
 function toPreviewInput(plan: LessonPlan): LessonPlanInput {
   return {
+    curriculumId: plan.curriculum_id,
+    subjectId: plan.subject_id,
+    unitId: plan.unit_id,
+    gradeLevels: plan.grade_levels ?? [],
+    indicatorIds: plan.indicator_ids ?? [],
+    learningOutcomeIds: plan.learning_outcome_ids ?? [],
     title: plan.title,
     unitName: plan.unit_name,
     unitNumber: plan.unit_number,
@@ -96,6 +98,8 @@ function toPreviewInput(plan: LessonPlan): LessonPlanInput {
 }
 
 export function LessonPlanListView() {
+  const { user } = useAuthContext();
+  const isPersonalWorkspace = user?.is_personal_workspace === true;
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<'all' | LessonPlanStatus>('all');
   const [search, setSearch] = useState('');
@@ -246,7 +250,7 @@ export function LessonPlanListView() {
             display: 'grid',
             gridTemplateColumns: {
               xs: '1fr',
-              sm: 'repeat(2, minmax(0, 1fr))',
+              sm: 'repeat(3, minmax(0, 1fr))',
               xl: 'repeat(4, minmax(0, 1fr))',
             },
           }}
@@ -453,7 +457,7 @@ export function LessonPlanListView() {
                       แก้ไข
                     </Button>
                   ) : null}
-                  {editable ? (
+                  {editable && !isPersonalWorkspace ? (
                     <Button size="small" variant="contained" onClick={() => setSubmitting(plan)}>
                       ส่งตรวจ
                     </Button>
@@ -495,7 +499,7 @@ export function LessonPlanListView() {
       ) : null}
 
       <Dialog
-        open={Boolean(submitting)}
+        open={!isPersonalWorkspace && Boolean(submitting)}
         onClose={() => setSubmitting(null)}
         fullWidth
         maxWidth="xs"

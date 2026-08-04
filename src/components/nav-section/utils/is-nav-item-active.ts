@@ -26,7 +26,13 @@ export function isNavItemActive(
 }
 
 export function isNavDataActive(pathname: string, item: NavItemDataProps): boolean {
+  const isExcluded = item.activePathExclusions?.some((excludedPath) => {
+    const cleanExcludedPath = excludedPath.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+    return pathname === cleanExcludedPath || pathname.startsWith(`${cleanExcludedPath}/`);
+  });
+
   if (
+    !isExcluded &&
     isNavItemActive(pathname, item.path, {
       deepMatch: item.deepMatch,
       hasChildren: !!item.children,

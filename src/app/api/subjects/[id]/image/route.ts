@@ -11,13 +11,31 @@ const BUCKET = 'subject-images';
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_SIZE = 5 * 1024 * 1024;
 
-async function getOwnedSubject(id: string, schoolId: string | null) {
-  return supabaseAdmin
+async function getEditableSubject(
+  id: string,
+  caller: { sub: string; role: 'school_admin' | 'teacher'; schoolId: string | null }
+) {
+  const { data: subject } = await supabaseAdmin
     .from('subjects')
-    .select('id')
+    .select('id, scope, school_id, created_by')
     .eq('id', id)
-    .eq('school_id', schoolId)
     .maybeSingle();
+  if (!subject) return null;
+
+  if (['personal', 'public'].includes(subject.scope)) {
+    return subject.created_by === caller.sub ? subject : null;
+  }
+  if (subject.scope !== 'school' || subject.school_id !== caller.schoolId) return null;
+  if (caller.role === 'school_admin' || subject.created_by === caller.sub) return subject;
+
+  const { data: assignment } = await supabaseAdmin
+    .from('teacher_assignments')
+    .select('id')
+    .eq('teacher_id', caller.sub)
+    .eq('subject_id', id)
+    .limit(1)
+    .maybeSingle();
+  return assignment ? subject : null;
 }
 
 async function removeStoredImages(folder: string) {
@@ -34,26 +52,13 @@ async function removeStoredImages(folder: string) {
 
 export async function POST(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
-  if (!caller?.schoolId) {
+  if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
   const { id } = await params;
-  const { data: subject } = await getOwnedSubject(id, caller.schoolId);
+  const subject = await getEditableSubject(id, caller);
   if (!subject) return NextResponse.json({ message: 'ไม่พบรายวิชานี้' }, { status: 404 });
-
-  if (caller.role === 'teacher') {
-    const { data: assignment } = await supabaseAdmin
-      .from('teacher_assignments')
-      .select('id')
-      .eq('teacher_id', caller.sub)
-      .eq('subject_id', id)
-      .limit(1)
-      .maybeSingle();
-    if (!assignment) {
-      return NextResponse.json({ message: 'แก้ไขได้เฉพาะรูปของวิชาที่คุณสอน' }, { status: 403 });
-    }
-  }
 
   const formData = await request.formData();
   const file = formData.get('file');
@@ -68,7 +73,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไฟล์ต้องมีขนาดไม่เกิน 5MB' }, { status: 400 });
   }
 
-  const folder = `${caller.schoolId}/${id}`;
+  const folder = `${subject.school_id ?? caller.sub}/${id}`;
   const removeError = await removeStoredImages(folder);
   if (removeError) return NextResponse.json({ message: removeError.message }, { status: 500 });
 
@@ -88,7 +93,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     .from('subjects')
     .update({ image_url: `${publicUrl}?v=${Date.now()}` })
     .eq('id', id)
-    .eq('school_id', caller.schoolId)
     .select(
       'id, code, name, name_en, credits, description, description_en, image_url, academic_year_id, semester_id, created_at'
     )
@@ -100,35 +104,21 @@ export async function POST(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
-  if (!caller?.schoolId) {
+  if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
   const { id } = await params;
-  const { data: subject } = await getOwnedSubject(id, caller.schoolId);
+  const subject = await getEditableSubject(id, caller);
   if (!subject) return NextResponse.json({ message: 'ไม่พบรายวิชานี้' }, { status: 404 });
 
-  if (caller.role === 'teacher') {
-    const { data: assignment } = await supabaseAdmin
-      .from('teacher_assignments')
-      .select('id')
-      .eq('teacher_id', caller.sub)
-      .eq('subject_id', id)
-      .limit(1)
-      .maybeSingle();
-    if (!assignment) {
-      return NextResponse.json({ message: 'แก้ไขได้เฉพาะรูปของวิชาที่คุณสอน' }, { status: 403 });
-    }
-  }
-
-  const removeError = await removeStoredImages(`${caller.schoolId}/${id}`);
+  const removeError = await removeStoredImages(`${subject.school_id ?? caller.sub}/${id}`);
   if (removeError) return NextResponse.json({ message: removeError.message }, { status: 500 });
 
   const { data, error } = await supabaseAdmin
     .from('subjects')
     .update({ image_url: null })
     .eq('id', id)
-    .eq('school_id', caller.schoolId)
     .select(
       'id, code, name, name_en, credits, description, description_en, image_url, academic_year_id, semester_id, created_at'
     )

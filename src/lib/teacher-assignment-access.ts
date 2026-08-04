@@ -12,7 +12,8 @@ export async function loadTeacherAssignment(id: string) {
     .select(
       `id, teacher_id, classroom_id, subject_id, semester_id,
        classrooms(school_id, name, grade_level, academic_years(year)),
-       subjects(name, code, credits, image_url),
+       subjects(id, name, code, credits, image_url, grade_levels,
+         curriculum_indicators(id, subject_id, code, description, learning_standard)),
        teacher:app_users!teacher_assignments_teacher_id_fkey(username, first_name, last_name),
        semesters(name, is_active)`
     )

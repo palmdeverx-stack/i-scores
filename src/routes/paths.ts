@@ -66,6 +66,8 @@ export const paths = {
       root: `${ROOTS.TEACHER}/lesson-plans`,
       new: `${ROOTS.TEACHER}/lesson-plans/new`,
       templates: `${ROOTS.TEACHER}/lesson-plans/templates`,
+      templateNew: `${ROOTS.TEACHER}/lesson-plans/templates/new`,
+      templateEdit: (id: string) => `${ROOTS.TEACHER}/lesson-plans/templates/${id}/edit`,
       edit: (id: string) => `${ROOTS.TEACHER}/lesson-plans/${id}/edit`,
     },
     lessonPlanReviews: `${ROOTS.TEACHER}/lesson-plan-reviews`,
@@ -154,6 +156,8 @@ export const paths = {
       learningAreas: `${ROOTS.ADMIN}/master-data/learning-areas`,
       subjectTypes: `${ROOTS.ADMIN}/master-data/subject-types`,
       educationStages: `${ROOTS.ADMIN}/master-data/education-stages`,
+      gradeLevels: `${ROOTS.ADMIN}/master-data/grade-levels`,
+      activityTypes: `${ROOTS.ADMIN}/master-data/activity-types`,
     },
     user: {
       root: `${ROOTS.ADMIN}/user`,

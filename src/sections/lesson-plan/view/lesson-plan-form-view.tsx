@@ -9,9 +9,9 @@ import dayjs from 'dayjs';
 import dynamic from 'next/dynamic';
 import { useRef, useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch, useFieldArray } from 'react-hook-form';
 import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, useWatch, Controller, useFieldArray } from 'react-hook-form';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -19,14 +19,19 @@ import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import Autocomplete from '@mui/material/Autocomplete';
 import LinearProgress from '@mui/material/LinearProgress';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
+
+import { curriculumReferenceShape } from 'src/features/curriculum/schema';
+import { LessonPlanTemplatePickerDialog } from 'src/features/templates/components/lesson-plan-template-picker-dialog';
 
 import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
@@ -80,6 +85,7 @@ const indicatorsSchema = z
 
 const LessonPlanSchema = z
   .object({
+    ...curriculumReferenceShape,
     teacherAssignmentId: z.string().uuid({ error: 'กรุณาเลือกรายวิชาและห้องเรียน' }),
     title: z
       .string()
@@ -216,7 +222,7 @@ const TAB_FORM_FIELDS: Record<string, Array<keyof LessonPlanFormValues>> = {
     'startDate',
     'endDate',
   ],
-  'lesson-plan-standards': ['learningStandards', 'indicators'],
+  'lesson-plan-standards': ['subjectId', 'indicatorIds', 'learningStandards', 'indicators'],
   'lesson-plan-objectives': ['learningObjectives'],
   'lesson-plan-essential': ['essentialContent'],
   'lesson-plan-characteristics': ['desiredCharacteristics'],
@@ -229,6 +235,15 @@ const TAB_FORM_FIELDS: Record<string, Array<keyof LessonPlanFormValues>> = {
 
 const DEFAULT_TAB_ORDER = Object.keys(TAB_FORM_FIELDS);
 const TAB_ORDER_STORAGE_KEY = 'lesson-plan-tab-order';
+
+const TAB_TEMPLATE_TYPES = {
+  'lesson-plan-objectives': 'learning_objective',
+  'lesson-plan-essential': 'essential_content',
+  'lesson-plan-questions': 'question',
+  'lesson-plan-activities': 'learning_activity',
+  'lesson-plan-media': 'media',
+  'lesson-plan-assessment': 'assessment',
+} as const;
 
 type LessonPlanNavigationSection = {
   id: string;
@@ -335,6 +350,12 @@ function DraggableLessonPlanTab({
 }
 
 const EMPTY_FORM: LessonPlanFormValues = {
+  curriculumId: null,
+  subjectId: null,
+  unitId: null,
+  gradeLevels: [],
+  indicatorIds: [],
+  learningOutcomeIds: [],
   teacherAssignmentId: '',
   title: '',
   unitNumber: 1,
@@ -356,6 +377,15 @@ const EMPTY_FORM: LessonPlanFormValues = {
 
 function plainText(value?: string | null) {
   return richTextToPlainText(value);
+}
+
+function subjectLearningStandardText(subject: {
+  learning_standard_code?: string | null;
+  learning_standards?: string | null;
+}) {
+  return [subject.learning_standard_code?.trim(), plainText(subject.learning_standards)]
+    .filter(Boolean)
+    .join(' ');
 }
 
 function parseLearningMedia(value?: string | null): LearningMediaItem[] {
@@ -877,6 +907,7 @@ export function LessonPlanFormView({
   const initializedTemplateId = useRef<string | null>(null);
   const [activeSection, setActiveSection] = useState('lesson-plan-general');
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [tabOrder, setTabOrder] = useState(DEFAULT_TAB_ORDER);
 
   useEffect(() => {
@@ -923,6 +954,7 @@ export function LessonPlanFormView({
   });
   const startDate = useWatch({ control, name: 'startDate' });
   const selectedAssignmentId = useWatch({ control, name: 'teacherAssignmentId' });
+  const selectedIndicatorIds = useWatch({ control, name: 'indicatorIds' });
   const learningObjectives = useWatch({ control, name: 'learningObjectives' });
   const navigationValues = useWatch({ control });
 
@@ -966,6 +998,12 @@ export function LessonPlanFormView({
     if (!plan || initializedPlanId.current === plan.id) return;
 
     reset({
+      curriculumId: plan.curriculum_id,
+      subjectId: plan.subject_id,
+      unitId: plan.unit_id,
+      gradeLevels: plan.grade_levels ?? [],
+      indicatorIds: plan.indicator_ids ?? [],
+      learningOutcomeIds: plan.learning_outcome_ids ?? [],
       teacherAssignmentId: plan.teacher_assignment_id,
       title: plan.title,
       unitNumber: plan.unit_number,
@@ -994,6 +1032,12 @@ export function LessonPlanFormView({
 
     reset({
       ...EMPTY_FORM,
+      curriculumId: template.curriculum_id,
+      subjectId: template.subject_id,
+      unitId: template.unit_id,
+      gradeLevels: template.grade_levels ?? [],
+      indicatorIds: template.indicator_ids ?? [],
+      learningOutcomeIds: template.learning_outcome_ids ?? [],
       title: `${template.title} (จากเทมเพลต)`.slice(0, 200),
       unitNumber: template.unit_number,
       unitName: template.unit_name,
@@ -1065,23 +1109,47 @@ export function LessonPlanFormView({
   );
 
   const applyCurriculum = (assignmentId: string) => {
-    const subject = optionsQuery.data?.find((option) => option.id === assignmentId)?.subject;
+    const assignment = optionsQuery.data?.find((option) => option.id === assignmentId);
+    const subject = assignment?.subject;
     if (!subject) return;
 
+    const linkedIndicators = subject.curriculum_indicators ?? [];
+    const gradeLevel = assignment?.classroom?.grade_level;
+    setValue('curriculumId', subject.curriculum_id, { shouldDirty: true });
+    setValue('subjectId', subject.id, { shouldDirty: true });
+    setValue('unitId', null, { shouldDirty: true });
+    setValue('learningOutcomeIds', [], { shouldDirty: true });
+    setValue('gradeLevels', gradeLevel ? [gradeLevel] : subject.grade_levels ?? [], {
+      shouldDirty: true,
+    });
+    setValue('indicatorIds', linkedIndicators.map((indicator) => indicator.id), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    const linkedStandards = [
+      ...new Set(
+        linkedIndicators
+          .map((indicator) => indicator.learning_standard?.trim())
+          .filter((value): value is string => Boolean(value))
+      ),
+    ];
     setValue(
       'learningStandards',
-      parseLearningStandardRows(plainText(subject.learning_standards)),
+      parseLearningStandardRows(
+        linkedStandards.length ? linkedStandards.join('\n') : subjectLearningStandardText(subject)
+      ),
       {
         shouldDirty: true,
       }
     );
-    setValue('indicators', parseIndicatorFormRows(plainText(subject.indicators)), {
-      shouldDirty: true,
-    });
-    setValue('learningObjectives', parseObjectiveFormGroups(plainText(subject.learning_outcomes)), {
-      shouldDirty: true,
-    });
-    setValue('essentialContent', subject.description ?? '', { shouldDirty: true });
+    setValue(
+      'indicators',
+      linkedIndicators.length
+        ? linkedIndicators.map(({ code, description }) => ({ code, description }))
+        : parseIndicatorFormRows(plainText(subject.indicators)),
+      { shouldDirty: true }
+    );
   };
 
   const selectAssignment = (assignmentId: string) => {
@@ -1089,15 +1157,61 @@ export function LessonPlanFormView({
     const subject = assignment?.subject;
 
     setValue('teacherAssignmentId', assignmentId, { shouldDirty: true, shouldValidate: true });
+    setValue('subjectId', subject?.id ?? null, { shouldDirty: true });
+    setValue('curriculumId', subject?.curriculum_id ?? null, { shouldDirty: true });
+    setValue(
+      'gradeLevels',
+      assignment?.classroom?.grade_level
+        ? [assignment.classroom.grade_level]
+        : subject?.grade_levels ?? [],
+      { shouldDirty: true }
+    );
     if (!getValues('title')) {
       setValue('title', subject ? `แผนการสอน ${subject.name}` : '', { shouldDirty: true });
     }
-    if (!getValues('unitName')) {
-      setValue('unitName', plainText(subject?.learning_units).split('\n')[0] || '', {
-        shouldDirty: true,
-      });
-    }
     if (!templateId) applyCurriculum(assignmentId);
+  };
+
+  const selectUnit = (unitId: string) => {
+    const unit = selectedAssignment?.subject?.learning_units_structured.find(
+      (item) => item.id === unitId
+    );
+    setValue('unitId', unit?.id ?? null, { shouldDirty: true });
+    if (!unit) return;
+    setValue('unitName', unit.name, { shouldDirty: true, shouldValidate: true });
+    if (unit.estimated_periods) {
+      setValue('durationPeriods', unit.estimated_periods, { shouldDirty: true });
+    }
+  };
+
+  const selectIndicators = (indicatorIds: string[]) => {
+    const subject = selectedAssignment?.subject;
+    if (!subject) return;
+    const selected = subject.curriculum_indicators.filter((indicator) =>
+      indicatorIds.includes(indicator.id)
+    );
+    setValue('indicatorIds', indicatorIds, { shouldDirty: true, shouldValidate: true });
+    setValue(
+      'indicators',
+      selected.length
+        ? selected.map(({ code, description }) => ({ code, description }))
+        : [{ code: '', description: '' }],
+      { shouldDirty: true, shouldValidate: true }
+    );
+    const standards = [
+      ...new Set(
+        selected
+          .map((indicator) => indicator.learning_standard?.trim())
+          .filter((value): value is string => Boolean(value))
+      ),
+    ];
+    setValue(
+      'learningStandards',
+      parseLearningStandardRows(
+        standards.length ? standards.join('\n') : subjectLearningStandardText(subject)
+      ),
+      { shouldDirty: true, shouldValidate: true }
+    );
   };
 
   const isEditable = !planQuery.data || ['draft', 'revision'].includes(planQuery.data.status);
@@ -1406,6 +1520,23 @@ export function LessonPlanFormView({
                     </MenuItem>
                   ))}
                 </Field.Select>
+                {selectedAssignment?.subject?.learning_units_structured.length ? (
+                  <Field.Select
+                    name="unitId"
+                    label="หน่วยการเรียนรู้จากรายวิชา"
+                    disabled={!isEditable}
+                    onChange={(event) => selectUnit(event.target.value)}
+                    helperText="เลือกแล้วระบบจะเติมชื่อหน่วยและจำนวนคาบตั้งต้นให้"
+                    sx={{ gridColumn: { sm: '1 / -1' } }}
+                  >
+                    <MenuItem value="">กำหนดหน่วยเฉพาะแผนนี้</MenuItem>
+                    {selectedAssignment.subject.learning_units_structured.map((unit) => (
+                      <MenuItem key={unit.id} value={unit.id}>
+                        {unit.code ? `${unit.code} · ` : ''}{unit.name}
+                      </MenuItem>
+                    ))}
+                  </Field.Select>
+                ) : null}
                 <Field.Text
                   required
                   disabled={!isEditable}
@@ -1506,14 +1637,88 @@ export function LessonPlanFormView({
                     ดึงข้อมูลล่าสุด
                   </Button>
                 </Box>
+                {selectedAssignment?.subject?.curriculum_indicators.length ? (
+                  <Controller
+                    name="indicatorIds"
+                    control={control}
+                    render={({ fieldState }) => (
+                      <Autocomplete
+                        multiple
+                        disabled={!isEditable}
+                        options={selectedAssignment.subject!.curriculum_indicators}
+                        value={selectedAssignment.subject!.curriculum_indicators.filter(
+                          (indicator) => selectedIndicatorIds.includes(indicator.id)
+                        )}
+                        getOptionLabel={(option) => `${option.code} · ${option.description}`}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        onChange={(_, value) => {
+                          selectIndicators(value.map((indicator) => indicator.id));
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            required
+                            label="ตัวชี้วัดจากคลังรายวิชา"
+                            error={Boolean(fieldState.error)}
+                            helperText={
+                              fieldState.error?.message ??
+                              'เลือกจาก object เดียวกับหน้า Template และหน้ารายวิชา'
+                            }
+                          />
+                        )}
+                      />
+                    )}
+                  />
+                ) : (
+                  <Alert severity="info">
+                    รายวิชานี้ยังไม่มีตัวชี้วัดแบบโครงสร้าง จึงใช้ข้อมูลข้อความเดิมได้ชั่วคราว
+                  </Alert>
+                )}
+                {selectedAssignment?.subject?.learning_outcomes_structured.length ? (
+                  <Controller
+                    name="learningOutcomeIds"
+                    control={control}
+                    render={({ field }) => (
+                      <Autocomplete
+                        multiple
+                        disabled={!isEditable}
+                        options={selectedAssignment.subject!.learning_outcomes_structured}
+                        value={selectedAssignment.subject!.learning_outcomes_structured.filter(
+                          (item) => field.value.includes(item.id)
+                        )}
+                        getOptionLabel={(option) =>
+                          `${option.code ? `${option.code} · ` : ''}${option.description}`
+                        }
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        onChange={(_, value) => field.onChange(value.map((item) => item.id))}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="ผลลัพธ์การเรียนรู้รายวิชาที่ใช้ในแผน"
+                            helperText="เป็น reference จากรายวิชา ไม่ถูกนำไปเขียนทับจุดประสงค์ของแผน"
+                          />
+                        )}
+                      />
+                    )}
+                  />
+                ) : null}
                 <DynamicCurriculumField
                   label="มาตรฐานการเรียนรู้"
                   addLabel="เพิ่มมาตรฐานการเรียนรู้"
-                  disabled={!isEditable}
+                  disabled={
+                    !isEditable ||
+                    Boolean(selectedAssignment?.subject?.curriculum_indicators.length)
+                  }
                   control={control}
                 />
                 <Divider />
-                <DynamicIndicatorsField disabled={!isEditable} control={control} />
+                <DynamicIndicatorsField
+                  disabled={
+                    !isEditable ||
+                    Boolean(selectedAssignment?.subject?.curriculum_indicators.length)
+                  }
+                  control={control}
+                />
               </Card>
 
               <Card
@@ -1859,6 +2064,19 @@ export function LessonPlanFormView({
               </Typography>
             </Box>
             <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              {lessonPlanId && activeSection in TAB_TEMPLATE_TYPES ? (
+                <Button
+                  type="button"
+                  color="primary"
+                  size="large"
+                  variant="outlined"
+                  disabled={!isEditable}
+                  startIcon={<RemixIcon icon="solar:documents-linear" />}
+                  onClick={() => setTemplatePickerOpen(true)}
+                >
+                  ใช้ Template
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 color="inherit"
@@ -1902,6 +2120,19 @@ export function LessonPlanFormView({
           plan={toPayload(getValues())}
           assignment={selectedAssignment}
           version={planQuery.data?.version_number ?? 1}
+        />
+      ) : null}
+
+      {lessonPlanId && activeSection in TAB_TEMPLATE_TYPES ? (
+        <LessonPlanTemplatePickerDialog
+          open={templatePickerOpen}
+          onClose={() => setTemplatePickerOpen(false)}
+          lessonPlanId={lessonPlanId}
+          templateType={TAB_TEMPLATE_TYPES[activeSection as keyof typeof TAB_TEMPLATE_TYPES]}
+          onApplied={async () => {
+            initializedPlanId.current = null;
+            await planQuery.refetch();
+          }}
         />
       ) : null}
     </Container>

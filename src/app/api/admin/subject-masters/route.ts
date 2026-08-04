@@ -3,11 +3,16 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { canViewViaPermission } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
-const CATEGORIES = ['learning_area', 'subject_type', 'education_stage'] as const;
+const CATEGORIES = [
+  'learning_area',
+  'subject_type',
+  'education_stage',
+  'grade_level',
+  'activity_type',
+] as const;
 
 function isCategory(value: unknown): value is (typeof CATEGORIES)[number] {
   return typeof value === 'string' && CATEGORIES.includes(value as (typeof CATEGORIES)[number]);
@@ -15,22 +20,26 @@ function isCategory(value: unknown): value is (typeof CATEGORIES)[number] {
 
 export async function GET(request: Request) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
-  if (
-    !caller?.schoolId ||
-    (caller.role === 'teacher' && !(await canViewViaPermission(caller, 'subjects.manage')))
-  ) {
+  // Classification masters are reference data required by every teacher who can
+  // open the subject form. Mutation remains restricted to school administrators.
+  if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const source = new URL(request.url).searchParams.get('source');
+  const useSchoolMaster = source !== 'global' && Boolean(caller.schoolId);
+  let query = supabaseAdmin
     .from('subject_master_items')
     .select(
-      'id, category, code, name, name_en, sort_order, is_active, is_system, created_at, updated_at'
+      'id, category, code, name, name_en, parent_code, sort_order, is_active, is_system, created_at, updated_at'
     )
-    .eq('school_id', caller.schoolId)
     .order('category')
     .order('sort_order')
     .order('name');
+  query = useSchoolMaster
+    ? query.eq('school_id', caller.schoolId!)
+    : query.is('school_id', null);
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
@@ -64,12 +73,16 @@ export async function POST(request: Request) {
       code,
       name,
       name_en: nameEn || null,
+      parent_code:
+        typeof body?.parentCode === 'string' && body.parentCode.trim()
+          ? body.parentCode.trim().slice(0, 100)
+          : null,
       sort_order: sortOrder,
       is_active: true,
       is_system: false,
     })
     .select(
-      'id, category, code, name, name_en, sort_order, is_active, is_system, created_at, updated_at'
+      'id, category, code, name, name_en, parent_code, sort_order, is_active, is_system, created_at, updated_at'
     )
     .single();
 

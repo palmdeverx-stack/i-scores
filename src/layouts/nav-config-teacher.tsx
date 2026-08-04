@@ -70,30 +70,31 @@ export const navData: NavSectionProps['data'] = [
         featureKey: 'admin.school_profile',
       },
       {
-        title: 'สร้างรายวิชา',
-        path: paths.teacher.subjectNew,
-        icon: ICONS.subject,
-        featureKey: 'teacher.manage_subjects',
-      },
-      {
         title: 'สร้างกลุ่มเรียน',
         path: paths.teacher.classroomNew,
         icon: ICONS.classroom,
         featureKey: 'teacher.manage_classrooms',
       },
       {
-        title: 'เพิ่มผู้เรียน',
-        path: paths.teacher.enrollmentNew,
-        icon: ICONS.studentAdd,
-        featureKey: 'teacher.manage_enrollments',
-      },
-      {
         title: 'รายวิชา',
         path: paths.teacher.assignments,
         icon: ICONS.assignments,
         deepMatch: true,
-        featureKey: 'teacher.assignments',
-        requiresDepartmentPermission: 'teaching.assignments',
+        children: [
+          {
+            title: 'รายวิชาที่สอน',
+            path: paths.teacher.assignments,
+            icon: ICONS.assignments,
+            featureKey: 'teacher.assignments',
+            requiresDepartmentPermission: 'teaching.assignments',
+          },
+          {
+            title: 'สร้างรายวิชา',
+            path: paths.teacher.subjectNew,
+            icon: ICONS.subject,
+            featureKey: 'teacher.manage_subjects',
+          },
+        ],
       },
       {
         title: 'แผนการสอน',
@@ -106,6 +107,7 @@ export const navData: NavSectionProps['data'] = [
             title: 'แผนการสอนของฉัน',
             path: paths.teacher.lessonPlans.root,
             icon: ICONS.documents,
+            activePathExclusions: [paths.teacher.lessonPlans.templates],
           },
           {
             title: 'เทมเพลตแผนการสอน',
@@ -115,12 +117,25 @@ export const navData: NavSectionProps['data'] = [
         ],
       },
       {
-        title: 'นักเรียนของฉัน',
+        title: 'ผู้เรียน',
         path: paths.teacher.students,
         icon: ICONS.students,
         deepMatch: true,
-        featureKey: 'teacher.students',
-        requiresDepartmentPermission: 'teaching.students',
+        children: [
+          {
+            title: 'รายชื่อผู้เรียน',
+            path: paths.teacher.students,
+            icon: ICONS.students,
+            featureKey: 'teacher.students',
+            requiresDepartmentPermission: 'teaching.students',
+          },
+          {
+            title: 'เพิ่มผู้เรียน',
+            path: paths.teacher.enrollmentNew,
+            icon: ICONS.studentAdd,
+            featureKey: 'teacher.manage_enrollments',
+          },
+        ],
       },
       {
         title: 'สแกนเช็คชื่อ',

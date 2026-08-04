@@ -50,6 +50,13 @@ import {
 
 // ----------------------------------------------------------------------
 
+const SUBJECT_SCOPE_LABELS = {
+  system: 'ระบบ',
+  personal: 'ส่วนตัว',
+  school: 'โรงเรียน',
+  public: 'สาธารณะ',
+} as const;
+
 export function SubjectListView({
   basePath = paths.admin.subject.root,
 }: { basePath?: string } = {}) {
@@ -61,6 +68,8 @@ export function SubjectListView({
   const [areaFilter, setAreaFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
+  const createPath =
+    basePath === paths.teacher.departmentSubject ? paths.teacher.subjectNew : `${basePath}/new`;
 
   const {
     data: allSubjects = [],
@@ -87,7 +96,7 @@ export function SubjectListView({
   });
   const { data: masterItems = [] } = useQuery({
     queryKey: ['subject-master-items'],
-    queryFn: listSubjectMasterItems,
+    queryFn: () => listSubjectMasterItems('school'),
   });
   const learningAreas = masterItems.filter((item) => item.category === 'learning_area');
   const learningAreaLabel = (code: string | null) =>
@@ -121,11 +130,14 @@ export function SubjectListView({
 
   const duplicateMutation = useMutation({
     mutationFn: async (subject: Subject) => {
-      if (!subject.academic_year_id || !subject.semester_id) {
+      if (subject.scope === 'school' && (!subject.academic_year_id || !subject.semester_id)) {
         throw new Error('ไม่สามารถคัดลอกวิชาที่ยังไม่กำหนดปีการศึกษาหรือภาคเรียนได้');
       }
 
       const newSubject = await createSubject({
+        curriculumId: subject.curriculum_id ?? undefined,
+        scope:
+          subject.scope === 'system' || subject.scope === 'public' ? 'personal' : subject.scope,
         code: subject.code
           ? `${subject.code}-COPY`
           : `SUBJ-${Date.now().toString(36).toUpperCase()}`,
@@ -135,17 +147,33 @@ export function SubjectListView({
         studyHours: subject.study_hours,
         description: subject.description ?? undefined,
         descriptionEn: subject.description_en ?? undefined,
-        academicYearId: subject.academic_year_id,
-        semesterId: subject.semester_id,
+        academicYearId: subject.academic_year_id ?? undefined,
+        semesterId: subject.semester_id ?? undefined,
         learningArea: subject.learning_area ?? undefined,
         activityType: subject.activity_type ?? undefined,
         subjectType: subject.subject_type ?? undefined,
         educationStage: subject.education_stage ?? undefined,
         gradeLevels: subject.grade_levels,
+        learningStandardCode: subject.learning_standard_code ?? undefined,
         learningStandards: subject.learning_standards ?? undefined,
         learningOutcomes: subject.learning_outcomes ?? undefined,
         learningUnits: subject.learning_units ?? undefined,
         indicators: subject.indicators ?? undefined,
+        curriculumIndicators: subject.curriculum_indicators.map((indicator) => ({
+          code: indicator.code,
+          description: indicator.description,
+          learningStandard: indicator.learning_standard ?? undefined,
+        })),
+        learningOutcomesStructured: subject.learning_outcomes_structured.map((item) => ({
+          code: item.code ?? undefined,
+          description: item.description,
+        })),
+        learningUnitsStructured: subject.learning_units_structured.map((item) => ({
+          code: item.code ?? undefined,
+          name: item.name,
+          description: item.description ?? undefined,
+          estimatedPeriods: item.estimated_periods ?? undefined,
+        })),
       });
 
       if (!subject.image_url) return newSubject;
@@ -188,15 +216,15 @@ export function SubjectListView({
       >
         <Box>
           <Typography component="h1" variant="h3">
-            วิชาและหลักสูตร
+            รายวิชาและหลักสูตร
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-            จัดการข้อมูล หน่วยกิต คำอธิบาย และรูปภาพรายวิชาที่เปิดสอนในโรงเรียน
+            จัดการรายวิชาของโรงเรียน รายวิชาส่วนตัว และรายวิชาสาธารณะในที่เดียว
           </Typography>
         </Box>
         <Button
           component={RouterLink}
-          href={`${basePath}/new`}
+          href={createPath}
           variant="contained"
           startIcon={<RemixIcon icon="mingcute:add-line" />}
         >
@@ -367,6 +395,9 @@ export function SubjectListView({
                       <Box sx={{ minWidth: 0 }}>
                         <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
                           <Typography variant="subtitle2">{subject.name}</Typography>
+                          <Label variant="soft" color="secondary">
+                            {SUBJECT_SCOPE_LABELS[subject.scope]}
+                          </Label>
                           {subject.name_en && (
                             <Typography
                               variant="body2"
@@ -440,8 +471,11 @@ export function SubjectListView({
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {subject.semesters?.name ?? 'ยังไม่กำหนดภาคเรียน'} /{' '}
-                      {subject.academic_years?.year ?? 'ยังไม่กำหนดปี'}
+                      {subject.scope === 'school'
+                        ? `${subject.semesters?.name ?? 'ยังไม่กำหนดภาคเรียน'} / ${
+                            subject.academic_years?.year ?? 'ยังไม่กำหนดปี'
+                          }`
+                        : 'ไม่ผูกภาคเรียน'}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -461,16 +495,18 @@ export function SubjectListView({
                     </Label>
                   </TableCell>
                   <TableCell align="right">
-                    <Tooltip title="แก้ไข">
-                      <IconButton
-                        size="small"
-                        component={RouterLink}
-                        href={`${basePath}/${subject.id}/edit`}
-                        aria-label={`แก้ไขวิชา ${subject.name}`}
-                      >
-                        <RemixIcon icon="solar:pen-bold" width={18} />
-                      </IconButton>
-                    </Tooltip>
+                    {subject.can_edit ? (
+                      <Tooltip title="แก้ไข">
+                        <IconButton
+                          size="small"
+                          component={RouterLink}
+                          href={`${basePath}/${subject.id}/edit`}
+                          aria-label={`แก้ไขวิชา ${subject.name}`}
+                        >
+                          <RemixIcon icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                      </Tooltip>
+                    ) : null}
                     <Tooltip title="คัดลอกวิชา">
                       <IconButton
                         size="small"
@@ -481,19 +517,21 @@ export function SubjectListView({
                         <RemixIcon icon="solar:copy-bold" width={18} />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="ลบ">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => {
-                          deleteMutation.reset();
-                          setDeletingSubject(subject);
-                        }}
-                        aria-label={`ลบวิชา ${subject.name}`}
-                      >
-                        <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                      </IconButton>
-                    </Tooltip>
+                    {subject.can_edit ? (
+                      <Tooltip title="ลบ">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => {
+                            deleteMutation.reset();
+                            setDeletingSubject(subject);
+                          }}
+                          aria-label={`ลบวิชา ${subject.name}`}
+                        >
+                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
+                      </Tooltip>
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))}

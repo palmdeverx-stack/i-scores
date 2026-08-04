@@ -16,7 +16,12 @@ export async function GET(request: Request) {
     .select(
       `id,
        subject:subjects!inner(
-         id, code, name, description, learning_standards, learning_outcomes, indicators, learning_units
+         id, curriculum_id, code, name, description, learning_area, grade_levels, scope,
+         learning_standard_code, learning_standards, learning_outcomes, indicators, learning_units,
+         curriculum:curricula(id, school_id, owner_id, code, name, version, curriculum_type, scope, status),
+         curriculum_indicators(id, subject_id, code, description, learning_standard),
+         learning_outcomes_structured:subject_learning_outcomes(id, subject_id, code, description, sequence),
+         learning_units_structured:subject_learning_units(id, subject_id, code, name, description, sequence, estimated_periods)
        ),
        classroom:classrooms!inner(id, name, grade_level, school_id, academic_year:academic_years(year)),
        semester:semesters(id, name)`

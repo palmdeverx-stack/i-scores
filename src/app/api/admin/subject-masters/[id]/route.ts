@@ -8,7 +8,7 @@ import { supabaseAdmin } from 'src/lib/supabase-admin';
 type RouteParams = { params: Promise<{ id: string }> };
 
 const ITEM_SELECT =
-  'id, category, code, name, name_en, sort_order, is_active, is_system, created_at, updated_at';
+  'id, category, code, name, name_en, parent_code, sort_order, is_active, is_system, created_at, updated_at';
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin']);
@@ -78,12 +78,19 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       ? 'learning_area'
       : item.category === 'education_stage'
         ? 'education_stage'
-        : 'subject_type';
-  const { count } = await supabaseAdmin
+        : item.category === 'activity_type'
+          ? 'activity_type'
+          : item.category === 'grade_level'
+            ? 'grade_levels'
+            : 'subject_type';
+  let usageQuery = supabaseAdmin
     .from('subjects')
     .select('id', { count: 'exact', head: true })
-    .eq('school_id', caller.schoolId)
-    .eq(usedColumn, item.code);
+    .eq('school_id', caller.schoolId);
+  usageQuery = item.category === 'grade_level'
+    ? usageQuery.contains(usedColumn, [item.code])
+    : usageQuery.eq(usedColumn, item.code);
+  const { count } = await usageQuery;
 
   if (count) {
     return NextResponse.json(

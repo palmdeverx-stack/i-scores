@@ -78,15 +78,22 @@ test('personal workspaces use product branding instead of school branding', () =
   const teacherLayout = read('src/app/teacher/layout.tsx');
   const departmentAccess = read('src/lib/department-permission-access.ts');
   const studentList = read('src/sections/user/view/student-list-view.tsx');
+  const semesterRoute = read('src/app/api/semesters/route.ts');
+  const semesterDetailRoute = read('src/app/api/semesters/[id]/route.ts');
+  const reviewPage = read('src/app/teacher/lesson-plan-reviews/page.tsx');
+  const lessonPlanAccess = read('src/lib/lesson-plan-access.ts');
+  const lessonPlanStatusRoute = read('src/app/api/lesson-plans/[id]/status/route.ts');
+  const lessonPlanList = read('src/sections/lesson-plan/view/lesson-plan-list-view.tsx');
 
   assert.match(verticalNav, /isMasterAdmin \|\| user\?\.is_personal_workspace === true/);
   assert.match(verticalNav, /usesProductIdentity \? \(/);
   assert.match(headerIdentity, /if \(isPersonalWorkspace\)/);
   assert.match(headerIdentity, /<Typography variant="subtitle1">eKru<\/Typography>/);
   assert.match(mobileBrand, /isPersonalWorkspace \|\| !school\?\.logo_url/);
-  assert.match(teacherLayout, /group\.items\.map\(\(item\) =>/);
-  assert.match(teacherLayout, /item\.title === 'นักเรียนของฉัน'/);
-  assert.doesNotMatch(teacherLayout, /departmentAcademicYear|departmentStudent/);
+  assert.match(teacherLayout, /items: group\.items/);
+  assert.match(teacherLayout, /item\.title === 'ปีการศึกษาและภาคเรียน'/);
+  assert.match(teacherLayout, /featureKey: undefined/);
+  assert.match(teacherLayout, /item\.title !== 'ตรวจแผนการสอน'/);
   assert.match(
     teacherLayout,
     /if \(user\?\.is_personal_workspace\) return dedupeTeacherNav\(licensedNav\)/
@@ -95,6 +102,14 @@ test('personal workspaces use product branding instead of school branding', () =
   assert.match(departmentAccess, /school\.owner_auth_user_id === teacher\.auth_user_id/);
   assert.match(departmentAccess, /return \[\.\.\.DEPARTMENT_PERMISSION_KEYS\]/);
   assert.match(studentList, /manage_permissions \?\? \[\]\)\.includes\('students\.manage'\)/);
+  assert.match(semesterRoute, /requireRole\(request, \['school_admin', 'teacher'\]\)/);
+  assert.match(semesterRoute, /canManageViaPermission\(caller, 'academic_years\.manage'\)/);
+  assert.match(semesterDetailRoute, /canManageViaPermission\(caller, 'academic_years\.manage'\)/);
+  assert.match(reviewPage, /schoolWorkspaceOnly/);
+  assert.match(lessonPlanAccess, /isPersonalWorkspaceOwner/);
+  assert.match(lessonPlanAccess, /return false/);
+  assert.match(lessonPlanStatusRoute, /พื้นที่ส่วนตัวไม่มีขั้นตอนส่งตรวจแผนการสอน/);
+  assert.match(lessonPlanList, /editable && !isPersonalWorkspace/);
 });
 
 test('one identity can switch isolated workspaces and carry personal teacher licenses', () => {

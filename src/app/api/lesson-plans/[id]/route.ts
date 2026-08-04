@@ -9,6 +9,10 @@ import {
   canViewLessonPlan,
   lessonPlanSnapshot,
 } from 'src/lib/lesson-plan-access';
+import {
+  CurriculumReferenceError,
+  resolveCurriculumReference,
+} from 'src/features/curriculum/server/resolve-curriculum-reference';
 
 import {
   parseLessonPlanPayload,
@@ -86,16 +90,53 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่พบรายวิชาที่คุณได้รับมอบหมาย' }, { status: 404 });
   }
 
+  const assignmentSubjectId = String(assignment.subject_id);
+  const classroomGrade = (assignment.classrooms as unknown as { grade_level: string | null })
+    ?.grade_level;
+  let curriculum;
+  try {
+    curriculum = await resolveCurriculumReference(
+      caller,
+      {
+        curriculumId: payload.curriculum_id,
+        subjectId: payload.subject_id,
+        unitId: payload.unit_id,
+        gradeLevels: payload.grade_levels.length
+          ? payload.grade_levels
+          : classroomGrade
+            ? [classroomGrade]
+            : [],
+        indicatorIds: payload.indicator_ids,
+        learningOutcomeIds: payload.learning_outcome_ids,
+      },
+      assignmentSubjectId
+    );
+  } catch (curriculumError) {
+    if (curriculumError instanceof CurriculumReferenceError) {
+      return NextResponse.json({ message: curriculumError.message }, { status: 400 });
+    }
+    throw curriculumError;
+  }
+  const linkedPayload = {
+    ...payload,
+    subject_id: curriculum.subjectId,
+    curriculum_id: curriculum.curriculumId,
+    unit_id: curriculum.unitId,
+    grade_levels: curriculum.gradeLevels,
+    indicator_ids: curriculum.indicatorIds,
+    learning_outcome_ids: curriculum.learningOutcomeIds,
+  };
+
   const nextVersion = expectedVersion + 1;
   const updatePayload =
     isDraftSave && LESSON_PLAN_DRAFT_TAB_COLUMNS[draftTab]
       ? Object.fromEntries(
           LESSON_PLAN_DRAFT_TAB_COLUMNS[draftTab].map((column) => [
             column,
-            payload[column as keyof typeof payload],
+            linkedPayload[column as keyof typeof linkedPayload],
           ])
         )
-      : payload;
+      : linkedPayload;
   const nextSavedTabs =
     isDraftSave && LESSON_PLAN_DRAFT_TAB_COLUMNS[draftTab]
       ? [...new Set([...(plan!.saved_tabs ?? []), draftTab])]

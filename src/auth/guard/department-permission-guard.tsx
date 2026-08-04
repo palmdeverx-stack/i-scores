@@ -18,6 +18,7 @@ type DepartmentPermissionGuardProps = {
    * permissions (e.g. department management itself).
    */
   permission?: string;
+  schoolWorkspaceOnly?: boolean;
   children: React.ReactNode;
 };
 
@@ -36,13 +37,19 @@ type DepartmentWorkspaceGuardProps = {
  * denied" screen, so the page's existence isn't confirmed to someone who
  * isn't meant to reach it.
  */
-export function DepartmentPermissionGuard({ permission, children }: DepartmentPermissionGuardProps) {
+export function DepartmentPermissionGuard({
+  permission,
+  schoolWorkspaceOnly = false,
+  children,
+}: DepartmentPermissionGuardProps) {
   const { user } = useAuthContext();
   const router = useRouter();
 
   const isSchoolAdmin = user?.role === 'school_admin';
   const hasPermission = !!permission && (user?.department_permissions ?? []).includes(permission);
-  const isAllowed = isSchoolAdmin || hasPermission;
+  const isAllowed =
+    (isSchoolAdmin || hasPermission) &&
+    (!schoolWorkspaceOnly || user?.is_personal_workspace !== true);
 
   useEffect(() => {
     if (user && !isAllowed) {

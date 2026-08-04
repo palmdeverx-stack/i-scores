@@ -73,7 +73,7 @@ export function SchoolSubscriptionGuard({ children }: { children: ReactNode }) {
   );
   if (feature && !subscription.enabled_features.includes(feature)) {
     return (
-      <Container maxWidth="md" sx={{ py: 5 }}>
+      <Container maxWidth={false} sx={{ py: 3 }}>
         <Alert severity="warning">
           <Typography variant="subtitle1">แพ็กเกจนี้ไม่รองรับเมนูดังกล่าว</Typography>
           กรุณาอัปเกรดแพ็กเกจเพื่อเปิดใช้งาน
