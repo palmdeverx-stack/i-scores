@@ -73,6 +73,7 @@ export type LessonPlan = {
   indicators: string | null;
   milestone_indicators: string | null;
   terminal_indicators: string | null;
+  template_section_contents: Record<string, unknown>;
   learning_objectives: string | null;
   essential_content: string | null;
   learner_competencies: string | null;
@@ -127,6 +128,7 @@ export type LessonPlanInput = CurriculumReference & {
   learningActivities: string;
   learningMedia: string;
   assessment: string;
+  templateSectionContents?: Record<string, unknown>;
 };
 
 async function parseResponse<T>(response: Response, fallback: string): Promise<T> {

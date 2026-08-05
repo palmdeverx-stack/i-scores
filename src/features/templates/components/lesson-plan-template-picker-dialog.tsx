@@ -30,34 +30,45 @@ export function LessonPlanTemplatePickerDialog({
   lessonPlanId,
   templateType,
   onApplied,
+  onSelectTemplate,
 }: {
   open: boolean;
   onClose: () => void;
-  lessonPlanId: string;
+  lessonPlanId?: string;
   templateType: TemplateType;
-  onApplied: () => void | Promise<void>;
+  onApplied?: () => void | Promise<void>;
+  onSelectTemplate?: (template: LessonTemplate) => void | Promise<void>;
 }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<LessonTemplate | null>(null);
   const templatesQuery = useQuery({
     queryKey: ['lesson-templates', 'picker', templateType, search],
-    queryFn: () =>
-      getTemplates({ tab: 'all', templateType, status: 'active', search: search || undefined }),
+    queryFn: () => getTemplates({ tab: 'all', templateType, search: search || undefined }),
     enabled: open,
   });
   const applyMutation = useMutation({
-    mutationFn: () =>
-      applyTemplate({
+    mutationFn: async () => {
+      if (onSelectTemplate) {
+        await onSelectTemplate(selected!);
+        return;
+      }
+      if (!lessonPlanId) throw new Error('กรุณาบันทึกแผนการสอนก่อนใช้ Template ราย Section');
+      await applyTemplate({
         templateId: selected!.id,
         targetType: 'lesson_plan',
         targetId: lessonPlanId,
         sectionType: templateType,
-      }),
+      });
+    },
     onSuccess: async () => {
-      toast.success('นำ Template มาใช้ใน Section นี้แล้ว');
+      toast.success(
+        onSelectTemplate
+          ? 'นำ Template มาเป็นข้อมูลตั้งต้นแล้ว'
+          : 'นำ Template มาใช้ใน Section นี้แล้ว'
+      );
       await Promise.all([
-        onApplied(),
+        onApplied?.(),
         queryClient.invalidateQueries({ queryKey: ['lesson-templates'] }),
       ]);
       setSelected(null);
@@ -65,6 +76,9 @@ export function LessonPlanTemplatePickerDialog({
     },
     onError: (error) => toast.error(error.message),
   });
+  const templates = (templatesQuery.data ?? []).filter(
+    (template) => template.status === 'active' || template.can_edit
+  );
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
       <DialogTitle>เลือก Template: {TEMPLATE_TYPE_LABELS[templateType]}</DialogTitle>
@@ -92,7 +106,7 @@ export function LessonPlanTemplatePickerDialog({
           }}
         >
           <Box sx={{ gap: 1.5, display: 'grid' }}>
-            {(templatesQuery.data ?? []).map((template) => (
+            {templates.map((template) => (
               <Card
                 component="button"
                 type="button"
@@ -131,15 +145,15 @@ export function LessonPlanTemplatePickerDialog({
             </Card>
           ) : null}
         </Box>
-        {!templatesQuery.isLoading && !templatesQuery.data?.length ? (
-          <Alert severity="info">ยังไม่มี Template ที่ Active สำหรับ Section นี้</Alert>
+        {!templatesQuery.isLoading && !templates.length ? (
+          <Alert severity="info">ยังไม่มี Template ที่พร้อมใช้งานสำหรับ Section นี้</Alert>
         ) : null}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>ยกเลิก</Button>
         <Button
           variant="contained"
-          disabled={!selected}
+          disabled={!selected || (selected.status !== 'active' && !selected.can_edit)}
           loading={applyMutation.isPending}
           onClick={() => applyMutation.mutate()}
         >

@@ -10,14 +10,14 @@ import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 export const metadata: Metadata = { title: `สร้างแผนการสอน - ${CONFIG.appName}` };
 
-type Props = { searchParams: Promise<{ template?: string }> };
+type Props = { searchParams: Promise<{ template?: string; catalogTemplate?: string }> };
 
 export default async function Page({ searchParams }: Props) {
-  const { template } = await searchParams;
+  const { template, catalogTemplate } = await searchParams;
 
   return (
     <DepartmentPermissionGuard permission="teaching.assignments">
-      <LessonPlanFormView templateId={template} />
+      <LessonPlanFormView templateId={template} catalogSourceTemplateId={catalogTemplate} />
     </DepartmentPermissionGuard>
   );
 }

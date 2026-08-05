@@ -318,7 +318,7 @@ function FullPlanTemplateReader({
             >
               คัดลอก
             </Button>
-            {selectedTemplate.status === 'active' ? (
+            {selectedTemplate.status === 'active' || selectedTemplate.can_edit ? (
               <Button
                 size="small"
                 variant="contained"
@@ -387,9 +387,7 @@ function FullPlanTemplateReader({
               title: template.name,
               unitName: template.description,
               previewText: template.description,
-              sectionCount: Array.isArray(
-                (template.content as { sections?: unknown }).sections
-              )
+              sectionCount: Array.isArray((template.content as { sections?: unknown }).sections)
                 ? (template.content as { sections: unknown[] }).sections.length
                 : undefined,
               versionNumber: template.version,
@@ -756,7 +754,11 @@ export function LessonPlanTemplateListView({
           templates={templates}
           selectedTemplate={selectedTemplate}
           onSelect={(template) => setSelectedTemplateId(template.id)}
-          onApply={setApplyTarget}
+          onApply={(template) =>
+            router.push(
+              `${paths.teacher.lessonPlans.new}?catalogTemplate=${encodeURIComponent(template.id)}`
+            )
+          }
           onAction={(template, action) => actionMutation.mutate({ template, action })}
         />
       ) : (

@@ -21,10 +21,13 @@ type LessonPlanFooterBarProps = {
   showTemplatePickerButton: boolean;
   isEditable: boolean;
   isSaving: boolean;
+  showPublishButton?: boolean;
+  saveLabel?: string;
   returnPath: string;
   onOpenTemplatePicker: () => void;
   onPreviewPdf: () => void;
   onSaveTab: () => void;
+  onPublish?: () => void;
 };
 
 export const LessonPlanFooterBar = memo(function LessonPlanFooterBar({
@@ -37,10 +40,13 @@ export const LessonPlanFooterBar = memo(function LessonPlanFooterBar({
   showTemplatePickerButton,
   isEditable,
   isSaving,
+  showPublishButton = false,
+  saveLabel = 'บันทึก',
   returnPath,
   onOpenTemplatePicker,
   onPreviewPdf,
   onSaveTab,
+  onPublish,
 }: LessonPlanFooterBarProps) {
   return (
     <Card
@@ -120,8 +126,21 @@ export const LessonPlanFooterBar = memo(function LessonPlanFooterBar({
             onClick={onSaveTab}
             sx={{ minWidth: 170 }}
           >
-            บันทึก
+            {saveLabel}
           </Button>
+          {showPublishButton ? (
+            <Button
+              type="button"
+              size="large"
+              color="success"
+              variant="contained"
+              disabled={!isEditable || isSaving}
+              startIcon={<RemixIcon icon="solar:upload-minimalistic-linear" />}
+              onClick={onPublish}
+            >
+              เผยแพร่
+            </Button>
+          ) : null}
         </Box>
       </Box>
     </Card>

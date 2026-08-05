@@ -36,6 +36,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     learning_standards: source.learning_standards,
     milestone_indicators: source.milestone_indicators ?? source.indicators,
     terminal_indicators: source.terminal_indicators,
+    template_section_contents: source.template_section_contents ?? {},
     learning_objectives: source.learning_objectives,
     essential_content: source.essential_content,
     learner_competencies: source.learner_competencies,

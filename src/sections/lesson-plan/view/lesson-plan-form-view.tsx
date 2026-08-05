@@ -5,6 +5,7 @@ import type { DropResult } from '@hello-pangea/dnd';
 import type { LessonPlan } from '../lesson-plan-actions';
 import type { LessonPlanFormValues } from './lesson-plan-form.schema';
 import type { TemplateAIResult } from 'src/features/ai/types/ai.types';
+import type { PublishTemplateScope } from 'src/features/templates/components/template-publish-dialog';
 import type {
   TemplateType,
   LessonTemplate,
@@ -15,8 +16,8 @@ import type {
 } from 'src/features/templates/types';
 
 import dynamic from 'next/dynamic';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch, useFieldArray } from 'react-hook-form';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -37,6 +38,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { TemplateAIDialog } from 'src/features/ai/components/template-ai-dialog';
 import { defaultTemplateContent } from 'src/features/templates/template-defaults';
+import { TemplatePublishDialog } from 'src/features/templates/components/template-publish-dialog';
 import { LessonPlanTemplatePickerDialog } from 'src/features/templates/components/lesson-plan-template-picker-dialog';
 import {
   createTemplate,
@@ -51,19 +53,10 @@ import { toast } from 'src/components/snackbar';
 import { Form } from 'src/components/hook-form';
 import { RemixIcon } from 'src/components/remix-icon';
 
-import { MediaTab } from './tabs/media-tab';
 import { GeneralTab } from './tabs/general-tab';
-import { QuestionsTab } from './tabs/questions-tab';
-import { StandardsTab } from './tabs/standards-tab';
-import { ActivitiesTab } from './tabs/activities-tab';
-import { AssessmentTab } from './tabs/assessment-tab';
-import { ObjectivesTab } from './tabs/objectives-tab';
 import { LessonPlanTabNav } from './lesson-plan-tab-nav';
-import { CompetenciesTab } from './tabs/competencies-tab';
 import { LessonPlanFooterBar } from './lesson-plan-footer-bar';
-import { CharacteristicsTab } from './tabs/characteristics-tab';
 import { TemplateContentTab } from './tabs/template-content-tab';
-import { EssentialContentTab } from './tabs/essential-content-tab';
 import { parseAssessment, parseLearningActivities } from '../lesson-plan-content';
 import {
   getLessonPlan,
@@ -76,7 +69,6 @@ import {
   EMPTY_FORM,
   TAB_LABELS,
   TAB_FORM_FIELDS,
-  LessonPlanSchema,
   DEFAULT_TAB_ORDER,
   EVALUATION_TAB_IDS,
   TAB_TEMPLATE_TYPES,
@@ -93,7 +85,8 @@ import {
   parseObjectiveFormGroups,
   parseLearningStandardRows,
   subjectLearningStandardText,
-  objectivesToAssessmentIssues,
+  legacyValuesToTemplateSections,
+  templateSectionsToLegacyValues,
 } from './lesson-plan-form.utils';
 
 // ----------------------------------------------------------------------
@@ -205,11 +198,13 @@ export function LessonPlanFormView({
   lessonPlanId,
   templateId,
   catalogTemplateId,
+  catalogSourceTemplateId,
   newCatalogTemplate = false,
 }: {
   lessonPlanId?: string;
   templateId?: string;
   catalogTemplateId?: string;
+  catalogSourceTemplateId?: string;
   newCatalogTemplate?: boolean;
 }) {
   const isTemplateMode = Boolean(catalogTemplateId) || newCatalogTemplate;
@@ -218,6 +213,7 @@ export function LessonPlanFormView({
   const initializedPlanId = useRef<string | null>(null);
   const initializedTemplateId = useRef<string | null>(null);
   const initializedCatalogTemplateId = useRef<string | null>(null);
+  const initializedCatalogSourceTemplateId = useRef<string | null>(null);
   const [activeSection, setActiveSection] = useState('lesson-plan-general');
   const [pdfOpen, setPdfOpen] = useState(false);
   const [templatePreview, setTemplatePreview] = useState<LessonTemplate | null>(null);
@@ -226,6 +222,8 @@ export function LessonPlanFormView({
   const [templateLogoRemoved, setTemplateLogoRemoved] = useState(false);
   const [aiDialogOpen, setAIDialogOpen] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [selectedFullPlanTemplateName, setSelectedFullPlanTemplateName] = useState('');
   const [tabOrder, setTabOrder] = useState(DEFAULT_TAB_ORDER);
   const [enabledEvaluationSections, setEnabledEvaluationSections] = useState<string[]>([]);
 
@@ -258,11 +256,16 @@ export function LessonPlanFormView({
     }
   }, [isTemplateMode]);
 
+  const defaultFormValues = useMemo<LessonPlanFormValues>(
+    () => ({
+      ...EMPTY_FORM,
+      templateSectionContents: legacyValuesToTemplateSections(EMPTY_FORM),
+    }),
+    []
+  );
   const methods = useForm<LessonPlanFormValues>({
-    resolver: zodResolver(
-      isTemplateMode ? TemplateLessonPlanSchema : LessonPlanSchema
-    ) as Resolver<LessonPlanFormValues>,
-    defaultValues: EMPTY_FORM,
+    resolver: zodResolver(TemplateLessonPlanSchema) as Resolver<LessonPlanFormValues>,
+    defaultValues: defaultFormValues,
     mode: 'onTouched',
   });
   const {
@@ -275,16 +278,12 @@ export function LessonPlanFormView({
     trigger,
     formState: { dirtyFields },
   } = methods;
-  const { replace: replaceAssessment } = useFieldArray({ control, name: 'assessment' });
   const startDate = useWatch({ control, name: 'startDate' });
   const selectedAssignmentId = useWatch({ control, name: 'teacherAssignmentId' });
-  const selectedIndicatorIds = useWatch({ control, name: 'indicatorIds' });
-  const learningObjectives = useWatch({ control, name: 'learningObjectives' });
   const evaluationStudents = useWatch({ control, name: 'evaluationStudents' });
   const navigationValues = useWatch({ control });
 
   useEffect(() => {
-    if (!isTemplateMode) return;
     const roster = (evaluationStudents ?? []) as EvaluationStudent[];
     const sectionContents = getValues('templateSectionContents');
     let nextSectionContents = { ...sectionContents };
@@ -367,33 +366,7 @@ export function LessonPlanFormView({
         shouldValidate: false,
       });
     }
-  }, [
-    evaluationStudents,
-    getValues,
-    isTemplateMode,
-    navigationValues.templateSectionContents,
-    setValue,
-  ]);
-
-  useEffect(() => {
-    const issues = objectivesToAssessmentIssues(learningObjectives);
-    if (!issues.length) return;
-
-    const currentRows = getValues('assessment');
-    const nextRows = issues.map((issue, index) => ({
-      issue,
-      method: currentRows[index]?.method ?? '',
-      tool: currentRows[index]?.tool ?? '',
-      criteria: currentRows[index]?.criteria ?? '',
-    }));
-
-    if (
-      currentRows.length !== nextRows.length ||
-      nextRows.some((row, index) => row.issue !== currentRows[index]?.issue)
-    ) {
-      replaceAssessment(nextRows);
-    }
-  }, [getValues, learningObjectives, replaceAssessment]);
+  }, [evaluationStudents, getValues, navigationValues.templateSectionContents, setValue]);
 
   const optionsQuery = useQuery({
     queryKey: ['lesson-plan-options'],
@@ -414,10 +387,15 @@ export function LessonPlanFormView({
     queryFn: () => getTemplateDocument(catalogTemplateId!),
     enabled: Boolean(catalogTemplateId),
   });
+  const catalogSourceTemplateQuery = useQuery({
+    queryKey: ['lesson-template-document', catalogSourceTemplateId],
+    queryFn: () => getTemplateDocument(catalogSourceTemplateId!),
+    enabled: Boolean(catalogSourceTemplateId) && !lessonPlanId,
+  });
   const aiOptionsQuery = useQuery({
     queryKey: ['lesson-template-options'],
     queryFn: getTemplateOptions,
-    enabled: isTemplateMode,
+    enabled: true,
   });
   const templateLearningAreas = useMemo(() => {
     const masterByCode = new Map(
@@ -469,7 +447,8 @@ export function LessonPlanFormView({
     const plan = planQuery.data;
     if (!plan || initializedPlanId.current === plan.id) return;
 
-    reset({
+    const values: LessonPlanFormValues = {
+      ...EMPTY_FORM,
       curriculumId: plan.curriculum_id,
       subjectId: plan.subject_id,
       unitId: plan.unit_id,
@@ -494,6 +473,18 @@ export function LessonPlanFormView({
       learningActivities: parseLearningActivities(plan.learning_activities),
       learningMedia: parseLearningMedia(plan.learning_media),
       assessment: parseAssessment(plan.assessment),
+    };
+    const persistedSections = plan.template_section_contents ?? {};
+    const persistedStudents = Array.isArray(persistedSections._evaluationStudents)
+      ? (persistedSections._evaluationStudents as EvaluationStudent[])
+      : values.evaluationStudents;
+    reset({
+      ...values,
+      evaluationStudents: persistedStudents,
+      templateSectionContents:
+        Object.keys(persistedSections).length > 0
+          ? persistedSections
+          : legacyValuesToTemplateSections(values),
     });
     initializedPlanId.current = plan.id;
   }, [planQuery.data, reset]);
@@ -503,7 +494,7 @@ export function LessonPlanFormView({
     const template = templatesQuery.data?.find((plan) => plan.id === templateId);
     if (!template) return;
 
-    reset({
+    const values: LessonPlanFormValues = {
       ...EMPTY_FORM,
       curriculumId: template.curriculum_id,
       subjectId: template.subject_id,
@@ -528,6 +519,18 @@ export function LessonPlanFormView({
       learningActivities: parseLearningActivities(template.learning_activities),
       learningMedia: parseLearningMedia(template.learning_media),
       assessment: parseAssessment(template.assessment),
+    };
+    const persistedSections = template.template_section_contents ?? {};
+    const persistedStudents = Array.isArray(persistedSections._evaluationStudents)
+      ? (persistedSections._evaluationStudents as EvaluationStudent[])
+      : values.evaluationStudents;
+    reset({
+      ...values,
+      evaluationStudents: persistedStudents,
+      templateSectionContents:
+        Object.keys(persistedSections).length > 0
+          ? persistedSections
+          : legacyValuesToTemplateSections(values),
     });
     initializedTemplateId.current = templateId;
   }, [lessonPlanId, reset, templateId, templatesQuery.data]);
@@ -590,6 +593,10 @@ export function LessonPlanFormView({
     TAB_FORM_FIELDS[tab ?? '']?.forEach((fieldName) => {
       resetField(fieldName, { defaultValue: getValues(fieldName) });
     });
+    if (tab && tab in TAB_TEMPLATE_TYPES) {
+      const fieldName = `templateSectionContents.${tab}` as const;
+      resetField(fieldName, { defaultValue: getValues(fieldName) });
+    }
   };
 
   const saveMutation = useMutation<
@@ -599,24 +606,38 @@ export function LessonPlanFormView({
       values: LessonPlanFormValues;
       saveMode?: 'draft';
       tab?: string;
+      publishScope?: PublishTemplateScope;
     }
   >({
     mutationFn: async ({
       values,
       saveMode,
       tab,
+      publishScope,
     }: {
       values: LessonPlanFormValues;
       saveMode?: 'draft';
       tab?: string;
+      publishScope?: PublishTemplateScope;
     }) => {
       if (isTemplateMode) {
+        const withPublication = (input: ReturnType<typeof templateDocumentInput>) => ({
+          ...input,
+          scope: publishScope ?? input.scope,
+          status: publishScope
+            ? ('active' as const)
+            : saveMode === 'draft'
+              ? ('draft' as const)
+              : input.status,
+        });
         if (catalogTemplateId) {
           const template = catalogTemplateQuery.data?.template;
           if (!template) throw new Error('ยังโหลด Template ไม่สำเร็จ');
           let saved = await updateTemplate(
             catalogTemplateId,
-            templateDocumentInput(values, tabOrder, template, enabledEvaluationSections)
+            withPublication(
+              templateDocumentInput(values, tabOrder, template, enabledEvaluationSections)
+            )
           );
           let logoUrl = ((saved.content as LessonPlanTemplateContent).cover?.logoUrl ?? '').trim();
           if (templateLogo instanceof File) {
@@ -634,7 +655,9 @@ export function LessonPlanFormView({
         }
 
         let saved = await createTemplate(
-          templateDocumentInput(values, tabOrder, undefined, enabledEvaluationSections)
+          withPublication(
+            templateDocumentInput(values, tabOrder, undefined, enabledEvaluationSections)
+          )
         );
         if (templateLogo instanceof File) {
           const { logoUrl } = await uploadTemplateLogo(saved.id, templateLogo);
@@ -646,7 +669,7 @@ export function LessonPlanFormView({
         }
         return { kind: 'template' as const, saved };
       }
-      const payload = toPayload(values);
+      const payload = toPayload(templateSectionsToLegacyValues(values));
       const request = lessonPlanId
         ? updateLessonPlan(lessonPlanId, {
             ...payload,
@@ -660,6 +683,7 @@ export function LessonPlanFormView({
     },
     onSuccess: async (result, variables) => {
       if (result.kind === 'template') {
+        setPublishDialogOpen(false);
         const logoUrl = (result.saved.content as LessonPlanTemplateContent).cover?.logoUrl ?? '';
         setTemplateLogo(logoUrl || null);
         setTemplateLogoRemoved(false);
@@ -681,9 +705,13 @@ export function LessonPlanFormView({
           await queryClient.invalidateQueries({ queryKey: ['lesson-templates'] });
           router.replace(paths.teacher.lessonPlans.templateEdit(result.saved.id));
           toast.success(
-            variables.saveMode === 'draft'
-              ? `บันทึก “${activeNavigationSection.label}” ใน Template แล้ว`
-              : 'สร้าง Template แผนการสอนแล้ว'
+            variables.publishScope
+              ? variables.publishScope === 'school'
+                ? 'เผยแพร่ Template ให้ทั้งโรงเรียนแล้ว'
+                : 'เผยแพร่ Template ส่วนตัวแล้ว'
+              : variables.saveMode === 'draft'
+                ? `บันทึก “${activeNavigationSection.label}” ใน Template แล้ว`
+                : 'สร้าง Template แผนการสอนแล้ว'
           );
           return;
         }
@@ -694,6 +722,15 @@ export function LessonPlanFormView({
           }),
           queryClient.invalidateQueries({ queryKey: ['lesson-templates'] }),
         ]);
+        if (variables.publishScope) {
+          toast.success(
+            variables.publishScope === 'school'
+              ? 'เผยแพร่ Template ให้ทั้งโรงเรียนแล้ว'
+              : 'เผยแพร่ Template ส่วนตัวแล้ว'
+          );
+          router.push(paths.teacher.lessonPlans.templates);
+          return;
+        }
         if (variables.saveMode === 'draft') {
           toast.success(`บันทึก “${activeNavigationSection.label}” ใน Template แล้ว`);
           return;
@@ -759,24 +796,41 @@ export function LessonPlanFormView({
             .filter((value): value is string => Boolean(value))
         ),
       ];
+      const standardValues = linkedStandards.length
+        ? linkedStandards
+        : [subjectLearningStandardText(subject)].filter(Boolean);
+      const milestoneValues = linkedIndicators.length
+        ? linkedIndicators.map(({ code, description }) => ({ code, description }))
+        : parseIndicatorFormRows(plainText(subject.indicators));
+      setValue('learningStandards', parseLearningStandardRows(standardValues.join('\n')), {
+        shouldDirty: true,
+      });
+      setValue('milestoneIndicators', milestoneValues, { shouldDirty: true });
+      const currentStandards = getValues('templateSectionContents.lesson-plan-standards') as Record<
+        string,
+        unknown
+      >;
       setValue(
-        'learningStandards',
-        parseLearningStandardRows(
-          linkedStandards.length ? linkedStandards.join('\n') : subjectLearningStandardText(subject)
-        ),
+        'templateSectionContents.lesson-plan-standards',
         {
-          shouldDirty: true,
-        }
-      );
-      setValue(
-        'milestoneIndicators',
-        linkedIndicators.length
-          ? linkedIndicators.map(({ code, description }) => ({ code, description }))
-          : parseIndicatorFormRows(plainText(subject.indicators)),
+          ...currentStandards,
+          items: standardValues.map((title) => ({
+            id: crypto.randomUUID(),
+            code: '',
+            title,
+            description: '',
+          })),
+          milestoneIndicators: milestoneValues.map(({ code, description }) => ({
+            id: crypto.randomUUID(),
+            code,
+            title: description,
+            description: '',
+          })),
+        },
         { shouldDirty: true }
       );
     },
-    [optionsQuery.data, setValue]
+    [getValues, optionsQuery.data, setValue]
   );
 
   const selectAssignment = useCallback(
@@ -813,39 +867,6 @@ export function LessonPlanFormView({
       if (unit.estimated_periods) {
         setValue('durationPeriods', unit.estimated_periods, { shouldDirty: true });
       }
-    },
-    [selectedAssignment, setValue]
-  );
-
-  const selectIndicators = useCallback(
-    (indicatorIds: string[]) => {
-      const subject = selectedAssignment?.subject;
-      if (!subject) return;
-      const selected = subject.curriculum_indicators.filter((indicator) =>
-        indicatorIds.includes(indicator.id)
-      );
-      setValue('indicatorIds', indicatorIds, { shouldDirty: true, shouldValidate: true });
-      setValue(
-        'milestoneIndicators',
-        selected.length
-          ? selected.map(({ code, description }) => ({ code, description }))
-          : [{ code: '', description: '' }],
-        { shouldDirty: true, shouldValidate: true }
-      );
-      const standards = [
-        ...new Set(
-          selected
-            .map((indicator) => indicator.learning_standard?.trim())
-            .filter((value): value is string => Boolean(value))
-        ),
-      ];
-      setValue(
-        'learningStandards',
-        parseLearningStandardRows(
-          standards.length ? standards.join('\n') : subjectLearningStandardText(subject)
-        ),
-        { shouldDirty: true, shouldValidate: true }
-      );
     },
     [selectedAssignment, setValue]
   );
@@ -981,16 +1002,17 @@ export function LessonPlanFormView({
     )
     .map((section) => ({
       ...section,
-      complete: isTemplateMode
-        ? section.id === 'lesson-plan-general'
+      complete:
+        section.id === 'lesson-plan-general'
           ? section.complete
           : hasMeaningfulTemplateStep(
               TAB_TEMPLATE_TYPES[section.id as keyof typeof TAB_TEMPLATE_TYPES],
               navigationValues.templateSectionContents?.[section.id]
-            )
-        : section.complete &&
-          savedTabs.has(section.id) &&
-          !TAB_FORM_FIELDS[section.id]?.some((fieldName) => Boolean(dirtyFields[fieldName])),
+            ) &&
+            (isTemplateMode || savedTabs.has(section.id)) &&
+            !(dirtyFields.templateSectionContents as Record<string, unknown> | undefined)?.[
+              section.id
+            ],
     }))
     .sort((first, second) => tabOrder.indexOf(first.id) - tabOrder.indexOf(second.id));
   const activeSectionIndex = Math.max(
@@ -998,9 +1020,7 @@ export function LessonPlanFormView({
     0
   );
   const activeNavigationSection = navigationSections[activeSectionIndex];
-  const activeTemplateType = isTemplateMode
-    ? TAB_TEMPLATE_TYPES[activeSection as keyof typeof TAB_TEMPLATE_TYPES]
-    : undefined;
+  const activeTemplateType = TAB_TEMPLATE_TYPES[activeSection as keyof typeof TAB_TEMPLATE_TYPES];
   const activeTemplateContent = useMemo(
     () =>
       activeTemplateType
@@ -1082,11 +1102,10 @@ export function LessonPlanFormView({
     }
 
     const currentTabFields = TAB_FORM_FIELDS[activeSection] ?? [];
-    const isCurrentTabValid = isTemplateMode
-      ? activeSection === 'lesson-plan-general'
+    const isCurrentTabValid =
+      activeSection === 'lesson-plan-general'
         ? await trigger(currentTabFields, { shouldFocus: true })
-        : true
-      : await trigger(currentTabFields, { shouldFocus: true });
+        : true;
     if (!isCurrentTabValid) {
       toast.warning('กรุณากรอกข้อมูลใน Step นี้ให้ครบก่อนบันทึก');
       return;
@@ -1095,12 +1114,82 @@ export function LessonPlanFormView({
     saveMutation.mutate({ values: getValues(), saveMode: 'draft', tab: activeSection });
   }, [activeSection, getValues, goToSection, isTemplateMode, saveMutation, trigger]);
 
-  const onApplyCurriculum = useCallback(() => {
-    applyCurriculum(selectedAssignmentId);
-  }, [applyCurriculum, selectedAssignmentId]);
+  const publishTemplate = useCallback(
+    async (scope: PublishTemplateScope) => {
+      const generalFields = TAB_FORM_FIELDS['lesson-plan-general'] ?? [];
+      if (!(await trigger(generalFields, { shouldFocus: true }))) {
+        setPublishDialogOpen(false);
+        goToSection('lesson-plan-general');
+        toast.warning('กรุณากรอกข้อมูลทั่วไปให้ครบก่อนเผยแพร่');
+        return;
+      }
+      saveMutation.mutate({ values: getValues(), publishScope: scope });
+    },
+    [getValues, goToSection, saveMutation, trigger]
+  );
 
   const onOpenAIDialog = useCallback(() => setAIDialogOpen(true), []);
   const onOpenTemplatePicker = useCallback(() => setTemplatePickerOpen(true), []);
+  const onSelectFullPlanTemplate = useCallback(
+    async (
+      template: LessonTemplate,
+      loadedDocument?: Awaited<ReturnType<typeof getTemplateDocument>>
+    ) => {
+      const document = loadedDocument ?? (await getTemplateDocument(template.id));
+      const templateValues = templateDocumentValues(document.template, document.sectionTemplates);
+      const currentValues = getValues();
+      const hasAssignment = Boolean(currentValues.teacherAssignmentId);
+      const content = document.template.content as LessonPlanTemplateContent;
+      const enabledEvaluationTabs = EVALUATION_TAB_IDS.filter((tabId) => {
+        const templateType = TAB_TEMPLATE_TYPES[tabId];
+        const section = content.sections?.find((item) => item.sectionType === templateType);
+        return Boolean(section && section.enabled !== false);
+      });
+
+      reset({
+        ...templateValues,
+        teacherAssignmentId: currentValues.teacherAssignmentId,
+        curriculumId: hasAssignment ? currentValues.curriculumId : templateValues.curriculumId,
+        subjectId: hasAssignment ? currentValues.subjectId : templateValues.subjectId,
+        unitId: hasAssignment ? currentValues.unitId : templateValues.unitId,
+        gradeLevels: hasAssignment ? currentValues.gradeLevels : templateValues.gradeLevels,
+        indicatorIds: hasAssignment ? currentValues.indicatorIds : templateValues.indicatorIds,
+        learningOutcomeIds: hasAssignment
+          ? currentValues.learningOutcomeIds
+          : templateValues.learningOutcomeIds,
+        startDate: currentValues.startDate,
+        endDate: currentValues.endDate,
+      });
+      setEnabledEvaluationSections(enabledEvaluationTabs);
+      setTemplateLogo(content.cover?.logoUrl ?? null);
+      setTemplateLogoRemoved(false);
+      const savedOrder = content.document?.sectionOrder;
+      setTabOrder(
+        savedOrder?.length === DEFAULT_TAB_ORDER.length &&
+          DEFAULT_TAB_ORDER.every((tabId) => savedOrder.includes(tabId))
+          ? savedOrder
+          : DEFAULT_TAB_ORDER
+      );
+      setSelectedFullPlanTemplateName(template.name);
+      setActiveSection('lesson-plan-general');
+    },
+    [getValues, reset]
+  );
+
+  useEffect(() => {
+    const document = catalogSourceTemplateQuery.data;
+    if (
+      !catalogSourceTemplateId ||
+      !document ||
+      initializedCatalogSourceTemplateId.current === catalogSourceTemplateId
+    )
+      return;
+    initializedCatalogSourceTemplateId.current = catalogSourceTemplateId;
+    void onSelectFullPlanTemplate(document.template, document).catch((error: Error) => {
+      initializedCatalogSourceTemplateId.current = null;
+      toast.error(error.message);
+    });
+  }, [catalogSourceTemplateId, catalogSourceTemplateQuery.data, onSelectFullPlanTemplate]);
 
   const onLogoDrop = useCallback((file: File) => {
     setTemplateLogo(file);
@@ -1175,7 +1264,12 @@ export function LessonPlanFormView({
     templateLogoPreviewUrl,
   ]);
 
-  if (planQuery.isLoading || templatesQuery.isLoading || catalogTemplateQuery.isLoading)
+  if (
+    planQuery.isLoading ||
+    templatesQuery.isLoading ||
+    catalogTemplateQuery.isLoading ||
+    catalogSourceTemplateQuery.isLoading
+  )
     return <LinearProgress />;
 
   const returnPath = isTemplateMode
@@ -1210,23 +1304,45 @@ export function LessonPlanFormView({
           {isTemplateMode ? 'กลับไปหน้า Template แผนการสอน' : 'กลับไปหน้าแผนการสอน'}
         </Button>
       </Box>
-      <Box sx={{ mb: 2 }}>
-        <Typography component="h1" variant="h3">
-          {catalogTemplateId
-            ? 'แก้ไข Template แผนการสอน'
-            : isTemplateMode
-              ? 'สร้าง Template แผนการสอน'
-              : lessonPlanId
-                ? 'แก้ไขแผนการสอน'
-                : 'สร้างแผนการสอน'}
-        </Typography>
-        <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-          {catalogTemplateId
-            ? 'แก้ไขหัวข้อและเนื้อหาตั้งต้นที่จะนำไปใช้สร้างแผนการสอน'
-            : isTemplateMode
-              ? 'กำหนดหัวข้อและเนื้อหาตั้งต้นที่จะนำไปใช้สร้างแผนการสอน'
-              : 'เลือกรายวิชาที่ได้รับมอบหมาย ระบบจะเติมหลักสูตรและตัวชี้วัดตั้งต้นให้อัตโนมัติ'}
-        </Typography>
+      <Box
+        sx={{
+          mb: 2,
+          gap: 2,
+          display: 'flex',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          justifyContent: 'space-between',
+          flexDirection: { xs: 'column', sm: 'row' },
+        }}
+      >
+        <Box>
+          <Typography component="h1" variant="h3">
+            {catalogTemplateId
+              ? 'แก้ไข Template แผนการสอน'
+              : isTemplateMode
+                ? 'สร้าง Template แผนการสอน'
+                : lessonPlanId
+                  ? 'แก้ไขแผนการสอน'
+                  : 'สร้างแผนการสอน'}
+          </Typography>
+          <Typography sx={{ mt: 1, color: 'text.secondary' }}>
+            {catalogTemplateId
+              ? 'แก้ไขหัวข้อและเนื้อหาตั้งต้นที่จะนำไปใช้สร้างแผนการสอน'
+              : isTemplateMode
+                ? 'กำหนดหัวข้อและเนื้อหาตั้งต้นที่จะนำไปใช้สร้างแผนการสอน'
+                : 'เลือกรายวิชาที่ได้รับมอบหมาย ระบบจะเติมหลักสูตรและตัวชี้วัดตั้งต้นให้อัตโนมัติ'}
+          </Typography>
+        </Box>
+        {!isTemplateMode && !lessonPlanId ? (
+          <Button
+            size="large"
+            variant="contained"
+            startIcon={<RemixIcon icon="solar:documents-linear" />}
+            onClick={onOpenTemplatePicker}
+            sx={{ flexShrink: 0 }}
+          >
+            เลือกจาก Template
+          </Button>
+        ) : null}
       </Box>
 
       {planQuery.data?.review_note ? (
@@ -1239,18 +1355,26 @@ export function LessonPlanFormView({
           โหลดข้อมูลจากเทมเพลตแล้ว กรุณาเลือกรายวิชาและห้องเรียนก่อนบันทึก
         </Alert>
       ) : null}
+      {selectedFullPlanTemplateName ? (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          ใช้ Template “{selectedFullPlanTemplateName}” เป็นข้อมูลตั้งต้นแล้ว
+          กรุณาเลือกรายวิชาและห้องเรียนก่อนบันทึก
+        </Alert>
+      ) : null}
 
       {saveMutation.isError ||
       optionsQuery.isError ||
       planQuery.isError ||
       templatesQuery.isError ||
-      catalogTemplateQuery.isError ? (
+      catalogTemplateQuery.isError ||
+      catalogSourceTemplateQuery.isError ? (
         <Alert severity="error" sx={{ mb: 3 }}>
           {saveMutation.error?.message ??
             optionsQuery.error?.message ??
             planQuery.error?.message ??
             templatesQuery.error?.message ??
-            catalogTemplateQuery.error?.message}
+            catalogTemplateQuery.error?.message ??
+            catalogSourceTemplateQuery.error?.message}
         </Alert>
       ) : null}
 
@@ -1306,6 +1430,8 @@ export function LessonPlanFormView({
               <TemplateContentTab
                 activeSection={activeSection}
                 activeTemplateType={activeTemplateType}
+                isTemplateMode={isTemplateMode}
+                isEditable={isEditable}
                 templateOptions={aiOptionsQuery.data?.templates ?? []}
                 objectiveContent={
                   navigationValues.templateSectionContents?.[
@@ -1316,40 +1442,6 @@ export function LessonPlanFormView({
                 onOpenAIDialog={onOpenAIDialog}
               />
             ) : null}
-
-            {!isTemplateMode && activeSection === 'lesson-plan-standards' && (
-              <StandardsTab
-                isEditable={isEditable}
-                selectedAssignment={selectedAssignment}
-                selectedIndicatorIds={selectedIndicatorIds}
-                onSelectIndicators={selectIndicators}
-                onApplyCurriculum={onApplyCurriculum}
-              />
-            )}
-            {!isTemplateMode && activeSection === 'lesson-plan-objectives' && (
-              <ObjectivesTab isEditable={isEditable} />
-            )}
-            {!isTemplateMode && activeSection === 'lesson-plan-essential' && (
-              <EssentialContentTab isEditable={isEditable} />
-            )}
-            {!isTemplateMode && activeSection === 'lesson-plan-characteristics' && (
-              <CharacteristicsTab isEditable={isEditable} />
-            )}
-            {!isTemplateMode && activeSection === 'lesson-plan-competencies' && (
-              <CompetenciesTab isEditable={isEditable} />
-            )}
-            {!isTemplateMode && activeSection === 'lesson-plan-questions' && (
-              <QuestionsTab isEditable={isEditable} />
-            )}
-            {!isTemplateMode && activeSection === 'lesson-plan-activities' && (
-              <ActivitiesTab isEditable={isEditable} />
-            )}
-            {!isTemplateMode && activeSection === 'lesson-plan-media' && (
-              <MediaTab isEditable={isEditable} />
-            )}
-            {!isTemplateMode && activeSection === 'lesson-plan-assessment' && (
-              <AssessmentTab isEditable={isEditable} />
-            )}
           </Box>
         </Box>
 
@@ -1368,15 +1460,31 @@ export function LessonPlanFormView({
             catalogTemplateQuery.data?.template.version ?? planQuery.data?.version_number ?? 1
           }
           activeTabLabel={activeNavigationSection.label}
-          showTemplatePickerButton={Boolean(lessonPlanId) && activeSection in TAB_TEMPLATE_TYPES}
+          showTemplatePickerButton={
+            !lessonPlanId || (Boolean(lessonPlanId) && activeSection in TAB_TEMPLATE_TYPES)
+          }
           isEditable={isEditable}
           isSaving={saveMutation.isPending}
+          showPublishButton={isTemplateMode}
+          saveLabel={isTemplateMode ? 'บันทึกฉบับร่าง' : 'บันทึก'}
           returnPath={returnPath}
           onOpenTemplatePicker={onOpenTemplatePicker}
           onPreviewPdf={onPreviewPdf}
           onSaveTab={saveCurrentTab}
+          onPublish={() => setPublishDialogOpen(true)}
         />
       </Form>
+
+      <TemplatePublishDialog
+        open={publishDialogOpen}
+        loading={saveMutation.isPending}
+        canPublishSchool={Boolean(aiOptionsQuery.data?.canManageSchool)}
+        initialScope={
+          catalogTemplateQuery.data?.template.scope === 'school' ? 'school' : 'personal'
+        }
+        onClose={() => setPublishDialogOpen(false)}
+        onPublish={publishTemplate}
+      />
 
       {activeTemplateType ? (
         <TemplateAIDialog
@@ -1435,7 +1543,7 @@ export function LessonPlanFormView({
         <LessonPlanPdfDialog
           open
           onClose={() => setPdfOpen(false)}
-          plan={toPayload(getValues())}
+          plan={toPayload(templateSectionsToLegacyValues(getValues()))}
           assignment={selectedAssignment}
           version={
             catalogTemplateQuery.data?.template.version ?? planQuery.data?.version_number ?? 1
@@ -1443,16 +1551,25 @@ export function LessonPlanFormView({
         />
       ) : null}
 
-      {lessonPlanId && activeSection in TAB_TEMPLATE_TYPES ? (
+      {templatePickerOpen && (!lessonPlanId || activeSection in TAB_TEMPLATE_TYPES) ? (
         <LessonPlanTemplatePickerDialog
-          open={templatePickerOpen}
+          open
           onClose={() => setTemplatePickerOpen(false)}
           lessonPlanId={lessonPlanId}
-          templateType={TAB_TEMPLATE_TYPES[activeSection as keyof typeof TAB_TEMPLATE_TYPES]}
-          onApplied={async () => {
-            initializedPlanId.current = null;
-            await planQuery.refetch();
-          }}
+          templateType={
+            lessonPlanId
+              ? TAB_TEMPLATE_TYPES[activeSection as keyof typeof TAB_TEMPLATE_TYPES]
+              : 'lesson_plan'
+          }
+          onSelectTemplate={lessonPlanId ? undefined : onSelectFullPlanTemplate}
+          onApplied={
+            lessonPlanId
+              ? async () => {
+                  initializedPlanId.current = null;
+                  await planQuery.refetch();
+                }
+              : undefined
+          }
         />
       ) : null}
     </Container>

@@ -22,6 +22,8 @@ type TemplateContentFieldsProps = ComponentProps<typeof TemplateContentFields>;
 type TemplateContentTabProps = {
   activeSection: string;
   activeTemplateType: TemplateType;
+  isTemplateMode: boolean;
+  isEditable: boolean;
   templateOptions: TemplateContentFieldsProps['templateOptions'];
   objectiveContent: TemplateContentFieldsProps['objectiveContent'];
   aiEnabled: boolean;
@@ -31,6 +33,8 @@ type TemplateContentTabProps = {
 export const TemplateContentTab = memo(function TemplateContentTab({
   activeSection,
   activeTemplateType,
+  isTemplateMode,
+  isEditable,
   templateOptions,
   objectiveContent,
   aiEnabled,
@@ -50,7 +54,9 @@ export const TemplateContentTab = memo(function TemplateContentTab({
         <Box>
           <Typography variant="h5">{TAB_LABELS[activeSection]}</Typography>
           <Typography variant="body2" color="text.secondary">
-            ฟอร์มกลางสำหรับ Template ประเภทนี้ ข้อมูลเป็นตัวอย่างและไม่ผูกกับรายวิชา
+            {isTemplateMode
+              ? 'ฟอร์มกลางสำหรับ Template ประเภทนี้ ข้อมูลเป็นตัวอย่างและไม่ผูกกับรายวิชา'
+              : 'ใช้ฟอร์มชุดเดียวกับ Template และบันทึกข้อมูลลงในแผนการสอนนี้'}
           </Typography>
         </Box>
         {aiEnabled ? (
@@ -65,13 +71,15 @@ export const TemplateContentTab = memo(function TemplateContentTab({
         ) : null}
       </Box>
       <Divider />
-      <TemplateContentFields
-        templateType={activeTemplateType}
-        templateOptions={templateOptions}
-        contentPath={`templateSectionContents.${activeSection}`}
-        studentRosterPath="evaluationStudents"
-        objectiveContent={objectiveContent}
-      />
+      <Box component="fieldset" disabled={!isEditable} sx={{ p: 0, m: 0, minWidth: 0, border: 0 }}>
+        <TemplateContentFields
+          templateType={activeTemplateType}
+          templateOptions={templateOptions}
+          contentPath={`templateSectionContents.${activeSection}`}
+          studentRosterPath="evaluationStudents"
+          objectiveContent={objectiveContent}
+        />
+      </Box>
     </Card>
   );
 });

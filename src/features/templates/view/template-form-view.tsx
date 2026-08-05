@@ -1,6 +1,7 @@
 'use client';
 
 import type { TemplateAIAction } from 'src/features/ai/types/ai.types';
+import type { PublishTemplateScope } from '../components/template-publish-dialog';
 import type { TemplateType, TemplateInput, LessonPlanTemplateContent } from '../types';
 
 import { useRef, useMemo, useState, useEffect } from 'react';
@@ -35,6 +36,7 @@ import { parseTemplateInput } from '../schemas';
 import { defaultTemplateContent } from '../template-defaults';
 import { TemplatePreview } from '../components/template-preview';
 import { TemplateCoverFields } from '../components/template-cover-fields';
+import { TemplatePublishDialog } from '../components/template-publish-dialog';
 import { TemplateContentFields } from '../components/template-content-fields';
 import { GRADE_LEVELS, TEMPLATE_TYPES, TEMPLATE_TYPE_LABELS } from '../constants';
 import {
@@ -115,6 +117,7 @@ export function TemplateFormView({
   const [templateLogo, setTemplateLogo] = useState<File | string | null>(null);
   const [templateLogoPreviewUrl, setTemplateLogoPreviewUrl] = useState('');
   const [logoRemoved, setLogoRemoved] = useState(false);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [editorSection, setEditorSection] = useState<'general' | 'structure' | 'preview'>(
     'general'
   );
@@ -339,9 +342,18 @@ export function TemplateFormView({
       }
       return saved;
     },
-    onSuccess: async (saved) => {
+    onSuccess: async (saved, input) => {
       localStorage.removeItem(draftStorageKey);
-      toast.success(templateId ? 'บันทึกการแก้ไขแล้ว' : 'สร้าง Template แล้ว');
+      setPublishDialogOpen(false);
+      toast.success(
+        input.status === 'active'
+          ? input.scope === 'school'
+            ? 'เผยแพร่ Template ให้ทั้งโรงเรียนแล้ว'
+            : 'เผยแพร่ Template ส่วนตัวแล้ว'
+          : templateId
+            ? 'บันทึกฉบับร่างแล้ว'
+            : 'สร้างฉบับร่างแล้ว'
+      );
       await queryClient.invalidateQueries({ queryKey: ['lesson-templates'] });
       router.push(returnPath);
       router.refresh();
@@ -350,24 +362,32 @@ export function TemplateFormView({
     onError: (error) => toast.error(error.message),
   });
 
-  const submit = handleSubmit((values) => {
-    try {
-      const normalizedValues = isFullPlanEditor
-        ? {
-            ...values,
-            curriculumId: null,
-            subjectId: null,
-            unitId: null,
-            courseId: null,
-            indicatorIds: [],
-            learningOutcomeIds: [],
-          }
-        : values;
-      saveMutation.mutate(parseTemplateInput(normalizedValues) as TemplateInput);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'กรุณาตรวจสอบข้อมูล');
-    }
-  });
+  const submitTemplate = (status: 'draft' | 'active', publishScope?: PublishTemplateScope) =>
+    handleSubmit((values) => {
+      try {
+        const valuesWithPublication = {
+          ...values,
+          status,
+          scope: publishScope ?? values.scope,
+        };
+        const normalizedValues = isFullPlanEditor
+          ? {
+              ...valuesWithPublication,
+              curriculumId: null,
+              subjectId: null,
+              unitId: null,
+              courseId: null,
+              indicatorIds: [],
+              learningOutcomeIds: [],
+            }
+          : valuesWithPublication;
+        saveMutation.mutate(parseTemplateInput(normalizedValues) as TemplateInput);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'กรุณาตรวจสอบข้อมูล');
+      }
+    })();
+
+  const submitDraft = () => submitTemplate('draft');
 
   if (templateQuery.isLoading) return <LinearProgress />;
   if (templateQuery.isError)
@@ -433,7 +453,7 @@ export function TemplateFormView({
           ) : null}
         </Box>
       </Box>
-      <Form methods={methods} onSubmit={submit}>
+      <Form methods={methods} onSubmit={submitDraft}>
         <Box
           sx={{
             gap: 3,
@@ -539,17 +559,6 @@ export function TemplateFormView({
                       {option.label}
                     </MenuItem>
                   ))}
-                </Field.Select>
-                <Field.Select name="scope" label="ขอบเขตการใช้งาน">
-                  <MenuItem value="personal">ส่วนตัว</MenuItem>
-                  {optionsQuery.data?.canManageSchool ? (
-                    <MenuItem value="school">โรงเรียน</MenuItem>
-                  ) : null}
-                </Field.Select>
-                <Field.Select name="status" label="สถานะ">
-                  <MenuItem value="draft">ฉบับร่าง</MenuItem>
-                  <MenuItem value="active">ใช้งาน</MenuItem>
-                  <MenuItem value="archived">เก็บถาวร</MenuItem>
                 </Field.Select>
                 {!isFullPlanEditor ? (
                   <>
@@ -909,15 +918,34 @@ export function TemplateFormView({
             ยกเลิก
           </Button>
           <Button
-            type="submit"
+            type="button"
             variant="contained"
             loading={saveMutation.isPending}
             startIcon={<RemixIcon icon="solar:diskette-linear" />}
+            onClick={submitDraft}
           >
-            บันทึก Template
+            บันทึกฉบับร่าง
+          </Button>
+          <Button
+            type="button"
+            color="success"
+            variant="contained"
+            disabled={saveMutation.isPending}
+            startIcon={<RemixIcon icon="solar:upload-minimalistic-linear" />}
+            onClick={() => setPublishDialogOpen(true)}
+          >
+            เผยแพร่
           </Button>
         </Card>
       </Form>
+      <TemplatePublishDialog
+        open={publishDialogOpen}
+        loading={saveMutation.isPending}
+        canPublishSchool={Boolean(optionsQuery.data?.canManageSchool)}
+        initialScope={methods.getValues('scope') === 'school' ? 'school' : 'personal'}
+        onClose={() => setPublishDialogOpen(false)}
+        onPublish={(scope) => submitTemplate('active', scope)}
+      />
       <TemplateAIDialog
         open={aiDialogOpen}
         onClose={() => setAIDialogOpen(false)}

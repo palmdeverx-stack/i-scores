@@ -24,15 +24,16 @@ export const LESSON_PLAN_DRAFT_TAB_COLUMNS: Record<string, string[]> = {
     'learning_standards',
     'milestone_indicators',
     'terminal_indicators',
+    'template_section_contents',
   ],
-  'lesson-plan-objectives': ['learning_objectives'],
-  'lesson-plan-essential': ['essential_content'],
-  'lesson-plan-characteristics': ['desired_characteristics'],
-  'lesson-plan-competencies': ['learner_competencies'],
-  'lesson-plan-questions': ['guiding_questions'],
-  'lesson-plan-activities': ['learning_activities'],
-  'lesson-plan-media': ['learning_media'],
-  'lesson-plan-assessment': ['assessment'],
+  'lesson-plan-objectives': ['learning_objectives', 'template_section_contents'],
+  'lesson-plan-essential': ['essential_content', 'template_section_contents'],
+  'lesson-plan-characteristics': ['desired_characteristics', 'template_section_contents'],
+  'lesson-plan-competencies': ['learner_competencies', 'template_section_contents'],
+  'lesson-plan-questions': ['guiding_questions', 'template_section_contents'],
+  'lesson-plan-activities': ['learning_activities', 'template_section_contents'],
+  'lesson-plan-media': ['learning_media', 'template_section_contents'],
+  'lesson-plan-assessment': ['assessment', 'template_section_contents'],
 };
 
 const text = (value: unknown, max: number) =>
@@ -49,6 +50,10 @@ const stringArray = (value: unknown, max: number) =>
         ),
       ].slice(0, max)
     : [];
+const jsonObject = (value: unknown) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return JSON.stringify(value).length <= 1_000_000 ? (value as Record<string, unknown>) : {};
+};
 
 export type LessonPlanPayload = ReturnType<typeof parseLessonPlanPayload>;
 
@@ -118,5 +123,6 @@ export function parseLessonPlanPayload(
     learning_activities: optionalText(value.learningActivities, 50000),
     learning_media: optionalText(value.learningMedia, 20000),
     assessment: optionalText(value.assessment, 30000),
+    template_section_contents: jsonObject(value.templateSectionContents),
   };
 }
