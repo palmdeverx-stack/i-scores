@@ -76,17 +76,26 @@ export const navData: NavSectionProps['data'] = [
         featureKey: 'teacher.manage_classrooms',
       },
       {
-        title: 'รายวิชา',
+        title: 'ชั้นเรียนที่สอน',
         path: paths.teacher.assignments,
         icon: ICONS.assignments,
         deepMatch: true,
+        featureKey: 'teacher.assignments',
+        requiresDepartmentPermission: 'teaching.assignments',
+      },
+      {
+        title: 'รายวิชา',
+        path: paths.teacher.subjectRoot,
+        icon: ICONS.subject,
+        deepMatch: true,
         children: [
           {
-            title: 'รายวิชาที่สอน',
-            path: paths.teacher.assignments,
-            icon: ICONS.assignments,
-            featureKey: 'teacher.assignments',
-            requiresDepartmentPermission: 'teaching.assignments',
+            title: 'คลังรายวิชา',
+            path: paths.teacher.subjectRoot,
+            icon: ICONS.subject,
+            deepMatch: true,
+            activePathExclusions: [paths.teacher.subjectNew],
+            featureKey: 'teacher.manage_subjects',
           },
           {
             title: 'สร้างรายวิชา',
@@ -101,18 +110,27 @@ export const navData: NavSectionProps['data'] = [
         path: paths.teacher.lessonPlans.root,
         icon: ICONS.documents,
         deepMatch: true,
+        featureKey: 'teacher.lesson_plans',
         requiresDepartmentPermission: 'teaching.assignments',
         children: [
           {
             title: 'แผนการสอนของฉัน',
             path: paths.teacher.lessonPlans.root,
             icon: ICONS.documents,
-            activePathExclusions: [paths.teacher.lessonPlans.templates],
+            activePathExclusions: [
+              paths.teacher.lessonPlans.templates,
+              paths.teacher.lessonPlans.templateLibrary,
+            ],
           },
           {
-            title: 'เทมเพลตแผนการสอน',
+            title: 'Template แผนการสอน',
             path: paths.teacher.lessonPlans.templates,
             icon: ICONS.gradeReviews,
+          },
+          {
+            title: 'รวม Template ทุกประเภท',
+            path: paths.teacher.lessonPlans.templateLibrary,
+            icon: ICONS.documents,
           },
         ],
       },
@@ -198,6 +216,7 @@ export const navData: NavSectionProps['data'] = [
         title: 'ตรวจแผนการสอน',
         path: paths.teacher.lessonPlanReviews,
         icon: ICONS.gradeReviews,
+        featureKey: 'teacher.lesson_plans',
         requiresDepartmentPermission: 'lesson_plans.review',
       },
       {

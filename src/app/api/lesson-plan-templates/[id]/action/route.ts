@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { requireRole } from 'src/lib/auth-token';
+import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import {
   duplicateTemplate,
   setTemplateArchived,
@@ -9,7 +9,7 @@ import {
 type Context = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: Context) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId)
     return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการ' }, { status: 403 });
   const body = await request.json().catch(() => ({}));

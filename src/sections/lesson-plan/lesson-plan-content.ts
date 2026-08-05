@@ -5,12 +5,18 @@ export type AssessmentRow = {
   criteria: string;
 };
 
+export type LearningActivityRow = {
+  title: string;
+  description: string;
+};
+
 export type IndicatorRow = {
   code: string;
   description: string;
 };
 
 const ASSESSMENT_TABLE_PREFIX = 'ASSESSMENT_TABLE_V1:';
+const ACTIVITIES_LIST_PREFIX = 'ACTIVITIES_LIST_V1:';
 
 const INDICATOR_CODE_PATTERN =
   /^((?:[ก-๙A-Za-z]+\s+)?\d+(?:\.\d+)*\s+[ปม]\.?\s*\d+\/\d+)\s+(.*)$/;
@@ -88,6 +94,49 @@ export function serializeAssessment(rows: AssessmentRow[]) {
     .filter((row) => Object.values(row).some(Boolean));
 
   return cleanedRows.length ? `${ASSESSMENT_TABLE_PREFIX}${JSON.stringify(cleanedRows)}` : '';
+}
+
+export function parseLearningActivities(value?: string | null): LearningActivityRow[] {
+  if (value?.startsWith(ACTIVITIES_LIST_PREFIX)) {
+    try {
+      const parsed = JSON.parse(value.slice(ACTIVITIES_LIST_PREFIX.length));
+      if (Array.isArray(parsed)) {
+        const rows = parsed.flatMap((row): LearningActivityRow[] => {
+          if (!row || typeof row !== 'object') return [];
+          const record = row as Record<string, unknown>;
+          return [
+            {
+              title: typeof record.title === 'string' ? record.title : '',
+              description: typeof record.description === 'string' ? record.description : '',
+            },
+          ];
+        });
+        if (rows.length) return rows;
+      }
+    } catch {
+      // Fall through and preserve malformed or legacy content as a single row.
+    }
+  }
+
+  return [{ title: '', description: value ?? '' }];
+}
+
+export function serializeLearningActivities(rows: LearningActivityRow[]) {
+  const cleanedRows = rows
+    .map((row) => ({ title: row.title.trim(), description: row.description.trim() }))
+    .filter((row) => row.title || richTextToPlainText(row.description));
+
+  return cleanedRows.length ? `${ACTIVITIES_LIST_PREFIX}${JSON.stringify(cleanedRows)}` : '';
+}
+
+export function activitiesToPlainText(value?: string | null) {
+  return parseLearningActivities(value)
+    .flatMap((row, index) => {
+      const description = richTextToPlainText(row.description);
+      if (!row.title && !description) return [];
+      return [row.title || `กิจกรรมที่ ${index + 1}`, description].filter(Boolean);
+    })
+    .join('\n');
 }
 
 export function assessmentToPlainText(value?: string | null) {

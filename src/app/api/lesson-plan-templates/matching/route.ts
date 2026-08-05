@@ -2,11 +2,11 @@ import type { TemplateType } from 'src/features/templates/types';
 
 import { NextResponse } from 'next/server';
 
-import { requireRole } from 'src/lib/auth-token';
+import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import { findMatchingTemplates } from 'src/features/templates/server/template-service';
 
 export async function GET(request: Request) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId)
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   const params = new URL(request.url).searchParams;

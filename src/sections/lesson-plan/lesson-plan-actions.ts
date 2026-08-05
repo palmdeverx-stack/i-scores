@@ -71,6 +71,8 @@ export type LessonPlan = {
   end_date: string | null;
   learning_standards: string | null;
   indicators: string | null;
+  milestone_indicators: string | null;
+  terminal_indicators: string | null;
   learning_objectives: string | null;
   essential_content: string | null;
   learner_competencies: string | null;
@@ -115,7 +117,8 @@ export type LessonPlanInput = CurriculumReference & {
   startDate: string;
   endDate: string;
   learningStandards: string;
-  indicators: string;
+  milestoneIndicators: string;
+  terminalIndicators: string;
   learningObjectives: string;
   essentialContent: string;
   learnerCompetencies: string;

@@ -60,6 +60,7 @@ const emptyValues: FormValues = {
 export function TeacherAssignmentFormDialog({ open, editingRow, onClose }: Props) {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
+  const isPersonalWorkspace = user?.is_personal_workspace === true;
   const schoolScope = user?.school_id ?? '';
   const queryClient = useQueryClient();
 
@@ -78,9 +79,14 @@ export function TeacherAssignmentFormDialog({ open, editingRow, onClose }: Props
   });
   const { data: subjects = [], isLoading: subjectsLoading } = useQuery({
     queryKey: ['subjects', schoolScope, semesterId],
-    queryFn: () => listSubjects({ semesterId }),
+    queryFn: () => listSubjects(isPersonalWorkspace ? undefined : { semesterId }),
     enabled: open && !!schoolScope && !!semesterId,
   });
+  const availableSubjects = subjects.filter(
+    (subject) =>
+      subject.semester_id === semesterId ||
+      (isPersonalWorkspace && ['personal', 'public', 'system'].includes(subject.scope))
+  );
   const { data: classrooms = [], isLoading: classroomsLoading } = useQuery({
     queryKey: ['classrooms', schoolScope, academicYearId],
     queryFn: () => listClassrooms({ academicYearId }),
@@ -273,7 +279,7 @@ export function TeacherAssignmentFormDialog({ open, editingRow, onClose }: Props
                 semesterId ? 'แสดงเฉพาะวิชาที่เปิดในภาคเรียนนี้' : 'เลือกปีการศึกษาและภาคเรียนก่อน'
               }
             >
-              {subjects.map((subject) => (
+              {availableSubjects.map((subject) => (
                 <MenuItem key={subject.id} value={subject.id}>
                   {subject.code ? `${subject.code} · ${subject.name}` : subject.name}
                 </MenuItem>

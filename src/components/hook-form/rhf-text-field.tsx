@@ -47,7 +47,7 @@ export function RHFTextField({
               ? transformValueOnBlur(event.target.value)
               : event.target.value;
 
-            field.onChange(transformedValue);
+            field.onChange(transformedValue === '' && isNumberType ? undefined : transformedValue);
           }}
           type={isNumberType ? 'text' : type}
           error={!!error}

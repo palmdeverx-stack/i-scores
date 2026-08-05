@@ -94,7 +94,9 @@ export function AcademicYearListView() {
             ปีการศึกษา
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-            จัดการปีการศึกษาและภาคเรียนของโรงเรียน
+            {user?.is_personal_workspace
+              ? 'จัดรอบปีและภาคเรียนสำหรับชั้นเรียนส่วนตัวของคุณ'
+              : 'จัดการปีการศึกษาและภาคเรียนของโรงเรียน'}
           </Typography>
         </Box>
 

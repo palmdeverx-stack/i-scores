@@ -130,7 +130,7 @@ export function EnrollmentCreateView() {
             กลับไปหน้าชั้นเรียน
           </Button>
           <Typography component="h1" variant="h3" sx={{ mb: 1 }}>
-            เพิ่มนักเรียนเข้าห้อง
+            เพิ่มนักเรียนกลุ่มเรียน (ห้องเรียน)
           </Typography>
           <Typography sx={{ color: 'text.secondary' }}>
             เลือกห้องเรียนก่อน แล้วเลือกนักเรียนหลายคนเพื่อเพิ่มเข้าห้องพร้อมกัน
@@ -382,7 +382,11 @@ export function EnrollmentCreateView() {
             value={selectedClassroom?.name ?? 'ยังไม่ได้เลือก'}
             ready={!!selectedClassroom}
           />
-          <Alert severity="info" icon={<RemixIcon icon="solar:info-circle-bold" />} sx={{ mt: 2.5 }}>
+          <Alert
+            severity="info"
+            icon={<RemixIcon icon="solar:info-circle-bold" />}
+            sx={{ mt: 2.5 }}
+          >
             ระบบจะแสดงเฉพาะนักเรียนที่ยังไม่มีห้องในปีการศึกษานี้ และสามารถกำหนดเลขที่ภายหลังได้
           </Alert>
         </Card>

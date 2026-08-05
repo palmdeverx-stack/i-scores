@@ -10,6 +10,17 @@ export const reflectionSchema = z.object({
         required: z.boolean().optional(),
       })
     )
-    .min(1, 'กรุณาเพิ่มหัวข้ออย่างน้อย 1 รายการ')
-    .max(50),
+    .max(50)
+    .optional(),
+  studentCount: z.number().int().min(0).max(100000).optional(),
+  passedCount: z.number().int().min(0).max(100000).optional(),
+  passedPercentage: z.number().min(0).max(100).optional(),
+  notPassedCount: z.number().int().min(0).max(100000).optional(),
+  notPassedPercentage: z.number().min(0).max(100).optional(),
+  specialStudents: z.array(z.string().trim().min(1).max(1000)).max(100).optional().default([]),
+  knowledgeResult: z.string().max(30000).optional().default(''),
+  processResult: z.string().max(30000).optional().default(''),
+  attitudeResult: z.string().max(30000).optional().default(''),
+  problems: z.string().max(30000).optional().default(''),
+  solutions: z.string().max(30000).optional().default(''),
 });

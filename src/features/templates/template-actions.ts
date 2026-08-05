@@ -1,6 +1,14 @@
 'use client';
 
-import type { TemplateInput, LessonTemplate, TemplateFilters } from './types';
+import type {
+  TemplateType,
+  TemplateScope,
+  TemplateInput,
+  LessonTemplate,
+  TemplateContent,
+  TemplateFilters,
+  TemplateTabCounts,
+} from './types';
 
 async function parseResponse<T>(response: Response, fallback: string): Promise<T> {
   const json = await response.json().catch(() => null);
@@ -34,6 +42,7 @@ export async function getTemplatesPage(
     templates: LessonTemplate[];
     hasMore: boolean;
     nextOffset: number;
+    tabCounts?: TemplateTabCounts;
   }>(response, 'โหลด Template ไม่สำเร็จ');
 }
 
@@ -41,6 +50,14 @@ export async function getTemplateById(id: string) {
   const response = await fetch(`/api/lesson-plan-templates/${id}`);
   return (await parseResponse<{ template: LessonTemplate }>(response, 'โหลด Template ไม่สำเร็จ'))
     .template;
+}
+
+export async function getTemplateDocument(id: string) {
+  const response = await fetch(`/api/lesson-plan-templates/${id}?include=sections`);
+  return parseResponse<{ template: LessonTemplate; sectionTemplates: LessonTemplate[] }>(
+    response,
+    'โหลดเอกสาร Template ไม่สำเร็จ'
+  );
 }
 
 export async function getTemplateOptions() {
@@ -73,6 +90,17 @@ export async function getTemplateOptions() {
       description: string;
       learning_standard: string | null;
     }>;
+    templates: Array<{
+      id: string;
+      name: string;
+      template_type: TemplateType;
+      scope: TemplateScope;
+      content: TemplateContent;
+    }>;
+    learningAreas: Array<{ code: string; name: string }>;
+    gradeLevels: Array<{ code: string; name: string }>;
+    academicYears: string[];
+    semesters: string[];
     canManageSchool: boolean;
     aiEnabled: boolean;
   }>(response, 'โหลดตัวเลือกไม่สำเร็จ');
@@ -98,6 +126,21 @@ export async function updateTemplate(id: string, input: TemplateInput) {
     .template;
 }
 
+export async function uploadTemplateLogo(id: string, file: File) {
+  const formData = new FormData();
+  formData.set('file', file);
+  const response = await fetch(`/api/lesson-plan-templates/${id}/logo`, {
+    method: 'POST',
+    body: formData,
+  });
+  return parseResponse<{ logoUrl: string }>(response, 'อัปโหลดโลโก้ไม่สำเร็จ');
+}
+
+export async function deleteTemplateLogo(id: string) {
+  const response = await fetch(`/api/lesson-plan-templates/${id}/logo`, { method: 'DELETE' });
+  return parseResponse<{ success: true }>(response, 'ลบโลโก้ไม่สำเร็จ');
+}
+
 export async function deleteTemplate(id: string) {
   const response = await fetch(`/api/lesson-plan-templates/${id}`, { method: 'DELETE' });
   await parseResponse(response, 'ลบ Template ไม่สำเร็จ');
@@ -109,7 +152,7 @@ export async function templateAction(id: string, action: 'duplicate' | 'archive'
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action }),
   });
-  return parseResponse(response, 'ดำเนินการไม่สำเร็จ');
+  return parseResponse<{ template: LessonTemplate }>(response, 'ดำเนินการไม่สำเร็จ');
 }
 
 export async function applyTemplate(input: {

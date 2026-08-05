@@ -1,10 +1,10 @@
 import { ZodError } from 'zod';
 import { NextResponse } from 'next/server';
 
-import { requireRole } from 'src/lib/auth-token';
 import { aiConfig } from 'src/features/ai/config/ai.config';
 import { generateTemplateRequestSchema } from 'src/features/ai/schemas';
 import { AIError, publicAIError } from 'src/features/ai/errors/ai-error';
+import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import { generateTemplateWithAI } from 'src/features/ai/services/template-ai.service';
 import { enforceTemplateAIRateLimit } from 'src/features/ai/services/ai-rate-limit.service';
 import {
@@ -17,7 +17,7 @@ import {
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId) {
     return NextResponse.json({ code: 'AI_INVALID_INPUT', message: 'ไม่มีสิทธิ์ใช้งาน AI' }, { status: 403 });
   }

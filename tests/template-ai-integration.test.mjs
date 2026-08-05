@@ -8,7 +8,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('route authenticates, checks feature/config, rate limit and quota before OpenAI', () => {
   const source = read('src/app/api/ai/templates/generate/route.ts');
-  const auth = source.indexOf('requireRole');
+  const auth = source.indexOf('requireLessonPlanFeature');
   const enabled = source.indexOf('templateEnabled');
   const configured = source.indexOf('OPENAI_API_KEY');
   const rate = source.indexOf('enforceTemplateAIRateLimit(caller.sub)');

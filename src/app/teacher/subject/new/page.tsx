@@ -11,5 +11,5 @@ import { SubjectFormView } from 'src/sections/subject/view/subject-form-view';
 export const metadata: Metadata = { title: `เพิ่มรายวิชา - ${CONFIG.appName}` };
 
 export default function Page() {
-  return <SubjectFormView basePath={paths.teacher.departmentSubject} />;
+  return <SubjectFormView basePath={paths.teacher.subjectRoot} />;
 }

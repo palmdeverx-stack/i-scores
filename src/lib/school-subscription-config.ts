@@ -102,6 +102,12 @@ export const SCHOOL_FEATURES = [
     description: 'จัดการรายวิชา งาน คะแนน และเช็คชื่อรายวิชา',
   },
   {
+    key: 'teacher.lesson_plans',
+    group: 'ครู',
+    label: 'แผนการสอนและเทมเพลต',
+    description: 'สร้าง จัดการ และใช้เทมเพลตแผนการสอน',
+  },
+  {
     key: 'teacher.students',
     group: 'ครู',
     label: 'นักเรียนของฉัน',

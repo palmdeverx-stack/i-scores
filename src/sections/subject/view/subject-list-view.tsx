@@ -70,6 +70,10 @@ export function SubjectListView({
   const queryClient = useQueryClient();
   const createPath =
     basePath === paths.teacher.departmentSubject ? paths.teacher.subjectNew : `${basePath}/new`;
+  const editPath = (subjectId: string) =>
+    basePath === paths.teacher.departmentSubject
+      ? paths.teacher.subjectEdit(subjectId)
+      : `${basePath}/${subjectId}/edit`;
 
   const {
     data: allSubjects = [],
@@ -195,7 +199,7 @@ export function SubjectListView({
     onSuccess: async (newSubject) => {
       await queryClient.invalidateQueries({ queryKey: ['subjects'] });
       toast.success(`คัดลอกวิชา "${newSubject.name}" เรียบร้อยแล้ว`);
-      router.push(`${basePath}/${newSubject.id}/edit`);
+      router.push(editPath(newSubject.id));
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -500,7 +504,7 @@ export function SubjectListView({
                         <IconButton
                           size="small"
                           component={RouterLink}
-                          href={`${basePath}/${subject.id}/edit`}
+                          href={editPath(subject.id)}
                           aria-label={`แก้ไขวิชา ${subject.name}`}
                         >
                           <RemixIcon icon="solar:pen-bold" width={18} />

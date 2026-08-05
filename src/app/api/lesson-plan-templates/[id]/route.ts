@@ -1,8 +1,8 @@
 import { ZodError } from 'zod';
 import { NextResponse } from 'next/server';
 
-import { requireRole } from 'src/lib/auth-token';
 import { parseTemplateInput } from 'src/features/templates/schemas';
+import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import {
   CurriculumReferenceError,
   resolveCurriculumReference,
@@ -12,6 +12,7 @@ import {
   deleteTemplate,
   getTemplateById,
   canReadTemplate,
+  getLinkedSectionTemplates,
 } from 'src/features/templates/server/template-service';
 
 type Context = { params: Promise<{ id: string }> };
@@ -29,16 +30,21 @@ function failure(error: unknown) {
 }
 
 export async function GET(request: Request, { params }: Context) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   if (!caller) return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   const template = await getTemplateById((await params).id);
   if (!(await canReadTemplate(caller, template)))
     return NextResponse.json({ message: 'ไม่พบ Template' }, { status: 404 });
-  return NextResponse.json({ template });
+  const includeSections = new URL(request.url).searchParams.get('include') === 'sections';
+  const sectionTemplates =
+    includeSections && template?.template_type === 'lesson_plan'
+      ? await getLinkedSectionTemplates(caller, template.content)
+      : undefined;
+  return NextResponse.json({ template, sectionTemplates });
 }
 
 export async function PATCH(request: Request, { params }: Context) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId) return NextResponse.json({ message: 'ไม่มีสิทธิ์แก้ไข' }, { status: 403 });
   try {
     const input = parseTemplateInput(await request.json());
@@ -52,7 +58,7 @@ export async function PATCH(request: Request, { params }: Context) {
 }
 
 export async function DELETE(request: Request, { params }: Context) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId) return NextResponse.json({ message: 'ไม่มีสิทธิ์ลบ' }, { status: 403 });
   try {
     await deleteTemplate(caller, (await params).id);

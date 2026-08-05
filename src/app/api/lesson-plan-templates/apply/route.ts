@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import { NextResponse } from 'next/server';
 
-import { requireRole } from 'src/lib/auth-token';
+import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import { applyTemplateToLessonPlan } from 'src/features/templates/server/template-service';
 
 const applySchema = z.object({
@@ -12,7 +12,7 @@ const applySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const caller = requireRole(request, ['teacher']);
+  const caller = await requireLessonPlanFeature(request, ['teacher']);
   if (!caller?.schoolId)
     return NextResponse.json({ message: 'ไม่มีสิทธิ์นำ Template ไปใช้' }, { status: 403 });
   const parsed = applySchema.safeParse(await request.json().catch(() => null));

@@ -1,49 +1,70 @@
 'use client';
 
-import type { Control } from 'react-hook-form';
+import type { Resolver } from 'react-hook-form';
 import type { DropResult } from '@hello-pangea/dnd';
-import type { LessonPlan, LessonPlanInput } from '../lesson-plan-actions';
+import type { LessonPlan } from '../lesson-plan-actions';
+import type { LessonPlanFormValues } from './lesson-plan-form.schema';
+import type { TemplateAIResult } from 'src/features/ai/types/ai.types';
+import type {
+  TemplateType,
+  LessonTemplate,
+  EvaluationStudent,
+  SectionTemplateContent,
+  LearningObjectiveContent,
+  LessonPlanTemplateContent,
+} from 'src/features/templates/types';
 
-import * as z from 'zod';
-import dayjs from 'dayjs';
 import dynamic from 'next/dynamic';
-import { useRef, useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
+import { useForm, useWatch, useFieldArray } from 'react-hook-form';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm, useWatch, Controller, useFieldArray } from 'react-hook-form';
 
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
-import MenuItem from '@mui/material/MenuItem';
-import TextField from '@mui/material/TextField';
+import Dialog from '@mui/material/Dialog';
 import Container from '@mui/material/Container';
-import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import Autocomplete from '@mui/material/Autocomplete';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import LinearProgress from '@mui/material/LinearProgress';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { curriculumReferenceShape } from 'src/features/curriculum/schema';
+import { TemplateAIDialog } from 'src/features/ai/components/template-ai-dialog';
+import { defaultTemplateContent } from 'src/features/templates/template-defaults';
 import { LessonPlanTemplatePickerDialog } from 'src/features/templates/components/lesson-plan-template-picker-dialog';
+import {
+  createTemplate,
+  updateTemplate,
+  deleteTemplateLogo,
+  getTemplateOptions,
+  uploadTemplateLogo,
+  getTemplateDocument,
+} from 'src/features/templates/template-actions';
 
 import { toast } from 'src/components/snackbar';
+import { Form } from 'src/components/hook-form';
 import { RemixIcon } from 'src/components/remix-icon';
-import { Form, Field } from 'src/components/hook-form';
 
-import {
-  parseAssessment,
-  parseIndicators,
-  serializeAssessment,
-  serializeIndicators,
-  richTextToPlainText,
-} from '../lesson-plan-content';
+import { MediaTab } from './tabs/media-tab';
+import { GeneralTab } from './tabs/general-tab';
+import { QuestionsTab } from './tabs/questions-tab';
+import { StandardsTab } from './tabs/standards-tab';
+import { ActivitiesTab } from './tabs/activities-tab';
+import { AssessmentTab } from './tabs/assessment-tab';
+import { ObjectivesTab } from './tabs/objectives-tab';
+import { LessonPlanTabNav } from './lesson-plan-tab-nav';
+import { CompetenciesTab } from './tabs/competencies-tab';
+import { LessonPlanFooterBar } from './lesson-plan-footer-bar';
+import { CharacteristicsTab } from './tabs/characteristics-tab';
+import { TemplateContentTab } from './tabs/template-content-tab';
+import { EssentialContentTab } from './tabs/essential-content-tab';
+import { parseAssessment, parseLearningActivities } from '../lesson-plan-content';
 import {
   getLessonPlan,
   createLessonPlan,
@@ -51,866 +72,175 @@ import {
   listLessonPlanOptions,
   listLessonPlanTemplates,
 } from '../lesson-plan-actions';
+import {
+  EMPTY_FORM,
+  TAB_LABELS,
+  TAB_FORM_FIELDS,
+  LessonPlanSchema,
+  DEFAULT_TAB_ORDER,
+  EVALUATION_TAB_IDS,
+  TAB_TEMPLATE_TYPES,
+  TAB_ORDER_STORAGE_KEY,
+  TemplateLessonPlanSchema,
+} from './lesson-plan-form.schema';
+import {
+  plainText,
+  toPayload,
+  parseLearningMedia,
+  templateDocumentInput,
+  parseIndicatorFormRows,
+  templateDocumentValues,
+  parseObjectiveFormGroups,
+  parseLearningStandardRows,
+  subjectLearningStandardText,
+  objectivesToAssessmentIssues,
+} from './lesson-plan-form.utils';
+
+// ----------------------------------------------------------------------
+
+function hasMeaningfulTemplateStep(type: TemplateType | undefined, content: unknown) {
+  if (!type || !content || typeof content !== 'object') return false;
+  const value = content as Record<string, unknown>;
+  const hasText = (input: unknown) => Boolean(plainText(String(input ?? '')));
+  const hasListText = (input: unknown, fields: string[]) =>
+    Array.isArray(input) &&
+    input.some((item) => {
+      if (typeof item === 'string' || typeof item === 'number') return hasText(item);
+      if (!item || typeof item !== 'object') return false;
+      const row = item as Record<string, unknown>;
+      return fields.some((field) => hasText(row[field]));
+    });
+
+  if (type === 'learning_standard')
+    return ['items', 'milestoneIndicators', 'terminalIndicators'].some((field) =>
+      hasListText(value[field], ['code', 'title', 'description'])
+    );
+  if (type === 'learning_objective')
+    return hasListText(value.objectives, [
+      'description',
+      'behaviorVerb',
+      'condition',
+      'expectedResult',
+      'successCriteria',
+    ]);
+  if (type === 'essential_content')
+    return hasText(value.content) || hasListText(value.keyConcepts, []);
+  if (
+    ['competency', 'desired_characteristic', 'learner_development', 'learning_task'].includes(type)
+  )
+    return hasListText(value.items, ['code', 'title', 'description']);
+  if (type === 'question') return hasListText(value.questions, ['question', 'expectedAnswer']);
+  if (type === 'learning_activity') return hasListText(value.items, ['title', 'description']);
+  if (type === 'media')
+    return hasListText(value.items, ['title', 'description', 'url', 'usageInstructions']);
+  if (type === 'assessment')
+    return (
+      hasListText(value.rows, ['issue', 'method', 'instrument', 'criteria']) ||
+      ['method', 'instrument', 'evidence', 'criteria'].some((field) => hasText(value[field]))
+    );
+  if (type === 'reflection')
+    return (
+      [
+        'studentCount',
+        'passedCount',
+        'passedPercentage',
+        'notPassedCount',
+        'notPassedPercentage',
+      ].some(
+        (field) => value[field] !== undefined && value[field] !== null && value[field] !== ''
+      ) ||
+      ['knowledgeResult', 'processResult', 'attitudeResult', 'problems', 'solutions'].some(
+        (field) => hasText(value[field])
+      ) ||
+      hasListText(value.specialStudents, []) ||
+      hasListText(value.sections, ['title', 'placeholder'])
+    );
+  if (type === 'worksheet_assessment_record')
+    return (
+      hasText(value.topic) ||
+      hasText(value.evaluatorName) ||
+      ((value.students as Array<Record<string, unknown>> | undefined) ?? []).some((student) =>
+        hasText(student.name)
+      )
+    );
+  if (type === 'desired_characteristic_assessment')
+    return (
+      hasText(value.evaluatorName) ||
+      ((value.students as Array<Record<string, unknown>> | undefined) ?? []).some((student) =>
+        hasText(student.name)
+      )
+    );
+  if (type === 'competency_assessment')
+    return (
+      hasText(value.evaluatorName) ||
+      ((value.students as Array<Record<string, unknown>> | undefined) ?? []).some((student) =>
+        hasText(student.name)
+      )
+    );
+  if (type === 'behavior_observation')
+    return (
+      hasText(value.evaluatorName) ||
+      ((value.students as Array<Record<string, unknown>> | undefined) ?? []).some((student) =>
+        hasText(student.name)
+      )
+    );
+  if (type === 'learning_content') return hasListText(value.topics, ['title', 'description']);
+  if (type === 'rubric') return hasListText(value.criteria, ['name', 'description']);
+  return false;
+}
 
 // ----------------------------------------------------------------------
 
 const LessonPlanPdfDialog = dynamic(() => import('../components/lesson-plan-pdf-dialog'), {
   ssr: false,
 });
-
-// ----------------------------------------------------------------------
-
-const optionalDate = z
-  .string()
-  .nullable()
-  .refine((value) => !value || dayjs(value).isValid(), { error: 'วันที่ไม่ถูกต้อง' });
-
-const requiredRichText = (message: string, max: number) =>
-  z
-    .string()
-    .max(max, { error: 'ข้อมูลยาวเกินกำหนด' })
-    .refine((value) => Boolean(richTextToPlainText(value)), { error: message });
-
-const indicatorsSchema = z
-  .array(
-    z.object({
-      code: z.string().trim().min(1, { error: 'กรุณากรอกรหัสตัวชี้วัด' }),
-      description: z.string().trim().min(1, { error: 'กรุณากรอกรายละเอียดตัวชี้วัด' }),
-    })
-  )
-  .min(1, { error: 'กรุณาเพิ่มตัวชี้วัดอย่างน้อย 1 รายการ' })
-  .refine((rows) => serializeIndicators(rows).length <= 20000, {
-    error: 'ข้อมูลยาวเกินกำหนด',
-  });
-
-const LessonPlanSchema = z
-  .object({
-    ...curriculumReferenceShape,
-    teacherAssignmentId: z.string().uuid({ error: 'กรุณาเลือกรายวิชาและห้องเรียน' }),
-    title: z
-      .string()
-      .trim()
-      .min(1, { error: 'กรุณากรอกชื่อแผนการสอน' })
-      .max(200, { error: 'ชื่อแผนการสอนต้องไม่เกิน 200 ตัวอักษร' }),
-    unitNumber: z
-      .number({ error: 'กรุณาระบุหน่วยที่' })
-      .int({ error: 'หน่วยต้องเป็นจำนวนเต็ม' })
-      .min(1, { error: 'หน่วยต้องเริ่มจาก 1' }),
-    unitName: z
-      .string()
-      .trim()
-      .min(1, { error: 'กรุณากรอกชื่อหน่วยการเรียนรู้' })
-      .max(300, { error: 'ชื่อหน่วยต้องไม่เกิน 300 ตัวอักษร' }),
-    durationPeriods: z
-      .number({ error: 'กรุณาระบุจำนวนคาบ' })
-      .int({ error: 'จำนวนคาบต้องเป็นจำนวนเต็ม' })
-      .min(1, { error: 'จำนวนคาบต้องอย่างน้อย 1 คาบ' })
-      .max(200, { error: 'จำนวนคาบต้องไม่เกิน 200 คาบ' }),
-    startDate: optionalDate,
-    endDate: optionalDate,
-    learningStandards: z
-      .array(
-        z.object({
-          content: z.string().trim().min(1, { error: 'กรุณากรอกมาตรฐานการเรียนรู้' }),
-        })
-      )
-      .min(1, { error: 'กรุณาเพิ่มมาตรฐานการเรียนรู้อย่างน้อย 1 รายการ' })
-      .refine((rows) => rows.map((row) => row.content).join('\n').length <= 20000, {
-        error: 'ข้อมูลยาวเกินกำหนด',
-      }),
-    indicators: indicatorsSchema,
-    learningObjectives: z
-      .array(
-        z.object({
-          label: z.string().trim().min(1, { error: 'กรุณาระบุชื่อด้าน' }),
-          code: z.string().trim(),
-          items: z
-            .array(
-              z.object({
-                content: z.string().trim().min(1, { error: 'กรุณากรอกจุดประสงค์การเรียนรู้' }),
-              })
-            )
-            .min(1, { error: 'กรุณาเพิ่มจุดประสงค์การเรียนรู้อย่างน้อย 1 รายการ' }),
-        })
-      )
-      .min(1, { error: 'กรุณาเพิ่มด้านของจุดประสงค์การเรียนรู้อย่างน้อย 1 ด้าน' })
-      .refine((groups) => serializeObjectiveFormGroups(groups).length <= 20000, {
-        error: 'ข้อมูลยาวเกินกำหนด',
-      }),
-    essentialContent: requiredRichText('กรุณากรอกสาระสำคัญ', 30000),
-    learnerCompetencies: requiredRichText('กรุณากรอกสมรรถนะสำคัญของผู้เรียน', 30000),
-    desiredCharacteristics: requiredRichText('กรุณากรอกคุณลักษณะอันพึงประสงค์', 30000),
-    guidingQuestions: requiredRichText('กรุณากรอกคำถามหลัก', 30000),
-    learningActivities: requiredRichText('กรุณากรอกกิจกรรมการเรียนรู้', 50000),
-    learningMedia: z
-      .array(
-        z.object({
-          content: z
-            .string()
-            .trim()
-            .min(1, { error: 'กรุณากรอกสื่อหรือแหล่งเรียนรู้' })
-            .max(2000, { error: 'รายการยาวเกินกำหนด' }),
-        })
-      )
-      .min(1, { error: 'กรุณาเพิ่มสื่อหรือแหล่งเรียนรู้อย่างน้อย 1 รายการ' })
-      .max(100, { error: 'เพิ่มสื่อได้ไม่เกิน 100 รายการ' }),
-    assessment: z
-      .array(
-        z.object({
-          issue: z
-            .string()
-            .trim()
-            .min(1, { error: 'กรุณาระบุประเด็นการประเมิน' })
-            .max(10000, { error: 'ข้อมูลยาวเกินกำหนด' }),
-          method: z
-            .string()
-            .trim()
-            .min(1, { error: 'กรุณาระบุวิธีการประเมิน' })
-            .max(10000, { error: 'ข้อมูลยาวเกินกำหนด' }),
-          tool: z
-            .string()
-            .trim()
-            .min(1, { error: 'กรุณาระบุเครื่องมือการประเมิน' })
-            .max(10000, { error: 'ข้อมูลยาวเกินกำหนด' }),
-          criteria: z
-            .string()
-            .trim()
-            .min(1, { error: 'กรุณาระบุเกณฑ์การประเมิน' })
-            .max(10000, { error: 'ข้อมูลยาวเกินกำหนด' }),
-        })
-      )
-      .min(1, { error: 'กรุณาเพิ่มการประเมินอย่างน้อย 1 รายการ' })
-      .max(50, { error: 'เพิ่มการประเมินได้ไม่เกิน 50 รายการ' })
-      .refine((rows) => serializeAssessment(rows).length <= 30000, {
-        error: 'ข้อมูลการประเมินรวมยาวเกินกำหนด',
-      }),
-  })
-  .superRefine((values, context) => {
-    if (
-      values.startDate &&
-      values.endDate &&
-      dayjs(values.endDate).startOf('day').isBefore(dayjs(values.startDate).startOf('day'))
-    ) {
-      context.addIssue({
-        code: 'custom',
-        path: ['endDate'],
-        message: 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มใช้',
-      });
-    }
-  });
-
-type LessonPlanFormValues = z.infer<typeof LessonPlanSchema>;
-
-type LearningMediaItem = LessonPlanFormValues['learningMedia'][number];
-
-type SerializedObjectiveGroup = {
-  code: string;
-  label: string;
-  items: string[];
-};
-
-const EMPTY_GROUP_LABEL = 'หมวดหมู่ใหม่';
-const EMPTY_GROUP_CODE = '-';
-
-const TAB_FORM_FIELDS: Record<string, Array<keyof LessonPlanFormValues>> = {
-  'lesson-plan-general': [
-    'teacherAssignmentId',
-    'title',
-    'unitNumber',
-    'unitName',
-    'durationPeriods',
-    'startDate',
-    'endDate',
-  ],
-  'lesson-plan-standards': ['subjectId', 'indicatorIds', 'learningStandards', 'indicators'],
-  'lesson-plan-objectives': ['learningObjectives'],
-  'lesson-plan-essential': ['essentialContent'],
-  'lesson-plan-characteristics': ['desiredCharacteristics'],
-  'lesson-plan-competencies': ['learnerCompetencies'],
-  'lesson-plan-questions': ['guidingQuestions'],
-  'lesson-plan-activities': ['learningActivities'],
-  'lesson-plan-media': ['learningMedia'],
-  'lesson-plan-assessment': ['assessment'],
-};
-
-const DEFAULT_TAB_ORDER = Object.keys(TAB_FORM_FIELDS);
-const TAB_ORDER_STORAGE_KEY = 'lesson-plan-tab-order';
-
-const TAB_TEMPLATE_TYPES = {
-  'lesson-plan-objectives': 'learning_objective',
-  'lesson-plan-essential': 'essential_content',
-  'lesson-plan-questions': 'question',
-  'lesson-plan-activities': 'learning_activity',
-  'lesson-plan-media': 'media',
-  'lesson-plan-assessment': 'assessment',
-} as const;
-
-type LessonPlanNavigationSection = {
-  id: string;
-  label: string;
-  complete: boolean;
-};
-
-function DraggableLessonPlanTab({
-  section,
-  index,
-  active,
-  onMove,
-  onSelect,
-}: {
-  section: LessonPlanNavigationSection;
-  index: number;
-  active: boolean;
-  onMove: (tabId: string, offset: number) => void;
-  onSelect: (tabId: string) => void;
-}) {
-  return (
-    <Draggable draggableId={section.id} index={index}>
-      {(provided, snapshot) => (
-        <Button
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          fullWidth
-          color="inherit"
-          title="ลากไอคอนเพื่อจัดลำดับ หรือกด Alt พร้อมปุ่มลูกศรขึ้น/ลง"
-          aria-label={`${section.label} ${section.complete ? 'ครบแล้ว' : 'ยังไม่ครบ'}`}
-          onClick={() => onSelect(section.id)}
-          onKeyDown={(event) => {
-            if (!event.altKey) return;
-            if (event.key === 'ArrowUp') {
-              event.preventDefault();
-              onMove(section.id, -1);
-            }
-            if (event.key === 'ArrowDown') {
-              event.preventDefault();
-              onMove(section.id, 1);
-            }
-          }}
-          sx={{
-            gap: 1,
-            px: 1.25,
-            py: 1,
-            minWidth: 0,
-            borderRadius: 1,
-            position: 'relative',
-            justifyContent: 'flex-start',
-            opacity: snapshot.isDragging ? 0.85 : 1,
-            bgcolor: active ? 'primary.lighter' : 'transparent',
-            color: active ? 'primary.main' : 'text.secondary',
-            ...(snapshot.isDragging && {
-              border: 0,
-              outline: 'none',
-              boxShadow: 'none',
-            }),
-            '&:hover': {
-              bgcolor: snapshot.isDragging
-                ? active
-                  ? 'primary.lighter'
-                  : 'transparent'
-                : 'action.hover',
-            },
-          }}
-        >
-          <RemixIcon
-            width={20}
-            icon={section.complete ? 'solar:check-circle-bold' : 'solar:radio-button-linear'}
-            sx={{
-              flexShrink: 0,
-              color: section.complete ? 'success.main' : 'text.disabled',
-            }}
-          />
-          <Typography
-            component="span"
-            variant="body2"
-            sx={{ minWidth: 0, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis' }}
-          >
-            {section.label}
-          </Typography>
-          <Box
-            {...provided.dragHandleProps}
-            component="span"
-            aria-label={`ลากเพื่อย้าย ${section.label}`}
-            sx={{
-              ml: 'auto',
-              p: 0.25,
-              display: 'grid',
-              flexShrink: 0,
-              cursor: 'grab',
-              color: 'text.disabled',
-              touchAction: 'none',
-              '&:active': { cursor: 'grabbing' },
-            }}
-          >
-            <RemixIcon icon="custom:drag-dots-fill" width={18} />
-          </Box>
-        </Button>
-      )}
-    </Draggable>
-  );
-}
-
-const EMPTY_FORM: LessonPlanFormValues = {
-  curriculumId: null,
-  subjectId: null,
-  unitId: null,
-  gradeLevels: [],
-  indicatorIds: [],
-  learningOutcomeIds: [],
-  teacherAssignmentId: '',
-  title: '',
-  unitNumber: 1,
-  unitName: '',
-  durationPeriods: 1,
-  startDate: null,
-  endDate: null,
-  learningStandards: [{ content: '' }],
-  indicators: [{ code: '', description: '' }],
-  learningObjectives: [{ label: '', code: '', items: [{ content: '' }] }],
-  essentialContent: '',
-  learnerCompetencies: '',
-  desiredCharacteristics: '',
-  guidingQuestions: '',
-  learningActivities: '',
-  learningMedia: [{ content: '' }],
-  assessment: [],
-};
-
-function plainText(value?: string | null) {
-  return richTextToPlainText(value);
-}
-
-function subjectLearningStandardText(subject: {
-  learning_standard_code?: string | null;
-  learning_standards?: string | null;
-}) {
-  return [subject.learning_standard_code?.trim(), plainText(subject.learning_standards)]
-    .filter(Boolean)
-    .join(' ');
-}
-
-function parseLearningMedia(value?: string | null): LearningMediaItem[] {
-  const items = plainText(value)
-    .split('\n')
-    .map((line) => line.replace(/^\s*(?:\d+(?:\.\d+)*[.)]?|[-•])\s*/, '').trim())
-    .filter(Boolean)
-    .map((content) => ({ content }));
-
-  return items.length ? items : [{ content: '' }];
-}
-
-function serializeLearningMedia(items: LearningMediaItem[]) {
-  return items
-    .map((item) => item.content.trim())
-    .filter(Boolean)
-    .map((item, index) => `8.${index + 1} ${item}`)
-    .join('\n');
-}
-
-function splitItems(value: string) {
-  return value ? value.split('\n') : [''];
-}
-
-function parseObjectives(value: string): SerializedObjectiveGroup[] {
-  const groups: SerializedObjectiveGroup[] = [];
-  let currentGroup: SerializedObjectiveGroup | null = null;
-
-  value.split('\n').forEach((line) => {
-    const normalizedLine = line.trim();
-    if (!normalizedLine) return;
-
-    if (/^\d+[.)](?:\s|$)/.test(normalizedLine)) {
-      if (!currentGroup) {
-        currentGroup = { label: 'ด้านความรู้ความเข้าใจ', code: 'K', items: [] };
-        groups.push(currentGroup);
-      }
-      currentGroup.items.push(line.replace(/^\s*\d+[.)]\s*/, ''));
-      return;
-    }
-
-    const editableHeader = line.match(/^(.*?)\t\(([^()]*)\)\.?$/);
-    const legacyHeader = normalizedLine.match(/^(.+?)\s*\(([^()]*)\)\.?$/);
-    const header = editableHeader ?? legacyHeader;
-    if (header) {
-      currentGroup = {
-        label: header[1] === EMPTY_GROUP_LABEL ? '' : header[1],
-        code: header[2] === EMPTY_GROUP_CODE ? '' : header[2],
-        items: [],
-      };
-      groups.push(currentGroup);
-      return;
-    }
-
-    if (!currentGroup) {
-      currentGroup = { label: 'ด้านความรู้ความเข้าใจ', code: 'K', items: [] };
-      groups.push(currentGroup);
-    }
-    currentGroup.items.push(line.replace(/^\s*\d+[.)]\s*/, ''));
-  });
-
-  return groups.length ? groups : [{ label: '', code: '', items: [] }];
-}
-
-function serializeObjectives(groups: SerializedObjectiveGroup[]) {
-  return groups
-    .flatMap(({ code, label, items }) => {
-      const heading = `${label || EMPTY_GROUP_LABEL}\t(${code || EMPTY_GROUP_CODE})`;
-      return [heading, ...items.map((item, index) => `${index + 1}. ${item}`)];
-    })
-    .join('\n');
-}
-
-function parseLearningStandardRows(
-  value?: string | null
-): LessonPlanFormValues['learningStandards'] {
-  return splitItems(value ?? '').map((content) => ({ content }));
-}
-
-function serializeLearningStandardRows(rows: LessonPlanFormValues['learningStandards']) {
-  return rows
-    .map((row) => row.content.trim())
-    .filter(Boolean)
-    .join('\n');
-}
-
-function parseObjectiveFormGroups(
-  value?: string | null
-): LessonPlanFormValues['learningObjectives'] {
-  return parseObjectives(value ?? '').map((group) => ({
-    code: group.code,
-    label: group.label,
-    items: (group.items.length ? group.items : ['']).map((content) => ({ content })),
-  }));
-}
-
-function serializeObjectiveFormGroups(
-  groups: Array<{ code: string; label: string; items: Array<{ content: string }> }>
-) {
-  return serializeObjectives(
-    groups.map((group) => ({
-      code: group.code,
-      label: group.label,
-      items: group.items.map((item) => item.content),
-    }))
-  );
-}
-
-function cleanObjectives(groups: LessonPlanFormValues['learningObjectives']) {
-  const cleanedGroups = groups
-    .map((group) => ({
-      ...group,
-      items: group.items.map((item) => item.content).filter((item) => item.trim()),
-    }))
-    .filter((group) => group.items.length);
-
-  return serializeObjectives(cleanedGroups);
-}
-
-function parseIndicatorFormRows(value?: string | null): LessonPlanFormValues['indicators'] {
-  const rows = parseIndicators(value);
-  return rows.length ? rows : [{ code: '', description: '' }];
-}
-
-function objectivesToAssessmentIssues(groups: LessonPlanFormValues['learningObjectives']) {
-  return groups
-    .map((group) => ({
-      ...group,
-      items: group.items.map((item) => item.content).filter((item) => item.trim()),
-    }))
-    .filter((group) => group.items.length)
-    .map((group) => {
-      const heading = [group.label.trim(), group.code.trim() ? `(${group.code.trim()})` : '']
-        .filter(Boolean)
-        .join(' ');
-      const items = group.items.map((item, index) => `${index + 1}. ${item.trim()}`);
-
-      return [heading, ...items].filter(Boolean).join('\n');
-    });
-}
-
-function DynamicCurriculumField({
-  label,
-  addLabel,
-  required,
-  disabled,
-  control,
-}: {
-  label: string;
-  addLabel: string;
-  required?: boolean;
-  disabled: boolean;
-  control: Control<LessonPlanFormValues>;
-}) {
-  const { fields, append, remove, update } = useFieldArray({
-    control,
-    name: 'learningStandards',
-  });
-
-  return (
-    <Box>
-      <Typography variant="subtitle1" sx={{ mb: 1.25, fontWeight: 700 }}>
-        {label}
-        {required ? ' *' : ''}
-      </Typography>
-      <Box sx={{ gap: 1.5, display: 'grid' }}>
-        {fields.map((item, index) => (
-          <Box
-            key={item.id}
-            sx={{
-              gap: 1,
-              p: 1.5,
-              display: 'grid',
-              borderRadius: 1.5,
-              gridTemplateColumns: '32px minmax(0, 1fr) 36px',
-            }}
-          >
-            <Box
-              sx={{
-                width: 28,
-                height: 28,
-                display: 'grid',
-                borderRadius: '50%',
-                placeItems: 'center',
-                color: 'primary.main',
-                bgcolor: 'primary.lighter',
-                typography: 'subtitle2',
-              }}
-            >
-              {index + 1}
-            </Box>
-            <Field.Text
-              required={required}
-              multiline
-              minRows={2}
-              disabled={disabled}
-              name={`learningStandards.${index}.content`}
-              placeholder={`กรอก${label}`}
-              slotProps={{ htmlInput: { 'aria-label': `${label} รายการที่ ${index + 1}` } }}
-            />
-            <IconButton
-              color="error"
-              size="small"
-              disabled={disabled}
-              aria-label={`ลบ${label} รายการที่ ${index + 1}`}
-              onClick={() => (fields.length === 1 ? update(0, { content: '' }) : remove(index))}
-            >
-              <RemixIcon icon="solar:trash-bin-trash-linear" />
-            </IconButton>
-          </Box>
-        ))}
-      </Box>
-      <Button
-        size="small"
-        disabled={disabled}
-        startIcon={<RemixIcon icon="mingcute:add-line" />}
-        onClick={() => append({ content: '' })}
-        sx={{ mt: 1 }}
-      >
-        {addLabel}
-      </Button>
-    </Box>
-  );
-}
-
-function DynamicIndicatorsField({
-  disabled,
-  control,
-}: {
-  disabled: boolean;
-  control: Control<LessonPlanFormValues>;
-}) {
-  const { fields, append, remove, update } = useFieldArray({
-    control,
-    name: 'indicators',
-  });
-
-  return (
-    <Box>
-      <Typography variant="subtitle1" sx={{ mb: 1.25, fontWeight: 700 }}>
-        ตัวชี้วัด / ผลการเรียนรู้
-      </Typography>
-      <Box sx={{ gap: 1.5, display: 'grid' }}>
-        {fields.map((row, index) => (
-          <Box
-            key={row.id}
-            sx={{
-              gap: 1,
-              p: 1.5,
-              display: 'grid',
-              alignItems: 'flex-start',
-              borderRadius: 1.5,
-              gridTemplateColumns: '32px minmax(0, 1fr) 36px',
-            }}
-          >
-            <Box
-              sx={{
-                width: 28,
-                height: 28,
-                display: 'grid',
-                borderRadius: '50%',
-                placeItems: 'center',
-                color: 'primary.main',
-                bgcolor: 'primary.lighter',
-                typography: 'subtitle2',
-              }}
-            >
-              {index + 1}
-            </Box>
-            <Box
-              sx={{
-                gap: 1.25,
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: '180px minmax(0, 1fr)' },
-              }}
-            >
-              <Field.Text
-                required
-                disabled={disabled}
-                name={`indicators.${index}.code`}
-                label="รหัสตัวชี้วัด"
-                placeholder="เช่น ว 1.2 ป.3/1"
-              />
-              <Field.Text
-                required
-                multiline
-                minRows={2}
-                disabled={disabled}
-                name={`indicators.${index}.description`}
-                label="รายละเอียดตัวชี้วัด"
-                placeholder="ระบุพฤติกรรมหรือผลลัพธ์ที่ต้องการวัด"
-              />
-            </Box>
-            <IconButton
-              color="error"
-              size="small"
-              disabled={disabled}
-              aria-label={`ลบตัวชี้วัดรายการที่ ${index + 1}`}
-              onClick={() =>
-                fields.length === 1 ? update(0, { code: '', description: '' }) : remove(index)
-              }
-            >
-              <RemixIcon icon="solar:trash-bin-trash-linear" />
-            </IconButton>
-          </Box>
-        ))}
-      </Box>
-      <Button
-        size="small"
-        disabled={disabled}
-        startIcon={<RemixIcon icon="mingcute:add-line" />}
-        onClick={() => append({ code: '', description: '' })}
-        sx={{ mt: 1 }}
-      >
-        เพิ่มตัวชี้วัดหรือผลการเรียนรู้
-      </Button>
-    </Box>
-  );
-}
-
-function DynamicObjectivesField({
-  disabled,
-  control,
-}: {
-  disabled: boolean;
-  control: Control<LessonPlanFormValues>;
-}) {
-  const { fields, append, remove, update } = useFieldArray({
-    control,
-    name: 'learningObjectives',
-  });
-
-  return (
-    <Box sx={{ gap: 2.5, display: 'grid' }}>
-      <Box
-        sx={{
-          gap: 1,
-          display: 'flex',
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          justifyContent: 'space-between',
-          flexDirection: { xs: 'column', sm: 'row' },
-        }}
-      >
-        <Box>
-          <Typography variant="h6">2. จุดประสงค์การเรียนรู้</Typography>
-          <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-            กำหนดชื่อและรหัสของแต่ละด้านได้อย่างอิสระ
-          </Typography>
-        </Box>
-        <Button
-          size="small"
-          variant="outlined"
-          disabled={disabled}
-          startIcon={<RemixIcon icon="mingcute:add-line" />}
-          onClick={() => append({ label: '', code: '', items: [{ content: '' }] })}
-        >
-          เพิ่มด้าน
-        </Button>
-      </Box>
-      {fields.map((group, categoryIndex) => (
-        <ObjectiveGroupFields
-          key={group.id}
-          control={control}
-          disabled={disabled}
-          categoryIndex={categoryIndex}
-          onRemove={() =>
-            fields.length === 1
-              ? update(0, { label: '', code: '', items: [{ content: '' }] })
-              : remove(categoryIndex)
-          }
-        />
-      ))}
-    </Box>
-  );
-}
-
-function ObjectiveGroupFields({
-  control,
-  disabled,
-  categoryIndex,
-  onRemove,
-}: {
-  control: Control<LessonPlanFormValues>;
-  disabled: boolean;
-  categoryIndex: number;
-  onRemove: () => void;
-}) {
-  const groupLabel = useWatch({
-    control,
-    name: `learningObjectives.${categoryIndex}.label`,
-  });
-  const { fields, append, remove, update } = useFieldArray({
-    control,
-    name: `learningObjectives.${categoryIndex}.items`,
-  });
-  const groupName = groupLabel || `ด้านที่ ${categoryIndex + 1}`;
-
-  return (
-    <Box
-      sx={{
-        p: { xs: 1.5, sm: 2 },
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 1.5,
-        bgcolor: 'background.paper',
-      }}
-    >
-      {categoryIndex ? <Divider sx={{ mb: 2.5 }} /> : null}
-      <Box
-        sx={{
-          gap: 1,
-          mb: 2,
-          display: 'grid',
-          alignItems: 'center',
-          gridTemplateColumns: { xs: '1fr 80px', sm: 'minmax(0, 1fr) 120px 36px' },
-        }}
-      >
-        <Field.Text
-          required
-          size="small"
-          label="ชื่อด้าน"
-          disabled={disabled}
-          name={`learningObjectives.${categoryIndex}.label`}
-          placeholder="เช่น ด้านความรู้ความเข้าใจ"
-        />
-        <Field.Text
-          size="small"
-          label="รหัส"
-          disabled={disabled}
-          name={`learningObjectives.${categoryIndex}.code`}
-          placeholder="เช่น K"
-        />
-        <IconButton
-          color="error"
-          size="small"
-          disabled={disabled}
-          aria-label={`ลบ${groupName}`}
-          sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' }, justifySelf: 'end' }}
-          onClick={onRemove}
-        >
-          <RemixIcon icon="solar:trash-bin-trash-linear" />
-        </IconButton>
-      </Box>
-      <Box sx={{ gap: 1.5, display: 'grid' }}>
-        {fields.map((item, index) => (
-          <Box
-            key={item.id}
-            sx={{
-              gap: 1,
-              display: 'grid',
-              alignItems: 'flex-start',
-              gridTemplateColumns: '32px minmax(0, 1fr) 36px',
-            }}
-          >
-            <Typography variant="body2" sx={{ pt: 1.75, textAlign: 'center', fontWeight: 700 }}>
-              {index + 1}.
-            </Typography>
-            <Field.Text
-              required
-              multiline
-              minRows={2}
-              disabled={disabled}
-              name={`learningObjectives.${categoryIndex}.items.${index}.content`}
-              placeholder={`กรอกจุดประสงค์${groupLabel || ''}`}
-              slotProps={{
-                htmlInput: { 'aria-label': `${groupName} รายการที่ ${index + 1}` },
-              }}
-            />
-            <IconButton
-              color="error"
-              size="small"
-              disabled={disabled}
-              aria-label={`ลบ${groupName} รายการที่ ${index + 1}`}
-              onClick={() => (fields.length === 1 ? update(0, { content: '' }) : remove(index))}
-            >
-              <RemixIcon icon="solar:trash-bin-trash-linear" />
-            </IconButton>
-          </Box>
-        ))}
-      </Box>
-      <Button
-        size="small"
-        disabled={disabled}
-        startIcon={<RemixIcon icon="mingcute:add-line" />}
-        onClick={() => append({ content: '' })}
-        sx={{ mt: 1 }}
-      >
-        เพิ่มรายการใน{groupName}
-      </Button>
-    </Box>
-  );
-}
-
-function toPayload(values: LessonPlanFormValues): LessonPlanInput {
-  return {
-    ...values,
-    learningStandards: serializeLearningStandardRows(values.learningStandards),
-    indicators: serializeIndicators(values.indicators),
-    learningObjectives: cleanObjectives(values.learningObjectives),
-    learningMedia: serializeLearningMedia(values.learningMedia),
-    assessment: serializeAssessment(values.assessment),
-    startDate: values.startDate ? dayjs(values.startDate).format('YYYY-MM-DD') : '',
-    endDate: values.endDate ? dayjs(values.endDate).format('YYYY-MM-DD') : '',
-  };
-}
+const LessonPlanTemplatePdfViewer = dynamic(
+  () => import('../components/lesson-plan-template-pdf-viewer'),
+  { ssr: false }
+);
 
 // ----------------------------------------------------------------------
 
 export function LessonPlanFormView({
   lessonPlanId,
   templateId,
+  catalogTemplateId,
+  newCatalogTemplate = false,
 }: {
   lessonPlanId?: string;
   templateId?: string;
+  catalogTemplateId?: string;
+  newCatalogTemplate?: boolean;
 }) {
+  const isTemplateMode = Boolean(catalogTemplateId) || newCatalogTemplate;
   const router = useRouter();
   const queryClient = useQueryClient();
   const initializedPlanId = useRef<string | null>(null);
   const initializedTemplateId = useRef<string | null>(null);
+  const initializedCatalogTemplateId = useRef<string | null>(null);
   const [activeSection, setActiveSection] = useState('lesson-plan-general');
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [templatePreview, setTemplatePreview] = useState<LessonTemplate | null>(null);
+  const [templateLogo, setTemplateLogo] = useState<File | string | null>(null);
+  const [templateLogoPreviewUrl, setTemplateLogoPreviewUrl] = useState('');
+  const [templateLogoRemoved, setTemplateLogoRemoved] = useState(false);
+  const [aiDialogOpen, setAIDialogOpen] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [tabOrder, setTabOrder] = useState(DEFAULT_TAB_ORDER);
+  const [enabledEvaluationSections, setEnabledEvaluationSections] = useState<string[]>([]);
 
   useEffect(() => {
+    if (!(templateLogo instanceof File)) {
+      setTemplateLogoPreviewUrl(templateLogo ?? '');
+      return undefined;
+    }
+    const objectUrl = URL.createObjectURL(templateLogo);
+    setTemplateLogoPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [templateLogo]);
+
+  useEffect(() => {
+    if (isTemplateMode) return;
     const savedOrder = localStorage.getItem(TAB_ORDER_STORAGE_KEY);
     if (!savedOrder) return;
 
@@ -926,10 +256,12 @@ export function LessonPlanFormView({
     } catch {
       localStorage.removeItem(TAB_ORDER_STORAGE_KEY);
     }
-  }, []);
+  }, [isTemplateMode]);
 
   const methods = useForm<LessonPlanFormValues>({
-    resolver: zodResolver(LessonPlanSchema),
+    resolver: zodResolver(
+      isTemplateMode ? TemplateLessonPlanSchema : LessonPlanSchema
+    ) as Resolver<LessonPlanFormValues>,
     defaultValues: EMPTY_FORM,
     mode: 'onTouched',
   });
@@ -943,20 +275,105 @@ export function LessonPlanFormView({
     trigger,
     formState: { dirtyFields },
   } = methods;
-  const {
-    fields: learningMediaFields,
-    append: appendLearningMedia,
-    remove: removeLearningMedia,
-  } = useFieldArray({ control, name: 'learningMedia' });
-  const { fields: assessmentFields, replace: replaceAssessment } = useFieldArray({
-    control,
-    name: 'assessment',
-  });
+  const { replace: replaceAssessment } = useFieldArray({ control, name: 'assessment' });
   const startDate = useWatch({ control, name: 'startDate' });
   const selectedAssignmentId = useWatch({ control, name: 'teacherAssignmentId' });
   const selectedIndicatorIds = useWatch({ control, name: 'indicatorIds' });
   const learningObjectives = useWatch({ control, name: 'learningObjectives' });
+  const evaluationStudents = useWatch({ control, name: 'evaluationStudents' });
   const navigationValues = useWatch({ control });
+
+  useEffect(() => {
+    if (!isTemplateMode) return;
+    const roster = (evaluationStudents ?? []) as EvaluationStudent[];
+    const sectionContents = getValues('templateSectionContents');
+    let nextSectionContents = { ...sectionContents };
+    let sectionContentsChanged = false;
+    const configurations = [
+      ['lesson-plan-worksheet-assessment-record', 'scoreColumns', 'scores'],
+      ['lesson-plan-competency-assessment', 'domains', 'scores'],
+      ['lesson-plan-behavior-observation', 'behaviors', 'observations'],
+    ] as const;
+    configurations.forEach(([tabId, dimensionField, valueField]) => {
+      const content = (sectionContents[tabId] ?? {}) as Record<string, unknown>;
+      const rows = Array.isArray(content.students)
+        ? (content.students as Array<Record<string, unknown>>)
+        : [];
+      const dimension = Array.isArray(content[dimensionField]) ? content[dimensionField].length : 0;
+      const nextRows = roster.map((student, studentIndex) => {
+        const current = rows.find((row) => row.id === student.id) ?? rows[studentIndex];
+        const currentValues = Array.isArray(current?.[valueField])
+          ? (current[valueField] as unknown[])
+          : [];
+        return {
+          ...current,
+          id: student.id,
+          name: student.name,
+          [valueField]: Array.from({ length: dimension }, (_, index) =>
+            valueField === 'observations'
+              ? Boolean(currentValues[index])
+              : Number(currentValues[index] ?? 0)
+          ),
+        };
+      });
+      if (JSON.stringify(rows) !== JSON.stringify(nextRows)) {
+        nextSectionContents = {
+          ...nextSectionContents,
+          [tabId]: { ...content, students: nextRows },
+        };
+        sectionContentsChanged = true;
+      }
+    });
+
+    const characteristicTabId = 'lesson-plan-desired-characteristic-assessment';
+    const characteristicContent = (sectionContents[characteristicTabId] ?? {}) as Record<
+      string,
+      unknown
+    >;
+    const characteristicRows = Array.isArray(characteristicContent.students)
+      ? (characteristicContent.students as Array<Record<string, unknown>>)
+      : [];
+    const characteristicGroups = Array.isArray(characteristicContent.characteristicGroups)
+      ? (characteristicContent.characteristicGroups as Array<Record<string, unknown>>)
+      : [];
+    const behaviorCount = characteristicGroups.reduce(
+      (total, group) => total + (Array.isArray(group.behaviors) ? group.behaviors.length : 0),
+      0
+    );
+    const nextCharacteristicRows = roster.map((student, studentIndex) => {
+      const current =
+        characteristicRows.find((row) => row.id === student.id) ?? characteristicRows[studentIndex];
+      const scores = Array.isArray(current?.scores) ? current.scores : [];
+      return {
+        ...current,
+        id: student.id,
+        name: student.name,
+        scores: Array.from({ length: behaviorCount }, (_, index) => Number(scores[index] ?? 0)),
+      };
+    });
+    if (JSON.stringify(characteristicRows) !== JSON.stringify(nextCharacteristicRows)) {
+      nextSectionContents = {
+        ...nextSectionContents,
+        [characteristicTabId]: {
+          ...characteristicContent,
+          students: nextCharacteristicRows,
+        },
+      };
+      sectionContentsChanged = true;
+    }
+    if (sectionContentsChanged) {
+      setValue('templateSectionContents', nextSectionContents, {
+        shouldDirty: false,
+        shouldValidate: false,
+      });
+    }
+  }, [
+    evaluationStudents,
+    getValues,
+    isTemplateMode,
+    navigationValues.templateSectionContents,
+    setValue,
+  ]);
 
   useEffect(() => {
     const issues = objectivesToAssessmentIssues(learningObjectives);
@@ -992,6 +409,61 @@ export function LessonPlanFormView({
     queryFn: listLessonPlanTemplates,
     enabled: Boolean(templateId) && !lessonPlanId,
   });
+  const catalogTemplateQuery = useQuery({
+    queryKey: ['lesson-template-document', catalogTemplateId],
+    queryFn: () => getTemplateDocument(catalogTemplateId!),
+    enabled: Boolean(catalogTemplateId),
+  });
+  const aiOptionsQuery = useQuery({
+    queryKey: ['lesson-template-options'],
+    queryFn: getTemplateOptions,
+    enabled: isTemplateMode,
+  });
+  const templateLearningAreas = useMemo(() => {
+    const masterByCode = new Map(
+      (aiOptionsQuery.data?.learningAreas ?? []).map((item) => [item.code, item.name])
+    );
+    return [
+      ...new Set([
+        ...(aiOptionsQuery.data?.learningAreas ?? []).map((item) => item.name),
+        ...(aiOptionsQuery.data?.subjects ?? []).flatMap((subject) =>
+          subject.learning_area
+            ? [masterByCode.get(subject.learning_area) ?? subject.learning_area]
+            : []
+        ),
+      ]),
+    ];
+  }, [aiOptionsQuery.data]);
+  const templateGradeLevels = useMemo(() => {
+    const masterByCode = new Map(
+      (aiOptionsQuery.data?.gradeLevels ?? []).map((item) => [item.code, item.name])
+    );
+    return [
+      ...new Set([
+        ...(aiOptionsQuery.data?.gradeLevels ?? []).map((item) => item.name),
+        ...(aiOptionsQuery.data?.subjects ?? []).flatMap((subject) =>
+          subject.grade_levels.map((level) => masterByCode.get(level) ?? level)
+        ),
+      ]),
+    ];
+  }, [aiOptionsQuery.data]);
+  const templateCoverSubjects = useMemo(() => {
+    const learningAreaByCode = new Map(
+      (aiOptionsQuery.data?.learningAreas ?? []).map((item) => [item.code, item.name])
+    );
+    const gradeLevelByCode = new Map(
+      (aiOptionsQuery.data?.gradeLevels ?? []).map((item) => [item.code, item.name])
+    );
+    return (aiOptionsQuery.data?.subjects ?? []).map((subject) => ({
+      code: subject.code,
+      name: subject.name,
+      learningArea: subject.learning_area
+        ? (learningAreaByCode.get(subject.learning_area) ?? subject.learning_area)
+        : null,
+      gradeLevels: subject.grade_levels.map((level) => gradeLevelByCode.get(level) ?? level),
+      topics: subject.learning_units_structured.map((unit) => unit.name),
+    }));
+  }, [aiOptionsQuery.data]);
 
   useEffect(() => {
     const plan = planQuery.data;
@@ -1012,13 +484,14 @@ export function LessonPlanFormView({
       startDate: plan.start_date,
       endDate: plan.end_date,
       learningStandards: parseLearningStandardRows(plan.learning_standards),
-      indicators: parseIndicatorFormRows(plan.indicators),
+      milestoneIndicators: parseIndicatorFormRows(plan.milestone_indicators || plan.indicators),
+      terminalIndicators: parseIndicatorFormRows(plan.terminal_indicators),
       learningObjectives: parseObjectiveFormGroups(plan.learning_objectives),
       essentialContent: plan.essential_content ?? '',
       learnerCompetencies: plan.learner_competencies ?? '',
       desiredCharacteristics: plan.desired_characteristics ?? '',
       guidingQuestions: plan.guiding_questions ?? '',
-      learningActivities: plan.learning_activities ?? '',
+      learningActivities: parseLearningActivities(plan.learning_activities),
       learningMedia: parseLearningMedia(plan.learning_media),
       assessment: parseAssessment(plan.assessment),
     });
@@ -1043,18 +516,75 @@ export function LessonPlanFormView({
       unitName: template.unit_name,
       durationPeriods: template.duration_periods,
       learningStandards: parseLearningStandardRows(template.learning_standards),
-      indicators: parseIndicatorFormRows(template.indicators),
+      milestoneIndicators: parseIndicatorFormRows(
+        template.milestone_indicators || template.indicators
+      ),
+      terminalIndicators: parseIndicatorFormRows(template.terminal_indicators),
       learningObjectives: parseObjectiveFormGroups(template.learning_objectives),
       essentialContent: template.essential_content ?? '',
       learnerCompetencies: template.learner_competencies ?? '',
       desiredCharacteristics: template.desired_characteristics ?? '',
       guidingQuestions: template.guiding_questions ?? '',
-      learningActivities: template.learning_activities ?? '',
+      learningActivities: parseLearningActivities(template.learning_activities),
       learningMedia: parseLearningMedia(template.learning_media),
       assessment: parseAssessment(template.assessment),
     });
     initializedTemplateId.current = templateId;
   }, [lessonPlanId, reset, templateId, templatesQuery.data]);
+
+  useEffect(() => {
+    const templateDocument = catalogTemplateQuery.data;
+    if (
+      !catalogTemplateId ||
+      !templateDocument ||
+      initializedCatalogTemplateId.current === catalogTemplateId
+    )
+      return;
+    const values = templateDocumentValues(
+      templateDocument.template,
+      templateDocument.sectionTemplates
+    );
+    const templateContent = templateDocument.template.content as LessonPlanTemplateContent;
+    const enabledEvaluationTabs = EVALUATION_TAB_IDS.filter((tabId) => {
+      const templateType = TAB_TEMPLATE_TYPES[tabId];
+      const section = templateContent.sections?.find((item) => item.sectionType === templateType);
+      return Boolean(section && section.enabled !== false);
+    });
+    setEnabledEvaluationSections(enabledEvaluationTabs);
+    setTemplateLogo(templateContent.cover?.logoUrl ?? null);
+    setTemplateLogoRemoved(false);
+    reset({ ...values, teacherAssignmentId: '' });
+    const savedOrder = templateContent.document?.sectionOrder;
+    if (
+      savedOrder?.length === DEFAULT_TAB_ORDER.length &&
+      DEFAULT_TAB_ORDER.every((tab) => savedOrder.includes(tab))
+    ) {
+      setTabOrder(savedOrder);
+    } else {
+      setTabOrder(DEFAULT_TAB_ORDER);
+    }
+    initializedCatalogTemplateId.current = catalogTemplateId;
+  }, [catalogTemplateId, catalogTemplateQuery.data, reset]);
+
+  useEffect(() => {
+    if (!newCatalogTemplate || catalogTemplateId || initializedCatalogTemplateId.current) return;
+    const freshContent = defaultTemplateContent('lesson_plan') as LessonPlanTemplateContent;
+    reset({
+      ...EMPTY_FORM,
+      templateSectionContents: {
+        cover: freshContent.cover,
+        ...Object.fromEntries(
+          Object.entries(TAB_TEMPLATE_TYPES).map(([tabId, type]) => [
+            tabId,
+            defaultTemplateContent(type),
+          ])
+        ),
+      },
+    });
+    setTabOrder(DEFAULT_TAB_ORDER);
+    setEnabledEvaluationSections([]);
+    initializedCatalogTemplateId.current = '__new__';
+  }, [catalogTemplateId, newCatalogTemplate, reset]);
 
   const markTabClean = (tab?: string) => {
     TAB_FORM_FIELDS[tab ?? '']?.forEach((fieldName) => {
@@ -1062,8 +592,16 @@ export function LessonPlanFormView({
     });
   };
 
-  const saveMutation = useMutation({
-    mutationFn: ({
+  const saveMutation = useMutation<
+    { kind: 'template'; saved: LessonTemplate } | { kind: 'lesson-plan'; saved: LessonPlan },
+    Error,
+    {
+      values: LessonPlanFormValues;
+      saveMode?: 'draft';
+      tab?: string;
+    }
+  >({
+    mutationFn: async ({
       values,
       saveMode,
       tab,
@@ -1072,8 +610,44 @@ export function LessonPlanFormView({
       saveMode?: 'draft';
       tab?: string;
     }) => {
+      if (isTemplateMode) {
+        if (catalogTemplateId) {
+          const template = catalogTemplateQuery.data?.template;
+          if (!template) throw new Error('ยังโหลด Template ไม่สำเร็จ');
+          let saved = await updateTemplate(
+            catalogTemplateId,
+            templateDocumentInput(values, tabOrder, template, enabledEvaluationSections)
+          );
+          let logoUrl = ((saved.content as LessonPlanTemplateContent).cover?.logoUrl ?? '').trim();
+          if (templateLogo instanceof File) {
+            ({ logoUrl } = await uploadTemplateLogo(catalogTemplateId, templateLogo));
+          } else if (templateLogoRemoved) {
+            await deleteTemplateLogo(catalogTemplateId);
+            logoUrl = '';
+          }
+          const savedContent = saved.content as LessonPlanTemplateContent;
+          saved = {
+            ...saved,
+            content: { ...savedContent, cover: { ...savedContent.cover, logoUrl } },
+          };
+          return { kind: 'template' as const, saved };
+        }
+
+        let saved = await createTemplate(
+          templateDocumentInput(values, tabOrder, undefined, enabledEvaluationSections)
+        );
+        if (templateLogo instanceof File) {
+          const { logoUrl } = await uploadTemplateLogo(saved.id, templateLogo);
+          const savedContent = saved.content as LessonPlanTemplateContent;
+          saved = {
+            ...saved,
+            content: { ...savedContent, cover: { ...savedContent.cover, logoUrl } },
+          };
+        }
+        return { kind: 'template' as const, saved };
+      }
       const payload = toPayload(values);
-      return lessonPlanId
+      const request = lessonPlanId
         ? updateLessonPlan(lessonPlanId, {
             ...payload,
             expectedVersion: planQuery.data!.version_number,
@@ -1082,8 +656,54 @@ export function LessonPlanFormView({
             changeNote: saveMode === 'draft' ? `บันทึก ${tab ?? 'ฉบับร่าง'}` : undefined,
           })
         : createLessonPlan({ ...payload, saveMode, tab });
+      return request.then((saved) => ({ kind: 'lesson-plan' as const, saved }));
     },
-    onSuccess: (savedPlan, variables) => {
+    onSuccess: async (result, variables) => {
+      if (result.kind === 'template') {
+        const logoUrl = (result.saved.content as LessonPlanTemplateContent).cover?.logoUrl ?? '';
+        setTemplateLogo(logoUrl || null);
+        setTemplateLogoRemoved(false);
+        const sectionContents = getValues('templateSectionContents');
+        setValue(
+          'templateSectionContents',
+          {
+            ...sectionContents,
+            cover: {
+              ...(sectionContents.cover as LessonPlanTemplateContent['cover']),
+              logoUrl,
+            },
+          },
+          { shouldDirty: false }
+        );
+        markTabClean(variables.tab);
+
+        if (!catalogTemplateId) {
+          await queryClient.invalidateQueries({ queryKey: ['lesson-templates'] });
+          router.replace(paths.teacher.lessonPlans.templateEdit(result.saved.id));
+          toast.success(
+            variables.saveMode === 'draft'
+              ? `บันทึก “${activeNavigationSection.label}” ใน Template แล้ว`
+              : 'สร้าง Template แผนการสอนแล้ว'
+          );
+          return;
+        }
+
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: ['lesson-template-document', catalogTemplateId],
+          }),
+          queryClient.invalidateQueries({ queryKey: ['lesson-templates'] }),
+        ]);
+        if (variables.saveMode === 'draft') {
+          toast.success(`บันทึก “${activeNavigationSection.label}” ใน Template แล้ว`);
+          return;
+        }
+        toast.success('บันทึก Template แผนการสอนแล้ว');
+        router.push(paths.teacher.lessonPlans.templates);
+        return;
+      }
+
+      const savedPlan = result.saved;
       if (variables.saveMode === 'draft') {
         markTabClean(variables.tab);
         toast.success(`บันทึก “${activeNavigationSection.label}” เป็นฉบับร่างแล้ว`);
@@ -1108,111 +728,127 @@ export function LessonPlanFormView({
     (option) => option.id === selectedAssignmentId
   );
 
-  const applyCurriculum = (assignmentId: string) => {
-    const assignment = optionsQuery.data?.find((option) => option.id === assignmentId);
-    const subject = assignment?.subject;
-    if (!subject) return;
+  const applyCurriculum = useCallback(
+    (assignmentId: string) => {
+      const assignment = optionsQuery.data?.find((option) => option.id === assignmentId);
+      const subject = assignment?.subject;
+      if (!subject) return;
 
-    const linkedIndicators = subject.curriculum_indicators ?? [];
-    const gradeLevel = assignment?.classroom?.grade_level;
-    setValue('curriculumId', subject.curriculum_id, { shouldDirty: true });
-    setValue('subjectId', subject.id, { shouldDirty: true });
-    setValue('unitId', null, { shouldDirty: true });
-    setValue('learningOutcomeIds', [], { shouldDirty: true });
-    setValue('gradeLevels', gradeLevel ? [gradeLevel] : subject.grade_levels ?? [], {
-      shouldDirty: true,
-    });
-    setValue('indicatorIds', linkedIndicators.map((indicator) => indicator.id), {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-
-    const linkedStandards = [
-      ...new Set(
-        linkedIndicators
-          .map((indicator) => indicator.learning_standard?.trim())
-          .filter((value): value is string => Boolean(value))
-      ),
-    ];
-    setValue(
-      'learningStandards',
-      parseLearningStandardRows(
-        linkedStandards.length ? linkedStandards.join('\n') : subjectLearningStandardText(subject)
-      ),
-      {
+      const linkedIndicators = subject.curriculum_indicators ?? [];
+      const gradeLevel = assignment?.classroom?.grade_level;
+      setValue('curriculumId', subject.curriculum_id, { shouldDirty: true });
+      setValue('subjectId', subject.id, { shouldDirty: true });
+      setValue('unitId', null, { shouldDirty: true });
+      setValue('learningOutcomeIds', [], { shouldDirty: true });
+      setValue('gradeLevels', gradeLevel ? [gradeLevel] : (subject.grade_levels ?? []), {
         shouldDirty: true,
+      });
+      setValue(
+        'indicatorIds',
+        linkedIndicators.map((indicator) => indicator.id),
+        {
+          shouldDirty: true,
+          shouldValidate: true,
+        }
+      );
+
+      const linkedStandards = [
+        ...new Set(
+          linkedIndicators
+            .map((indicator) => indicator.learning_standard?.trim())
+            .filter((value): value is string => Boolean(value))
+        ),
+      ];
+      setValue(
+        'learningStandards',
+        parseLearningStandardRows(
+          linkedStandards.length ? linkedStandards.join('\n') : subjectLearningStandardText(subject)
+        ),
+        {
+          shouldDirty: true,
+        }
+      );
+      setValue(
+        'milestoneIndicators',
+        linkedIndicators.length
+          ? linkedIndicators.map(({ code, description }) => ({ code, description }))
+          : parseIndicatorFormRows(plainText(subject.indicators)),
+        { shouldDirty: true }
+      );
+    },
+    [optionsQuery.data, setValue]
+  );
+
+  const selectAssignment = useCallback(
+    (assignmentId: string) => {
+      const assignment = optionsQuery.data?.find((option) => option.id === assignmentId);
+      const subject = assignment?.subject;
+
+      setValue('teacherAssignmentId', assignmentId, { shouldDirty: true, shouldValidate: true });
+      setValue('subjectId', subject?.id ?? null, { shouldDirty: true });
+      setValue('curriculumId', subject?.curriculum_id ?? null, { shouldDirty: true });
+      setValue(
+        'gradeLevels',
+        assignment?.classroom?.grade_level
+          ? [assignment.classroom.grade_level]
+          : (subject?.grade_levels ?? []),
+        { shouldDirty: true }
+      );
+      if (!getValues('title')) {
+        setValue('title', subject ? `แผนการสอน ${subject.name}` : '', { shouldDirty: true });
       }
-    );
-    setValue(
-      'indicators',
-      linkedIndicators.length
-        ? linkedIndicators.map(({ code, description }) => ({ code, description }))
-        : parseIndicatorFormRows(plainText(subject.indicators)),
-      { shouldDirty: true }
-    );
-  };
+      if (!templateId) applyCurriculum(assignmentId);
+    },
+    [applyCurriculum, getValues, optionsQuery.data, setValue, templateId]
+  );
 
-  const selectAssignment = (assignmentId: string) => {
-    const assignment = optionsQuery.data?.find((option) => option.id === assignmentId);
-    const subject = assignment?.subject;
+  const selectUnit = useCallback(
+    (unitId: string) => {
+      const unit = selectedAssignment?.subject?.learning_units_structured.find(
+        (item) => item.id === unitId
+      );
+      setValue('unitId', unit?.id ?? null, { shouldDirty: true });
+      if (!unit) return;
+      setValue('unitName', unit.name, { shouldDirty: true, shouldValidate: true });
+      if (unit.estimated_periods) {
+        setValue('durationPeriods', unit.estimated_periods, { shouldDirty: true });
+      }
+    },
+    [selectedAssignment, setValue]
+  );
 
-    setValue('teacherAssignmentId', assignmentId, { shouldDirty: true, shouldValidate: true });
-    setValue('subjectId', subject?.id ?? null, { shouldDirty: true });
-    setValue('curriculumId', subject?.curriculum_id ?? null, { shouldDirty: true });
-    setValue(
-      'gradeLevels',
-      assignment?.classroom?.grade_level
-        ? [assignment.classroom.grade_level]
-        : subject?.grade_levels ?? [],
-      { shouldDirty: true }
-    );
-    if (!getValues('title')) {
-      setValue('title', subject ? `แผนการสอน ${subject.name}` : '', { shouldDirty: true });
-    }
-    if (!templateId) applyCurriculum(assignmentId);
-  };
-
-  const selectUnit = (unitId: string) => {
-    const unit = selectedAssignment?.subject?.learning_units_structured.find(
-      (item) => item.id === unitId
-    );
-    setValue('unitId', unit?.id ?? null, { shouldDirty: true });
-    if (!unit) return;
-    setValue('unitName', unit.name, { shouldDirty: true, shouldValidate: true });
-    if (unit.estimated_periods) {
-      setValue('durationPeriods', unit.estimated_periods, { shouldDirty: true });
-    }
-  };
-
-  const selectIndicators = (indicatorIds: string[]) => {
-    const subject = selectedAssignment?.subject;
-    if (!subject) return;
-    const selected = subject.curriculum_indicators.filter((indicator) =>
-      indicatorIds.includes(indicator.id)
-    );
-    setValue('indicatorIds', indicatorIds, { shouldDirty: true, shouldValidate: true });
-    setValue(
-      'indicators',
-      selected.length
-        ? selected.map(({ code, description }) => ({ code, description }))
-        : [{ code: '', description: '' }],
-      { shouldDirty: true, shouldValidate: true }
-    );
-    const standards = [
-      ...new Set(
-        selected
-          .map((indicator) => indicator.learning_standard?.trim())
-          .filter((value): value is string => Boolean(value))
-      ),
-    ];
-    setValue(
-      'learningStandards',
-      parseLearningStandardRows(
-        standards.length ? standards.join('\n') : subjectLearningStandardText(subject)
-      ),
-      { shouldDirty: true, shouldValidate: true }
-    );
-  };
+  const selectIndicators = useCallback(
+    (indicatorIds: string[]) => {
+      const subject = selectedAssignment?.subject;
+      if (!subject) return;
+      const selected = subject.curriculum_indicators.filter((indicator) =>
+        indicatorIds.includes(indicator.id)
+      );
+      setValue('indicatorIds', indicatorIds, { shouldDirty: true, shouldValidate: true });
+      setValue(
+        'milestoneIndicators',
+        selected.length
+          ? selected.map(({ code, description }) => ({ code, description }))
+          : [{ code: '', description: '' }],
+        { shouldDirty: true, shouldValidate: true }
+      );
+      const standards = [
+        ...new Set(
+          selected
+            .map((indicator) => indicator.learning_standard?.trim())
+            .filter((value): value is string => Boolean(value))
+        ),
+      ];
+      setValue(
+        'learningStandards',
+        parseLearningStandardRows(
+          standards.length ? standards.join('\n') : subjectLearningStandardText(subject)
+        ),
+        { shouldDirty: true, shouldValidate: true }
+      );
+    },
+    [selectedAssignment, setValue]
+  );
 
   const isEditable = !planQuery.data || ['draft', 'revision'].includes(planQuery.data.status);
   const onSubmit = handleSubmit((values) => saveMutation.mutate({ values }));
@@ -1221,7 +857,7 @@ export function LessonPlanFormView({
       id: 'lesson-plan-general',
       label: 'ข้อมูลทั่วไป',
       complete: Boolean(
-        navigationValues.teacherAssignmentId &&
+        (isTemplateMode || navigationValues.teacherAssignmentId) &&
         navigationValues.title?.trim() &&
         navigationValues.unitName?.trim() &&
         navigationValues.durationPeriods
@@ -1232,8 +868,14 @@ export function LessonPlanFormView({
       label: 'มาตรฐานและตัวชี้วัด',
       complete:
         Boolean(navigationValues.learningStandards?.some((row) => row.content?.trim())) &&
-        Boolean(navigationValues.indicators?.length) &&
-        Boolean(navigationValues.indicators?.every((row) => Boolean(row.code && row.description))),
+        Boolean(navigationValues.milestoneIndicators?.length) &&
+        Boolean(
+          navigationValues.milestoneIndicators?.every((row) => Boolean(row.code && row.description))
+        ) &&
+        Boolean(navigationValues.terminalIndicators?.length) &&
+        Boolean(
+          navigationValues.terminalIndicators?.every((row) => Boolean(row.code && row.description))
+        ),
     },
     {
       id: 'lesson-plan-objectives',
@@ -1272,7 +914,12 @@ export function LessonPlanFormView({
     {
       id: 'lesson-plan-activities',
       label: 'กิจกรรมการเรียนรู้',
-      complete: Boolean(plainText(navigationValues.learningActivities)),
+      complete: Boolean(
+        navigationValues.learningActivities?.length &&
+        navigationValues.learningActivities.every(
+          (row) => row?.title?.trim() && plainText(row?.description)
+        )
+      ),
     },
     {
       id: 'lesson-plan-media',
@@ -1293,15 +940,57 @@ export function LessonPlanFormView({
         )
       ),
     },
+    {
+      id: 'lesson-plan-reflection',
+      label: 'บันทึกผลหลังการสอน',
+      complete: false,
+    },
+    {
+      id: 'lesson-plan-worksheet-assessment-record',
+      label: 'บันทึกผลการประเมินใบงาน',
+      complete: false,
+    },
+    {
+      id: 'lesson-plan-desired-characteristic-assessment',
+      label: 'แบบประเมินคุณลักษณะอันพึงประสงค์',
+      complete: false,
+    },
+    {
+      id: 'lesson-plan-competency-assessment',
+      label: 'แบบประเมินสมรรถนะสำคัญของผู้เรียน',
+      complete: false,
+    },
+    {
+      id: 'lesson-plan-behavior-observation',
+      label: 'แบบสังเกตพฤติกรรม',
+      complete: false,
+    },
   ];
   const savedTabs = new Set(planQuery.data?.saved_tabs ?? []);
   const navigationSections = navigationSectionCandidates
+    .filter(
+      (section) =>
+        isTemplateMode ||
+        ![
+          'lesson-plan-reflection',
+          'lesson-plan-worksheet-assessment-record',
+          'lesson-plan-desired-characteristic-assessment',
+          'lesson-plan-competency-assessment',
+          'lesson-plan-behavior-observation',
+        ].includes(section.id)
+    )
     .map((section) => ({
       ...section,
-      complete:
-        section.complete &&
-        savedTabs.has(section.id) &&
-        !TAB_FORM_FIELDS[section.id]?.some((fieldName) => Boolean(dirtyFields[fieldName])),
+      complete: isTemplateMode
+        ? section.id === 'lesson-plan-general'
+          ? section.complete
+          : hasMeaningfulTemplateStep(
+              TAB_TEMPLATE_TYPES[section.id as keyof typeof TAB_TEMPLATE_TYPES],
+              navigationValues.templateSectionContents?.[section.id]
+            )
+        : section.complete &&
+          savedTabs.has(section.id) &&
+          !TAB_FORM_FIELDS[section.id]?.some((fieldName) => Boolean(dirtyFields[fieldName])),
     }))
     .sort((first, second) => tabOrder.indexOf(first.id) - tabOrder.indexOf(second.id));
   const activeSectionIndex = Math.max(
@@ -1309,58 +998,189 @@ export function LessonPlanFormView({
     0
   );
   const activeNavigationSection = navigationSections[activeSectionIndex];
+  const activeTemplateType = isTemplateMode
+    ? TAB_TEMPLATE_TYPES[activeSection as keyof typeof TAB_TEMPLATE_TYPES]
+    : undefined;
+  const activeTemplateContent = useMemo(
+    () =>
+      activeTemplateType
+        ? ((navigationValues.templateSectionContents?.[activeSection] ??
+            defaultTemplateContent(activeTemplateType)) as SectionTemplateContent)
+        : defaultTemplateContent('learning_objective'),
+    [activeSection, activeTemplateType, navigationValues.templateSectionContents]
+  );
+  const aiDialogInitial = useMemo(
+    () => ({
+      name: navigationValues.title?.trim() || 'Template แผนการสอน',
+      templateType: activeTemplateType ?? ('learning_objective' as const),
+      subjectId: null,
+      gradeLevels: navigationValues.gradeLevels ?? [],
+      durationMinutes: Math.max(1, Number(navigationValues.durationPeriods ?? 1)) * 50,
+      indicatorIds: [],
+      content: activeTemplateContent,
+      tags: catalogTemplateQuery.data?.template.tags ?? [],
+      metadata: catalogTemplateQuery.data?.template.metadata ?? {},
+    }),
+    [
+      activeTemplateContent,
+      activeTemplateType,
+      catalogTemplateQuery.data?.template.metadata,
+      catalogTemplateQuery.data?.template.tags,
+      navigationValues.durationPeriods,
+      navigationValues.gradeLevels,
+      navigationValues.title,
+    ]
+  );
 
-  const goToSection = (sectionId: string) => {
+  const goToSection = useCallback((sectionId: string) => {
     setActiveSection(sectionId);
-  };
+  }, []);
 
-  const updateTabOrder = (nextOrder: string[]) => {
-    setTabOrder(nextOrder);
-    localStorage.setItem(TAB_ORDER_STORAGE_KEY, JSON.stringify(nextOrder));
-  };
+  const updateTabOrder = useCallback(
+    (nextOrder: string[]) => {
+      setTabOrder(nextOrder);
+      if (!isTemplateMode) localStorage.setItem(TAB_ORDER_STORAGE_KEY, JSON.stringify(nextOrder));
+    },
+    [isTemplateMode]
+  );
 
-  const moveTab = (tabId: string, offset: number) => {
-    const currentIndex = tabOrder.indexOf(tabId);
-    const nextIndex = currentIndex + offset;
-    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= tabOrder.length) return;
+  const moveTab = useCallback(
+    (tabId: string, offset: number) => {
+      const currentIndex = tabOrder.indexOf(tabId);
+      const nextIndex = currentIndex + offset;
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= tabOrder.length) return;
 
-    const nextOrder = [...tabOrder];
-    [nextOrder[currentIndex], nextOrder[nextIndex]] = [
-      nextOrder[nextIndex],
-      nextOrder[currentIndex],
-    ];
-    updateTabOrder(nextOrder);
-  };
+      const nextOrder = [...tabOrder];
+      [nextOrder[currentIndex], nextOrder[nextIndex]] = [
+        nextOrder[nextIndex],
+        nextOrder[currentIndex],
+      ];
+      updateTabOrder(nextOrder);
+    },
+    [tabOrder, updateTabOrder]
+  );
 
-  const handleTabDragEnd = (result: DropResult) => {
-    const { source, destination } = result;
-    if (!destination || destination.index === source.index) return;
+  const handleTabDragEnd = useCallback(
+    (result: DropResult) => {
+      const { source, destination } = result;
+      if (!destination || destination.index === source.index) return;
 
-    const nextOrder = navigationSections.map((section) => section.id);
-    const [movedTabId] = nextOrder.splice(source.index, 1);
-    nextOrder.splice(destination.index, 0, movedTabId);
-    updateTabOrder(nextOrder);
-  };
+      const nextOrder = navigationSections.map((section) => section.id);
+      const [movedTabId] = nextOrder.splice(source.index, 1);
+      nextOrder.splice(destination.index, 0, movedTabId);
+      updateTabOrder(nextOrder);
+    },
+    [navigationSections, updateTabOrder]
+  );
 
-  const saveCurrentTab = async () => {
+  const saveCurrentTab = useCallback(async () => {
     const values = getValues();
-    if (!values.teacherAssignmentId) {
+    if (!isTemplateMode && !values.teacherAssignmentId) {
       toast.warning('กรุณาเลือกรายวิชาและห้องเรียนก่อนบันทึกฉบับร่าง');
       goToSection('lesson-plan-general');
       return;
     }
 
     const currentTabFields = TAB_FORM_FIELDS[activeSection] ?? [];
-    const isCurrentTabValid = await trigger(currentTabFields, { shouldFocus: true });
+    const isCurrentTabValid = isTemplateMode
+      ? activeSection === 'lesson-plan-general'
+        ? await trigger(currentTabFields, { shouldFocus: true })
+        : true
+      : await trigger(currentTabFields, { shouldFocus: true });
     if (!isCurrentTabValid) {
       toast.warning('กรุณากรอกข้อมูลใน Step นี้ให้ครบก่อนบันทึก');
       return;
     }
 
     saveMutation.mutate({ values: getValues(), saveMode: 'draft', tab: activeSection });
-  };
+  }, [activeSection, getValues, goToSection, isTemplateMode, saveMutation, trigger]);
 
-  if (planQuery.isLoading || templatesQuery.isLoading) return <LinearProgress />;
+  const onApplyCurriculum = useCallback(() => {
+    applyCurriculum(selectedAssignmentId);
+  }, [applyCurriculum, selectedAssignmentId]);
+
+  const onOpenAIDialog = useCallback(() => setAIDialogOpen(true), []);
+  const onOpenTemplatePicker = useCallback(() => setTemplatePickerOpen(true), []);
+
+  const onLogoDrop = useCallback((file: File) => {
+    setTemplateLogo(file);
+    setTemplateLogoRemoved(false);
+  }, []);
+
+  const onLogoRemove = useCallback(() => {
+    setTemplateLogo(null);
+    setTemplateLogoRemoved(true);
+    const sectionContents = getValues('templateSectionContents');
+    setValue(
+      'templateSectionContents',
+      {
+        ...sectionContents,
+        cover: {
+          ...(sectionContents.cover as LessonPlanTemplateContent['cover']),
+          logoUrl: '',
+        },
+      },
+      { shouldDirty: true }
+    );
+  }, [getValues, setValue]);
+
+  const onPreviewPdf = useCallback(() => {
+    if (isTemplateMode && !catalogTemplateId) {
+      toast.warning('กรุณาบันทึก Template อย่างน้อยหนึ่งครั้งก่อนดูตัวอย่าง PDF');
+      return;
+    }
+    if (catalogTemplateId) {
+      const currentTemplate = catalogTemplateQuery.data?.template;
+      if (!currentTemplate) return;
+      const previewInput = templateDocumentInput(
+        getValues(),
+        tabOrder,
+        currentTemplate,
+        enabledEvaluationSections
+      );
+      const previewContent = previewInput.content as LessonPlanTemplateContent;
+      setTemplatePreview({
+        ...currentTemplate,
+        name: previewInput.name,
+        description: previewInput.description ?? null,
+        template_type: previewInput.templateType,
+        scope: previewInput.scope,
+        status: previewInput.status,
+        content: {
+          ...previewContent,
+          cover: {
+            ...previewContent.cover,
+            logoUrl: templateLogoPreviewUrl,
+          },
+        },
+        metadata: previewInput.metadata ?? {},
+        tags: previewInput.tags ?? [],
+        curriculum_id: previewInput.curriculumId,
+        subject_id: previewInput.subjectId ?? null,
+        unit_id: previewInput.unitId,
+        course_id: previewInput.courseId ?? null,
+        grade_levels: previewInput.gradeLevels ?? [],
+        indicator_ids: previewInput.indicatorIds ?? [],
+        learning_outcome_ids: previewInput.learningOutcomeIds,
+      });
+    }
+    setPdfOpen(true);
+  }, [
+    catalogTemplateId,
+    catalogTemplateQuery.data,
+    enabledEvaluationSections,
+    getValues,
+    isTemplateMode,
+    tabOrder,
+    templateLogoPreviewUrl,
+  ]);
+
+  if (planQuery.isLoading || templatesQuery.isLoading || catalogTemplateQuery.isLoading)
+    return <LinearProgress />;
+
+  const returnPath = isTemplateMode
+    ? paths.teacher.lessonPlans.templates
+    : paths.teacher.lessonPlans.root;
 
   return (
     <Container
@@ -1381,21 +1201,31 @@ export function LessonPlanFormView({
       <Box>
         <Button
           component={RouterLink}
-          href={paths.teacher.lessonPlans.root}
+          href={returnPath}
           color="inherit"
           size="small"
           startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
           sx={{ mb: 1.5, color: 'text.secondary' }}
         >
-          กลับไปหน้าแผนการสอน
+          {isTemplateMode ? 'กลับไปหน้า Template แผนการสอน' : 'กลับไปหน้าแผนการสอน'}
         </Button>
       </Box>
       <Box sx={{ mb: 2 }}>
         <Typography component="h1" variant="h3">
-          {lessonPlanId ? 'แก้ไขแผนการสอน' : 'สร้างแผนการสอน'}
+          {catalogTemplateId
+            ? 'แก้ไข Template แผนการสอน'
+            : isTemplateMode
+              ? 'สร้าง Template แผนการสอน'
+              : lessonPlanId
+                ? 'แก้ไขแผนการสอน'
+                : 'สร้างแผนการสอน'}
         </Typography>
         <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-          เลือกรายวิชาที่ได้รับมอบหมาย ระบบจะเติมหลักสูตรและตัวชี้วัดตั้งต้นให้อัตโนมัติ
+          {catalogTemplateId
+            ? 'แก้ไขหัวข้อและเนื้อหาตั้งต้นที่จะนำไปใช้สร้างแผนการสอน'
+            : isTemplateMode
+              ? 'กำหนดหัวข้อและเนื้อหาตั้งต้นที่จะนำไปใช้สร้างแผนการสอน'
+              : 'เลือกรายวิชาที่ได้รับมอบหมาย ระบบจะเติมหลักสูตรและตัวชี้วัดตั้งต้นให้อัตโนมัติ'}
         </Typography>
       </Box>
 
@@ -1409,15 +1239,18 @@ export function LessonPlanFormView({
           โหลดข้อมูลจากเทมเพลตแล้ว กรุณาเลือกรายวิชาและห้องเรียนก่อนบันทึก
         </Alert>
       ) : null}
+
       {saveMutation.isError ||
       optionsQuery.isError ||
       planQuery.isError ||
-      templatesQuery.isError ? (
+      templatesQuery.isError ||
+      catalogTemplateQuery.isError ? (
         <Alert severity="error" sx={{ mb: 3 }}>
           {saveMutation.error?.message ??
             optionsQuery.error?.message ??
             planQuery.error?.message ??
-            templatesQuery.error?.message}
+            templatesQuery.error?.message ??
+            catalogTemplateQuery.error?.message}
         </Alert>
       ) : null}
 
@@ -1430,696 +1263,183 @@ export function LessonPlanFormView({
             gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '300px minmax(0, 1fr)' },
           }}
         >
-          <Card
-            component="nav"
-            variant="outlined"
-            aria-label="หัวข้อแผนการสอน"
-            sx={{
-              p: 0,
-              top: 88,
-              zIndex: 5,
-              position: { md: 'sticky' },
-              maxHeight: { md: 'calc(100vh - 112px)' },
-              overflowY: { md: 'auto' },
-              boxShadow: 'none',
-              border: 'none',
-              borderRadius: 0,
-            }}
-          >
-            <Typography variant="subtitle2" sx={{ px: 1.25, py: 1 }}>
-              หัวข้อแผนการสอน
-            </Typography>
-            <DragDropContext onDragEnd={handleTabDragEnd}>
-              <Droppable droppableId="lesson-plan-nav">
-                {(droppableProvided) => (
-                  <Box
-                    ref={droppableProvided.innerRef}
-                    {...droppableProvided.droppableProps}
-                    sx={{
-                      gap: 1,
-                      display: 'grid',
-                      gridTemplateColumns: {
-                        xs: 'repeat(2, minmax(0, 1fr))',
-                        sm: 'repeat(3, minmax(0, 1fr))',
-                        md: '1fr',
-                      },
-                    }}
-                  >
-                    {navigationSections.map((section, index) => (
-                      <DraggableLessonPlanTab
-                        key={section.id}
-                        section={section}
-                        index={index}
-                        active={activeSection === section.id}
-                        onMove={moveTab}
-                        onSelect={goToSection}
-                      />
-                    ))}
-                    {droppableProvided.placeholder}
-                  </Box>
-                )}
-              </Droppable>
-            </DragDropContext>
-          </Card>
+          <LessonPlanTabNav
+            sections={navigationSections}
+            activeSection={activeSection}
+            onSelect={goToSection}
+            onMove={moveTab}
+            onDragEnd={handleTabDragEnd}
+            evaluationSectionIds={isTemplateMode ? EVALUATION_TAB_IDS : []}
+            enabledEvaluationSections={enabledEvaluationSections}
+            onToggleEvaluationSection={(tabId) =>
+              setEnabledEvaluationSections((current) =>
+                current.includes(tabId)
+                  ? current.filter((item) => item !== tabId)
+                  : [...current, tabId]
+              )
+            }
+          />
 
-          <Box
-            sx={{
-              gap: 3,
-              display: 'grid',
-            }}
-          >
-            <Card
-              id="lesson-plan-general"
-              variant="outlined"
-              sx={{
-                p: { xs: 2.5, sm: 3.5 },
-                display: activeSection === 'lesson-plan-general' ? 'block' : 'none',
-              }}
-            >
-              <Typography variant="h5">ข้อมูลแผน</Typography>
-              <Box
-                sx={{
-                  gap: 2.5,
-                  mt: 2.5,
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-                }}
-              >
-                <Field.Select
-                  required
-                  name="teacherAssignmentId"
-                  disabled={!isEditable}
-                  label="รายวิชาและห้องเรียน"
-                  onChange={(event) => selectAssignment(event.target.value)}
-                  sx={{ gridColumn: { sm: '1 / -1' } }}
-                >
-                  {(optionsQuery.data ?? []).map((option) => (
-                    <MenuItem key={option.id} value={option.id}>
-                      {option.subject?.code ? `${option.subject.code} · ` : ''}
-                      {option.subject?.name} · {option.classroom?.name} · {option.semester?.name}
-                    </MenuItem>
-                  ))}
-                </Field.Select>
-                {selectedAssignment?.subject?.learning_units_structured.length ? (
-                  <Field.Select
-                    name="unitId"
-                    label="หน่วยการเรียนรู้จากรายวิชา"
-                    disabled={!isEditable}
-                    onChange={(event) => selectUnit(event.target.value)}
-                    helperText="เลือกแล้วระบบจะเติมชื่อหน่วยและจำนวนคาบตั้งต้นให้"
-                    sx={{ gridColumn: { sm: '1 / -1' } }}
-                  >
-                    <MenuItem value="">กำหนดหน่วยเฉพาะแผนนี้</MenuItem>
-                    {selectedAssignment.subject.learning_units_structured.map((unit) => (
-                      <MenuItem key={unit.id} value={unit.id}>
-                        {unit.code ? `${unit.code} · ` : ''}{unit.name}
-                      </MenuItem>
-                    ))}
-                  </Field.Select>
-                ) : null}
-                <Field.Text
-                  required
-                  disabled={!isEditable}
-                  name="title"
-                  label="ชื่อแผนการสอน"
-                  placeholder="เช่น แผนการจัดการเรียนรู้เรื่องแรงและการเคลื่อนที่"
-                  sx={{ gridColumn: { sm: '1 / -1' } }}
-                />
-                <Field.Text
-                  required
-                  disabled={!isEditable}
-                  type="number"
-                  name="unitNumber"
-                  label="หน่วยที่"
-                  slotProps={{ htmlInput: { min: 1 } }}
-                />
-                <Field.Text
-                  required
-                  disabled={!isEditable}
-                  name="unitName"
-                  label="ชื่อหน่วยการเรียนรู้"
-                />
-                <Field.Text
-                  required
-                  disabled={!isEditable}
-                  type="number"
-                  name="durationPeriods"
-                  label="จำนวนคาบ"
-                  slotProps={{ htmlInput: { min: 1, max: 200 } }}
-                />
-                <Box sx={{ gap: 2, display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                  <Field.DatePicker
-                    name="startDate"
-                    label="เริ่มใช้"
-                    disabled={!isEditable}
-                    format="DD/MM/YYYY"
-                    slotProps={{ textField: { fullWidth: true } }}
-                  />
-                  <Field.DatePicker
-                    name="endDate"
-                    label="ถึงวันที่"
-                    disabled={!isEditable}
-                    format="DD/MM/YYYY"
-                    minDate={startDate ? dayjs(startDate) : undefined}
-                    slotProps={{ textField: { fullWidth: true } }}
-                  />
-                </Box>
-              </Box>
-            </Card>
+          <Box sx={{ gap: 3, display: 'grid' }}>
+            {activeSection === 'lesson-plan-general' && (
+              <GeneralTab
+                isTemplateMode={isTemplateMode}
+                isEditable={isEditable}
+                isSaving={saveMutation.isPending}
+                assignmentOptions={optionsQuery.data ?? []}
+                selectedAssignment={selectedAssignment}
+                onSelectAssignment={selectAssignment}
+                onSelectUnit={selectUnit}
+                startDate={startDate}
+                templateCoverSubjects={templateCoverSubjects}
+                templateLearningAreas={templateLearningAreas}
+                templateGradeLevels={templateGradeLevels}
+                academicYears={aiOptionsQuery.data?.academicYears}
+                semesters={aiOptionsQuery.data?.semesters}
+                templateLogo={templateLogo}
+                onLogoDrop={onLogoDrop}
+                onLogoRemove={onLogoRemove}
+              />
+            )}
 
-            <Box
-              sx={{
-                gap: 3,
-                display: 'grid',
-              }}
-            >
-              <Card
-                id="lesson-plan-standards"
-                variant="outlined"
-                sx={{
-                  gap: 2.5,
-                  p: { xs: 2.5, sm: 3.5 },
-                  display: activeSection === 'lesson-plan-standards' ? 'grid' : 'none',
-                  scrollMarginTop: 96,
-                }}
-              >
-                <Box
-                  sx={{
-                    gap: 1.5,
-                    display: 'flex',
-                    alignItems: { xs: 'flex-start', sm: 'center' },
-                    justifyContent: 'space-between',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                  }}
-                >
-                  <Box>
-                    <Typography variant="h6">
-                      1. มาตรฐานการเรียนรู้ / ตัวชี้วัด / ผลการเรียนรู้
-                    </Typography>
-                    {selectedAssignment?.subject ? (
-                      <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                        เชื่อมกับหลักสูตร{' '}
-                        {selectedAssignment.subject.code
-                          ? `${selectedAssignment.subject.code} · `
-                          : ''}
-                        {selectedAssignment.subject.name}
-                      </Typography>
-                    ) : null}
-                  </Box>
-                  <Button
-                    size="small"
-                    color="inherit"
-                    variant="outlined"
-                    disabled={!isEditable || !selectedAssignment?.subject}
-                    startIcon={<RemixIcon icon="solar:refresh-linear" />}
-                    onClick={() => applyCurriculum(selectedAssignmentId)}
-                  >
-                    ดึงข้อมูลล่าสุด
-                  </Button>
-                </Box>
-                {selectedAssignment?.subject?.curriculum_indicators.length ? (
-                  <Controller
-                    name="indicatorIds"
-                    control={control}
-                    render={({ fieldState }) => (
-                      <Autocomplete
-                        multiple
-                        disabled={!isEditable}
-                        options={selectedAssignment.subject!.curriculum_indicators}
-                        value={selectedAssignment.subject!.curriculum_indicators.filter(
-                          (indicator) => selectedIndicatorIds.includes(indicator.id)
-                        )}
-                        getOptionLabel={(option) => `${option.code} · ${option.description}`}
-                        isOptionEqualToValue={(option, value) => option.id === value.id}
-                        onChange={(_, value) => {
-                          selectIndicators(value.map((indicator) => indicator.id));
-                        }}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            required
-                            label="ตัวชี้วัดจากคลังรายวิชา"
-                            error={Boolean(fieldState.error)}
-                            helperText={
-                              fieldState.error?.message ??
-                              'เลือกจาก object เดียวกับหน้า Template และหน้ารายวิชา'
-                            }
-                          />
-                        )}
-                      />
-                    )}
-                  />
-                ) : (
-                  <Alert severity="info">
-                    รายวิชานี้ยังไม่มีตัวชี้วัดแบบโครงสร้าง จึงใช้ข้อมูลข้อความเดิมได้ชั่วคราว
-                  </Alert>
-                )}
-                {selectedAssignment?.subject?.learning_outcomes_structured.length ? (
-                  <Controller
-                    name="learningOutcomeIds"
-                    control={control}
-                    render={({ field }) => (
-                      <Autocomplete
-                        multiple
-                        disabled={!isEditable}
-                        options={selectedAssignment.subject!.learning_outcomes_structured}
-                        value={selectedAssignment.subject!.learning_outcomes_structured.filter(
-                          (item) => field.value.includes(item.id)
-                        )}
-                        getOptionLabel={(option) =>
-                          `${option.code ? `${option.code} · ` : ''}${option.description}`
-                        }
-                        isOptionEqualToValue={(option, value) => option.id === value.id}
-                        onChange={(_, value) => field.onChange(value.map((item) => item.id))}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="ผลลัพธ์การเรียนรู้รายวิชาที่ใช้ในแผน"
-                            helperText="เป็น reference จากรายวิชา ไม่ถูกนำไปเขียนทับจุดประสงค์ของแผน"
-                          />
-                        )}
-                      />
-                    )}
-                  />
-                ) : null}
-                <DynamicCurriculumField
-                  label="มาตรฐานการเรียนรู้"
-                  addLabel="เพิ่มมาตรฐานการเรียนรู้"
-                  disabled={
-                    !isEditable ||
-                    Boolean(selectedAssignment?.subject?.curriculum_indicators.length)
-                  }
-                  control={control}
-                />
-                <Divider />
-                <DynamicIndicatorsField
-                  disabled={
-                    !isEditable ||
-                    Boolean(selectedAssignment?.subject?.curriculum_indicators.length)
-                  }
-                  control={control}
-                />
-              </Card>
+            {activeTemplateType ? (
+              <TemplateContentTab
+                activeSection={activeSection}
+                activeTemplateType={activeTemplateType}
+                templateOptions={aiOptionsQuery.data?.templates ?? []}
+                objectiveContent={
+                  navigationValues.templateSectionContents?.[
+                    'lesson-plan-objectives'
+                  ] as LearningObjectiveContent
+                }
+                aiEnabled={Boolean(aiOptionsQuery.data?.aiEnabled)}
+                onOpenAIDialog={onOpenAIDialog}
+              />
+            ) : null}
 
-              <Card
-                id="lesson-plan-objectives"
-                variant="outlined"
-                sx={{
-                  p: { xs: 2.5, sm: 3.5 },
-                  display: activeSection === 'lesson-plan-objectives' ? 'block' : 'none',
-                }}
-              >
-                <DynamicObjectivesField disabled={!isEditable} control={control} />
-              </Card>
-
-              <Card
-                id="lesson-plan-essential"
-                variant="outlined"
-                sx={{
-                  gap: 2,
-                  p: { xs: 2.5, sm: 3.5 },
-                  display: activeSection === 'lesson-plan-essential' ? 'grid' : 'none',
-                  scrollMarginTop: 96,
-                }}
-              >
-                <Box>
-                  <Typography variant="h6">3. สาระสำคัญ</Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                    จัดรูปแบบย่อหน้า ตัวหนา ลำดับเลข และหัวข้อย่อยด้วยเครื่องมือแก้ไขข้อความ
-                  </Typography>
-                </Box>
-                <Field.Editor
-                  name="essentialContent"
-                  editable={isEditable}
-                  placeholder="อธิบายแนวคิด เนื้อหา และสาระสำคัญของหน่วยการเรียนรู้"
-                />
-              </Card>
-
-              <Card
-                id="lesson-plan-characteristics"
-                variant="outlined"
-                sx={{
-                  gap: 2,
-                  p: { xs: 2.5, sm: 3.5 },
-                  display: activeSection === 'lesson-plan-characteristics' ? 'grid' : 'none',
-                  scrollMarginTop: 96,
-                }}
-              >
-                <Box>
-                  <Typography variant="h6">5. คุณลักษณะอันพึงประสงค์</Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                    ระบุคุณลักษณะและพฤติกรรมที่ต้องการส่งเสริมให้เกิดกับผู้เรียน
-                  </Typography>
-                </Box>
-                <Field.Editor
-                  name="desiredCharacteristics"
-                  editable={isEditable}
-                  placeholder="เช่น มีวินัย ใฝ่เรียนรู้ มุ่งมั่นในการทำงาน และมีจิตสาธารณะ"
-                />
-              </Card>
-
-              <Card
-                id="lesson-plan-competencies"
-                variant="outlined"
-                sx={{
-                  gap: 2,
-                  p: { xs: 2.5, sm: 3.5 },
-                  display: activeSection === 'lesson-plan-competencies' ? 'grid' : 'none',
-                  scrollMarginTop: 96,
-                }}
-              >
-                <Box>
-                  <Typography variant="h6">4. สมรรถนะสำคัญของผู้เรียน</Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                    ระบุสมรรถนะและพฤติกรรมที่ผู้เรียนจะพัฒนาจากแผนการสอนนี้
-                  </Typography>
-                </Box>
-                <Field.Editor
-                  name="learnerCompetencies"
-                  editable={isEditable}
-                  placeholder="เช่น ความสามารถในการสื่อสาร การคิด การแก้ปัญหา การใช้ทักษะชีวิต และการใช้เทคโนโลยี"
-                />
-              </Card>
-
-              <Card
-                id="lesson-plan-questions"
-                variant="outlined"
-                sx={{
-                  gap: 2,
-                  p: { xs: 2.5, sm: 3.5 },
-                  display: activeSection === 'lesson-plan-questions' ? 'grid' : 'none',
-                  scrollMarginTop: 96,
-                }}
-              >
-                <Box>
-                  <Typography variant="h6">6. คำถามหลัก (Big Question)</Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                    สร้างคำถามปลายเปิดเพื่อกระตุ้นการคิด วิเคราะห์ และเชื่อมโยงเนื้อหา
-                  </Typography>
-                </Box>
-                <Field.Editor
-                  name="guidingQuestions"
-                  editable={isEditable}
-                  placeholder="เพิ่มคำถามหลักและจัดเป็นรายการลำดับเลข"
-                />
-              </Card>
-
-              <Card
-                id="lesson-plan-activities"
-                variant="outlined"
-                sx={{
-                  gap: 2,
-                  p: { xs: 2.5, sm: 3.5 },
-                  display: activeSection === 'lesson-plan-activities' ? 'grid' : 'none',
-                  scrollMarginTop: 96,
-                }}
-              >
-                <Box>
-                  <Typography variant="h6">7. กิจกรรมการเรียนรู้ *</Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                    จัดกิจกรรมตามชั่วโมง ขั้นนำเข้าสู่บทเรียน ขั้นกิจกรรม และขั้นสรุป
-                  </Typography>
-                </Box>
-                <Field.Editor
-                  name="learningActivities"
-                  editable={isEditable}
-                  placeholder="ระบุชั่วโมงและขั้นตอนกิจกรรม พร้อมจัดเป็นหัวข้อและรายการย่อย"
-                />
-              </Card>
-
-              <Card
-                id="lesson-plan-media"
-                variant="outlined"
-                sx={{
-                  gap: 2,
-                  p: { xs: 2.5, sm: 3.5 },
-                  display: activeSection === 'lesson-plan-media' ? 'grid' : 'none',
-                  scrollMarginTop: 96,
-                }}
-              >
-                <Box
-                  sx={{
-                    gap: 1,
-                    display: 'flex',
-                    alignItems: { xs: 'flex-start', sm: 'center' },
-                    justifyContent: 'space-between',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                  }}
-                >
-                  <Box>
-                    <Typography variant="h6">8. สื่อและแหล่งเรียนรู้</Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                      เพิ่มหนังสือ แบบฝึกหัด อุปกรณ์ ใบงาน หรือแหล่งเรียนรู้ทีละรายการ
-                    </Typography>
-                  </Box>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    disabled={!isEditable}
-                    startIcon={<RemixIcon icon="mingcute:add-line" />}
-                    onClick={() => appendLearningMedia({ content: '' })}
-                  >
-                    เพิ่มสื่อ
-                  </Button>
-                </Box>
-
-                {learningMediaFields.length ? (
-                  <Box sx={{ gap: 1.25, display: 'grid' }}>
-                    {learningMediaFields.map((media, index) => (
-                      <Box
-                        key={media.id}
-                        sx={{
-                          gap: 1,
-                          display: 'grid',
-                          alignItems: 'center',
-                          gridTemplateColumns: '48px minmax(0, 1fr) 40px',
-                        }}
-                      >
-                        <Typography variant="subtitle2" sx={{ textAlign: 'right' }}>
-                          8.{index + 1}
-                        </Typography>
-                        <Field.Text
-                          disabled={!isEditable}
-                          name={`learningMedia.${index}.content`}
-                          label={`สื่อหรือแหล่งเรียนรู้รายการที่ ${index + 1}`}
-                        />
-                        <IconButton
-                          color="error"
-                          size="small"
-                          disabled={!isEditable}
-                          aria-label={`ลบสื่อรายการที่ ${index + 1}`}
-                          onClick={() => removeLearningMedia(index)}
-                        >
-                          <RemixIcon icon="solar:trash-bin-trash-linear" />
-                        </IconButton>
-                      </Box>
-                    ))}
-                  </Box>
-                ) : (
-                  <Alert severity="info">กด “เพิ่มสื่อ” เพื่อเพิ่มสื่อหรือแหล่งเรียนรู้</Alert>
-                )}
-              </Card>
-
-              <Card
-                id="lesson-plan-assessment"
-                variant="outlined"
-                sx={{
-                  gap: 2,
-                  p: { xs: 2.5, sm: 3.5 },
-                  display: activeSection === 'lesson-plan-assessment' ? 'grid' : 'none',
-                  scrollMarginTop: 96,
-                }}
-              >
-                <Box
-                  sx={{
-                    gap: 1,
-                    display: 'flex',
-                    alignItems: { xs: 'flex-start', sm: 'center' },
-                    justifyContent: 'space-between',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                  }}
-                >
-                  <Box>
-                    <Typography variant="h6">9. การวัดและประเมินผลการเรียนรู้ *</Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                      ประเด็นการประเมินดึงจากจุดประสงค์การเรียนรู้โดยอัตโนมัติ
-                    </Typography>
-                  </Box>
-                </Box>
-
-                {assessmentFields.length ? (
-                  <Box sx={{ overflowX: 'auto' }}>
-                    <Box
-                      sx={{
-                        gap: 1,
-                        px: 1,
-                        mb: 1,
-                        minWidth: { sm: 900 },
-                        display: { xs: 'none', sm: 'grid' },
-                        gridTemplateColumns: '36px repeat(4, minmax(180px, 1fr))',
-                      }}
-                    >
-                      <Box />
-                      {[
-                        'ประเด็นการประเมิน',
-                        'วิธีการประเมิน',
-                        'เครื่องมือการประเมิน',
-                        'เกณฑ์การประเมิน',
-                      ].map((label) => (
-                        <Typography key={label} variant="subtitle2" sx={{ textAlign: 'center' }}>
-                          {label}
-                        </Typography>
-                      ))}
-                    </Box>
-
-                    <Box sx={{ gap: 1.25, display: 'grid' }}>
-                      {assessmentFields.map((row, index) => (
-                        <Box
-                          key={row.id}
-                          sx={{
-                            gap: 1,
-                            p: 1,
-                            display: 'grid',
-                            minWidth: { sm: 900 },
-                            alignItems: 'flex-start',
-                            borderRadius: 1.5,
-                            borderColor: 'divider',
-                            bgcolor: 'background.paper',
-                            gridTemplateColumns: {
-                              xs: 'minmax(0, 1fr)',
-                              sm: '36px repeat(4, minmax(180px, 1fr))',
-                            },
-                          }}
-                        >
-                          <Typography
-                            variant="subtitle2"
-                            sx={{ pt: { sm: 2 }, textAlign: 'center' }}
-                          >
-                            {index + 1}
-                          </Typography>
-                          {(
-                            [
-                              ['issue', 'ประเด็นการประเมิน'],
-                              ['method', 'วิธีการประเมิน'],
-                              ['tool', 'เครื่องมือการประเมิน'],
-                              ['criteria', 'เกณฑ์การประเมิน'],
-                            ] as const
-                          ).map(([fieldName, label]) => (
-                            <Field.Text
-                              key={fieldName}
-                              required
-                              multiline
-                              minRows={3}
-                              disabled={!isEditable || fieldName === 'issue'}
-                              name={`assessment.${index}.${fieldName}`}
-                              label={label}
-                              sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
-                            />
-                          ))}
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-                ) : (
-                  <Alert severity="warning">
-                    กรุณากรอกจุดประสงค์การเรียนรู้ก่อนกำหนดการวัดและประเมินผล
-                  </Alert>
-                )}
-              </Card>
-            </Box>
+            {!isTemplateMode && activeSection === 'lesson-plan-standards' && (
+              <StandardsTab
+                isEditable={isEditable}
+                selectedAssignment={selectedAssignment}
+                selectedIndicatorIds={selectedIndicatorIds}
+                onSelectIndicators={selectIndicators}
+                onApplyCurriculum={onApplyCurriculum}
+              />
+            )}
+            {!isTemplateMode && activeSection === 'lesson-plan-objectives' && (
+              <ObjectivesTab isEditable={isEditable} />
+            )}
+            {!isTemplateMode && activeSection === 'lesson-plan-essential' && (
+              <EssentialContentTab isEditable={isEditable} />
+            )}
+            {!isTemplateMode && activeSection === 'lesson-plan-characteristics' && (
+              <CharacteristicsTab isEditable={isEditable} />
+            )}
+            {!isTemplateMode && activeSection === 'lesson-plan-competencies' && (
+              <CompetenciesTab isEditable={isEditable} />
+            )}
+            {!isTemplateMode && activeSection === 'lesson-plan-questions' && (
+              <QuestionsTab isEditable={isEditable} />
+            )}
+            {!isTemplateMode && activeSection === 'lesson-plan-activities' && (
+              <ActivitiesTab isEditable={isEditable} />
+            )}
+            {!isTemplateMode && activeSection === 'lesson-plan-media' && (
+              <MediaTab isEditable={isEditable} />
+            )}
+            {!isTemplateMode && activeSection === 'lesson-plan-assessment' && (
+              <AssessmentTab isEditable={isEditable} />
+            )}
           </Box>
         </Box>
 
-        <Card
-          variant="outlined"
-          sx={{
-            p: 2,
-            mt: 'auto',
-            bottom: 16,
-            zIndex: 5,
-            position: 'sticky',
-            boxShadow: (theme) => theme.vars.customShadows.z8,
-          }}
-        >
-          <Box
-            sx={{
-              gap: 1,
-              display: 'flex',
-              alignItems: { sm: 'center' },
-              justifyContent: 'space-between',
-              flexDirection: { xs: 'column-reverse', sm: 'row' },
-            }}
-          >
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="overline" sx={{ color: 'primary.main' }}>
-                ขั้นตอนที่ {activeSectionIndex + 1} จาก {navigationSections.length}
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ display: { xs: 'none', sm: 'block' }, color: 'text.secondary' }}
-              >
-                {planQuery.data?.status === 'revision' ? 'ฉบับแก้ไข' : 'ฉบับร่าง'} · เวอร์ชัน{' '}
-                {planQuery.data?.version_number ?? 1} · บันทึกเฉพาะ Tab “
-                {activeNavigationSection.label}”
-              </Typography>
-            </Box>
-            <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {lessonPlanId && activeSection in TAB_TEMPLATE_TYPES ? (
-                <Button
-                  type="button"
-                  color="primary"
-                  size="large"
-                  variant="outlined"
-                  disabled={!isEditable}
-                  startIcon={<RemixIcon icon="solar:documents-linear" />}
-                  onClick={() => setTemplatePickerOpen(true)}
-                >
-                  ใช้ Template
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                color="inherit"
-                size="large"
-                variant="outlined"
-                startIcon={<RemixIcon icon="solar:printer-minimalistic-linear" />}
-                onClick={() => setPdfOpen(true)}
-              >
-                พรีวิว PDF
-              </Button>
-              <Button
-                component={RouterLink}
-                href={paths.teacher.lessonPlans.root}
-                color="inherit"
-                size="large"
-                disabled={saveMutation.isPending}
-              >
-                ยกเลิก
-              </Button>
-              <Button
-                type="button"
-                size="large"
-                variant="contained"
-                disabled={!isEditable}
-                loading={saveMutation.isPending}
-                startIcon={<RemixIcon icon="solar:diskette-linear" />}
-                onClick={saveCurrentTab}
-                sx={{ minWidth: 170 }}
-              >
-                บันทึก
-              </Button>
-            </Box>
-          </Box>
-        </Card>
+        <LessonPlanFooterBar
+          title={navigationValues.title?.trim() || 'ยังไม่ได้ระบุชื่อแผน'}
+          stepIndex={activeSectionIndex + 1}
+          stepCount={navigationSections.length}
+          statusLabel={
+            isTemplateMode
+              ? 'Template'
+              : planQuery.data?.status === 'revision'
+                ? 'ฉบับแก้ไข'
+                : 'ฉบับร่าง'
+          }
+          versionLabel={
+            catalogTemplateQuery.data?.template.version ?? planQuery.data?.version_number ?? 1
+          }
+          activeTabLabel={activeNavigationSection.label}
+          showTemplatePickerButton={Boolean(lessonPlanId) && activeSection in TAB_TEMPLATE_TYPES}
+          isEditable={isEditable}
+          isSaving={saveMutation.isPending}
+          returnPath={returnPath}
+          onOpenTemplatePicker={onOpenTemplatePicker}
+          onPreviewPdf={onPreviewPdf}
+          onSaveTab={saveCurrentTab}
+        />
       </Form>
 
-      {pdfOpen ? (
+      {activeTemplateType ? (
+        <TemplateAIDialog
+          open={aiDialogOpen}
+          lockTemplateType
+          defaultAction="improve"
+          onClose={() => setAIDialogOpen(false)}
+          subjects={aiOptionsQuery.data?.subjects ?? []}
+          indicators={aiOptionsQuery.data?.indicators ?? []}
+          initial={aiDialogInitial}
+          onApply={(result: TemplateAIResult) => {
+            setValue(`templateSectionContents.${activeSection}`, result.content, {
+              shouldDirty: true,
+            });
+            setAIDialogOpen(false);
+            toast.success(
+              `นำผลลัพธ์ AI มาใส่ใน Step “${TAB_LABELS[activeSection]}” แล้ว กรุณาตรวจสอบก่อนบันทึก`
+            );
+          }}
+        />
+      ) : null}
+
+      {pdfOpen && catalogTemplateId && templatePreview ? (
+        <Dialog
+          open
+          fullWidth
+          maxWidth="xl"
+          onClose={() => {
+            setPdfOpen(false);
+            setTemplatePreview(null);
+          }}
+        >
+          <DialogTitle>พรีวิว PDF · {templatePreview.name}</DialogTitle>
+          <DialogContent dividers sx={{ p: 0, bgcolor: 'grey.100' }}>
+            <LessonPlanTemplatePdfViewer
+              template={templatePreview}
+              sectionTemplates={catalogTemplateQuery.data?.sectionTemplates ?? []}
+              onPdfReady={() => undefined}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              color="inherit"
+              onClick={() => {
+                setPdfOpen(false);
+                setTemplatePreview(null);
+              }}
+            >
+              ปิด
+            </Button>
+          </DialogActions>
+        </Dialog>
+      ) : null}
+
+      {pdfOpen && !isTemplateMode ? (
         <LessonPlanPdfDialog
           open
           onClose={() => setPdfOpen(false)}
           plan={toPayload(getValues())}
           assignment={selectedAssignment}
-          version={planQuery.data?.version_number ?? 1}
+          version={
+            catalogTemplateQuery.data?.template.version ?? planQuery.data?.version_number ?? 1
+          }
         />
       ) : null}
 

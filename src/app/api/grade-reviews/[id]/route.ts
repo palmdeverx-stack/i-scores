@@ -6,6 +6,7 @@ import { loadTeacherAssignment } from 'src/lib/teacher-assignment-access';
 import {
   canViewViaPermission,
   canManageViaPermission,
+  isPersonalWorkspaceOwner,
 } from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
@@ -78,6 +79,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+  }
+  if (
+    caller.role === 'teacher' &&
+    (await isPersonalWorkspaceOwner(caller.sub, caller.schoolId))
+  ) {
+    return NextResponse.json(
+      { message: 'พื้นที่ส่วนตัวบันทึกคะแนนได้โดยไม่ต้องส่งตรวจฝ่ายวิชาการ' },
+      { status: 403 }
+    );
   }
 
   const { id } = await params;

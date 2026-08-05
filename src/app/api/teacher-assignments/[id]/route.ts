@@ -7,6 +7,10 @@ import {
   canAccessTeacherAssignment,
 } from 'src/lib/teacher-assignment-access';
 import {
+  loadSubjectForTeaching,
+  teachingSubjectMatchesAcademicYear,
+} from 'src/lib/teaching-subject-access';
+import {
   hasTimetableCapability,
   canManageAssignmentSchedule,
   revertScheduleApprovalOnEdit,
@@ -48,8 +52,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, { status: 400 });
   }
 
-  const [{ data: teacher }, { data: subject }, { data: classroom }, { data: semester }] =
-    await Promise.all([
+  const [teacherResult, subject, classroomResult, semesterResult] = await Promise.all([
       supabaseAdmin
         .from('app_users')
         .select('id')
@@ -57,13 +60,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         .eq('role', 'teacher')
         .eq('school_id', caller.schoolId)
         .maybeSingle(),
-      supabaseAdmin
-        .from('subjects')
-        .select('id, academic_year_id')
-        .eq('id', subjectId)
-        .eq('semester_id', semesterId)
-        .eq('school_id', caller.schoolId)
-        .maybeSingle(),
+      loadSubjectForTeaching(caller, subjectId, semesterId),
       supabaseAdmin
         .from('classrooms')
         .select('id, academic_year_id')
@@ -76,18 +73,21 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         .eq('id', semesterId)
         .eq('academic_years.school_id', caller.schoolId)
         .maybeSingle(),
-    ]);
+  ]);
+  const { data: teacher } = teacherResult;
+  const { data: classroom } = classroomResult;
+  const { data: semester } = semesterResult;
 
   if (!teacher || !subject || !classroom || !semester) {
     return NextResponse.json(
-      { message: 'ไม่พบครู วิชา ห้องเรียน หรือภาคเรียนนี้ในโรงเรียนของคุณ' },
+      { message: 'ไม่พบครู รายวิชาที่เข้าถึงได้ กลุ่มเรียน หรือภาคเรียนในพื้นที่นี้' },
       { status: 404 }
     );
   }
 
   if (
-    subject.academic_year_id !== classroom.academic_year_id ||
-    subject.academic_year_id !== semester.academic_year_id
+    classroom.academic_year_id !== semester.academic_year_id ||
+    !teachingSubjectMatchesAcademicYear(subject, semester.academic_year_id)
   ) {
     return NextResponse.json(
       { message: 'รายวิชา ห้องเรียน และภาคเรียนต้องอยู่ในปีการศึกษาเดียวกัน' },

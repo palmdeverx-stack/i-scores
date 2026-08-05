@@ -56,6 +56,7 @@ export function ClassroomCreateView() {
   const router = useRouter();
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
+  const isPersonalWorkspace = user?.is_personal_workspace === true;
   const backPath = isTeacher ? paths.teacher.assignments : paths.admin.classroom.root;
 
   const {
@@ -92,7 +93,11 @@ export function ClassroomCreateView() {
   const { handleSubmit, control, setValue } = methods;
   const academicYearId = useWatch({ control, name: 'academicYearId' });
   const semesterId = useWatch({ control, name: 'semesterId' });
-  const availableSubjects = subjects?.filter((subject) => subject.semester_id === semesterId);
+  const availableSubjects = subjects?.filter(
+    (subject) =>
+      subject.semester_id === semesterId ||
+      (isPersonalWorkspace && ['personal', 'public', 'system'].includes(subject.scope))
+  );
 
   const {
     data: semesters,
@@ -156,7 +161,7 @@ export function ClassroomCreateView() {
             กลับไปหน้าชั้นเรียน
           </Button>
           <Typography component="h1" variant="h3" sx={{ mb: 1 }}>
-            สร้างห้องเรียนใหม่
+            สร้างกลุ่มเรียนใหม่ (ห้องเรียน)
           </Typography>
           <Typography sx={{ color: 'text.secondary' }}>
             กรอกข้อมูลห้องเรียนและวิชาที่สอน เพื่อเริ่มสร้างงานและบันทึกคะแนน

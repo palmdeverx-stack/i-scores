@@ -97,7 +97,7 @@ export function RHFAutocomplete({
   // ----------------------------------------------------------------------
 
   const handleChange: RHFAutocompleteProps['onChange'] = (event, value) => {
-    const updateValue = (newValue: object) => {
+    const updateValue = (newValue: any) => {
       if (onChange) {
         onChange(event, newValue, 'selectOption');
       } else {
@@ -198,9 +198,12 @@ export function RHFAutocomplete({
       render={({ field, fieldState: { error } }) => {
         const selectedOption = other.multiple
           ? modifiedOptions.filter((option) => field.value?.includes(option[keyOption.value]))
-          : modifiedOptions.find(
-              (option) => option[keyOption.value] === field.value?.[keyOption.value]
-            );
+          : other.freeSolo && typeof field.value === 'string'
+            ? (modifiedOptions.find((option) => option[keyOption.value] === field.value) ??
+              field.value)
+            : modifiedOptions.find(
+                (option) => option[keyOption.value] === field.value?.[keyOption.value]
+              );
 
         return (
           <Autocomplete
@@ -268,9 +271,13 @@ export function RHFAutocomplete({
               />
             )}
             isOptionEqualToValue={(option, value) =>
-              option?.[keyOption.value] === value[keyOption.value]
+              typeof value === 'string'
+                ? option?.[keyOption.value] === value
+                : option?.[keyOption.value] === value?.[keyOption.value]
             }
-            getOptionLabel={(option) => option[keyOption.label]}
+            getOptionLabel={(option) =>
+              typeof option === 'string' ? option : (option?.[keyOption.label] ?? '')
+            }
             renderOption={renderOption}
             renderTags={renderTags}
             {...other}

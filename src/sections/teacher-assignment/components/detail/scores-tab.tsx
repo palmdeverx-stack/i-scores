@@ -33,6 +33,8 @@ import {
   ASSIGNMENT_CATEGORY_META,
 } from 'src/sections/assignment/assignment-actions';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import { QuickScoreDialog } from '../quick-score-dialog';
 import { ScoreItemActionsDialog } from '../score-item-actions-dialog';
 
@@ -65,6 +67,7 @@ export const ScoresTab = memo(function ScoresTab({
   assignmentNewPath,
   quizNewPath,
 }: Props) {
+  const { user } = useAuthContext();
   const [selectedCategory, setSelectedCategory] = useState<AssignmentCategory>('assignment');
   const [scoreItemAction, setScoreItemAction] = useState<{
     mode: 'edit' | 'delete';
@@ -217,7 +220,9 @@ export const ScoresTab = memo(function ScoresTab({
         </Box>
       </Card>
 
-      <GradeSubmissionCard teacherAssignmentId={teacherAssignmentId} />
+      {user?.is_personal_workspace ? null : (
+        <GradeSubmissionCard teacherAssignmentId={teacherAssignmentId} />
+      )}
 
       <ScoreCategorySection
         category={selectedCategory}

@@ -7,13 +7,14 @@ import { DashboardLayout, SchoolHeaderIdentity } from 'src/layouts/dashboard';
 
 import { SchoolSubscriptionGuard } from 'src/sections/school-subscription/school-subscription-guard';
 import {
-  dedupeTeacherNav,
-  filterNavByDepartment,
-} from 'src/sections/teacher-department/filter-nav-by-department';
-import {
   filterDashboardNav,
   useSchoolSubscription,
 } from 'src/sections/school-subscription/use-school-subscription';
+import {
+  dedupeTeacherNav,
+  filterNavByDepartment,
+  groupPersonalWorkspaceNav,
+} from 'src/sections/teacher-department/filter-nav-by-department';
 
 import { useAuthContext } from 'src/auth/hooks';
 import {
@@ -38,20 +39,16 @@ export default function Layout({ children }: Props) {
         ? teacherNavData.map((group) => ({
             ...group,
             subheader: group.subheader === 'ภาพรวม' ? 'พื้นที่ส่วนตัว' : group.subheader,
-            items: group.items
-              .filter((item) => item.title !== 'ตรวจแผนการสอน')
-              .map((item) =>
-                item.title === 'ปีการศึกษาและภาคเรียน'
-                  ? { ...item, featureKey: undefined }
-                  : item
-              ),
+            items: group.items.filter((item) => item.title !== 'ตรวจแผนการสอน'),
           }))
         : teacherNavData;
       const licensedNav = filterDashboardNav(
         workspaceNav,
         subscriptionQuery.data?.subscription.enabled_features ?? []
       );
-      if (user?.is_personal_workspace) return dedupeTeacherNav(licensedNav);
+      if (user?.is_personal_workspace) {
+        return groupPersonalWorkspaceNav(dedupeTeacherNav(licensedNav));
+      }
 
       return dedupeTeacherNav(
         filterNavByDepartment(

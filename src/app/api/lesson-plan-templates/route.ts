@@ -8,8 +8,8 @@ import type {
 import { ZodError } from 'zod';
 import { NextResponse } from 'next/server';
 
-import { requireRole } from 'src/lib/auth-token';
 import { parseTemplateInput } from 'src/features/templates/schemas';
+import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import {
   getTemplates,
   createTemplate,
@@ -33,7 +33,7 @@ function errorResponse(error: unknown) {
 }
 
 export async function GET(request: Request) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId)
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   const params = new URL(request.url).searchParams;
@@ -41,6 +41,9 @@ export async function GET(request: Request) {
     search: params.get('search') || undefined,
     tab: (params.get('tab') || 'all') as TemplateFilters['tab'],
     templateType: (params.get('templateType') || undefined) as TemplateType | undefined,
+    excludeTemplateType: (params.get('excludeTemplateType') || undefined) as
+      | TemplateType
+      | undefined,
     scope: (params.get('scope') || undefined) as TemplateScope | undefined,
     status: (params.get('status') || undefined) as TemplateStatus | undefined,
     gradeLevel: params.get('gradeLevel') || undefined,
@@ -68,7 +71,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId)
     return NextResponse.json({ message: 'ไม่มีสิทธิ์สร้าง Template' }, { status: 403 });
   try {

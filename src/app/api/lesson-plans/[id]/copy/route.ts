@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import { ownsLessonPlan, loadLessonPlan, lessonPlanSnapshot } from 'src/lib/lesson-plan-access';
 
 // ----------------------------------------------------------------------
@@ -9,7 +9,7 @@ import { ownsLessonPlan, loadLessonPlan, lessonPlanSnapshot } from 'src/lib/less
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['teacher']);
+  const caller = await requireLessonPlanFeature(request, ['teacher']);
   const { id } = await params;
   const source = caller ? await loadLessonPlan(id) : null;
   if (!caller?.schoolId || !source || !ownsLessonPlan(caller, source)) {
@@ -34,7 +34,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     start_date: source.start_date,
     end_date: source.end_date,
     learning_standards: source.learning_standards,
-    indicators: source.indicators,
+    milestone_indicators: source.milestone_indicators ?? source.indicators,
+    terminal_indicators: source.terminal_indicators,
     learning_objectives: source.learning_objectives,
     essential_content: source.essential_content,
     learner_competencies: source.learner_competencies,

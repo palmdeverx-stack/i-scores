@@ -1,6 +1,7 @@
 import type { CurriculumReference } from 'src/features/curriculum/types';
 
 export type TemplateType =
+  | 'learning_standard'
   | 'learning_objective'
   | 'essential_content'
   | 'learning_content'
@@ -10,6 +11,14 @@ export type TemplateType =
   | 'media'
   | 'question'
   | 'reflection'
+  | 'worksheet_assessment_record'
+  | 'competency'
+  | 'competency_assessment'
+  | 'behavior_observation'
+  | 'desired_characteristic'
+  | 'desired_characteristic_assessment'
+  | 'learner_development'
+  | 'learning_task'
   | 'lesson_plan';
 
 export type TemplateScope = 'personal' | 'school' | 'system' | 'marketplace';
@@ -25,9 +34,19 @@ export type TemplateMetadata = {
   suitableFor?: string[];
 };
 
-export type LearningObjectiveContent = {
-  description: string;
+export type LearningObjectiveItem = {
+  id: string;
+  description?: string;
   domain: 'knowledge' | 'process' | 'attitude';
+  behaviorVerb?: string;
+  condition?: string;
+  expectedResult?: string;
+  successCriteria?: string;
+};
+export type LearningObjectiveContent = {
+  objectives?: LearningObjectiveItem[];
+  description?: string;
+  domain?: 'knowledge' | 'process' | 'attitude';
   behaviorVerb?: string;
   condition?: string;
   expectedResult?: string;
@@ -38,18 +57,7 @@ export type EssentialContent = { content: string; keyConcepts: string[] };
 export type LearningContent = {
   topics: Array<{ id: string; title: string; description?: string; order: number }>;
 };
-export type LearningActivityContent = {
-  activityName: string;
-  teachingMethod?: string;
-  phase: 'introduction' | 'learning' | 'practice' | 'conclusion';
-  durationMinutes?: number;
-  objectives: string[];
-  teacherActions: string[];
-  studentActions: string[];
-  requiredMaterials: string[];
-  expectedOutputs: string[];
-  groupType?: 'individual' | 'pair' | 'group' | 'whole_class';
-};
+export type LearningActivityContent = { items: StructuredTemplateItem[] };
 export type AssessmentContent = {
   assessmentType:
     | 'test'
@@ -66,6 +74,14 @@ export type AssessmentContent = {
   criteria: string;
   passingScore?: number;
   maximumScore?: number;
+  rows?: ObjectiveAssessmentRow[];
+};
+export type ObjectiveAssessmentRow = {
+  objectiveId: string;
+  issue: string;
+  method: string;
+  instrument: string;
+  criteria: string;
 };
 export type RubricContent = {
   rubricType: 'analytic' | 'holistic' | 'checklist' | 'rating_scale';
@@ -86,7 +102,8 @@ export type RubricContent = {
     }>;
   }>;
 };
-export type MediaContent = {
+export type MediaItem = {
+  id: string;
   mediaType:
     | 'worksheet'
     | 'slide'
@@ -103,6 +120,7 @@ export type MediaContent = {
   marketplaceProductId?: string;
   usageInstructions?: string;
 };
+export type MediaContent = Partial<Omit<MediaItem, 'id'>> & { items?: MediaItem[] };
 export type QuestionContent = {
   questions: Array<{
     id: string;
@@ -113,20 +131,92 @@ export type QuestionContent = {
   }>;
 };
 export type ReflectionContent = {
-  sections: Array<{ id: string; title: string; placeholder?: string; required?: boolean }>;
+  sections?: Array<{ id: string; title: string; placeholder?: string; required?: boolean }>;
+  studentCount?: number;
+  passedCount?: number;
+  passedPercentage?: number;
+  notPassedCount?: number;
+  notPassedPercentage?: number;
+  specialStudents?: string[];
+  knowledgeResult?: string;
+  processResult?: string;
+  attitudeResult?: string;
+  problems?: string;
+  solutions?: string;
 };
-export type LessonPlanTemplateContent = {
-  sections: Array<{
+export type WorksheetAssessmentRecordContent = {
+  title: string;
+  topic: string;
+  scoreColumns: Array<{ id: string; title: string; maximumScore: number }>;
+  students: Array<{ id: string; name: string; scores: number[]; result?: 'ผ่าน' | 'ไม่ผ่าน' | '' }>;
+  rubricCriteria: Array<{
     id: string;
-    sectionType: TemplateType;
-    templateId?: string;
     title: string;
-    order: number;
-    required: boolean;
+    levels: Array<{ level: number; label: string; description: string }>;
   }>;
+  passingScore: number;
+  passingCriteria: string;
+  evaluatorName: string;
+  evaluatorRole: string;
+  evaluationDate: string;
 };
-
-export type TemplateContent =
+export type DesiredCharacteristicAssessmentContent = {
+  title: string;
+  instructions: string;
+  characteristicGroups: Array<{
+    id: string;
+    title: string;
+    behaviors: Array<{ id: string; title: string }>;
+  }>;
+  students: Array<{ id: string; name: string; scores: number[] }>;
+  qualityLevels: Array<{
+    id: string;
+    minimumScore: number;
+    maximumScore?: number;
+    label: string;
+  }>;
+  passingScore: number;
+  passingNote: string;
+  evaluatorName: string;
+  evaluatorRole: string;
+  evaluationDate: string;
+};
+export type CompetencyAssessmentContent = {
+  title: string;
+  instructions: string;
+  domains: Array<{ id: string; title: string; competencyLabel: string }>;
+  students: Array<{ id: string; name: string; scores: number[] }>;
+  qualityLevels: Array<{ id: string; score: number; label: string }>;
+  passingScore: number;
+  passingNote: string;
+  evaluatorName: string;
+  evaluatorRole: string;
+  evaluationDate: string;
+};
+export type BehaviorObservationContent = {
+  title: string;
+  instructions: string;
+  behaviors: Array<{ id: string; title: string }>;
+  students: Array<{ id: string; name: string; observations: boolean[] }>;
+  passingMinimum: number;
+  passingNote: string;
+  evaluatorName: string;
+  evaluatorRole: string;
+  evaluationDate: string;
+};
+export type EvaluationStudent = { id: string; name: string };
+export type StructuredTemplateItem = {
+  id: string;
+  code?: string;
+  title: string;
+  description: string;
+};
+export type StructuredListContent = { items: StructuredTemplateItem[] };
+export type LearningStandardContent = StructuredListContent & {
+  milestoneIndicators: StructuredTemplateItem[];
+  terminalIndicators: StructuredTemplateItem[];
+};
+export type SectionTemplateContent =
   | LearningObjectiveContent
   | EssentialContent
   | LearningContent
@@ -136,7 +226,73 @@ export type TemplateContent =
   | MediaContent
   | QuestionContent
   | ReflectionContent
-  | LessonPlanTemplateContent;
+  | WorksheetAssessmentRecordContent
+  | DesiredCharacteristicAssessmentContent
+  | CompetencyAssessmentContent
+  | BehaviorObservationContent
+  | StructuredListContent
+  | LearningStandardContent;
+
+export type LessonPlanTemplateContent = {
+  cover?: LessonPlanTemplateCover;
+  evaluationStudents?: EvaluationStudent[];
+  sections: Array<{
+    id: string;
+    sectionType: TemplateType;
+    templateId?: string;
+    title: string;
+    order: number;
+    required: boolean;
+    enabled?: boolean;
+    content?: SectionTemplateContent;
+  }>;
+  document?: LessonPlanTemplateDocument;
+};
+
+export type LessonPlanTemplateCover = {
+  logoUrl?: string;
+  heading?: string;
+  learningArea?: string;
+  subjectName?: string;
+  subjectCode?: string;
+  topic?: string;
+  teacherName?: string;
+  teachingDate?: string;
+  gradeLevel?: string;
+  semester?: string;
+  durationHours?: number;
+  academicYear?: string;
+};
+
+export type LessonPlanTemplateDocument = CurriculumReference & {
+  sectionOrder?: string[];
+  title: string;
+  unitNumber: number;
+  unitName: string;
+  durationPeriods: number;
+  startDate?: string;
+  endDate?: string;
+  learningStandards: string;
+  /** @deprecated superseded by milestoneIndicators/terminalIndicators; kept for reading old saved documents */
+  indicators?: string;
+  milestoneIndicators: string;
+  terminalIndicators: string;
+  learningObjectives: string;
+  essentialContent: string;
+  learnerCompetencies: string;
+  desiredCharacteristics: string;
+  guidingQuestions: string;
+  learningActivities: string;
+  learningMedia: string;
+  assessment: string;
+};
+
+export type TemplateContent = SectionTemplateContent | LessonPlanTemplateContent;
+
+export type TemplateOption = Pick<
+  LessonTemplate,
+  'id' | 'name' | 'template_type' | 'scope' | 'content'
+>;
 
 export type LessonTemplate = {
   id: string;
@@ -206,6 +362,7 @@ export type TemplateFilters = {
   search?: string;
   tab?: 'all' | 'mine' | 'school' | 'system' | 'marketplace';
   templateType?: TemplateType;
+  excludeTemplateType?: TemplateType;
   scope?: TemplateScope;
   status?: TemplateStatus;
   gradeLevel?: string;
@@ -214,3 +371,6 @@ export type TemplateFilters = {
   ownerId?: string;
   schoolId?: string;
 };
+
+export type TemplateCatalogTab = NonNullable<TemplateFilters['tab']>;
+export type TemplateTabCounts = Record<TemplateCatalogTab, number>;

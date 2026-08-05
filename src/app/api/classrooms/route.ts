@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { canManageViaPermission } from 'src/lib/department-permission-access';
+import {
+  canManageViaPermission,
+  isPersonalWorkspaceOwner,
+} from 'src/lib/department-permission-access';
+import {
+  loadSubjectForTeaching,
+  teachingSubjectMatchesAcademicYear,
+} from 'src/lib/teaching-subject-access';
 
 // ----------------------------------------------------------------------
 
@@ -75,10 +82,16 @@ export async function POST(request: Request) {
   } = await request.json();
 
   const isAdminLike = await canManageViaPermission(caller, 'classrooms.manage');
+  const isPersonalOwner =
+    caller.role === 'teacher' &&
+    !!caller.schoolId &&
+    (await isPersonalWorkspaceOwner(caller.sub, caller.schoolId));
 
-  const requestedTeacherIds = isAdminLike
-    ? Array.from(new Set(Array.isArray(teacherIds) ? teacherIds.filter(Boolean) : []))
-    : [caller.sub];
+  const requestedTeacherIds = isPersonalOwner
+    ? [caller.sub]
+    : isAdminLike
+      ? Array.from(new Set(Array.isArray(teacherIds) ? teacherIds.filter(Boolean) : []))
+      : [caller.sub];
 
   if (!name || !academicYearId || requestedTeacherIds.length === 0) {
     return NextResponse.json(
@@ -87,7 +100,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isAdminLike && (!subjectId || !semesterId)) {
+  if (!isAdminLike && !isPersonalOwner && (!subjectId || !semesterId)) {
     return NextResponse.json(
       { message: 'กรุณาเลือกวิชาและภาคเรียน เพื่อผูกห้องนี้เข้ากับคุณ' },
       { status: 400 }
@@ -103,6 +116,34 @@ export async function POST(request: Request) {
 
   if (!year) {
     return NextResponse.json({ message: 'ไม่พบปีการศึกษานี้' }, { status: 404 });
+  }
+
+  const shouldCreateSelfAssignment =
+    caller.role === 'teacher' && !!subjectId && !!semesterId && (isPersonalOwner || !isAdminLike);
+  const [teachingSubject, teachingSemester] = shouldCreateSelfAssignment
+    ? await Promise.all([
+        loadSubjectForTeaching(caller, subjectId, semesterId),
+        supabaseAdmin
+          .from('semesters')
+          .select('id, academic_year_id, academic_years!inner(school_id)')
+          .eq('id', semesterId)
+          .eq('academic_year_id', academicYearId)
+          .eq('academic_years.school_id', caller.schoolId)
+          .maybeSingle()
+          .then(({ data }) => data),
+      ])
+    : [null, null];
+
+  if (
+    shouldCreateSelfAssignment &&
+    (!teachingSubject ||
+      !teachingSemester ||
+      !teachingSubjectMatchesAcademicYear(teachingSubject, academicYearId))
+  ) {
+    return NextResponse.json(
+      { message: 'ไม่พบรายวิชาหรือภาคเรียนที่เลือกในปีการศึกษานี้' },
+      { status: 404 }
+    );
   }
 
   const { data: teachers } = await supabaseAdmin
@@ -152,29 +193,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: homeroomError.message }, { status: 500 });
   }
 
-  if (!isAdminLike) {
-    const { data: subject } = await supabaseAdmin
-      .from('subjects')
-      .select('id')
-      .eq('id', subjectId)
-      .eq('semester_id', semesterId)
-      .eq('school_id', caller.schoolId)
-      .maybeSingle();
-
-    const { data: semester } = await supabaseAdmin
-      .from('semesters')
-      .select('id, academic_years!inner(school_id)')
-      .eq('id', semesterId)
-      .eq('academic_years.school_id', caller.schoolId)
-      .maybeSingle();
-
-    if (!subject || !semester) {
-      return NextResponse.json(
-        { message: 'ไม่พบรายวิชาหรือภาคเรียนนี้ในโรงเรียนของคุณ' },
-        { status: 404 }
-      );
-    }
-
+  if (shouldCreateSelfAssignment) {
     const { error: assignmentError } = await supabaseAdmin.from('teacher_assignments').insert({
       teacher_id: caller.sub,
       subject_id: subjectId,
@@ -183,6 +202,7 @@ export async function POST(request: Request) {
     });
 
     if (assignmentError) {
+      await supabaseAdmin.from('classrooms').delete().eq('id', classroom.id);
       return NextResponse.json({ message: assignmentError.message }, { status: 500 });
     }
   }

@@ -1,8 +1,15 @@
 'use client';
 
 import type { LessonPlan } from '../lesson-plan-actions';
-import type { TemplateType, LessonTemplate, TemplateStatus } from 'src/features/templates/types';
+import type {
+  TemplateType,
+  LessonTemplate,
+  TemplateStatus,
+  TemplateFilters,
+  TemplateCatalogTab,
+} from 'src/features/templates/types';
 
+import dynamic from 'next/dynamic';
 import { useDebounce } from 'minimal-shared/hooks';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
@@ -15,6 +22,7 @@ import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import Drawer from '@mui/material/Drawer';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
@@ -25,18 +33,12 @@ import DialogContent from '@mui/material/DialogContent';
 import LinearProgress from '@mui/material/LinearProgress';
 
 import { paths } from 'src/routes/paths';
+import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { fDate } from 'src/utils/format-time';
 
 import { TemplatePreview } from 'src/features/templates/components/template-preview';
-import {
-  applyTemplate,
-  deleteTemplate,
-  templateAction,
-  getTemplatesPage,
-  getTemplateOptions,
-} from 'src/features/templates/template-actions';
 import {
   GRADE_LEVELS,
   TEMPLATE_TYPES,
@@ -44,13 +46,30 @@ import {
   TEMPLATE_SCOPE_LABELS,
   TEMPLATE_STATUS_LABELS,
 } from 'src/features/templates/constants';
+import {
+  applyTemplate,
+  deleteTemplate,
+  templateAction,
+  getTemplatesPage,
+  getTemplateOptions,
+  getTemplateDocument,
+} from 'src/features/templates/template-actions';
 
 import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 
+import { LessonPlanDocumentCard } from '../components/lesson-plan-document-card';
 import { listLessonPlans, listLessonPlanTemplates } from '../lesson-plan-actions';
 
-type CatalogTab = 'all' | 'mine' | 'school' | 'system' | 'marketplace';
+const LessonPlanTemplatePdfViewer = dynamic(
+  () => import('../components/lesson-plan-template-pdf-viewer'),
+  {
+    ssr: false,
+    loading: () => <LinearProgress sx={{ gridColumn: { lg: '1 / span 2' }, m: 3 }} />,
+  }
+);
+
+type CatalogTab = TemplateCatalogTab;
 
 const PAGE_SIZE = 12;
 
@@ -69,11 +88,13 @@ function subjectLabel(plan: LessonPlan) {
 
 function TemplateCard({
   template,
+  editHref,
   onPreview,
   onApply,
   onAction,
 }: {
   template: LessonTemplate;
+  editHref: string;
   onPreview: () => void;
   onApply: () => void;
   onAction: (action: 'duplicate' | 'archive' | 'restore' | 'delete') => void;
@@ -90,7 +111,12 @@ function TemplateCard({
           variant="soft"
           label={TEMPLATE_TYPE_LABELS[template.template_type]}
         />
-        <Chip size="small" variant="outlined" label={TEMPLATE_SCOPE_LABELS[template.scope]} />
+        <Chip
+          size="small"
+          color={template.scope === 'personal' ? 'info' : 'default'}
+          variant={template.scope === 'personal' ? 'soft' : 'outlined'}
+          label={template.scope === 'personal' ? 'ของฉัน' : TEMPLATE_SCOPE_LABELS[template.scope]}
+        />
         <Chip
           size="small"
           color={
@@ -121,9 +147,11 @@ function TemplateCard({
         </Typography>
       </Box>
       <Box sx={{ gap: 0.5, display: 'flex', flexWrap: 'wrap' }}>
-        {template.tags.slice(0, 4).map((tag) => (
-          <Chip key={tag} size="small" label={tag} />
-        ))}
+        {Array.from(new Set(template.tags))
+          .slice(0, 4)
+          .map((tag) => (
+            <Chip key={tag} size="small" label={tag} />
+          ))}
       </Box>
       <Typography variant="caption" color="text.secondary">
         ใช้แล้ว {template.usage_count.toLocaleString('th-TH')} ครั้ง · แก้ไข{' '}
@@ -134,11 +162,7 @@ function TemplateCard({
           ดู
         </Button>
         {template.can_edit ? (
-          <Button
-            size="small"
-            component={RouterLink}
-            href={paths.teacher.lessonPlans.templateEdit(template.id)}
-          >
+          <Button size="small" component={RouterLink} href={editHref}>
             แก้ไข
           </Button>
         ) : null}
@@ -169,24 +193,256 @@ function TemplateCard({
   );
 }
 
-export function LessonPlanTemplateListView() {
+type TemplateAction = 'duplicate' | 'archive' | 'restore' | 'delete' | 'edit-copy';
+
+function FullPlanTemplateReader({
+  templates,
+  selectedTemplate,
+  onSelect,
+  onApply,
+  onAction,
+}: {
+  templates: LessonTemplate[];
+  selectedTemplate: LessonTemplate;
+  onSelect: (template: LessonTemplate) => void;
+  onApply: (template: LessonTemplate) => void;
+  onAction: (template: LessonTemplate, action: TemplateAction) => void;
+}) {
+  const [pdfDownload, setPdfDownload] = useState<{ templateId: string; url: string } | null>(null);
+  const downloadUrl = pdfDownload?.templateId === selectedTemplate.id ? pdfDownload.url : undefined;
+  const handlePdfReady = useCallback(
+    (url: string) =>
+      setPdfDownload((current) =>
+        current?.templateId === selectedTemplate.id && current.url === url
+          ? current
+          : { templateId: selectedTemplate.id, url }
+      ),
+    [selectedTemplate.id]
+  );
+  const documentQuery = useQuery({
+    queryKey: ['lesson-template-document', selectedTemplate.id],
+    queryFn: () => getTemplateDocument(selectedTemplate.id),
+  });
+  const recommendations = templates
+    .filter((template) => template.id !== selectedTemplate.id)
+    .slice(0, 6);
+
+  return (
+    <Box
+      sx={{
+        gap: 2,
+        display: 'grid',
+        alignItems: 'start',
+        gridTemplateColumns: { xs: 'minmax(0, 1fr)', xl: 'minmax(0, 1fr) 280px' },
+      }}
+    >
+      <Card variant="outlined" sx={{ minWidth: 0, overflow: 'hidden' }}>
+        <Box
+          sx={{
+            px: { xs: 2, md: 3 },
+            py: 1.5,
+            gap: 1,
+            display: 'flex',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            justifyContent: 'space-between',
+            flexDirection: { xs: 'column', sm: 'row' },
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Box>
+            <Typography variant="h6">{selectedTemplate.name}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              ใช้แล้ว {selectedTemplate.usage_count.toLocaleString('th-TH')} ครั้ง · อัปเดต{' '}
+              {fDate(selectedTemplate.updated_at)} · PDF จากข้อมูลจริง
+            </Typography>
+            <Box sx={{ gap: 0.75, mt: 1, display: 'flex', flexWrap: 'wrap' }}>
+              <Chip size="small" color="primary" variant="soft" label="แผนการสอนทั้งฉบับ" />
+              <Chip
+                size="small"
+                color={selectedTemplate.scope === 'personal' ? 'info' : 'default'}
+                variant={selectedTemplate.scope === 'personal' ? 'soft' : 'outlined'}
+                label={
+                  selectedTemplate.scope === 'personal'
+                    ? 'ของฉัน'
+                    : TEMPLATE_SCOPE_LABELS[selectedTemplate.scope]
+                }
+              />
+              <Chip
+                size="small"
+                color={
+                  selectedTemplate.status === 'active'
+                    ? 'success'
+                    : selectedTemplate.status === 'archived'
+                      ? 'default'
+                      : 'warning'
+                }
+                variant="soft"
+                label={TEMPLATE_STATUS_LABELS[selectedTemplate.status]}
+              />
+            </Box>
+          </Box>
+          <Box sx={{ gap: 0.75, display: 'flex', flexWrap: 'wrap' }}>
+            <Button
+              size="small"
+              component="a"
+              href={downloadUrl}
+              disabled={!downloadUrl}
+              download={`${selectedTemplate.name.replace(/[\\/:*?"<>|]/g, '-')}.pdf`}
+              startIcon={<RemixIcon icon="solar:download-minimalistic-bold" />}
+            >
+              ดาวน์โหลด PDF
+            </Button>
+            {selectedTemplate.can_edit ? (
+              <Button
+                size="small"
+                component={RouterLink}
+                href={paths.teacher.lessonPlans.templateEdit(selectedTemplate.id)}
+                startIcon={<RemixIcon icon="solar:pen-linear" />}
+              >
+                แก้ไข
+              </Button>
+            ) : (
+              <Button
+                size="small"
+                onClick={() => onAction(selectedTemplate, 'edit-copy')}
+                startIcon={<RemixIcon icon="solar:pen-linear" />}
+              >
+                คัดลอกเพื่อแก้ไข
+              </Button>
+            )}
+            <Button
+              size="small"
+              onClick={() => onAction(selectedTemplate, 'duplicate')}
+              startIcon={<RemixIcon icon="solar:copy-linear" />}
+            >
+              คัดลอก
+            </Button>
+            {selectedTemplate.status === 'active' ? (
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => onApply(selectedTemplate)}
+                startIcon={<RemixIcon icon="solar:document-add-linear" />}
+              >
+                ใช้ Template นี้
+              </Button>
+            ) : null}
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            display: 'grid',
+            bgcolor: 'grey.100',
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr)',
+              lg: '190px minmax(0, 1fr)',
+            },
+          }}
+        >
+          {documentQuery.isLoading ? (
+            <LinearProgress sx={{ gridColumn: { lg: '1 / span 2' }, m: 3 }} />
+          ) : null}
+          {documentQuery.isError ? (
+            <Alert severity="error" sx={{ gridColumn: { lg: '1 / span 2' }, m: 2 }}>
+              {documentQuery.error.message}
+            </Alert>
+          ) : null}
+          {documentQuery.data ? (
+            <LessonPlanTemplatePdfViewer
+              template={documentQuery.data.template}
+              sectionTemplates={documentQuery.data.sectionTemplates}
+              onPdfReady={handlePdfReady}
+            />
+          ) : null}
+        </Box>
+      </Card>
+
+      <Card
+        component="aside"
+        variant="outlined"
+        sx={{
+          p: 2.5,
+          gap: 1.75,
+          display: 'grid',
+          alignContent: 'start',
+          overflow: 'auto',
+          boxShadow: 'none',
+          borderRadius: { xl: 0 },
+          borderTop: { xl: 0 },
+          borderRight: { xl: 0 },
+          borderBottom: { xl: 0 },
+          maxHeight: { xl: 'calc(100vh - 190px)' },
+          position: { xl: 'sticky' },
+          top: { xl: 16 },
+        }}
+      >
+        <Typography variant="h6">เนื้อหาใกล้เคียง</Typography>
+        {recommendations.map((template) => (
+          <LessonPlanDocumentCard
+            key={template.id}
+            compact
+            data={{
+              title: template.name,
+              unitName: template.description,
+              previewText: template.description,
+              sectionCount: Array.isArray(
+                (template.content as { sections?: unknown }).sections
+              )
+                ? (template.content as { sections: unknown[] }).sections.length
+                : undefined,
+              versionNumber: template.version,
+              status: {
+                label: TEMPLATE_STATUS_LABELS[template.status],
+                color:
+                  template.status === 'active'
+                    ? 'success'
+                    : template.status === 'draft'
+                      ? 'warning'
+                      : 'default',
+              },
+              caption:
+                [template.subject?.name, ...template.grade_levels].filter(Boolean).join(' · ') ||
+                'ใช้ได้ทุกระดับชั้น',
+            }}
+            onOpen={() => onSelect(template)}
+          />
+        ))}
+      </Card>
+    </Box>
+  );
+}
+
+export function LessonPlanTemplateListView({
+  catalogMode = 'all',
+}: {
+  catalogMode?: 'full-plan' | 'all';
+}) {
+  const isFullPlanCatalog = catalogMode === 'full-plan';
+  const router = useRouter();
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [tab, setTab] = useState<CatalogTab>('all');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
-  const [templateType, setTemplateType] = useState<TemplateType | ''>('');
+  const [templateType, setTemplateType] = useState<TemplateType | ''>(
+    isFullPlanCatalog ? 'lesson_plan' : ''
+  );
   const [status, setStatus] = useState<TemplateStatus | ''>('');
   const [subjectId, setSubjectId] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
   const [preview, setPreview] = useState<LessonTemplate | null>(null);
   const [applyTarget, setApplyTarget] = useState<LessonTemplate | null>(null);
   const [lessonPlanId, setLessonPlanId] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
-  const filters = {
+  const filters: TemplateFilters = {
     tab,
     search: debouncedSearch || undefined,
-    templateType: templateType || undefined,
+    templateType: isFullPlanCatalog ? 'lesson_plan' : templateType || undefined,
+    excludeTemplateType: isFullPlanCatalog ? undefined : 'lesson_plan',
     status: status || undefined,
     subjectId: subjectId || undefined,
     gradeLevel: gradeLevel || undefined,
@@ -209,9 +465,20 @@ export function LessonPlanTemplateListView() {
   const legacyQuery = useQuery({
     queryKey: ['lesson-plan-templates', 'legacy'],
     queryFn: listLessonPlanTemplates,
+    enabled: isFullPlanCatalog,
   });
 
   const templates = templatesQuery.data?.pages.flatMap((page) => page.templates) ?? [];
+  const selectedTemplate =
+    templates.find((template) => template.id === selectedTemplateId) ?? templates[0];
+  const tabCounts = templatesQuery.data?.pages[0]?.tabCounts;
+  const activeFilterCount =
+    Number(tab !== 'all') +
+    Number(!!search.trim()) +
+    Number(!isFullPlanCatalog && !!templateType) +
+    Number(!!subjectId) +
+    Number(!!gradeLevel) +
+    Number(!!status);
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = templatesQuery;
 
   const loadMore = useCallback(() => {
@@ -240,18 +507,28 @@ export function LessonPlanTemplateListView() {
       action,
     }: {
       template: LessonTemplate;
-      action: 'duplicate' | 'archive' | 'restore' | 'delete';
+      action: TemplateAction;
     }) => {
       if (action === 'delete') {
-        if (!window.confirm(`ลบ “${template.name}” ถาวรหรือไม่?`)) return false;
+        if (!window.confirm(`ลบ “${template.name}” ถาวรหรือไม่?`))
+          return { changed: false, editTemplateId: null };
         await deleteTemplate(template.id);
-      } else await templateAction(template.id, action);
-      return true;
+        return { changed: true, editTemplateId: null };
+      }
+      const result = await templateAction(
+        template.id,
+        action === 'edit-copy' ? 'duplicate' : action
+      );
+      return {
+        changed: true,
+        editTemplateId: action === 'edit-copy' ? result.template.id : null,
+      };
     },
-    onSuccess: async (changed) => {
+    onSuccess: async ({ changed, editTemplateId }) => {
       if (!changed) return;
       toast.success('ดำเนินการเรียบร้อย');
       await queryClient.invalidateQueries({ queryKey: ['lesson-templates'] });
+      if (editTemplateId) router.push(paths.teacher.lessonPlans.templateEdit(editTemplateId));
     },
     onError: (error) => toast.error(error.message),
   });
@@ -276,7 +553,7 @@ export function LessonPlanTemplateListView() {
   });
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth={false} sx={{ py: 3 }}>
       <Box
         sx={{
           gap: 2,
@@ -289,47 +566,88 @@ export function LessonPlanTemplateListView() {
       >
         <Box>
           <Typography component="h1" variant="h3">
-            Template แผนการสอน
+            {isFullPlanCatalog ? 'เทมเพลตแผนการสอนฉบับเต็ม' : 'รวมเทมเพลตทุกประเภท'}
           </Typography>
           <Typography color="text.secondary">
-            คลังองค์ประกอบแยกส่วน และแผนที่ผ่านการอนุมัติ
+            {isFullPlanCatalog
+              ? 'เลือกโครงแผนฉบับเต็มที่ประกอบ Section พร้อมใช้งาน'
+              : 'คลังองค์ประกอบสำหรับนำไปใช้ซ้ำในแต่ละส่วนของแผนการสอน'}
           </Typography>
         </Box>
-        <Button
-          component={RouterLink}
-          href={paths.teacher.lessonPlans.templateNew}
-          variant="contained"
-          startIcon={<RemixIcon icon="mingcute:add-line" />}
-        >
-          สร้าง Template
-        </Button>
+        <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+          <Button
+            variant={activeFilterCount ? 'contained' : 'outlined'}
+            color={activeFilterCount ? 'primary' : 'inherit'}
+            onClick={() => setFilterOpen(true)}
+            startIcon={<RemixIcon icon="solar:filter-linear" />}
+            aria-label={`เปิดการค้นหาและตัวกรอง${activeFilterCount ? ` ใช้งานอยู่ ${activeFilterCount} รายการ` : ''}`}
+          >
+            ค้นหาและตัวกรอง{activeFilterCount ? ` (${activeFilterCount})` : ''}
+          </Button>
+          <Button
+            component={RouterLink}
+            href={
+              isFullPlanCatalog
+                ? paths.teacher.lessonPlans.templateNew
+                : paths.teacher.lessonPlans.templateLibraryNew
+            }
+            variant="contained"
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
+          >
+            สร้าง Template
+          </Button>
+        </Box>
       </Box>
 
-      <Card variant="outlined" sx={{ mb: 3 }}>
-        <Tabs
-          value={tab}
-          onChange={(_, value: CatalogTab) => setTab(value)}
-          variant="scrollable"
-          scrollButtons="auto"
-        >
-          {CATALOG_TABS.map((item) => (
-            <Tab key={item.value} value={item.value} label={item.label} />
-          ))}
-        </Tabs>
+      <Drawer
+        anchor="right"
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 10 }}
+        slotProps={{
+          backdrop: { sx: { zIndex: -1 } },
+          paper: { sx: { width: { xs: '100%', sm: 480 } } },
+        }}
+      >
         <Box
           sx={{
-            p: 2,
-            gap: 1.5,
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, minmax(0, 1fr))',
-              lg: '2fr repeat(4, minmax(150px, 1fr))',
-            },
+            p: 3,
+            gap: 2.5,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box>
+              <Typography variant="h5">ค้นหาและตัวกรอง</Typography>
+              <Typography variant="body2" color="text.secondary">
+                เลือกข้อมูลเพื่อจำกัดรายการที่แสดง
+              </Typography>
+            </Box>
+            <Button size="small" color="inherit" onClick={() => setFilterOpen(false)}>
+              ปิด
+            </Button>
+          </Box>
+
+          <Box sx={{ mx: -3, borderTop: 1, borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs
+              value={tab}
+              onChange={(_, value: CatalogTab) => setTab(value)}
+              variant="scrollable"
+              scrollButtons="auto"
+            >
+              {CATALOG_TABS.map((item) => (
+                <Tab
+                  key={item.value}
+                  value={item.value}
+                  label={`${item.label} (${tabCounts?.[item.value] ?? '…'})`}
+                />
+              ))}
+            </Tabs>
+          </Box>
+
           <TextField
-            size="small"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="ค้นหาชื่อ Template"
@@ -341,23 +659,24 @@ export function LessonPlanTemplateListView() {
               },
             }}
           />
+
+          {isFullPlanCatalog ? null : (
+            <TextField
+              select
+              label="ประเภท"
+              value={templateType}
+              onChange={(event) => setTemplateType(event.target.value as TemplateType | '')}
+            >
+              <MenuItem value="">ทั้งหมด</MenuItem>
+              {TEMPLATE_TYPES.filter((item) => item.value !== 'lesson_plan').map((item) => (
+                <MenuItem key={item.value} value={item.value}>
+                  {item.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
           <TextField
             select
-            size="small"
-            label="ประเภท"
-            value={templateType}
-            onChange={(event) => setTemplateType(event.target.value as TemplateType | '')}
-          >
-            <MenuItem value="">ทั้งหมด</MenuItem>
-            {TEMPLATE_TYPES.map((item) => (
-              <MenuItem key={item.value} value={item.value}>
-                {item.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
             label="รายวิชา"
             value={subjectId}
             onChange={(event) => setSubjectId(event.target.value)}
@@ -371,7 +690,6 @@ export function LessonPlanTemplateListView() {
           </TextField>
           <TextField
             select
-            size="small"
             label="ระดับชั้น"
             value={gradeLevel}
             onChange={(event) => setGradeLevel(event.target.value)}
@@ -385,7 +703,6 @@ export function LessonPlanTemplateListView() {
           </TextField>
           <TextField
             select
-            size="small"
             label="สถานะ"
             value={status}
             onChange={(event) => setStatus(event.target.value as TemplateStatus | '')}
@@ -395,8 +712,29 @@ export function LessonPlanTemplateListView() {
             <MenuItem value="active">ใช้งาน</MenuItem>
             <MenuItem value="archived">เก็บถาวร</MenuItem>
           </TextField>
+
+          <Box sx={{ mt: 'auto', gap: 1, display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+            <Button
+              color="inherit"
+              variant="outlined"
+              disabled={!activeFilterCount}
+              onClick={() => {
+                setTab('all');
+                setSearch('');
+                if (!isFullPlanCatalog) setTemplateType('');
+                setSubjectId('');
+                setGradeLevel('');
+                setStatus('');
+              }}
+            >
+              ล้างทั้งหมด
+            </Button>
+            <Button variant="contained" onClick={() => setFilterOpen(false)}>
+              ดูผลลัพธ์
+            </Button>
+          </Box>
         </Box>
-      </Card>
+      </Drawer>
 
       {templatesQuery.isLoading ? <LinearProgress /> : null}
       {templatesQuery.isError ? (
@@ -413,38 +751,44 @@ export function LessonPlanTemplateListView() {
           </Typography>
         </Card>
       ) : null}
-      <Box
-        sx={{
-          gap: 2,
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            md: 'repeat(2, minmax(0, 1fr))',
-            xl: 'repeat(3, minmax(0, 1fr))',
-          },
-        }}
-      >
-        {templates.map((template) => (
-          <TemplateCard
-            key={template.id}
-            template={template}
-            onPreview={() => setPreview(template)}
-            onApply={() => setApplyTarget(template)}
-            onAction={(action) => actionMutation.mutate({ template, action })}
-          />
-        ))}
-      </Box>
+      {isFullPlanCatalog && selectedTemplate ? (
+        <FullPlanTemplateReader
+          templates={templates}
+          selectedTemplate={selectedTemplate}
+          onSelect={(template) => setSelectedTemplateId(template.id)}
+          onApply={setApplyTarget}
+          onAction={(template, action) => actionMutation.mutate({ template, action })}
+        />
+      ) : (
+        <Box
+          sx={{
+            gap: 2,
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              md: 'repeat(2, minmax(0, 1fr))',
+              xl: 'repeat(3, minmax(0, 1fr))',
+            },
+          }}
+        >
+          {templates.map((template) => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              editHref={paths.teacher.lessonPlans.templateLibraryEdit(template.id)}
+              onPreview={() => setPreview(template)}
+              onApply={() => setApplyTarget(template)}
+              onAction={(action) => actionMutation.mutate({ template, action })}
+            />
+          ))}
+        </Box>
+      )}
 
       <Box ref={loadMoreRef} sx={{ minHeight: 8, mt: 2 }}>
         {templatesQuery.isFetchingNextPage ? <LinearProgress /> : null}
-        {!templatesQuery.hasNextPage && templates.length ? (
-          <Typography variant="body2" color="text.secondary" align="center">
-            แสดง Template ครบทั้งหมดแล้ว
-          </Typography>
-        ) : null}
       </Box>
 
-      {legacyQuery.data?.length ? (
+      {isFullPlanCatalog && legacyQuery.data?.length ? (
         <Box sx={{ mt: 5 }}>
           <Typography variant="h4">แผนการสอนที่อนุมัติแล้ว (รูปแบบเดิม)</Typography>
           <Typography color="text.secondary" sx={{ mb: 2 }}>

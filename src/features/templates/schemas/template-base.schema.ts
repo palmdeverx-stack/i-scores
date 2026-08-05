@@ -3,6 +3,7 @@ import * as z from 'zod';
 import { curriculumReferenceShape } from 'src/features/curriculum/schema';
 
 export const templateTypeSchema = z.enum([
+  'learning_standard',
   'learning_objective',
   'essential_content',
   'learning_content',
@@ -12,6 +13,14 @@ export const templateTypeSchema = z.enum([
   'media',
   'question',
   'reflection',
+  'worksheet_assessment_record',
+  'competency',
+  'competency_assessment',
+  'behavior_observation',
+  'desired_characteristic',
+  'desired_characteristic_assessment',
+  'learner_development',
+  'learning_task',
   'lesson_plan',
 ]);
 
@@ -33,7 +42,12 @@ export const templateBaseSchema = z.object({
   scope: z.enum(['personal', 'school']),
   status: z.enum(['draft', 'active', 'archived']),
   metadata: templateMetadataSchema.optional().default({}),
-  tags: z.array(z.string().trim().min(1).max(50)).max(30).optional().default([]),
+  tags: z
+    .array(z.string().trim().min(1).max(50))
+    .max(30)
+    .transform((tags) => Array.from(new Set(tags)))
+    .optional()
+    .default([]),
   courseId: z.preprocess((value) => (value === '' ? null : value), z.uuid().nullable().optional()),
   aiGeneration: z
     .object({

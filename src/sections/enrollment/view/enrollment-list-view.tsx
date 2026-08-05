@@ -289,9 +289,7 @@ export function EnrollmentListView({ initialClassroomId, classroomMode = false }
             disabled={classroomMode && !selectedFilterClassroom}
             startIcon={<RemixIcon icon="solar:user-plus-bold" />}
           >
-            {selectedFilterClassroom
-              ? `เพิ่มเข้า ${selectedFilterClassroom.name}`
-              : 'เพิ่มนักเรียน'}
+            เพิ่มนักเรียนเข้าชั้นเรียน
           </Button>
         </Box>
       </Box>
@@ -316,7 +314,9 @@ export function EnrollmentListView({ initialClassroomId, classroomMode = false }
       )}
       {classroomMode && initialClassroomId && !classroomsLoading && !selectedFilterClassroom && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          ไม่พบชั้นเรียนนี้ หรือชั้นเรียนไม่ได้อยู่ในโรงเรียนของคุณ
+          {user?.is_personal_workspace
+            ? 'ไม่พบชั้นเรียนนี้ในพื้นที่ส่วนตัวของคุณ'
+            : 'ไม่พบชั้นเรียนนี้ หรือชั้นเรียนไม่ได้อยู่ในโรงเรียนของคุณ'}
         </Alert>
       )}
 
@@ -380,7 +380,7 @@ export function EnrollmentListView({ initialClassroomId, classroomMode = false }
                 onClick={() => openCreateDialog(selectedFilterClassroom.id)}
                 startIcon={<RemixIcon icon="solar:user-plus-bold" />}
               >
-                เพิ่มเข้า {selectedFilterClassroom.name}
+                เพิ่มนักเรียนเข้าชั้นเรียน
               </Button>
             )}
           </Box>

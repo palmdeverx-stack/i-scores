@@ -1,7 +1,7 @@
 'use client';
 
 import type { TemplateAIAction } from 'src/features/ai/types/ai.types';
-import type { TemplateType, TemplateInput, TemplateContent } from '../types';
+import type { TemplateType, TemplateInput, LessonPlanTemplateContent } from '../types';
 
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { useForm, useWatch, Controller } from 'react-hook-form';
@@ -22,25 +22,38 @@ import LinearProgress from '@mui/material/LinearProgress';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { RouterLink } from 'src/routes/components';
 
 import { TemplateAIDialog } from 'src/features/ai/components/template-ai-dialog';
 
 import { toast } from 'src/components/snackbar';
+import { UploadAvatar } from 'src/components/upload';
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { parseTemplateInput } from '../schemas';
+import { defaultTemplateContent } from '../template-defaults';
 import { TemplatePreview } from '../components/template-preview';
+import { TemplateCoverFields } from '../components/template-cover-fields';
 import { TemplateContentFields } from '../components/template-content-fields';
 import { GRADE_LEVELS, TEMPLATE_TYPES, TEMPLATE_TYPE_LABELS } from '../constants';
 import {
   createTemplate,
+  deleteTemplate,
   updateTemplate,
   getTemplateById,
+  deleteTemplateLogo,
   getTemplateOptions,
+  uploadTemplateLogo,
 } from '../template-actions';
 
-const LOCAL_DRAFT_KEY = 'lesson-template-create-draft-v1';
+const DEFAULT_DRAFT_STORAGE_KEY = 'lesson-template-create-draft-v1';
+const LOGO_ACCEPT = {
+  'image/png': ['.png'],
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/webp': ['.webp'],
+};
+const MAX_LOGO_SIZE = 2 * 1024 * 1024;
 
 const SUBJECT_SCOPE_LABELS = {
   system: 'ระบบ',
@@ -48,100 +61,6 @@ const SUBJECT_SCOPE_LABELS = {
   school: 'โรงเรียน',
   public: 'สาธารณะ',
 } as const;
-
-function uid() {
-  return crypto.randomUUID();
-}
-
-export function defaultTemplateContent(type: TemplateType): TemplateContent {
-  if (type === 'learning_objective')
-    return {
-      description: '',
-      domain: 'knowledge',
-      behaviorVerb: '',
-      condition: '',
-      expectedResult: '',
-      successCriteria: '',
-    };
-  if (type === 'essential_content') return { content: '', keyConcepts: [] };
-  if (type === 'learning_content')
-    return { topics: [{ id: uid(), title: '', description: '', order: 0 }] };
-  if (type === 'learning_activity')
-    return {
-      activityName: '',
-      teachingMethod: '',
-      phase: 'learning',
-      durationMinutes: 50,
-      objectives: [],
-      teacherActions: [],
-      studentActions: [],
-      requiredMaterials: [],
-      expectedOutputs: [],
-      groupType: 'whole_class',
-    };
-  if (type === 'assessment')
-    return {
-      assessmentType: 'observation',
-      method: '',
-      instrument: '',
-      evidence: '',
-      criteria: '',
-      passingScore: 0,
-      maximumScore: 10,
-    };
-  if (type === 'rubric')
-    return {
-      rubricType: 'analytic',
-      scoreType: 'score',
-      maximumScore: 4,
-      passingScore: 2,
-      criteria: [
-        {
-          id: uid(),
-          name: '',
-          description: '',
-          weight: 100,
-          levels: [{ id: uid(), level: 1, label: 'ผ่าน', score: 1, description: '' }],
-        },
-      ],
-    };
-  if (type === 'media')
-    return {
-      mediaType: 'worksheet',
-      title: '',
-      description: '',
-      url: '',
-      marketplaceProductId: '',
-      usageInstructions: '',
-    };
-  if (type === 'question')
-    return {
-      questions: [
-        {
-          id: uid(),
-          question: '',
-          bloomLevel: 'understand',
-          expectedAnswer: '',
-          followUpQuestions: [],
-        },
-      ],
-    };
-  if (type === 'reflection')
-    return {
-      sections: [{ id: uid(), title: 'ผลการจัดการเรียนรู้', placeholder: '', required: true }],
-    };
-  return {
-    sections: [
-      {
-        id: uid(),
-        sectionType: 'learning_objective',
-        title: 'จุดประสงค์การเรียนรู้',
-        order: 0,
-        required: true,
-      },
-    ],
-  };
-}
 
 function createDefaults(type: TemplateType = 'learning_objective'): TemplateInput {
   return {
@@ -172,12 +91,33 @@ function createDefaults(type: TemplateType = 'learning_objective'): TemplateInpu
   };
 }
 
-export function TemplateFormView({ templateId }: { templateId?: string }) {
+export function TemplateFormView({
+  templateId,
+  initialTemplateType = 'learning_objective',
+  lockTemplateType = false,
+  returnPath = paths.teacher.lessonPlans.templates,
+  draftStorageKey = DEFAULT_DRAFT_STORAGE_KEY,
+}: {
+  templateId?: string;
+  initialTemplateType?: TemplateType;
+  lockTemplateType?: boolean;
+  returnPath?: string;
+  draftStorageKey?: string;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const initializedId = useRef<string | null>(null);
-  const methods = useForm<TemplateInput>({ defaultValues: createDefaults() });
+  const hydratedSectionContentId = useRef<string | null>(null);
+  const methods = useForm<TemplateInput>({
+    defaultValues: createDefaults(initialTemplateType),
+  });
   const [aiDialogOpen, setAIDialogOpen] = useState(false);
+  const [templateLogo, setTemplateLogo] = useState<File | string | null>(null);
+  const [templateLogoPreviewUrl, setTemplateLogoPreviewUrl] = useState('');
+  const [logoRemoved, setLogoRemoved] = useState(false);
+  const [editorSection, setEditorSection] = useState<'general' | 'structure' | 'preview'>(
+    'general'
+  );
   const {
     control,
     reset,
@@ -194,6 +134,15 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
   const metadata = useWatch({ control, name: 'metadata' });
   const tags = useWatch({ control, name: 'tags' });
   const aiGeneration = useWatch({ control, name: 'aiGeneration' });
+  const isFullPlanEditor = lockTemplateType && templateType === 'lesson_plan';
+  const previewContent = useMemo(() => {
+    if (!isFullPlanEditor) return content as Record<string, unknown>;
+    const lessonPlanContent = content as LessonPlanTemplateContent;
+    return {
+      ...lessonPlanContent,
+      cover: { ...lessonPlanContent.cover, logoUrl: templateLogoPreviewUrl },
+    } as unknown as Record<string, unknown>;
+  }, [content, isFullPlanEditor, templateLogoPreviewUrl]);
   const aiDialogInitial = useMemo(
     () => ({
       name: name ?? '',
@@ -220,40 +169,103 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
     queryFn: getTemplateOptions,
   });
   const selectedSubject = optionsQuery.data?.subjects.find((subject) => subject.id === subjectId);
+  const learningAreaNames = useMemo(() => {
+    const masterByCode = new Map(
+      (optionsQuery.data?.learningAreas ?? []).map((item) => [item.code, item.name])
+    );
+    return [
+      ...new Set([
+        ...(optionsQuery.data?.learningAreas ?? []).map((item) => item.name),
+        ...(optionsQuery.data?.subjects ?? []).flatMap((subject) =>
+          subject.learning_area
+            ? [masterByCode.get(subject.learning_area) ?? subject.learning_area]
+            : []
+        ),
+      ]),
+    ];
+  }, [optionsQuery.data]);
+  const gradeLevelNames = useMemo(() => {
+    const masterByCode = new Map(
+      (optionsQuery.data?.gradeLevels ?? []).map((item) => [item.code, item.name])
+    );
+    return [
+      ...new Set([
+        ...(optionsQuery.data?.gradeLevels ?? []).map((item) => item.name),
+        ...(optionsQuery.data?.subjects ?? []).flatMap((subject) =>
+          subject.grade_levels.map((level) => masterByCode.get(level) ?? level)
+        ),
+      ]),
+    ];
+  }, [optionsQuery.data]);
+  const coverSubjects = useMemo(() => {
+    const learningAreaByCode = new Map(
+      (optionsQuery.data?.learningAreas ?? []).map((item) => [item.code, item.name])
+    );
+    const gradeLevelByCode = new Map(
+      (optionsQuery.data?.gradeLevels ?? []).map((item) => [item.code, item.name])
+    );
+    return (optionsQuery.data?.subjects ?? []).map((subject) => ({
+      code: subject.code,
+      name: subject.name,
+      learningArea: subject.learning_area
+        ? (learningAreaByCode.get(subject.learning_area) ?? subject.learning_area)
+        : null,
+      gradeLevels: subject.grade_levels.map((level) => gradeLevelByCode.get(level) ?? level),
+      topics: subject.learning_units_structured.map((unit) => unit.name),
+    }));
+  }, [optionsQuery.data]);
+
+  useEffect(() => {
+    if (!(templateLogo instanceof File)) {
+      setTemplateLogoPreviewUrl(templateLogo ?? '');
+      return undefined;
+    }
+    const objectUrl = URL.createObjectURL(templateLogo);
+    setTemplateLogoPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [templateLogo]);
 
   useEffect(() => {
     if (templateId || initializedId.current) return;
     initializedId.current = 'new';
-    const saved = localStorage.getItem(LOCAL_DRAFT_KEY);
+    const saved = localStorage.getItem(draftStorageKey);
     if (!saved) return;
     try {
       reset(parseTemplateInput(JSON.parse(saved)) as TemplateInput);
       toast.info('กู้คืนฉบับร่างที่บันทึกอัตโนมัติแล้ว');
     } catch {
-      localStorage.removeItem(LOCAL_DRAFT_KEY);
+      localStorage.removeItem(draftStorageKey);
     }
-  }, [reset, templateId]);
+  }, [draftStorageKey, reset, templateId]);
 
   useEffect(() => {
     const template = templateQuery.data;
     if (!template || initializedId.current === template.id) return;
     initializedId.current = template.id;
+    const lessonPlanContent = template.content as LessonPlanTemplateContent;
+    setTemplateLogo(lessonPlanContent.cover?.logoUrl ?? null);
+    setLogoRemoved(false);
+    const contentWithoutLegacyDocument =
+      template.template_type === 'lesson_plan'
+        ? { cover: lessonPlanContent.cover, sections: lessonPlanContent.sections }
+        : template.content;
     reset({
       name: template.name,
       description: template.description ?? '',
       templateType: template.template_type,
       scope: template.scope === 'school' ? 'school' : 'personal',
       status: template.status,
-      content: template.content,
+      content: contentWithoutLegacyDocument,
       metadata: template.metadata,
       tags: template.tags,
-      subjectId: template.subject_id,
-      curriculumId: template.curriculum_id,
-      unitId: template.unit_id,
-      courseId: template.course_id,
+      subjectId: template.template_type === 'lesson_plan' ? null : template.subject_id,
+      curriculumId: template.template_type === 'lesson_plan' ? null : template.curriculum_id,
+      unitId: template.template_type === 'lesson_plan' ? null : template.unit_id,
+      courseId: template.template_type === 'lesson_plan' ? null : template.course_id,
       gradeLevels: template.grade_levels,
-      indicatorIds: template.indicator_ids,
-      learningOutcomeIds: template.learning_outcome_ids,
+      indicatorIds: template.template_type === 'lesson_plan' ? [] : template.indicator_ids,
+      learningOutcomeIds:
+        template.template_type === 'lesson_plan' ? [] : template.learning_outcome_ids,
       aiGeneration: template.is_ai_generated
         ? {
             isAIGenerated: true,
@@ -268,13 +280,38 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
   }, [reset, templateQuery.data]);
 
   useEffect(() => {
+    const template = templateQuery.data;
+    const templateOptions = optionsQuery.data?.templates;
+    if (
+      !template ||
+      template.template_type !== 'lesson_plan' ||
+      !templateOptions ||
+      initializedId.current !== template.id ||
+      hydratedSectionContentId.current === template.id
+    )
+      return;
+
+    hydratedSectionContentId.current = template.id;
+    const currentContent = methods.getValues('content') as LessonPlanTemplateContent;
+    const optionById = new Map(templateOptions.map((option) => [option.id, option]));
+    const sections = currentContent.sections.map((section) => ({
+      ...section,
+      content:
+        section.content ??
+        (section.templateId ? optionById.get(section.templateId)?.content : undefined) ??
+        defaultTemplateContent(section.sectionType),
+    }));
+    setValue('content', { ...currentContent, sections }, { shouldDirty: false });
+  }, [methods, optionsQuery.data?.templates, setValue, templateQuery.data]);
+
+  useEffect(() => {
     if (templateId || !isDirty) return undefined;
     const timer = window.setTimeout(
-      () => localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(methods.getValues())),
+      () => localStorage.setItem(draftStorageKey, JSON.stringify(methods.getValues())),
       800
     );
     return () => window.clearTimeout(timer);
-  }, [isDirty, methods, templateId, content, templateType]);
+  }, [content, draftStorageKey, isDirty, methods, templateId, templateType]);
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
@@ -286,13 +323,27 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
   }, [isDirty]);
 
   const saveMutation = useMutation({
-    mutationFn: (input: TemplateInput) =>
-      templateId ? updateTemplate(templateId, input) : createTemplate(input),
+    mutationFn: async (input: TemplateInput) => {
+      const saved = templateId
+        ? await updateTemplate(templateId, input)
+        : await createTemplate(input);
+      try {
+        if (templateLogo instanceof File) {
+          await uploadTemplateLogo(saved.id, templateLogo);
+        } else if (templateId && logoRemoved) {
+          await deleteTemplateLogo(saved.id);
+        }
+      } catch (error) {
+        if (!templateId) await deleteTemplate(saved.id);
+        throw error;
+      }
+      return saved;
+    },
     onSuccess: async (saved) => {
-      localStorage.removeItem(LOCAL_DRAFT_KEY);
+      localStorage.removeItem(draftStorageKey);
       toast.success(templateId ? 'บันทึกการแก้ไขแล้ว' : 'สร้าง Template แล้ว');
       await queryClient.invalidateQueries({ queryKey: ['lesson-templates'] });
-      router.push(paths.teacher.lessonPlans.templates);
+      router.push(returnPath);
       router.refresh();
       reset({ ...methods.getValues(), name: saved.name });
     },
@@ -301,7 +352,18 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
 
   const submit = handleSubmit((values) => {
     try {
-      saveMutation.mutate(parseTemplateInput(values) as TemplateInput);
+      const normalizedValues = isFullPlanEditor
+        ? {
+            ...values,
+            curriculumId: null,
+            subjectId: null,
+            unitId: null,
+            courseId: null,
+            indicatorIds: [],
+            learningOutcomeIds: [],
+          }
+        : values;
+      saveMutation.mutate(parseTemplateInput(normalizedValues) as TemplateInput);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'กรุณาตรวจสอบข้อมูล');
     }
@@ -317,6 +379,18 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
+      {isFullPlanEditor ? (
+        <Button
+          component={RouterLink}
+          href={returnPath}
+          color="inherit"
+          size="small"
+          startIcon={<RemixIcon icon="eva:arrow-ios-back-fill" />}
+          sx={{ mb: 1.5, color: 'text.secondary' }}
+        >
+          กลับไปหน้า Template แผนการสอน
+        </Button>
+      ) : null}
       <Box
         sx={{
           mb: 3,
@@ -329,10 +403,16 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
       >
         <Box>
           <Typography component="h1" variant="h3">
-            {templateId ? 'แก้ไข Template' : 'สร้าง Template'}
+            {templateId
+              ? 'แก้ไข Template'
+              : lockTemplateType
+                ? 'สร้าง Template แผนการสอนฉบับเต็ม'
+                : 'สร้าง Template'}
           </Typography>
           <Typography color="text.secondary">
-            สร้างองค์ประกอบที่นำกลับมาใช้ซ้ำในแผนการสอนได้
+            {lockTemplateType
+              ? 'กำหนดโครงสร้างทุก Section สำหรับนำไปใช้เป็นแผนทั้งฉบับ'
+              : 'สร้างองค์ประกอบที่นำกลับมาใช้ซ้ำในแผนการสอนได้'}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -359,11 +439,85 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
             gap: 3,
             display: 'grid',
             alignItems: 'start',
-            gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.4fr) minmax(320px, 0.6fr)' },
+            gridTemplateColumns: isFullPlanEditor
+              ? { xs: '1fr', md: '300px minmax(0, 1fr)' }
+              : { xs: '1fr', lg: 'minmax(0, 1.4fr) minmax(320px, 0.6fr)' },
           }}
         >
-          <Box sx={{ gap: 3, display: 'grid' }}>
-            <Card variant="outlined" sx={{ p: { xs: 2, sm: 3 }, gap: 2, display: 'grid' }}>
+          {isFullPlanEditor ? (
+            <Card
+              component="nav"
+              variant="outlined"
+              aria-label="หัวข้อ Template แผนการสอน"
+              sx={{
+                p: 0,
+                top: 88,
+                border: 0,
+                boxShadow: 'none',
+                borderRadius: 0,
+                position: { md: 'sticky' },
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ px: 1.25, py: 1 }}>
+                หัวข้อ Template
+              </Typography>
+              <Box
+                sx={{
+                  gap: 1,
+                  display: 'grid',
+                  gridTemplateColumns: { xs: 'repeat(3, minmax(0, 1fr))', md: '1fr' },
+                }}
+              >
+                {[
+                  {
+                    value: 'general' as const,
+                    label: 'ข้อมูล Template',
+                    icon: 'solar:document-text-linear',
+                  },
+                  {
+                    value: 'structure' as const,
+                    label: 'หัวข้อแผนการสอน',
+                    icon: 'solar:list-check-linear',
+                  },
+                  {
+                    value: 'preview' as const,
+                    label: 'Preview',
+                    icon: 'solar:eye-linear',
+                  },
+                ].map((section) => {
+                  const active = editorSection === section.value;
+                  return (
+                    <Button
+                      key={section.value}
+                      color={active ? 'primary' : 'inherit'}
+                      variant={active ? 'contained' : 'text'}
+                      onClick={() => setEditorSection(section.value)}
+                      startIcon={<RemixIcon icon={section.icon} />}
+                      sx={{ justifyContent: 'flex-start', py: 1.25 }}
+                    >
+                      {section.label}
+                    </Button>
+                  );
+                })}
+              </Box>
+            </Card>
+          ) : null}
+
+          <Box
+            sx={{
+              gap: 3,
+              display: isFullPlanEditor && editorSection === 'preview' ? 'none' : 'grid',
+              gridColumn: isFullPlanEditor ? { md: 2 } : undefined,
+            }}
+          >
+            <Card
+              variant="outlined"
+              sx={{
+                p: { xs: 2, sm: 3 },
+                gap: 2,
+                display: !isFullPlanEditor || editorSection === 'general' ? 'grid' : 'none',
+              }}
+            >
               <Typography variant="h5">ข้อมูลทั่วไป</Typography>
               <Field.Text required name="name" label="ชื่อ Template" />
               <Box
@@ -371,6 +525,7 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
               >
                 <Field.Select
                   required
+                  disabled={lockTemplateType}
                   name="templateType"
                   label="ประเภท Template"
                   onChange={(event) => {
@@ -396,55 +551,131 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
                   <MenuItem value="active">ใช้งาน</MenuItem>
                   <MenuItem value="archived">เก็บถาวร</MenuItem>
                 </Field.Select>
-                <Field.Select
-                  name="subjectId"
-                  label="รายวิชา"
-                  onChange={(event) => {
-                    const nextSubjectId = event.target.value || null;
-                    const nextSubject = optionsQuery.data?.subjects.find(
-                      (subject) => subject.id === nextSubjectId
-                    );
-                    setValue('subjectId', nextSubjectId, { shouldDirty: true });
-                    setValue('curriculumId', nextSubject?.curriculum_id ?? null, { shouldDirty: true });
-                    setValue('unitId', null, { shouldDirty: true });
-                    setValue('indicatorIds', [], { shouldDirty: true });
-                    setValue('learningOutcomeIds', [], { shouldDirty: true });
-                    if (nextSubject?.grade_levels.length) {
-                      setValue('gradeLevels', nextSubject.grade_levels, { shouldDirty: true });
-                    }
+                {!isFullPlanEditor ? (
+                  <>
+                    <Field.Select
+                      name="subjectId"
+                      label="รายวิชา"
+                      onChange={(event) => {
+                        const nextSubjectId = event.target.value || null;
+                        const nextSubject = optionsQuery.data?.subjects.find(
+                          (subject) => subject.id === nextSubjectId
+                        );
+                        setValue('subjectId', nextSubjectId, { shouldDirty: true });
+                        setValue('curriculumId', nextSubject?.curriculum_id ?? null, {
+                          shouldDirty: true,
+                        });
+                        setValue('unitId', null, { shouldDirty: true });
+                        setValue('indicatorIds', [], { shouldDirty: true });
+                        setValue('learningOutcomeIds', [], { shouldDirty: true });
+                        if (nextSubject?.grade_levels.length) {
+                          setValue('gradeLevels', nextSubject.grade_levels, { shouldDirty: true });
+                        }
+                      }}
+                    >
+                      <MenuItem value="">ไม่ระบุ</MenuItem>
+                      {(optionsQuery.data?.subjects ?? []).map((subject) => (
+                        <MenuItem key={subject.id} value={subject.id}>
+                          {subject.code ? `${subject.code} · ` : ''}
+                          {subject.name}
+                          {subject.scope ? ` (${SUBJECT_SCOPE_LABELS[subject.scope]})` : ''}
+                        </MenuItem>
+                      ))}
+                    </Field.Select>
+                    {selectedSubject?.learning_units_structured.length ? (
+                      <Field.Select
+                        name="unitId"
+                        label="หน่วยการเรียนรู้"
+                        onChange={(event) =>
+                          setValue('unitId', event.target.value || null, { shouldDirty: true })
+                        }
+                      >
+                        <MenuItem value="">ไม่ระบุ</MenuItem>
+                        {selectedSubject.learning_units_structured.map((unit) => (
+                          <MenuItem key={unit.id} value={unit.id}>
+                            {unit.code ? `${unit.code} · ` : ''}
+                            {unit.name}
+                          </MenuItem>
+                        ))}
+                      </Field.Select>
+                    ) : null}
+                    <TextField
+                      disabled
+                      label="กลุ่มสาระ"
+                      value={selectedSubject?.learning_area || 'เลือกจากรายวิชา'}
+                    />
+                  </>
+                ) : null}
+              </Box>
+              {isFullPlanEditor ? (
+                <Box
+                  sx={{
+                    gap: 2,
+                    p: 2,
+                    display: 'grid',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1.5,
+                    gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 190px' },
                   }}
                 >
-                  <MenuItem value="">ไม่ระบุ</MenuItem>
-                  {(optionsQuery.data?.subjects ?? []).map((subject) => (
-                    <MenuItem key={subject.id} value={subject.id}>
-                      {subject.code ? `${subject.code} · ` : ''}
-                      {subject.name}
-                      {subject.scope ? ` (${SUBJECT_SCOPE_LABELS[subject.scope]})` : ''}
-                    </MenuItem>
-                  ))}
-                </Field.Select>
-                {selectedSubject?.learning_units_structured.length ? (
-                  <Field.Select
-                    name="unitId"
-                    label="หน่วยการเรียนรู้"
-                    onChange={(event) =>
-                      setValue('unitId', event.target.value || null, { shouldDirty: true })
-                    }
+                  <Box sx={{ gridColumn: { md: '1 / -1' } }}>
+                    <Typography variant="h6">ข้อมูลหน้าปกตัวอย่าง</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      ใช้แสดงตัวอย่างใน PDF เท่านั้น เมื่อสร้างแผนจริงระบบจะใช้ข้อมูลจากรายวิชา
+                      ห้องเรียน และผู้สอน
+                    </Typography>
+                  </Box>
+                  <TemplateCoverFields
+                    prefix="content.cover"
+                    learningAreaField="content.cover.learningArea"
+                    subjects={coverSubjects}
+                    learningAreas={learningAreaNames}
+                    gradeLevels={gradeLevelNames}
+                    academicYears={optionsQuery.data?.academicYears}
+                    semesters={optionsQuery.data?.semesters}
+                  />
+                  <Box
+                    sx={{
+                      gap: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexDirection: 'column',
+                    }}
                   >
-                    <MenuItem value="">ไม่ระบุ</MenuItem>
-                    {selectedSubject.learning_units_structured.map((unit) => (
-                      <MenuItem key={unit.id} value={unit.id}>
-                        {unit.code ? `${unit.code} · ` : ''}{unit.name}
-                      </MenuItem>
-                    ))}
-                  </Field.Select>
-                ) : null}
-                <TextField
-                  disabled
-                  label="กลุ่มสาระ"
-                  value={selectedSubject?.learning_area || 'เลือกจากรายวิชา'}
-                />
-              </Box>
+                    <Typography variant="subtitle2">โลโก้บนเอกสาร</Typography>
+                    <UploadAvatar
+                      value={templateLogo}
+                      accept={LOGO_ACCEPT}
+                      maxSize={MAX_LOGO_SIZE}
+                      disabled={saveMutation.isPending}
+                      onDrop={(files) => {
+                        const file = files[0];
+                        if (!file) return;
+                        setTemplateLogo(file);
+                        setLogoRemoved(false);
+                      }}
+                      sx={{ width: 128, height: 128 }}
+                    />
+                    {templateLogo ? (
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => {
+                          setTemplateLogo(null);
+                          setLogoRemoved(true);
+                          setValue('content.cover.logoUrl', '', { shouldDirty: true });
+                        }}
+                      >
+                        ลบโลโก้
+                      </Button>
+                    ) : null}
+                    <Typography variant="caption" color="text.secondary" textAlign="center">
+                      PNG, JPEG หรือ WEBP ไม่เกิน 2MB
+                    </Typography>
+                  </Box>
+                </Box>
+              ) : null}
               <Field.Text multiline minRows={3} name="description" label="คำอธิบาย" />
               <Controller
                 name="tags"
@@ -514,45 +745,53 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
                   />
                 )}
               />
-              <Controller
-                name="indicatorIds"
-                control={control}
-                render={({ field }) => (
-                  <Autocomplete
-                    multiple
-                    options={(optionsQuery.data?.indicators ?? []).filter(
-                      (indicator) => !subjectId || indicator.subject_id === subjectId
-                    )}
-                    value={(optionsQuery.data?.indicators ?? []).filter((indicator) =>
-                      (field.value ?? []).includes(indicator.id)
-                    )}
-                    getOptionLabel={(option) => `${option.code} · ${option.description}`}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    onChange={(_, value) => field.onChange(value.map((item) => item.id))}
-                    renderInput={(params) => (
-                      <TextField {...params} label="ตัวชี้วัดที่เกี่ยวข้อง" />
+              {!isFullPlanEditor ? (
+                <>
+                  <Controller
+                    name="indicatorIds"
+                    control={control}
+                    render={({ field }) => (
+                      <Autocomplete
+                        multiple
+                        options={(optionsQuery.data?.indicators ?? []).filter(
+                          (indicator) => !subjectId || indicator.subject_id === subjectId
+                        )}
+                        value={(optionsQuery.data?.indicators ?? []).filter((indicator) =>
+                          (field.value ?? []).includes(indicator.id)
+                        )}
+                        getOptionLabel={(option) => `${option.code} · ${option.description}`}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        onChange={(_, value) => field.onChange(value.map((item) => item.id))}
+                        renderInput={(params) => (
+                          <TextField {...params} label="ตัวชี้วัดที่เกี่ยวข้อง" />
+                        )}
+                      />
                     )}
                   />
-                )}
-              />
-              {selectedSubject?.learning_outcomes_structured.length ? (
-                <Controller
-                  name="learningOutcomeIds"
-                  control={control}
-                  render={({ field }) => (
-                    <Autocomplete
-                      multiple
-                      options={selectedSubject.learning_outcomes_structured}
-                      value={selectedSubject.learning_outcomes_structured.filter((item) =>
-                        field.value.includes(item.id)
+                  {selectedSubject?.learning_outcomes_structured.length ? (
+                    <Controller
+                      name="learningOutcomeIds"
+                      control={control}
+                      render={({ field }) => (
+                        <Autocomplete
+                          multiple
+                          options={selectedSubject.learning_outcomes_structured}
+                          value={selectedSubject.learning_outcomes_structured.filter((item) =>
+                            field.value.includes(item.id)
+                          )}
+                          getOptionLabel={(option) =>
+                            `${option.code ? `${option.code} · ` : ''}${option.description}`
+                          }
+                          isOptionEqualToValue={(option, value) => option.id === value.id}
+                          onChange={(_, value) => field.onChange(value.map((item) => item.id))}
+                          renderInput={(params) => (
+                            <TextField {...params} label="ผลลัพธ์การเรียนรู้ที่เกี่ยวข้อง" />
+                          )}
+                        />
                       )}
-                      getOptionLabel={(option) => `${option.code ? `${option.code} · ` : ''}${option.description}`}
-                      isOptionEqualToValue={(option, value) => option.id === value.id}
-                      onChange={(_, value) => field.onChange(value.map((item) => item.id))}
-                      renderInput={(params) => <TextField {...params} label="ผลลัพธ์การเรียนรู้ที่เกี่ยวข้อง" />}
                     />
-                  )}
-                />
+                  ) : null}
+                </>
               ) : null}
               <Box
                 sx={{
@@ -595,7 +834,14 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
                 />
               </Box>
             </Card>
-            <Card variant="outlined" sx={{ p: { xs: 2, sm: 3 }, gap: 2, display: 'grid' }}>
+            <Card
+              variant="outlined"
+              sx={{
+                p: { xs: 2, sm: 3 },
+                gap: 2,
+                display: !isFullPlanEditor || editorSection === 'structure' ? 'grid' : 'none',
+              }}
+            >
               <Box>
                 <Typography variant="h5">เนื้อหา: {TEMPLATE_TYPE_LABELS[templateType]}</Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -603,20 +849,40 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
                 </Typography>
               </Box>
               <Divider />
-              <TemplateContentFields templateType={templateType} />
+              <TemplateContentFields
+                templateType={templateType}
+                templateOptions={optionsQuery.data?.templates ?? []}
+              />
             </Card>
           </Box>
           <Card
             variant="outlined"
-            sx={{ p: { xs: 2, sm: 3 }, position: { lg: 'sticky' }, top: { lg: 88 } }}
+            sx={{
+              p: { xs: 2, sm: 3 },
+              display: !isFullPlanEditor || editorSection === 'preview' ? 'block' : 'none',
+              gridColumn: isFullPlanEditor ? { md: 2 } : undefined,
+              position: isFullPlanEditor ? 'static' : { lg: 'sticky' },
+              top: isFullPlanEditor ? undefined : { lg: 88 },
+            }}
           >
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Box
+              sx={{
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1,
+              }}
+            >
               <Typography variant="h5">Preview</Typography>
-              {aiGeneration?.isAIGenerated ? <Chip color="secondary" size="small" label="สร้างด้วย AI" /> : null}
+              {aiGeneration?.isAIGenerated ? (
+                <Chip color="secondary" size="small" label="สร้างด้วย AI" />
+              ) : null}
             </Box>
             <TemplatePreview
               templateType={templateType}
-              content={content as Record<string, unknown>}
+              templateName={name}
+              content={previewContent}
             />
             {aiGeneration?.isAIGenerated ? (
               <Alert severity="info" sx={{ mt: 2 }}>
@@ -639,7 +905,7 @@ export function TemplateFormView({ templateId }: { templateId?: string }) {
             boxShadow: (theme) => theme.vars.customShadows.z8,
           }}
         >
-          <Button color="inherit" onClick={() => router.push(paths.teacher.lessonPlans.templates)}>
+          <Button color="inherit" onClick={() => router.push(returnPath)}>
             ยกเลิก
           </Button>
           <Button

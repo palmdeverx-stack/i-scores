@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from 'src/global-config';
-import { TemplateFormView } from 'src/features/templates/view';
+
+import { LessonPlanFormView } from 'src/sections/lesson-plan/view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
 
@@ -12,7 +13,7 @@ type Props = { params: Promise<{ id: string }> };
 export default async function Page({ params }: Props) {
   return (
     <DepartmentPermissionGuard permission="teaching.assignments">
-      <TemplateFormView templateId={(await params).id} />
+      <LessonPlanFormView catalogTemplateId={(await params).id} />
     </DepartmentPermissionGuard>
   );
 }

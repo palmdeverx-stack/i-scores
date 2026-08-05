@@ -61,15 +61,45 @@ test('the existing subject form is the single catalog creation surface', () => {
     new URL('../src/sections/subject/view/subject-form-view.tsx', import.meta.url),
     'utf8'
   );
+  const editPage = readFileSync(
+    new URL('../src/app/teacher/subject/[id]/edit/page.tsx', import.meta.url),
+    'utf8'
+  );
+  const listPage = readFileSync(
+    new URL('../src/app/teacher/subject/page.tsx', import.meta.url),
+    'utf8'
+  );
+  const createPage = readFileSync(
+    new URL('../src/app/teacher/subject/new/page.tsx', import.meta.url),
+    'utf8'
+  );
+  const legacyEditPage = readFileSync(
+    new URL('../src/app/teacher/department-work/subject/[id]/edit/page.tsx', import.meta.url),
+    'utf8'
+  );
   const legacyCatalogPage = readFileSync(
     new URL('../src/app/teacher/lesson-plans/subject-catalog/page.tsx', import.meta.url),
+    'utf8'
+  );
+  const teacherNav = readFileSync(
+    new URL('../src/layouts/nav-config-teacher.tsx', import.meta.url),
     'utf8'
   );
 
   assert.match(form, /name="scope"/);
   assert.match(form, /useFieldArray/);
   assert.match(form, /curriculumIndicators\.\$\{index\}\.code/);
+  assert.match(form, /router\.push\(basePath\)/);
+  assert.match(listPage, /<SubjectListView basePath=\{paths\.teacher\.subjectRoot\}/);
+  assert.match(createPage, /<SubjectFormView basePath=\{paths\.teacher\.subjectRoot\}/);
+  assert.match(editPage, /<SubjectFormView/);
+  assert.match(editPage, /subjectId=\{id\}/);
+  assert.match(legacyEditPage, /redirect\(paths\.teacher\.subjectEdit\(id\)\)/);
   assert.match(legacyCatalogPage, /redirect\(paths\.teacher\.subjectNew\)/);
+  assert.match(
+    teacherNav,
+    /title: 'คลังรายวิชา'[\s\S]*path: paths\.teacher\.subjectRoot/
+  );
 });
 
 test('lesson plans and templates share one curriculum reference shape', () => {

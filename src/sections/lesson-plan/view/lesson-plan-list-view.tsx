@@ -8,12 +8,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import Divider from '@mui/material/Divider';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
@@ -31,6 +29,7 @@ import { RemixIcon } from 'src/components/remix-icon';
 
 import { useAuthContext } from 'src/auth/hooks';
 
+import { LessonPlanDocumentCard } from '../components/lesson-plan-document-card';
 import {
   copyLessonPlan,
   listLessonPlans,
@@ -82,7 +81,8 @@ function toPreviewInput(plan: LessonPlan): LessonPlanInput {
     unitNumber: plan.unit_number,
     startDate: plan.start_date ?? '',
     endDate: plan.end_date ?? '',
-    indicators: plan.indicators ?? '',
+    milestoneIndicators: plan.milestone_indicators ?? plan.indicators ?? '',
+    terminalIndicators: plan.terminal_indicators ?? '',
     assessment: plan.assessment ?? '',
     durationPeriods: plan.duration_periods,
     learningMedia: plan.learning_media ?? '',
@@ -258,231 +258,63 @@ export function LessonPlanListView() {
           {plans.map((plan) => {
             const statusConfig = STATUS_CONFIG[plan.status];
             const editable = ['draft', 'revision'].includes(plan.status);
+
             return (
-              <Card
+              <LessonPlanDocumentCard
                 key={plan.id}
-                role="button"
-                tabIndex={0}
-                variant="outlined"
-                aria-label={`เปิดพรีวิว ${plan.title}`}
-                onClick={() => setPreviewing(plan)}
-                onKeyDown={(event) => {
-                  if (event.target !== event.currentTarget) return;
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setPreviewing(plan);
-                  }
+                data={{
+                  title: plan.title,
+                  unitNumber: plan.unit_number,
+                  unitName: plan.unit_name,
+                  previewText:
+                    plan.learning_objectives || plan.learning_standards || plan.unit_name,
+                  sectionCount: 9,
+                  durationPeriods: plan.duration_periods,
+                  versionNumber: plan.version_number,
+                  status: statusConfig,
+                  caption: `${assignmentLabel(plan)} · หน่วยที่ ${plan.unit_number}: ${plan.unit_name}`,
+                  reviewNote: plan.review_note,
                 }}
-                sx={{
-                  p: 1.5,
-                  minWidth: 0,
-                  display: 'flex',
-                  cursor: 'pointer',
-                  borderRadius: 3,
-                  flexDirection: 'column',
-                  transition: (theme) =>
-                    theme.transitions.create(['transform', 'box-shadow', 'border-color']),
-                  '&:hover': {
-                    transform: 'translateY(-3px)',
-                    borderColor: 'primary.light',
-                    boxShadow: (theme) => theme.customShadows.z12,
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    p: 1.5,
-                    height: 250,
-                    position: 'relative',
-                    borderRadius: 2.5,
-                    bgcolor: 'grey.300',
-                    border: '1px solid',
-                    borderColor: 'primary.lighter',
-                    '&::before, &::after': {
-                      left: '10%',
-                      right: '10%',
-                      content: '""',
-                      height: 12,
-                      bottom: -8,
-                      position: 'absolute',
-                      borderRadius: '0 0 12px 12px',
-                      bgcolor: 'grey.300',
-                      opacity: 0.55,
-                    },
-                    '&::after': { left: '15%', right: '15%', bottom: -14, opacity: 0.3 },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      p: 0,
-                      width: '100%',
-                      height: '100%',
-                      display: 'grid',
-                      overflow: 'hidden',
-                      placeItems: 'center',
-                      borderRadius: 2,
-                      // border: '2px solid',
-                      borderColor: 'primary.light',
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        p: 2,
-                        width: '48%',
-                        height: '100%',
-                        overflow: 'hidden',
-                        color: 'grey.800',
-                        bgcolor: 'common.white',
-                      }}
-                    >
-                      <Typography
-                        sx={{
-                          mb: 1,
-                          fontSize: 6,
-                          fontWeight: 700,
-                          textAlign: 'center',
-                        }}
+                onOpen={() => setPreviewing(plan)}
+                actions={
+                  <>
+                    {editable ? (
+                      <Button
+                        size="small"
+                        component={RouterLink}
+                        href={paths.teacher.lessonPlans.edit(plan.id)}
+                        startIcon={<RemixIcon icon="solar:pen-linear" />}
                       >
-                        {plan.title}
-                      </Typography>
-                      <Divider sx={{ mb: 1 }} />
-                      <Typography sx={{ fontSize: 5, fontWeight: 700 }}>
-                        หน่วยที่ {plan.unit_number} {plan.unit_name}
-                      </Typography>
-                      <Typography
-                        sx={{
-                          mt: 0.75,
-                          fontSize: 4.5,
-                          lineHeight: 1.6,
-                          overflow: 'hidden',
-                          whiteSpace: 'pre-line',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 12,
-                          WebkitBoxOrient: 'vertical',
-                        }}
-                      >
-                        {plan.learning_objectives || plan.learning_standards || plan.unit_name}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={{ left: 0, bottom: 0, position: 'absolute' }}>
-                    <Typography
-                      component="span"
-                      sx={{
-                        px: 1,
-                        py: 0.5,
-                        display: 'block',
-                        color: 'common.white',
-                        bgcolor: 'primary.darker',
-                        borderRadius: '0 8px 0 8px',
-                        typography: 'subtitle2',
-                      }}
-                    >
-                      PDF
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box sx={{ px: 1, pt: 3, pb: 1, minWidth: 0, flexGrow: 1 }}>
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      lineHeight: 1.4,
-                      overflow: 'hidden',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}
-                  >
-                    {plan.title}
-                  </Typography>
-
-                  <Box sx={{ gap: 1, mt: 0.75, display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-                      9 ส่วน · {plan.duration_periods} คาบ · v{plan.version_number}
-                    </Typography>
-                    <Chip size="small" color={statusConfig.color} label={statusConfig.label} />
-                  </Box>
-
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      mt: 0.75,
-                      display: 'block',
-                      color: 'text.secondary',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {assignmentLabel(plan)} · หน่วยที่ {plan.unit_number}: {plan.unit_name}
-                  </Typography>
-
-                  {/* <Typography
-                    variant="subtitle1"
-                    sx={{
-                      mt: 1.25,
-                      color: 'text.secondary',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    โดย{' '}
-                    <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>
-                      {teacherLabel(plan)}
-                    </Box>
-                  </Typography> */}
-
-                  {plan.review_note ? (
-                    <Alert severity="warning" sx={{ mt: 1.5, py: 0 }}>
-                      ฝ่ายวิชาการ: {plan.review_note}
-                    </Alert>
-                  ) : null}
-                </Box>
-
-                <Divider sx={{ my: 1 }} />
-                <Box
-                  onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
-                  sx={{ gap: 0.5, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}
-                >
-                  {editable ? (
+                        แก้ไข
+                      </Button>
+                    ) : null}
+                    {editable && !isPersonalWorkspace ? (
+                      <Button size="small" variant="contained" onClick={() => setSubmitting(plan)}>
+                        ส่งตรวจ
+                      </Button>
+                    ) : null}
                     <Button
                       size="small"
-                      component={RouterLink}
-                      href={paths.teacher.lessonPlans.edit(plan.id)}
-                      startIcon={<RemixIcon icon="solar:pen-linear" />}
+                      color="inherit"
+                      loading={copyMutation.isPending}
+                      onClick={() => copyMutation.mutate(plan.id)}
+                      startIcon={<RemixIcon icon="solar:copy-linear" />}
                     >
-                      แก้ไข
+                      คัดลอก
                     </Button>
-                  ) : null}
-                  {editable && !isPersonalWorkspace ? (
-                    <Button size="small" variant="contained" onClick={() => setSubmitting(plan)}>
-                      ส่งตรวจ
-                    </Button>
-                  ) : null}
-                  <Button
-                    size="small"
-                    color="inherit"
-                    loading={copyMutation.isPending}
-                    onClick={() => copyMutation.mutate(plan.id)}
-                    startIcon={<RemixIcon icon="solar:copy-linear" />}
-                  >
-                    คัดลอก
-                  </Button>
-                  {plan.status === 'draft' ? (
-                    <Button
-                      size="small"
-                      color="error"
-                      sx={{ ml: 'auto', minWidth: 60 }}
-                      onClick={() => setDeleting(plan)}
-                    >
-                      ลบ
-                    </Button>
-                  ) : null}
-                </Box>
-              </Card>
+                    {plan.status === 'draft' ? (
+                      <Button
+                        size="small"
+                        color="error"
+                        sx={{ ml: 'auto', minWidth: 60 }}
+                        onClick={() => setDeleting(plan)}
+                      >
+                        ลบ
+                      </Button>
+                    ) : null}
+                  </>
+                }
+              />
             );
           })}
         </Box>

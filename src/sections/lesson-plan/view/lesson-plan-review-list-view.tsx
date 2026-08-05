@@ -22,12 +22,16 @@ import LinearProgress from '@mui/material/LinearProgress';
 
 import { RemixIcon } from 'src/components/remix-icon';
 
-import { richTextToPlainText, assessmentToPlainText } from '../lesson-plan-content';
 import {
   getLessonPlan,
   updateLessonPlanStatus,
   listLessonPlansForReview,
 } from '../lesson-plan-actions';
+import {
+  richTextToPlainText,
+  assessmentToPlainText,
+  activitiesToPlainText,
+} from '../lesson-plan-content';
 
 // ----------------------------------------------------------------------
 
@@ -207,13 +211,14 @@ export function LessonPlanReviewListView() {
               </Alert>
               {[
                 ['มาตรฐานการเรียนรู้', detail.learning_standards],
-                ['ตัวชี้วัด', detail.indicators],
+                ['ตัวชี้วัดระหว่างทาง', detail.milestone_indicators ?? detail.indicators],
+                ['ตัวชี้วัดปลายทาง', detail.terminal_indicators],
                 ['จุดประสงค์การเรียนรู้', detail.learning_objectives],
                 ['สาระสำคัญ', detail.essential_content],
                 ['สมรรถนะสำคัญของผู้เรียน', detail.learner_competencies],
                 ['คุณลักษณะอันพึงประสงค์', detail.desired_characteristics],
                 ['คำถามหลัก (Big Question)', detail.guiding_questions],
-                ['กิจกรรมการเรียนรู้', detail.learning_activities],
+                ['กิจกรรมการเรียนรู้', activitiesToPlainText(detail.learning_activities)],
                 ['สื่อและแหล่งเรียนรู้', detail.learning_media],
                 ['การวัดและประเมินผล', assessmentToPlainText(detail.assessment)],
               ].map(([label, value]) => (

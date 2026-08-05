@@ -30,6 +30,7 @@ import {
   parseAssessment,
   parseIndicators,
   richTextToPlainText,
+  parseLearningActivities,
 } from '../lesson-plan-content';
 
 // ----------------------------------------------------------------------
@@ -40,6 +41,28 @@ Font.register({
     { src: '/fonts/LINESeedSansTH-Regular.ttf', fontWeight: 400 },
     { src: '/fonts/LINESeedSansTH-Bold.ttf', fontWeight: 700 },
   ],
+});
+
+// Thai text has no spaces between words. Segment at grapheme boundaries so a
+// long Thai phrase can wrap before overflowing while combining vowels and tone
+// marks stay attached to their base consonant.
+Font.registerHyphenationCallback((word) => {
+  try {
+    if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+      const segmenter = new Intl.Segmenter('th', { granularity: 'grapheme' });
+      return Array.from(segmenter.segment(word), (part) => part.segment);
+    }
+  } catch {
+    // Fall through to a combining-mark-aware fallback.
+  }
+  return Array.from(word).reduce<string[]>((clusters, character) => {
+    if (/\p{Mark}/u.test(character) && clusters.length) {
+      clusters[clusters.length - 1] += character;
+    } else {
+      clusters.push(character);
+    }
+    return clusters;
+  }, []);
 });
 
 const styles = StyleSheet.create({
@@ -77,7 +100,7 @@ const styles = StyleSheet.create({
   muted: { marginTop: 4, color: '#919EAB' },
   table: { marginTop: 8, borderTop: '1 solid #919EAB', borderLeft: '1 solid #919EAB' },
   tableRow: { display: 'flex', flexDirection: 'row' },
-  tableHeader: { backgroundColor: '#F4F6F8' },
+  tableHeader: { backgroundColor: '#EAF2F8' },
   tableCell: {
     width: '25%',
     padding: 5,
@@ -101,6 +124,28 @@ function content(value?: string | null) {
   return richTextToPlainText(value) || '-';
 }
 
+function IndicatorList({
+  indicators,
+}: {
+  indicators: Array<{ code: string; description: string }>;
+}) {
+  if (!indicators.length) return <Text style={styles.muted}>-</Text>;
+  return (
+    <View style={styles.indicatorList}>
+      {indicators.map((indicator, index) => (
+        <View
+          key={`${indicator.code}-${indicator.description}-${index}`}
+          style={styles.indicatorRow}
+          wrap={false}
+        >
+          <Text style={styles.indicatorCode}>{indicator.code}</Text>
+          <Text style={styles.indicatorText}>{indicator.description}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function thaiDate(value?: string | null) {
   if (!value || !dayjs(value).isValid()) return '-';
   const date = dayjs(value);
@@ -117,11 +162,15 @@ function LessonPlanDocument({
   version: number;
 }) {
   const assessment = parseAssessment(plan.assessment);
-  const indicators = parseIndicators(plan.indicators).filter(
+  const milestoneIndicators = parseIndicators(plan.milestoneIndicators).filter(
+    (indicator) => indicator.code || indicator.description
+  );
+  const terminalIndicators = parseIndicators(plan.terminalIndicators).filter(
     (indicator) => indicator.code || indicator.description
   );
   const subject = assignment?.subject;
   const classroom = assignment?.classroom;
+  const activityRows = parseLearningActivities(plan.learningActivities);
 
   const remainingSections = [
     {
@@ -139,17 +188,12 @@ function LessonPlanDocument({
       title: 'คำถามหลัก (Big Question)',
       value: plan.guidingQuestions,
     },
-    {
-      number: 7,
-      title: 'กิจกรรมการเรียนรู้',
-      value: plan.learningActivities,
-    },
-    {
-      number: 8,
-      title: 'สื่อและแหล่งเรียนรู้',
-      value: plan.learningMedia,
-    },
   ];
+  const mediaSection = {
+    number: 8,
+    title: 'สื่อและแหล่งเรียนรู้',
+    value: plan.learningMedia,
+  };
 
   return (
     <Document title={plan.title || 'แผนการสอน'} author="i-Scores">
@@ -198,23 +242,10 @@ function LessonPlanDocument({
           <Text style={styles.sectionTitle}>1. มาตรฐานการเรียนรู้และตัวชี้วัด</Text>
           <Text style={styles.subsection}>มาตรฐานการเรียนรู้</Text>
           <Text style={styles.content}>{content(plan.learningStandards)}</Text>
-          <Text style={styles.subsection}>ตัวชี้วัด</Text>
-          {indicators.length ? (
-            <View style={styles.indicatorList}>
-              {indicators.map((indicator, index) => (
-                <View
-                  key={`${indicator.code}-${indicator.description}-${index}`}
-                  style={styles.indicatorRow}
-                  wrap={false}
-                >
-                  <Text style={styles.indicatorCode}>{indicator.code}</Text>
-                  <Text style={styles.indicatorText}>{indicator.description}</Text>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <Text style={styles.muted}>-</Text>
-          )}
+          <Text style={styles.subsection}>ตัวชี้วัดระหว่างทาง</Text>
+          <IndicatorList indicators={milestoneIndicators} />
+          <Text style={styles.subsection}>ตัวชี้วัดปลายทาง</Text>
+          <IndicatorList indicators={terminalIndicators} />
         </View>
 
         <View style={styles.section} minPresenceAhead={70}>
@@ -239,6 +270,29 @@ function LessonPlanDocument({
             </Text>
           </View>
         ))}
+
+        <View style={styles.section} minPresenceAhead={70}>
+          <Text style={styles.sectionTitle}>7. กิจกรรมการเรียนรู้</Text>
+          {activityRows.length ? (
+            activityRows.map((row, index) => (
+              <View key={index} wrap={false}>
+                <Text style={styles.subsection}>{row.title || `กิจกรรมที่ ${index + 1}`}</Text>
+                <Text style={styles.content}>{richTextToPlainText(row.description) || '-'}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.muted}>-</Text>
+          )}
+        </View>
+
+        <View style={styles.section} minPresenceAhead={70}>
+          <Text style={styles.sectionTitle}>
+            {mediaSection.number}. {mediaSection.title}
+          </Text>
+          <Text style={mediaSection.value ? styles.content : styles.muted}>
+            {content(mediaSection.value)}
+          </Text>
+        </View>
 
         <View style={styles.section} minPresenceAhead={100}>
           <Text style={styles.sectionTitle}>9. การวัดและประเมินผลการเรียนรู้</Text>

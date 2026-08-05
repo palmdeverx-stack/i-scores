@@ -151,6 +151,7 @@ export const navData: NavSectionProps['data'] = [
         title: 'ตรวจแผนการสอน',
         path: paths.admin.lessonPlanReviews,
         icon: ICONS.gradeReviews,
+        featureKey: 'teacher.lesson_plans',
         requiresDepartmentPermission: 'lesson_plans.review',
       },
       {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import { isPersonalWorkspaceOwner } from 'src/lib/department-permission-access';
 import { ownsLessonPlan, loadLessonPlan, canReviewLessonPlans } from 'src/lib/lesson-plan-access';
 
@@ -25,7 +25,7 @@ const ALLOWED_FROM: Record<string, LessonPlanStatus[]> = {
 };
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   const { id } = await params;
   const plan = caller ? await loadLessonPlan(id) : null;
   if (!caller?.schoolId || !plan || plan.school_id !== caller.schoolId) {

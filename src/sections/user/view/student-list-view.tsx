@@ -582,23 +582,21 @@ export function StudentListView({
             </MenuItem>
           )}
 
+          {canManageStudents && <Divider sx={{ borderStyle: 'dashed' }} />}
           {canManageStudents && (
-            <>
-              <Divider sx={{ borderStyle: 'dashed' }} />
-              <MenuItem
-                sx={{ color: 'error.main' }}
-                onClick={() => {
-                  if (menuStudent) {
-                    deleteMutation.reset();
-                    setDeletingStudent(menuStudent);
-                  }
-                  rowMenu.onClose();
-                }}
-              >
-                <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                ลบ
-              </MenuItem>
-            </>
+            <MenuItem
+              sx={{ color: 'error.main' }}
+              onClick={() => {
+                if (menuStudent) {
+                  deleteMutation.reset();
+                  setDeletingStudent(menuStudent);
+                }
+                rowMenu.onClose();
+              }}
+            >
+              <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+              ลบ
+            </MenuItem>
           )}
         </MenuList>
       </CustomPopover>

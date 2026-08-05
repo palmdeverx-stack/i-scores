@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
-import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { loadTeacherAssignment } from 'src/lib/teacher-assignment-access';
+import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import {
   ownsLessonPlan,
   loadLessonPlan,
@@ -24,7 +24,7 @@ import {
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   const { id } = await params;
   const plan = caller ? await loadLessonPlan(id) : null;
   if (!caller || !(await canViewLessonPlan(caller, plan))) {
@@ -54,7 +54,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['teacher']);
+  const caller = await requireLessonPlanFeature(request, ['teacher']);
   const { id } = await params;
   const plan = caller ? await loadLessonPlan(id) : null;
   if (!caller || !caller.schoolId || !ownsLessonPlan(caller, plan)) {
@@ -177,7 +177,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(request: Request, { params }: RouteParams) {
-  const caller = requireRole(request, ['teacher']);
+  const caller = await requireLessonPlanFeature(request, ['teacher']);
   const { id } = await params;
   const plan = caller ? await loadLessonPlan(id) : null;
   if (!caller || !ownsLessonPlan(caller, plan)) {

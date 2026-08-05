@@ -1,6 +1,7 @@
 import type { TemplateType, TemplateScope, TemplateStatus } from './types';
 
 export const TEMPLATE_TYPE_LABELS: Record<TemplateType, string> = {
+  learning_standard: 'มาตรฐานการเรียนรู้และตัวชี้วัด',
   learning_objective: 'จุดประสงค์การเรียนรู้',
   essential_content: 'สาระสำคัญ',
   learning_content: 'สาระการเรียนรู้',
@@ -10,6 +11,14 @@ export const TEMPLATE_TYPE_LABELS: Record<TemplateType, string> = {
   media: 'สื่อและแหล่งเรียนรู้',
   question: 'คำถามกระตุ้นคิด',
   reflection: 'บันทึกหลังสอน',
+  worksheet_assessment_record: 'บันทึกผลการประเมินใบงาน',
+  competency: 'สมรรถนะสำคัญของผู้เรียน',
+  competency_assessment: 'แบบประเมินสมรรถนะสำคัญของผู้เรียน',
+  behavior_observation: 'แบบสังเกตพฤติกรรม',
+  desired_characteristic: 'คุณลักษณะอันพึงประสงค์',
+  desired_characteristic_assessment: 'แบบประเมินคุณลักษณะอันพึงประสงค์',
+  learner_development: 'จุดเน้นพัฒนาผู้เรียน',
+  learning_task: 'ภาระงานและชิ้นงาน',
   lesson_plan: 'แผนการสอนทั้งฉบับ',
 };
 
@@ -30,6 +39,17 @@ export const TEMPLATE_TYPES = Object.entries(TEMPLATE_TYPE_LABELS).map(([value, 
   value: value as TemplateType,
   label,
 }));
+
+export const LESSON_PLAN_SECTION_TYPES = TEMPLATE_TYPES.filter(
+  (option) => option.value !== 'lesson_plan'
+);
+
+export const OPTIONAL_EVALUATION_TEMPLATE_TYPES: TemplateType[] = [
+  'worksheet_assessment_record',
+  'desired_characteristic_assessment',
+  'competency_assessment',
+  'behavior_observation',
+];
 
 export const GRADE_LEVELS = [
   'อนุบาล 1',

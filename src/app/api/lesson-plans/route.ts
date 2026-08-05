@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
-import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { loadTeacherAssignment } from 'src/lib/teacher-assignment-access';
+import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import {
   LESSON_PLAN_SELECT,
   lessonPlanSnapshot,
@@ -21,7 +21,7 @@ import {
 // ----------------------------------------------------------------------
 
 export async function GET(request: Request) {
-  const caller = requireRole(request, ['teacher', 'school_admin']);
+  const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const caller = requireRole(request, ['teacher']);
+  const caller = await requireLessonPlanFeature(request, ['teacher']);
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์สร้างแผนการสอน' }, { status: 403 });
   }

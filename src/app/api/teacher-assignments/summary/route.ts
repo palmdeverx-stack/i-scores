@@ -17,11 +17,9 @@ export async function GET(request: Request) {
     .select(
       `subject_id, classroom_id, semester_id,
        teacher:app_users!teacher_assignments_teacher_id_fkey!inner(school_id),
-       subject:subjects!inner(school_id),
        classroom:classrooms!inner(id, name, school_id)`
     )
     .eq('teacher.school_id', caller.schoolId)
-    .eq('subject.school_id', caller.schoolId)
     .eq('classroom.school_id', caller.schoolId);
 
   if (caller.role === 'teacher') {

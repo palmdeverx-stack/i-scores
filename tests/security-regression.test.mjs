@@ -91,12 +91,10 @@ test('personal workspaces use product branding instead of school branding', () =
   assert.match(headerIdentity, /<Typography variant="subtitle1">eKru<\/Typography>/);
   assert.match(mobileBrand, /isPersonalWorkspace \|\| !school\?\.logo_url/);
   assert.match(teacherLayout, /items: group\.items/);
-  assert.match(teacherLayout, /item\.title === 'ปีการศึกษาและภาคเรียน'/);
-  assert.match(teacherLayout, /featureKey: undefined/);
   assert.match(teacherLayout, /item\.title !== 'ตรวจแผนการสอน'/);
   assert.match(
     teacherLayout,
-    /if \(user\?\.is_personal_workspace\) return dedupeTeacherNav\(licensedNav\)/
+    /if \(user\?\.is_personal_workspace\)[\s\S]*groupPersonalWorkspaceNav\(dedupeTeacherNav\(licensedNav\)\)/
   );
   assert.match(departmentAccess, /school\?\.workspace_type === 'personal'/);
   assert.match(departmentAccess, /school\.owner_auth_user_id === teacher\.auth_user_id/);
@@ -356,4 +354,141 @@ test('lesson plans remain school-scoped with owner and academic-review boundarie
   );
   assert.match(teacherNav, /title: 'ตรวจแผนการสอน'[\s\S]*'lesson_plans\.review'/);
   assert.match(adminNav, /title: 'ตรวจแผนการสอน'[\s\S]*'lesson_plans\.review'/);
+});
+
+test('lesson plans are independently controlled by package entitlements', () => {
+  const featureConfig = read('src/lib/school-subscription-config.ts');
+  const featureAccess = read('src/lib/lesson-plan-feature-access.ts');
+  const routeFeatures = read('src/sections/school-subscription/use-school-subscription.ts');
+  const teacherNav = read('src/layouts/nav-config-teacher.tsx');
+  const adminNav = read('src/layouts/nav-config-dashboard.tsx');
+  const collectionRoute = read('src/app/api/lesson-plans/route.ts');
+  const templateRoute = read('src/app/api/lesson-plan-templates/route.ts');
+  const aiTemplateRoute = read('src/app/api/ai/templates/generate/route.ts');
+  const migration = read(
+    'supabase/migrations/20260804170000_lesson_plan_package_feature.sql'
+  );
+
+  assert.match(featureConfig, /key: 'teacher\.lesson_plans'/);
+  assert.match(featureAccess, /schoolHasFeature\(caller\.schoolId, 'teacher\.lesson_plans'/);
+  assert.match(routeFeatures, /\['\/teacher\/lesson-plans', 'teacher\.lesson_plans'\]/);
+  assert.match(
+    routeFeatures,
+    /\['\/teacher\/lesson-plan-reviews', 'teacher\.lesson_plans'\]/
+  );
+  assert.match(routeFeatures, /\['\/admin\/lesson-plan-reviews', 'teacher\.lesson_plans'\]/);
+  assert.match(
+    teacherNav,
+    /title: 'แผนการสอน'[\s\S]*featureKey: 'teacher\.lesson_plans'/
+  );
+  assert.match(
+    teacherNav,
+    /title: 'ตรวจแผนการสอน'[\s\S]*featureKey: 'teacher\.lesson_plans'/
+  );
+  assert.match(
+    adminNav,
+    /title: 'ตรวจแผนการสอน'[\s\S]*featureKey: 'teacher\.lesson_plans'/
+  );
+  assert.match(collectionRoute, /requireLessonPlanFeature/);
+  assert.match(templateRoute, /requireLessonPlanFeature/);
+  assert.match(aiTemplateRoute, /requireLessonPlanFeature/);
+  assert.match(migration, /update public\.subscription_plans/);
+  assert.match(migration, /set source_bundles =/);
+  assert.match(migration, /update public\.school_subscriptions/);
+  assert.match(migration, /update public\.capability_bundles/);
+  assert.match(migration, /update public\.marketplace_user_licenses/);
+  assert.match(migration, /update public\.marketplace_school_licenses/);
+});
+
+test('personal workspaces can operate a complete academic-year teaching flow', () => {
+  const migration = read(
+    'supabase/migrations/20260804180000_personal_academic_year_flow.sql'
+  );
+  const studentMigration = read(
+    'supabase/migrations/20260804190000_personal_student_management.sql'
+  );
+  const subjectAccess = read('src/lib/teaching-subject-access.ts');
+  const assignmentRoute = read('src/app/api/teacher-assignments/route.ts');
+  const classroomRoute = read('src/app/api/classrooms/route.ts');
+  const teacherNav = read('src/layouts/nav-config-teacher.tsx');
+  const teacherLayout = read('src/app/teacher/layout.tsx');
+  const navGrouping = read('src/sections/teacher-department/filter-nav-by-department.ts');
+  const scoresTab = read(
+    'src/sections/teacher-assignment/components/detail/scores-tab.tsx'
+  );
+  const gradeReviewRoute = read('src/app/api/grade-reviews/[id]/route.ts');
+
+  assert.match(migration, /'admin\.academic_years'/);
+  assert.match(migration, /'admin\.classrooms'/);
+  assert.match(migration, /'admin\.enrollments'/);
+  assert.match(studentMigration, /'admin\.students'/);
+  assert.match(studentMigration, /update public\.marketplace_user_licenses/);
+  assert.match(migration, /update public\.marketplace_user_licenses/);
+  assert.match(migration, /and c\.school_id = p_school_id/);
+  assert.doesNotMatch(migration, /and s\.school_id = p_school_id/);
+  assert.match(subjectAccess, /subject\.scope === 'school'/);
+  assert.match(subjectAccess, /subjectVisibilityFilter\(caller\)/);
+  assert.match(assignmentRoute, /loadSubjectForTeaching\(caller, subjectId, semesterId\)/);
+  assert.match(classroomRoute, /isPersonalWorkspaceOwner/);
+  assert.match(classroomRoute, /shouldCreateSelfAssignment/);
+  assert.match(teacherNav, /title: 'ชั้นเรียนที่สอน'[\s\S]*featureKey: 'teacher\.assignments'/);
+  assert.match(teacherNav, /title: 'รายวิชา'[\s\S]*title: 'คลังรายวิชา'/);
+  assert.match(teacherLayout, /groupPersonalWorkspaceNav\(dedupeTeacherNav\(licensedNav\)\)/);
+  assert.match(navGrouping, /subheader: '1\. ตั้งค่าก่อนเริ่มสอน'/);
+  assert.match(navGrouping, /subheader: '2\. งานสอนประจำวัน'/);
+  assert.match(navGrouping, /subheader: '3\. สื่อสารและสรุปผล'/);
+  assert.match(navGrouping, /ขั้นที่ 1 กำหนดรอบปีและภาคเรียน/);
+  assert.match(navGrouping, /นักเรียน: 'ขั้นที่ 4 สร้างข้อมูลนักเรียน'/);
+  assert.match(navGrouping, /ลงทะเบียนนักเรียน: 'ขั้นที่ 5 เพิ่มนักเรียนเข้าชั้นเรียน'/);
+  assert.match(navGrouping, /\['admin\.students', 'teacher\.students'\]/);
+  assert.match(navGrouping, /subheader: 'เครื่องมือเพิ่มเติม'/);
+  assert.match(scoresTab, /user\?\.is_personal_workspace \? null/);
+  assert.match(gradeReviewRoute, /พื้นที่ส่วนตัวบันทึกคะแนนได้โดยไม่ต้องส่งตรวจฝ่ายวิชาการ/);
+});
+
+test('initial lesson-plan template sets are promoted into one shared system catalog', () => {
+  const migration = read(
+    'supabase/migrations/20260804200000_promote_existing_templates_to_system.sql'
+  );
+  const templateService = read('src/features/templates/server/template-service.ts');
+
+  assert.match(migration, /scope = 'system'/);
+  assert.match(migration, /school_id = null/);
+  assert.match(migration, /template\.scope = 'school'/);
+  assert.match(migration, /template\.status = 'active'/);
+  assert.match(migration, /'admin', 'demo2569_admin', 'marketplace_fc1b0d71'/);
+  assert.doesNotMatch(migration, /template\.scope = 'personal'/);
+  assert.match(templateService, /and\(scope\.eq\.system,status\.eq\.active\)/);
+});
+
+test('full lesson-plan templates and the all-type library use separate pages', () => {
+  const paths = read('src/routes/paths.ts');
+  const teacherNav = read('src/layouts/nav-config-teacher.tsx');
+  const fullPage = read('src/app/teacher/lesson-plans/templates/page.tsx');
+  const libraryPage = read('src/app/teacher/lesson-plans/template-library/page.tsx');
+  const templateList = read(
+    'src/sections/lesson-plan/view/lesson-plan-template-list-view.tsx'
+  );
+  const fullList = read(
+    'src/sections/lesson-plan/view/lesson-plan-full-template-list-view.tsx'
+  );
+  const libraryList = read(
+    'src/sections/lesson-plan/view/lesson-plan-template-library-view.tsx'
+  );
+  const templateService = read('src/features/templates/server/template-service.ts');
+
+  assert.match(paths, /templateLibrary: `\$\{ROOTS\.TEACHER\}\/lesson-plans\/template-library`/);
+  assert.match(teacherNav, /title: 'เทมเพลตแผนการสอน'/);
+  assert.match(teacherNav, /title: 'รวม Template ทุกประเภท'/);
+  assert.match(fullPage, /LessonPlanFullTemplateListView/);
+  assert.match(libraryPage, /LessonPlanTemplateLibraryView/);
+  assert.match(fullList, /catalogMode="full-plan"/);
+  assert.match(libraryList, /catalogMode="all"/);
+  assert.match(templateList, /isFullPlanCatalog \? 'lesson_plan'/);
+  assert.match(templateList, /Template แผนการสอนฉบับเต็ม/);
+  assert.match(templateList, /tabCounts\?\.\[item\.value\] \?\? '…'/);
+  assert.match(templateService, /fullLessonPlanTemplatePatch/);
+  assert.match(templateService, /template\.template_type === 'lesson_plan'/);
+  assert.match(templateService, /const countTab = async \(tab: TemplateCatalogTab\)/);
+  assert.match(templateService, /if \(offset === 0\)/);
 });
