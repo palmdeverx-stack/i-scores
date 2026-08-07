@@ -602,6 +602,7 @@ export function templateDocumentValues(
     evaluationStudents,
     templateSectionContents: {
       cover: content.cover ?? {},
+      pdfSettings: content.pdfSettings ?? {},
       ...Object.fromEntries(
         Object.entries(TAB_TEMPLATE_TYPES).map(([tabId, type]) => [tabId, reusableContent(type)])
       ),
@@ -745,6 +746,8 @@ export function templateDocumentInput(
         learningArea: values.unitName,
         logoUrl: currentCover.logoUrl,
       },
+      pdfSettings: values.templateSectionContents
+        .pdfSettings as LessonPlanTemplateContent['pdfSettings'],
       sections,
       document,
     },

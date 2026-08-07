@@ -94,6 +94,7 @@ function toPreviewInput(plan: LessonPlan): LessonPlanInput {
     learningObjectives: plan.learning_objectives ?? '',
     learnerCompetencies: plan.learner_competencies ?? '',
     desiredCharacteristics: plan.desired_characteristics ?? '',
+    templateSectionContents: plan.template_section_contents,
   };
 }
 

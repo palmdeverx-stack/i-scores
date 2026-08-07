@@ -123,7 +123,7 @@ export const navData: NavSectionProps['data'] = [
             ],
           },
           {
-            title: 'Template แผนการสอน',
+            title: 'เทมเพลตแผนการสอน',
             path: paths.teacher.lessonPlans.templates,
             icon: ICONS.gradeReviews,
           },

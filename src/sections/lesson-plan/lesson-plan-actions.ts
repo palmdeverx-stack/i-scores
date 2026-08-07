@@ -222,6 +222,21 @@ export async function copyLessonPlan(id: string) {
     .lessonPlan;
 }
 
+export async function uploadLessonPlanLogo(id: string, file: File) {
+  const formData = new FormData();
+  formData.set('file', file);
+  const response = await fetch(`/api/lesson-plans/${id}/logo`, {
+    method: 'POST',
+    body: formData,
+  });
+  return parseResponse<{ logoUrl: string }>(response, 'อัปโหลดโลโก้ไม่สำเร็จ');
+}
+
+export async function deleteLessonPlanLogo(id: string) {
+  const response = await fetch(`/api/lesson-plans/${id}/logo`, { method: 'DELETE' });
+  return parseResponse<{ success: true }>(response, 'ลบโลโก้ไม่สำเร็จ');
+}
+
 export async function updateLessonPlanStatus(
   id: string,
   action: 'submit' | 'revision' | 'approve' | 'archive',

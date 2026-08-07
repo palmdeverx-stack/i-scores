@@ -26,10 +26,10 @@ import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Container from '@mui/material/Container';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 import LinearProgress from '@mui/material/LinearProgress';
 
 import { paths } from 'src/routes/paths';
@@ -53,15 +53,20 @@ import { toast } from 'src/components/snackbar';
 import { Form } from 'src/components/hook-form';
 import { RemixIcon } from 'src/components/remix-icon';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import { GeneralTab } from './tabs/general-tab';
 import { LessonPlanTabNav } from './lesson-plan-tab-nav';
 import { LessonPlanFooterBar } from './lesson-plan-footer-bar';
 import { TemplateContentTab } from './tabs/template-content-tab';
 import { parseAssessment, parseLearningActivities } from '../lesson-plan-content';
+import { PdfDisplaySettingsDrawer } from '../components/pdf-display-settings-drawer';
 import {
   getLessonPlan,
   createLessonPlan,
   updateLessonPlan,
+  deleteLessonPlanLogo,
+  uploadLessonPlanLogo,
   listLessonPlanOptions,
   listLessonPlanTemplates,
 } from '../lesson-plan-actions';
@@ -184,9 +189,6 @@ function hasMeaningfulTemplateStep(type: TemplateType | undefined, content: unkn
 
 // ----------------------------------------------------------------------
 
-const LessonPlanPdfDialog = dynamic(() => import('../components/lesson-plan-pdf-dialog'), {
-  ssr: false,
-});
 const LessonPlanTemplatePdfViewer = dynamic(
   () => import('../components/lesson-plan-template-pdf-viewer'),
   { ssr: false }
@@ -210,12 +212,15 @@ export function LessonPlanFormView({
   const isTemplateMode = Boolean(catalogTemplateId) || newCatalogTemplate;
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user } = useAuthContext();
   const initializedPlanId = useRef<string | null>(null);
   const initializedTemplateId = useRef<string | null>(null);
   const initializedCatalogTemplateId = useRef<string | null>(null);
   const initializedCatalogSourceTemplateId = useRef<string | null>(null);
+  const initializedTeacherNameDefault = useRef(false);
   const [activeSection, setActiveSection] = useState('lesson-plan-general');
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [pdfSettingsDrawerOpen, setPdfSettingsDrawerOpen] = useState(false);
   const [templatePreview, setTemplatePreview] = useState<LessonTemplate | null>(null);
   const [templateLogo, setTemplateLogo] = useState<File | string | null>(null);
   const [templateLogoPreviewUrl, setTemplateLogoPreviewUrl] = useState('');
@@ -278,7 +283,6 @@ export function LessonPlanFormView({
     trigger,
     formState: { dirtyFields },
   } = methods;
-  const startDate = useWatch({ control, name: 'startDate' });
   const selectedAssignmentId = useWatch({ control, name: 'teacherAssignmentId' });
   const evaluationStudents = useWatch({ control, name: 'evaluationStudents' });
   const navigationValues = useWatch({ control });
@@ -486,8 +490,29 @@ export function LessonPlanFormView({
           ? persistedSections
           : legacyValuesToTemplateSections(values),
     });
+    const cover = (persistedSections.cover ?? {}) as LessonPlanTemplateContent['cover'];
+    setTemplateLogo(cover?.logoUrl ?? null);
+    setTemplateLogoRemoved(false);
+    setEnabledEvaluationSections(
+      Array.isArray(persistedSections._enabledEvaluationSections)
+        ? (persistedSections._enabledEvaluationSections as string[])
+        : []
+    );
     initializedPlanId.current = plan.id;
   }, [planQuery.data, reset]);
+
+  useEffect(() => {
+    if (isTemplateMode || lessonPlanId || initializedTeacherNameDefault.current || !user) return;
+    initializedTeacherNameDefault.current = true;
+    if (getValues('templateSectionContents.cover.teacherName' as any)) return;
+    const teacherName =
+      [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || '';
+    if (teacherName) {
+      setValue('templateSectionContents.cover.teacherName' as any, teacherName, {
+        shouldDirty: false,
+      });
+    }
+  }, [getValues, isTemplateMode, lessonPlanId, setValue, user]);
 
   useEffect(() => {
     if (!templateId || lessonPlanId || initializedTemplateId.current === templateId) return;
@@ -670,7 +695,11 @@ export function LessonPlanFormView({
         return { kind: 'template' as const, saved };
       }
       const payload = toPayload(templateSectionsToLegacyValues(values));
-      const request = lessonPlanId
+      payload.templateSectionContents = {
+        ...payload.templateSectionContents,
+        _enabledEvaluationSections: enabledEvaluationSections,
+      };
+      let saved = await (lessonPlanId
         ? updateLessonPlan(lessonPlanId, {
             ...payload,
             expectedVersion: planQuery.data!.version_number,
@@ -678,8 +707,25 @@ export function LessonPlanFormView({
             tab,
             changeNote: saveMode === 'draft' ? `บันทึก ${tab ?? 'ฉบับร่าง'}` : undefined,
           })
-        : createLessonPlan({ ...payload, saveMode, tab });
-      return request.then((saved) => ({ kind: 'lesson-plan' as const, saved }));
+        : createLessonPlan({ ...payload, saveMode, tab }));
+      const savedSections = (saved.template_section_contents ?? {}) as Record<string, unknown>;
+      let logoUrl = (
+        (savedSections.cover as { logoUrl?: string } | undefined)?.logoUrl ?? ''
+      ).trim();
+      if (templateLogo instanceof File) {
+        ({ logoUrl } = await uploadLessonPlanLogo(saved.id, templateLogo));
+      } else if (templateLogoRemoved) {
+        await deleteLessonPlanLogo(saved.id);
+        logoUrl = '';
+      }
+      saved = {
+        ...saved,
+        template_section_contents: {
+          ...savedSections,
+          cover: { ...(savedSections.cover as object | undefined), logoUrl },
+        },
+      };
+      return { kind: 'lesson-plan' as const, saved };
     },
     onSuccess: async (result, variables) => {
       if (result.kind === 'template') {
@@ -741,6 +787,10 @@ export function LessonPlanFormView({
       }
 
       const savedPlan = result.saved;
+      const savedCover = (savedPlan.template_section_contents as { cover?: { logoUrl?: string } })
+        ?.cover;
+      setTemplateLogo(savedCover?.logoUrl || null);
+      setTemplateLogoRemoved(false);
       if (variables.saveMode === 'draft') {
         markTabClean(variables.tab);
         toast.success(`บันทึก “${activeNavigationSection.label}” เป็นฉบับร่างแล้ว`);
@@ -851,6 +901,13 @@ export function LessonPlanFormView({
       if (!getValues('title')) {
         setValue('title', subject ? `แผนการสอน ${subject.name}` : '', { shouldDirty: true });
       }
+      const setCoverValue = (key: string, value: string) =>
+        setValue(`templateSectionContents.cover.${key}` as any, value, { shouldDirty: true });
+      setCoverValue('subjectName', subject?.name ?? '');
+      setCoverValue('subjectCode', subject?.code ?? '');
+      setCoverValue('gradeLevel', assignment?.classroom?.grade_level ?? '');
+      setCoverValue('semester', assignment?.semester?.name ?? '');
+      setCoverValue('academicYear', assignment?.classroom?.academic_year?.year ?? '');
       if (!templateId) applyCurriculum(assignmentId);
     },
     [applyCurriculum, getValues, optionsQuery.data, setValue, templateId]
@@ -989,17 +1046,7 @@ export function LessonPlanFormView({
   ];
   const savedTabs = new Set(planQuery.data?.saved_tabs ?? []);
   const navigationSections = navigationSectionCandidates
-    .filter(
-      (section) =>
-        isTemplateMode ||
-        ![
-          'lesson-plan-reflection',
-          'lesson-plan-worksheet-assessment-record',
-          'lesson-plan-desired-characteristic-assessment',
-          'lesson-plan-competency-assessment',
-          'lesson-plan-behavior-observation',
-        ].includes(section.id)
-    )
+    .filter((section) => isTemplateMode || section.id !== 'lesson-plan-reflection')
     .map((section) => ({
       ...section,
       complete:
@@ -1213,14 +1260,14 @@ export function LessonPlanFormView({
     );
   }, [getValues, setValue]);
 
-  const onPreviewPdf = useCallback(() => {
+  const buildTemplatePreview = useCallback(() => {
     if (isTemplateMode && !catalogTemplateId) {
       toast.warning('กรุณาบันทึก Template อย่างน้อยหนึ่งครั้งก่อนดูตัวอย่าง PDF');
-      return;
+      return false;
     }
     if (catalogTemplateId) {
       const currentTemplate = catalogTemplateQuery.data?.template;
-      if (!currentTemplate) return;
+      if (!currentTemplate) return false;
       const previewInput = templateDocumentInput(
         getValues(),
         tabOrder,
@@ -1252,17 +1299,86 @@ export function LessonPlanFormView({
         indicator_ids: previewInput.indicatorIds ?? [],
         learning_outcome_ids: previewInput.learningOutcomeIds,
       });
+    } else if (!isTemplateMode) {
+      const previewInput = templateDocumentInput(
+        getValues(),
+        tabOrder,
+        undefined,
+        enabledEvaluationSections
+      );
+      const previewContent = previewInput.content as LessonPlanTemplateContent;
+      const now = new Date().toISOString();
+      setTemplatePreview({
+        id: lessonPlanId ?? 'preview',
+        owner_id: user?.id ?? '',
+        school_id: null,
+        name: previewInput.name,
+        description: previewInput.description ?? null,
+        template_type: previewInput.templateType,
+        scope: 'personal',
+        status: 'draft',
+        content: {
+          ...previewContent,
+          cover: {
+            ...previewContent.cover,
+            logoUrl: templateLogoPreviewUrl,
+          },
+        },
+        metadata: previewInput.metadata ?? {},
+        tags: previewInput.tags ?? [],
+        curriculum_id: previewInput.curriculumId,
+        subject_id: previewInput.subjectId ?? null,
+        unit_id: previewInput.unitId,
+        course_id: previewInput.courseId ?? null,
+        grade_levels: previewInput.gradeLevels ?? [],
+        indicator_ids: previewInput.indicatorIds ?? [],
+        learning_outcome_ids: previewInput.learningOutcomeIds,
+        source_template_id: null,
+        version: 1,
+        usage_count: 0,
+        is_ai_generated: false,
+        ai_provider: null,
+        ai_model: null,
+        ai_generated_at: null,
+        ai_action: null,
+        ai_request_id: null,
+        created_at: now,
+        updated_at: now,
+        archived_at: null,
+        subject: selectedAssignment?.subject
+          ? {
+              id: selectedAssignment.subject.id,
+              code: selectedAssignment.subject.code,
+              name: selectedAssignment.subject.name,
+            }
+          : null,
+      });
     }
-    setPdfOpen(true);
+    return true;
   }, [
     catalogTemplateId,
     catalogTemplateQuery.data,
     enabledEvaluationSections,
     getValues,
     isTemplateMode,
+    lessonPlanId,
+    selectedAssignment,
     tabOrder,
     templateLogoPreviewUrl,
+    user?.id,
   ]);
+
+  const onPreviewPdf = useCallback(() => {
+    if (buildTemplatePreview()) setPdfOpen(true);
+  }, [buildTemplatePreview]);
+
+  const pdfSettingsKey = JSON.stringify(
+    navigationValues.templateSectionContents?.pdfSettings ?? {}
+  );
+  useEffect(() => {
+    if (pdfOpen) buildTemplatePreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfSettingsKey, pdfOpen]);
 
   if (
     planQuery.isLoading ||
@@ -1332,6 +1448,7 @@ export function LessonPlanFormView({
                 : 'เลือกรายวิชาที่ได้รับมอบหมาย ระบบจะเติมหลักสูตรและตัวชี้วัดตั้งต้นให้อัตโนมัติ'}
           </Typography>
         </Box>
+
         {!isTemplateMode && !lessonPlanId ? (
           <Button
             size="large"
@@ -1343,6 +1460,16 @@ export function LessonPlanFormView({
             เลือกจาก Template
           </Button>
         ) : null}
+        <Button
+          type="button"
+          color="inherit"
+          size="large"
+          variant="outlined"
+          startIcon={<RemixIcon icon="solar:printer-minimalistic-linear" />}
+          onClick={onPreviewPdf}
+        >
+          พรีวิว PDF
+        </Button>
       </Box>
 
       {planQuery.data?.review_note ? (
@@ -1393,7 +1520,7 @@ export function LessonPlanFormView({
             onSelect={goToSection}
             onMove={moveTab}
             onDragEnd={handleTabDragEnd}
-            evaluationSectionIds={isTemplateMode ? EVALUATION_TAB_IDS : []}
+            evaluationSectionIds={EVALUATION_TAB_IDS}
             enabledEvaluationSections={enabledEvaluationSections}
             onToggleEvaluationSection={(tabId) =>
               setEnabledEvaluationSections((current) =>
@@ -1414,7 +1541,6 @@ export function LessonPlanFormView({
                 selectedAssignment={selectedAssignment}
                 onSelectAssignment={selectAssignment}
                 onSelectUnit={selectUnit}
-                startDate={startDate}
                 templateCoverSubjects={templateCoverSubjects}
                 templateLearningAreas={templateLearningAreas}
                 templateGradeLevels={templateGradeLevels}
@@ -1507,7 +1633,7 @@ export function LessonPlanFormView({
         />
       ) : null}
 
-      {pdfOpen && catalogTemplateId && templatePreview ? (
+      {pdfOpen && (catalogTemplateId || !isTemplateMode) && templatePreview ? (
         <Dialog
           open
           fullWidth
@@ -1517,7 +1643,28 @@ export function LessonPlanFormView({
             setTemplatePreview(null);
           }}
         >
-          <DialogTitle>พรีวิว PDF · {templatePreview.name}</DialogTitle>
+          <DialogTitle
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
+          >
+            <span>พรีวิว PDF · {templatePreview.name}</span>
+            <Box sx={{ gap: 0.5, display: 'flex' }}>
+              <IconButton
+                onClick={() => setPdfSettingsDrawerOpen(true)}
+                aria-label="ตั้งค่าการแสดงผลเอกสาร"
+              >
+                <RemixIcon icon="solar:settings-linear" />
+              </IconButton>
+              <IconButton
+                onClick={() => {
+                  setPdfOpen(false);
+                  setTemplatePreview(null);
+                }}
+                aria-label="ปิดพรีวิว PDF"
+              >
+                <RemixIcon icon="mingcute:close-line" />
+              </IconButton>
+            </Box>
+          </DialogTitle>
           <DialogContent dividers sx={{ p: 0, bgcolor: 'grey.100' }}>
             <LessonPlanTemplatePdfViewer
               template={templatePreview}
@@ -1525,7 +1672,7 @@ export function LessonPlanFormView({
               onPdfReady={() => undefined}
             />
           </DialogContent>
-          <DialogActions>
+          {/* <DialogActions>
             <Button
               color="inherit"
               onClick={() => {
@@ -1535,21 +1682,15 @@ export function LessonPlanFormView({
             >
               ปิด
             </Button>
-          </DialogActions>
+          </DialogActions> */}
         </Dialog>
       ) : null}
 
-      {pdfOpen && !isTemplateMode ? (
-        <LessonPlanPdfDialog
-          open
-          onClose={() => setPdfOpen(false)}
-          plan={toPayload(templateSectionsToLegacyValues(getValues()))}
-          assignment={selectedAssignment}
-          version={
-            catalogTemplateQuery.data?.template.version ?? planQuery.data?.version_number ?? 1
-          }
-        />
-      ) : null}
+      <PdfDisplaySettingsDrawer
+        open={pdfSettingsDrawerOpen}
+        onClose={() => setPdfSettingsDrawerOpen(false)}
+        control={control}
+      />
 
       {templatePickerOpen && (!lessonPlanId || activeSection in TAB_TEMPLATE_TYPES) ? (
         <LessonPlanTemplatePickerDialog

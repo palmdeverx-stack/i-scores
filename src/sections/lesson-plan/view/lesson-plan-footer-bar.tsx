@@ -84,7 +84,7 @@ export const LessonPlanFooterBar = memo(function LessonPlanFooterBar({
           </Typography>
         </Box>
         <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {showTemplatePickerButton ? (
+          {/* {showTemplatePickerButton ? (
             <Button
               type="button"
               color="primary"
@@ -96,22 +96,14 @@ export const LessonPlanFooterBar = memo(function LessonPlanFooterBar({
             >
               ใช้ Template
             </Button>
-          ) : null}
-          <Button
-            type="button"
-            color="inherit"
-            size="large"
-            variant="outlined"
-            startIcon={<RemixIcon icon="solar:printer-minimalistic-linear" />}
-            onClick={onPreviewPdf}
-          >
-            พรีวิว PDF
-          </Button>
+          ) : null} */}
+
           <Button
             component={RouterLink}
             href={returnPath}
             color="inherit"
             size="large"
+            variant="outlined"
             disabled={isSaving}
           >
             ยกเลิก

@@ -4,6 +4,7 @@ import type {
   TemplateType,
   LessonTemplate,
   AssessmentContent,
+  PdfDisplaySettings,
   ObjectiveAssessmentRow,
   LearningObjectiveContent,
   LessonPlanTemplateContent,
@@ -14,6 +15,7 @@ import type {
   DesiredCharacteristicAssessmentContent,
 } from 'src/features/templates/types';
 
+import dayjs from 'dayjs';
 import { Page, pdfjs, Document } from 'react-pdf';
 import { useRef, useMemo, useState, useEffect } from 'react';
 import {
@@ -34,6 +36,8 @@ import Typography from '@mui/material/Typography';
 import CardActionArea from '@mui/material/CardActionArea';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { formatNumerals } from 'src/utils/thai-numerals';
+
 import { mapObjectivesToAssessmentRows } from 'src/features/templates/assessment-mapping';
 
 import { richTextToPlainText, parseLearningActivities } from '../lesson-plan-content';
@@ -51,13 +55,25 @@ Font.register({
   ],
 });
 
-// Thai text has no spaces between words. Segment at grapheme boundaries so a
-// long Thai phrase can wrap before overflowing while combining vowels and tone
-// marks stay attached to their base consonant.
-Font.registerHyphenationCallback((word) => {
+// @react-pdf/renderer's text shaping drops the final character of a run
+// whenever SARA AM (ำ, U+0E33) appears mid-word: the font's internal glyph
+// substitution expands it into two glyphs (nikhahit + sara aa) and the
+// layout engine's glyph-to-string index bookkeeping doesn't account for
+// that expansion. Pre-decomposing ำ into its two-codepoint form (ํ + า)
+// avoids the substitution entirely, so no glyph expansion — and no drop —
+// ever happens.
+function decomposeSaraAm(text: string) {
+  return text.replace(/ำ/g, 'ํา');
+}
+
+// Thai text has no spaces between words. Segment at word boundaries (not
+// individual characters) so a long Thai phrase wraps between whole words —
+// breaking mid-word makes the wrapped text unreadable.
+Font.registerHyphenationCallback((rawWord) => {
+  const word = decomposeSaraAm(rawWord);
   try {
     if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
-      const segmenter = new Intl.Segmenter('th', { granularity: 'grapheme' });
+      const segmenter = new Intl.Segmenter('th', { granularity: 'word' });
       return Array.from(segmenter.segment(word), (part) => part.segment);
     }
   } catch {
@@ -73,123 +89,163 @@ Font.registerHyphenationCallback((word) => {
   }, []);
 });
 
-const styles = StyleSheet.create({
-  page: {
-    paddingTop: 42,
-    paddingBottom: 48,
-    paddingHorizontal: 48,
-    fontSize: 10,
-    lineHeight: 1.55,
-    color: '#172B4D',
-    fontFamily: 'Sarabun',
-  },
-  overline: { fontSize: 8, color: '#637381', textAlign: 'center' },
-  title: { marginTop: 6, fontSize: 18, fontWeight: 700, textAlign: 'center' },
-  description: { marginTop: 8, color: '#637381', textAlign: 'center' },
-  coverHeading: { fontSize: 14, fontWeight: 700, textAlign: 'center' },
-  coverLogo: {
-    width: 72,
-    height: 72,
-    marginBottom: 10,
-    objectFit: 'contain',
-    alignSelf: 'center',
-  },
-  coverColumns: {
-    marginTop: 10,
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  coverLeft: { width: '68%', paddingRight: 12 },
-  coverRight: { width: '32%' },
-  coverLine: { marginBottom: 4, fontSize: 10, fontWeight: 700 },
-  coverDivider: { marginTop: 12, borderBottom: '1 solid #172B4D' },
-  meta: {
-    marginTop: 22,
-    paddingVertical: 10,
-    display: 'flex',
-    flexDirection: 'row',
-    borderTop: '1 solid #DFE3E8',
-    borderBottom: '1 solid #DFE3E8',
-  },
-  metaItem: { width: '33.333%' },
-  metaLabel: { fontSize: 8, color: '#919EAB' },
-  metaValue: { marginTop: 2, fontSize: 9 },
-  section: { marginTop: 18 },
-  sectionTitle: { fontSize: 12, fontWeight: 700 },
-  sectionContent: { marginTop: 8, paddingLeft: 16 },
-  subsection: { marginTop: 10, fontSize: 10, fontWeight: 700 },
-  paragraph: { marginBottom: 5 },
-  missing: { color: '#919EAB' },
-  assessmentTable: {
-    marginTop: 8,
-    borderTop: '0.5 solid #919EAB',
-    borderLeft: '0.5 solid #919EAB',
-  },
-  assessmentRow: { display: 'flex', flexDirection: 'row' },
-  assessmentHeader: { backgroundColor: '#EAF2F8' },
-  assessmentCell: {
-    width: '25%',
-    padding: 5,
-    fontSize: 8,
-    borderRight: '0.5 solid #919EAB',
-    borderBottom: '0.5 solid #919EAB',
-  },
-  assessmentCellHeader: { fontWeight: 700, textAlign: 'center' },
-  reflectionHeading: { marginTop: 18, fontSize: 11, fontWeight: 700 },
-  reflectionSubheading: { marginTop: 7, marginLeft: 18, fontSize: 10, fontWeight: 700 },
-  reflectionBody: { marginTop: 5, marginLeft: 36 },
-  reflectionRow: { marginBottom: 5, display: 'flex', flexDirection: 'row', alignItems: 'flex-end' },
-  reflectionLabel: { fontSize: 10 },
-  reflectionFill: {
-    minWidth: 72,
-    marginHorizontal: 4,
-    paddingHorizontal: 3,
-    fontSize: 10,
-    textAlign: 'center',
-    borderBottomWidth: 0.7,
-    borderBottomStyle: 'dotted',
-    borderBottomColor: '#172B4D',
-  },
-  reflectionBlock: { marginTop: 8 },
-  reflectionBlockTitle: { marginBottom: 3, fontSize: 10 },
-  reflectionWritingLine: {
-    minHeight: 18,
-    marginBottom: 4,
-    paddingHorizontal: 3,
-    fontSize: 9,
-    borderBottomWidth: 0.7,
-    borderBottomStyle: 'dotted',
-    borderBottomColor: '#172B4D',
-  },
-  reflectionSignature: {
-    width: 220,
-    marginTop: 70,
-    marginLeft: 'auto',
-    textAlign: 'center',
-  },
-  reflectionSignatureLine: { marginBottom: 4, fontSize: 10 },
-  worksheetTitle: { marginTop: 8, fontSize: 13, fontWeight: 700, textAlign: 'center' },
-  worksheetTopic: { marginTop: 5, marginBottom: 14, fontSize: 10, textAlign: 'center' },
-  worksheetSectionTitle: { marginTop: 16, marginBottom: 7, fontSize: 10, fontWeight: 700 },
-  worksheetTable: { borderTop: '0.5 solid #172B4D', borderLeft: '0.5 solid #172B4D' },
-  worksheetRow: { display: 'flex', flexDirection: 'row' },
-  worksheetHeader: { backgroundColor: '#EAF2F8' },
-  worksheetCell: {
-    padding: 4,
-    fontSize: 7.2,
-    borderRight: '0.5 solid #172B4D',
-    borderBottom: '0.5 solid #172B4D',
-  },
-  worksheetCellCenter: { textAlign: 'center' },
-  worksheetCellHeader: { fontWeight: 700, textAlign: 'center' },
-  worksheetNote: { marginTop: 6, fontSize: 8 },
-  worksheetSignature: { width: 230, marginTop: 24, marginLeft: 'auto', textAlign: 'center' },
-  worksheetSignatureLine: { marginBottom: 5, fontSize: 9 },
-});
+function createStyles(settings: PdfDisplaySettings) {
+  const contentSize = settings.contentFontSize ?? 10;
+  const headingSize = settings.headingFontSize ?? 12;
+  const textColor = settings.textColor ?? '#172B4D';
+
+  return StyleSheet.create({
+    page: {
+      paddingTop: 42,
+      paddingBottom: 48,
+      paddingHorizontal: 48,
+      fontSize: contentSize,
+      lineHeight: 1.55,
+      color: textColor,
+      fontFamily: 'Sarabun',
+    },
+    overline: { fontSize: 8, color: '#637381', textAlign: 'center' },
+    title: { marginTop: 6, fontSize: headingSize + 6, fontWeight: 700, textAlign: 'center' },
+    description: { marginTop: 8, color: '#637381', textAlign: 'center' },
+    coverHeading: { fontSize: headingSize + 2, fontWeight: 700, textAlign: 'center' },
+    coverLogo: {
+      width: 72,
+      height: 72,
+      marginBottom: 10,
+      objectFit: 'contain',
+      alignSelf: 'center',
+    },
+    coverColumns: {
+      marginTop: 10,
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    coverLeft: { width: '68%', paddingRight: 12 },
+    coverRight: { width: '32%' },
+    coverLine: { marginBottom: 4, fontSize: contentSize, fontWeight: 700 },
+    coverDivider: { marginTop: 12, borderBottom: '1 solid #172B4D' },
+    meta: {
+      marginTop: 22,
+      paddingVertical: 10,
+      display: 'flex',
+      flexDirection: 'row',
+      borderTop: '1 solid #DFE3E8',
+      borderBottom: '1 solid #DFE3E8',
+    },
+    metaItem: { width: '33.333%' },
+    metaLabel: { fontSize: Math.max(contentSize - 2, 6), color: '#919EAB' },
+    metaValue: { marginTop: 2, fontSize: contentSize - 1 },
+    section: { marginTop: 18 },
+    sectionTitle: { fontSize: headingSize, fontWeight: 700 },
+    sectionContent: { marginTop: 8, paddingLeft: 16 },
+    subsection: { marginTop: 10, fontSize: headingSize - 2, fontWeight: 700 },
+    paragraph: { marginBottom: 5, textIndent: 36 },
+    missing: { color: '#919EAB' },
+    assessmentTable: {
+      marginTop: 8,
+      borderTop: '0.5 solid #919EAB',
+      borderLeft: '0.5 solid #919EAB',
+    },
+    assessmentRow: { display: 'flex', flexDirection: 'row' },
+    assessmentHeader: { backgroundColor: '#EAF2F8' },
+    assessmentCell: {
+      width: '25%',
+      padding: 5,
+      fontSize: Math.max(contentSize - 2, 6),
+      borderRight: '0.5 solid #919EAB',
+      borderBottom: '0.5 solid #919EAB',
+    },
+    assessmentCellHeader: { fontWeight: 700, textAlign: 'center' },
+    reflectionHeading: { marginTop: 18, fontSize: headingSize - 1, fontWeight: 700 },
+    reflectionSubheading: {
+      marginTop: 7,
+      marginLeft: 18,
+      fontSize: headingSize - 2,
+      fontWeight: 700,
+    },
+    reflectionBody: { marginTop: 5, marginLeft: 36 },
+    reflectionRow: {
+      marginBottom: 5,
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+    },
+    reflectionLabel: { fontSize: contentSize },
+    reflectionFill: {
+      minWidth: 72,
+      marginHorizontal: 4,
+      paddingHorizontal: 3,
+      fontSize: contentSize,
+      textAlign: 'center',
+      borderBottomWidth: 0.7,
+      borderBottomStyle: 'dotted',
+      borderBottomColor: '#172B4D',
+    },
+    reflectionBlock: { marginTop: 8 },
+    reflectionBlockTitle: { marginBottom: 3, fontSize: contentSize },
+    reflectionWritingLine: {
+      minHeight: 18,
+      marginBottom: 4,
+      paddingHorizontal: 3,
+      fontSize: contentSize - 1,
+      borderBottomWidth: 0.7,
+      borderBottomStyle: 'dotted',
+      borderBottomColor: '#172B4D',
+    },
+    reflectionSignature: {
+      width: 220,
+      marginTop: 70,
+      marginLeft: 'auto',
+      textAlign: 'center',
+    },
+    reflectionSignatureLine: { marginBottom: 4, fontSize: contentSize },
+    worksheetTitle: {
+      marginTop: 8,
+      fontSize: headingSize + 1,
+      fontWeight: 700,
+      textAlign: 'center',
+    },
+    worksheetTopic: { marginTop: 5, marginBottom: 14, fontSize: contentSize, textAlign: 'center' },
+    worksheetSectionTitle: {
+      marginTop: 16,
+      marginBottom: 7,
+      fontSize: headingSize - 2,
+      fontWeight: 700,
+    },
+    worksheetTable: { borderTop: '0.5 solid #172B4D', borderLeft: '0.5 solid #172B4D' },
+    worksheetRow: { display: 'flex', flexDirection: 'row' },
+    worksheetHeader: { backgroundColor: '#EAF2F8' },
+    worksheetCell: {
+      padding: 4,
+      fontSize: Math.max(contentSize - 2.8, 6),
+      borderRight: '0.5 solid #172B4D',
+      borderBottom: '0.5 solid #172B4D',
+    },
+    worksheetCellCenter: { textAlign: 'center' },
+    worksheetCellHeader: { fontWeight: 700, textAlign: 'center' },
+    worksheetNote: { marginTop: 6, fontSize: Math.max(contentSize - 2, 6) },
+    worksheetSignature: { width: 230, marginTop: 24, marginLeft: 'auto', textAlign: 'center' },
+    worksheetSignatureLine: { marginBottom: 5, fontSize: contentSize - 1 },
+  });
+}
+
+type Styles = ReturnType<typeof createStyles>;
 
 function asText(value: unknown) {
   return typeof value === 'string' ? richTextToPlainText(value) : '';
+}
+
+const LIST_MARKER_PATTERN = /^([-•]|\d+[.)])\s+/;
+
+// Each line renders as its own paragraph, without a numbered marker — a
+// fixed-width marker column squeezes the text in narrow layouts.
+function ParagraphLine({ line, styles: pageStyles }: { line: string; styles: Styles }) {
+  return (
+    <RendererText style={pageStyles.paragraph}>
+      {line.replace(LIST_MARKER_PATTERN, '')}
+    </RendererText>
+  );
 }
 
 function structuredContentLines(content: Record<string, unknown>) {
@@ -548,58 +604,70 @@ function templateDocumentSections(document: LessonPlanTemplateDocument) {
   });
 }
 
-function BehaviorObservationPage({ observation }: { observation: BehaviorObservationContent }) {
+function BehaviorObservationPage({
+  observation,
+  styles: pageStyles,
+}: {
+  observation: BehaviorObservationContent;
+  styles: Styles;
+}) {
   const behaviors = observation.behaviors ?? [];
   const behaviorWidth = behaviors.length ? 52 / behaviors.length : 52;
 
   return (
-    <RendererPage size="A4" style={styles.page} wrap>
-      <RendererText style={styles.worksheetTitle}>
+    <RendererPage size="A4" style={pageStyles.page} wrap>
+      <RendererText style={pageStyles.worksheetTitle}>
         {observation.title || 'แบบสังเกตพฤติกรรม'}
       </RendererText>
-      <RendererText style={[styles.worksheetNote, { marginBottom: 10 }]}>
+      <RendererText style={[pageStyles.worksheetNote, { marginBottom: 10 }]}>
         คำชี้แจง : {observation.instructions || '-'}
       </RendererText>
 
-      <RendererView style={styles.worksheetTable}>
-        <RendererView style={[styles.worksheetRow, styles.worksheetHeader]} wrap={false}>
-          <RendererText style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '8%' }]}>
+      <RendererView style={pageStyles.worksheetTable}>
+        <RendererView style={[pageStyles.worksheetRow, pageStyles.worksheetHeader]} wrap={false}>
+          <RendererText
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '8%' }]}
+          >
             ลำดับที่
           </RendererText>
           <RendererText
-            style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '30%' }]}
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '30%' }]}
           >
             ชื่อ-สกุล
           </RendererText>
           <RendererText
-            style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '52%' }]}
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '52%' }]}
           >
             รายการประเมิน
           </RendererText>
           <RendererText
-            style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '10%' }]}
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '10%' }]}
           >
             สรุปผลการประเมิน
           </RendererText>
         </RendererView>
-        <RendererView style={[styles.worksheetRow, styles.worksheetHeader]} wrap={false}>
-          <RendererText style={[styles.worksheetCell, { width: '38%' }]} />
+        <RendererView style={[pageStyles.worksheetRow, pageStyles.worksheetHeader]} wrap={false}>
+          <RendererText style={[pageStyles.worksheetCell, { width: '38%' }]} />
           {behaviors.map((behavior) => (
             <RendererText
               key={behavior.id}
               style={[
-                styles.worksheetCell,
-                styles.worksheetCellHeader,
+                pageStyles.worksheetCell,
+                pageStyles.worksheetCellHeader,
                 { width: `${behaviorWidth}%` },
               ]}
             >
               {behavior.title || '-'}
             </RendererText>
           ))}
-          <RendererText style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '5%' }]}>
+          <RendererText
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '5%' }]}
+          >
             ผ่าน
           </RendererText>
-          <RendererText style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '5%' }]}>
+          <RendererText
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '5%' }]}
+          >
             ไม่ผ่าน
           </RendererText>
         </RendererView>
@@ -611,21 +679,25 @@ function BehaviorObservationPage({ observation }: { observation: BehaviorObserva
           const hasAssessment = Boolean(student.name?.trim()) || observedCount > 0;
           const passed = observedCount >= Number(observation.passingMinimum || 0);
           return (
-            <RendererView key={student.id || studentIndex} style={styles.worksheetRow} wrap={false}>
+            <RendererView
+              key={student.id || studentIndex}
+              style={pageStyles.worksheetRow}
+              wrap={false}
+            >
               <RendererText
-                style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '8%' }]}
+                style={[pageStyles.worksheetCell, pageStyles.worksheetCellCenter, { width: '8%' }]}
               >
                 {studentIndex + 1}
               </RendererText>
-              <RendererText style={[styles.worksheetCell, { width: '30%' }]}>
+              <RendererText style={[pageStyles.worksheetCell, { width: '30%' }]}>
                 {student.name || '-'}
               </RendererText>
               {observations.map((observed, behaviorIndex) => (
                 <RendererText
                   key={`${student.id || studentIndex}-${behaviors[behaviorIndex]?.id || behaviorIndex}`}
                   style={[
-                    styles.worksheetCell,
-                    styles.worksheetCellCenter,
+                    pageStyles.worksheetCell,
+                    pageStyles.worksheetCellCenter,
                     { width: `${behaviorWidth}%` },
                   ]}
                 >
@@ -633,12 +705,12 @@ function BehaviorObservationPage({ observation }: { observation: BehaviorObserva
                 </RendererText>
               ))}
               <RendererText
-                style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '5%' }]}
+                style={[pageStyles.worksheetCell, pageStyles.worksheetCellCenter, { width: '5%' }]}
               >
                 {hasAssessment && passed ? '✓' : ''}
               </RendererText>
               <RendererText
-                style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '5%' }]}
+                style={[pageStyles.worksheetCell, pageStyles.worksheetCellCenter, { width: '5%' }]}
               >
                 {hasAssessment && !passed ? '✓' : ''}
               </RendererText>
@@ -647,21 +719,21 @@ function BehaviorObservationPage({ observation }: { observation: BehaviorObserva
         })}
       </RendererView>
 
-      <RendererText style={styles.worksheetSectionTitle}>เกณฑ์การประเมิน</RendererText>
-      <RendererText style={styles.worksheetNote}>
+      <RendererText style={pageStyles.worksheetSectionTitle}>เกณฑ์การประเมิน</RendererText>
+      <RendererText style={pageStyles.worksheetNote}>
         {observation.passingNote ||
           `พบพฤติกรรมตั้งแต่ ${observation.passingMinimum ?? 0} รายการขึ้นไป หมายถึง ผ่าน`}
       </RendererText>
 
-      <RendererView style={styles.worksheetSignature} wrap={false}>
-        <RendererText style={styles.worksheetSignatureLine}>
+      <RendererView style={pageStyles.worksheetSignature} wrap={false}>
+        <RendererText style={pageStyles.worksheetSignatureLine}>
           ลงชื่อ................................................
           {observation.evaluatorRole || 'ผู้ประเมิน'}
         </RendererText>
-        <RendererText style={styles.worksheetSignatureLine}>
+        <RendererText style={pageStyles.worksheetSignatureLine}>
           ( {observation.evaluatorName || '................................................'} )
         </RendererText>
-        <RendererText style={styles.worksheetSignatureLine}>
+        <RendererText style={pageStyles.worksheetSignatureLine}>
           {observation.evaluationDate || 'วันที่ .......... / .......... / ..........'}
         </RendererText>
       </RendererView>
@@ -673,101 +745,113 @@ function CompetencyAssessmentPage({
   assessment,
   domain,
   domainIndex,
+  styles: pageStyles,
 }: {
   assessment: CompetencyAssessmentContent;
   domain: CompetencyAssessmentContent['domains'][number];
   domainIndex: number;
+  styles: Styles;
 }) {
   const qualityByScore = new Map(
     (assessment.qualityLevels ?? []).map((level) => [Number(level.score), level.label])
   );
 
   return (
-    <RendererPage size="A4" style={styles.page} wrap>
-      <RendererText style={styles.worksheetTitle}>
+    <RendererPage size="A4" style={pageStyles.page} wrap>
+      <RendererText style={pageStyles.worksheetTitle}>
         {assessment.title || 'แบบประเมินสมรรถนะสำคัญของผู้เรียน'}
         {domain.title ? domain.title : ''}
       </RendererText>
-      <RendererText style={[styles.worksheetNote, { marginBottom: 10 }]}>
+      <RendererText style={[pageStyles.worksheetNote, { marginBottom: 10 }]}>
         คำชี้แจง : {assessment.instructions || '-'}
       </RendererText>
 
-      <RendererView style={styles.worksheetTable}>
-        <RendererView style={[styles.worksheetRow, styles.worksheetHeader]} wrap={false}>
-          <RendererText style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '8%' }]}>
+      <RendererView style={pageStyles.worksheetTable}>
+        <RendererView style={[pageStyles.worksheetRow, pageStyles.worksheetHeader]} wrap={false}>
+          <RendererText
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '8%' }]}
+          >
             เลขที่
           </RendererText>
           <RendererText
-            style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '32%' }]}
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '32%' }]}
           >
             ชื่อ-สกุล
           </RendererText>
           <RendererText
-            style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '20%' }]}
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '20%' }]}
           >
             รายการที่สังเกต
           </RendererText>
           <RendererText
-            style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '20%' }]}
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '20%' }]}
           >
             ระดับคุณภาพ
           </RendererText>
           <RendererText
-            style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '20%' }]}
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '20%' }]}
           >
             สรุปผลการประเมิน
           </RendererText>
         </RendererView>
-        <RendererView style={[styles.worksheetRow, styles.worksheetHeader]} wrap={false}>
-          <RendererText style={[styles.worksheetCell, { width: '40%' }]} />
+        <RendererView style={[pageStyles.worksheetRow, pageStyles.worksheetHeader]} wrap={false}>
+          <RendererText style={[pageStyles.worksheetCell, { width: '40%' }]} />
           <RendererText
-            style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '20%' }]}
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '20%' }]}
           >
             {domain.competencyLabel || domain.title || '-'}
             {`\n`}เต็ม 3 คะแนน
           </RendererText>
-          <RendererText style={[styles.worksheetCell, { width: '40%' }]} />
+          <RendererText style={[pageStyles.worksheetCell, { width: '40%' }]} />
         </RendererView>
-        <RendererView style={[styles.worksheetRow, styles.worksheetHeader]} wrap={false}>
-          <RendererText style={[styles.worksheetCell, { width: '40%' }]} />
+        <RendererView style={[pageStyles.worksheetRow, pageStyles.worksheetHeader]} wrap={false}>
+          <RendererText style={[pageStyles.worksheetCell, { width: '40%' }]} />
           {[3, 2, 1, 0].map((score) => (
             <RendererText
               key={`competency-score-${score}`}
-              style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '5%' }]}
+              style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '5%' }]}
             >
               {score}
             </RendererText>
           ))}
-          <RendererText style={[styles.worksheetCell, { width: '40%' }]} />
+          <RendererText style={[pageStyles.worksheetCell, { width: '40%' }]} />
         </RendererView>
         {(assessment.students ?? []).map((student, studentIndex) => {
           const score = Number(student.scores?.[domainIndex] || 0);
           const hasAssessment = Boolean(student.name?.trim()) || score > 0;
           return (
-            <RendererView key={student.id || studentIndex} style={styles.worksheetRow} wrap={false}>
+            <RendererView
+              key={student.id || studentIndex}
+              style={pageStyles.worksheetRow}
+              wrap={false}
+            >
               <RendererText
-                style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '8%' }]}
+                style={[pageStyles.worksheetCell, pageStyles.worksheetCellCenter, { width: '8%' }]}
               >
                 {studentIndex + 1}
               </RendererText>
-              <RendererText style={[styles.worksheetCell, { width: '32%' }]}>
+              <RendererText style={[pageStyles.worksheetCell, { width: '32%' }]}>
                 {student.name || '-'}
               </RendererText>
               {[3, 2, 1, 0].map((rating) => (
                 <RendererText
                   key={`${student.id || studentIndex}-${rating}`}
-                  style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '5%' }]}
+                  style={[
+                    pageStyles.worksheetCell,
+                    pageStyles.worksheetCellCenter,
+                    { width: '5%' },
+                  ]}
                 >
                   {hasAssessment && score === rating ? '✓' : ''}
                 </RendererText>
               ))}
               <RendererText
-                style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '20%' }]}
+                style={[pageStyles.worksheetCell, pageStyles.worksheetCellCenter, { width: '20%' }]}
               >
                 {hasAssessment ? qualityByScore.get(score) || '-' : '-'}
               </RendererText>
               <RendererText
-                style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '20%' }]}
+                style={[pageStyles.worksheetCell, pageStyles.worksheetCellCenter, { width: '20%' }]}
               >
                 {hasAssessment
                   ? score >= Number(assessment.passingScore || 0)
@@ -780,36 +864,36 @@ function CompetencyAssessmentPage({
         })}
       </RendererView>
 
-      <RendererText style={styles.worksheetSectionTitle}>เกณฑ์การให้คะแนน</RendererText>
+      <RendererText style={pageStyles.worksheetSectionTitle}>เกณฑ์การให้คะแนน</RendererText>
       <RendererView style={{ width: 300 }}>
         {(assessment.qualityLevels ?? [])
           .toSorted((left, right) => right.score - left.score)
           .map((level) => (
-            <RendererView key={level.id} style={styles.worksheetRow}>
-              <RendererText style={[styles.worksheetNote, { width: '38%' }]}>
+            <RendererView key={level.id} style={pageStyles.worksheetRow}>
+              <RendererText style={[pageStyles.worksheetNote, { width: '38%' }]}>
                 คะแนนรวม {level.score} คะแนน
               </RendererText>
-              <RendererText style={[styles.worksheetNote, { width: '62%' }]}>
+              <RendererText style={[pageStyles.worksheetNote, { width: '62%' }]}>
                 ระดับคุณภาพ {level.label}
               </RendererText>
             </RendererView>
           ))}
       </RendererView>
-      <RendererText style={styles.worksheetSectionTitle}>เกณฑ์การตัดสิน</RendererText>
-      <RendererText style={styles.worksheetNote}>
+      <RendererText style={pageStyles.worksheetSectionTitle}>เกณฑ์การตัดสิน</RendererText>
+      <RendererText style={pageStyles.worksheetNote}>
         {assessment.passingNote ||
           `ได้รับคะแนนตั้งแต่ ${assessment.passingScore ?? 0} คะแนนขึ้นไปถือว่าผ่าน`}
       </RendererText>
 
-      <RendererView style={styles.worksheetSignature} wrap={false}>
-        <RendererText style={styles.worksheetSignatureLine}>
+      <RendererView style={pageStyles.worksheetSignature} wrap={false}>
+        <RendererText style={pageStyles.worksheetSignatureLine}>
           ลงชื่อ................................................
           {assessment.evaluatorRole || 'ผู้ประเมิน'}
         </RendererText>
-        <RendererText style={styles.worksheetSignatureLine}>
+        <RendererText style={pageStyles.worksheetSignatureLine}>
           ( {assessment.evaluatorName || '................................................'} )
         </RendererText>
-        <RendererText style={styles.worksheetSignatureLine}>
+        <RendererText style={pageStyles.worksheetSignatureLine}>
           {assessment.evaluationDate || 'วันที่ .......... / .......... / ..........'}
         </RendererText>
       </RendererView>
@@ -819,8 +903,10 @@ function CompetencyAssessmentPage({
 
 function DesiredCharacteristicAssessmentPage({
   assessment,
+  styles: pageStyles,
 }: {
   assessment: DesiredCharacteristicAssessmentContent;
+  styles: Styles;
 }) {
   const groups = assessment.characteristicGroups ?? [];
   const behaviors = groups.flatMap((group) =>
@@ -832,21 +918,23 @@ function DesiredCharacteristicAssessmentPage({
   const ratingWidth = behaviorWidth / 3;
 
   return (
-    <RendererPage size="A4" style={styles.page} wrap>
-      <RendererText style={styles.worksheetTitle}>
+    <RendererPage size="A4" style={pageStyles.page} wrap>
+      <RendererText style={pageStyles.worksheetTitle}>
         {assessment.title || 'แบบประเมินคุณลักษณะอันพึงประสงค์'}
       </RendererText>
-      <RendererText style={[styles.worksheetNote, { marginBottom: 10 }]}>
+      <RendererText style={[pageStyles.worksheetNote, { marginBottom: 10 }]}>
         คำชี้แจง : {assessment.instructions || '-'}
       </RendererText>
 
-      <RendererView style={styles.worksheetTable}>
-        <RendererView style={[styles.worksheetRow, styles.worksheetHeader]} wrap={false}>
-          <RendererText style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '5%' }]}>
+      <RendererView style={pageStyles.worksheetTable}>
+        <RendererView style={[pageStyles.worksheetRow, pageStyles.worksheetHeader]} wrap={false}>
+          <RendererText
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '5%' }]}
+          >
             ลำดับที่
           </RendererText>
           <RendererText
-            style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '22%' }]}
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '22%' }]}
           >
             ชื่อ-สกุล
           </RendererText>
@@ -854,48 +942,50 @@ function DesiredCharacteristicAssessmentPage({
             <RendererText
               key={group.id}
               style={[
-                styles.worksheetCell,
-                styles.worksheetCellHeader,
+                pageStyles.worksheetCell,
+                pageStyles.worksheetCellHeader,
                 { width: `${(group.behaviors?.length ?? 0) * behaviorWidth}%` },
               ]}
             >
               {group.title || '-'}
             </RendererText>
           ))}
-          <RendererText style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '8%' }]}>
+          <RendererText
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '8%' }]}
+          >
             รวมคะแนน
           </RendererText>
           <RendererText
-            style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '10%' }]}
+            style={[pageStyles.worksheetCell, pageStyles.worksheetCellHeader, { width: '10%' }]}
           >
             ผลการประเมิน
           </RendererText>
         </RendererView>
-        <RendererView style={[styles.worksheetRow, styles.worksheetHeader]} wrap={false}>
-          <RendererText style={[styles.worksheetCell, { width: '27%' }]} />
+        <RendererView style={[pageStyles.worksheetRow, pageStyles.worksheetHeader]} wrap={false}>
+          <RendererText style={[pageStyles.worksheetCell, { width: '27%' }]} />
           {behaviors.map(({ behavior }) => (
             <RendererText
               key={behavior.id}
               style={[
-                styles.worksheetCell,
-                styles.worksheetCellHeader,
+                pageStyles.worksheetCell,
+                pageStyles.worksheetCellHeader,
                 { width: `${behaviorWidth}%` },
               ]}
             >
               {behavior.title || '-'}
             </RendererText>
           ))}
-          <RendererText style={[styles.worksheetCell, { width: '18%' }]} />
+          <RendererText style={[pageStyles.worksheetCell, { width: '18%' }]} />
         </RendererView>
-        <RendererView style={[styles.worksheetRow, styles.worksheetHeader]} wrap={false}>
-          <RendererText style={[styles.worksheetCell, { width: '27%' }]} />
+        <RendererView style={[pageStyles.worksheetRow, pageStyles.worksheetHeader]} wrap={false}>
+          <RendererText style={[pageStyles.worksheetCell, { width: '27%' }]} />
           {behaviors.flatMap(({ behavior }) =>
             [3, 2, 1].map((score) => (
               <RendererText
                 key={`${behavior.id}-${score}`}
                 style={[
-                  styles.worksheetCell,
-                  styles.worksheetCellHeader,
+                  pageStyles.worksheetCell,
+                  pageStyles.worksheetCellHeader,
                   { width: `${ratingWidth}%` },
                 ]}
               >
@@ -903,19 +993,23 @@ function DesiredCharacteristicAssessmentPage({
               </RendererText>
             ))
           )}
-          <RendererText style={[styles.worksheetCell, { width: '18%' }]} />
+          <RendererText style={[pageStyles.worksheetCell, { width: '18%' }]} />
         </RendererView>
         {students.map((student, studentIndex) => {
           const scores = behaviors.map((_, index) => Number(student.scores?.[index] || 0));
           const total = scores.reduce((sum, score) => sum + score, 0);
           return (
-            <RendererView key={student.id || studentIndex} style={styles.worksheetRow} wrap={false}>
+            <RendererView
+              key={student.id || studentIndex}
+              style={pageStyles.worksheetRow}
+              wrap={false}
+            >
               <RendererText
-                style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '5%' }]}
+                style={[pageStyles.worksheetCell, pageStyles.worksheetCellCenter, { width: '5%' }]}
               >
                 {studentIndex + 1}
               </RendererText>
-              <RendererText style={[styles.worksheetCell, { width: '22%' }]}>
+              <RendererText style={[pageStyles.worksheetCell, { width: '22%' }]}>
                 {student.name || '-'}
               </RendererText>
               {scores.flatMap((selectedScore, behaviorIndex) =>
@@ -923,8 +1017,8 @@ function DesiredCharacteristicAssessmentPage({
                   <RendererText
                     key={`${student.id || studentIndex}-${behaviors[behaviorIndex]?.behavior.id || behaviorIndex}-${score}`}
                     style={[
-                      styles.worksheetCell,
-                      styles.worksheetCellCenter,
+                      pageStyles.worksheetCell,
+                      pageStyles.worksheetCellCenter,
                       { width: `${ratingWidth}%` },
                     ]}
                   >
@@ -933,12 +1027,12 @@ function DesiredCharacteristicAssessmentPage({
                 ))
               )}
               <RendererText
-                style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '8%' }]}
+                style={[pageStyles.worksheetCell, pageStyles.worksheetCellCenter, { width: '8%' }]}
               >
                 {total}
               </RendererText>
               <RendererText
-                style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '10%' }]}
+                style={[pageStyles.worksheetCell, pageStyles.worksheetCellCenter, { width: '10%' }]}
               >
                 {total >= Number(assessment.passingScore || 0) ? 'ผ่าน' : 'ไม่ผ่าน'}
               </RendererText>
@@ -947,45 +1041,45 @@ function DesiredCharacteristicAssessmentPage({
         })}
       </RendererView>
 
-      <RendererText style={styles.worksheetSectionTitle}>เกณฑ์การประเมิน</RendererText>
+      <RendererText style={pageStyles.worksheetSectionTitle}>เกณฑ์การประเมิน</RendererText>
       <RendererView style={{ width: 260 }}>
-        <RendererView style={styles.worksheetRow}>
-          <RendererText style={[styles.worksheetNote, { width: '50%', fontWeight: 700 }]}>
+        <RendererView style={pageStyles.worksheetRow}>
+          <RendererText style={[pageStyles.worksheetNote, { width: '50%', fontWeight: 700 }]}>
             ช่วงคะแนน
           </RendererText>
-          <RendererText style={[styles.worksheetNote, { width: '50%', fontWeight: 700 }]}>
+          <RendererText style={[pageStyles.worksheetNote, { width: '50%', fontWeight: 700 }]}>
             ระดับคุณภาพ
           </RendererText>
         </RendererView>
         {(assessment.qualityLevels ?? []).map((level) => (
-          <RendererView key={level.id} style={styles.worksheetRow}>
-            <RendererText style={[styles.worksheetNote, { width: '50%' }]}>
+          <RendererView key={level.id} style={pageStyles.worksheetRow}>
+            <RendererText style={[pageStyles.worksheetNote, { width: '50%' }]}>
               {level.minimumScore}
               {level.maximumScore === undefined || level.maximumScore === level.minimumScore
                 ? ''
                 : `–${level.maximumScore}`}{' '}
               คะแนน
             </RendererText>
-            <RendererText style={[styles.worksheetNote, { width: '50%' }]}>
+            <RendererText style={[pageStyles.worksheetNote, { width: '50%' }]}>
               {level.label}
             </RendererText>
           </RendererView>
         ))}
       </RendererView>
-      <RendererText style={styles.worksheetNote}>
+      <RendererText style={pageStyles.worksheetNote}>
         หมายเหตุ :{' '}
         {assessment.passingNote || `ผ่านเมื่อได้คะแนนตั้งแต่ ${assessment.passingScore ?? 0} คะแนน`}
       </RendererText>
 
-      <RendererView style={styles.worksheetSignature} wrap={false}>
-        <RendererText style={styles.worksheetSignatureLine}>
+      <RendererView style={pageStyles.worksheetSignature} wrap={false}>
+        <RendererText style={pageStyles.worksheetSignatureLine}>
           ลงชื่อ................................................
           {assessment.evaluatorRole || 'ผู้ประเมิน'}
         </RendererText>
-        <RendererText style={styles.worksheetSignatureLine}>
+        <RendererText style={pageStyles.worksheetSignatureLine}>
           ( {assessment.evaluatorName || '................................................'} )
         </RendererText>
-        <RendererText style={styles.worksheetSignatureLine}>
+        <RendererText style={pageStyles.worksheetSignatureLine}>
           {assessment.evaluationDate || 'วันที่ .......... / .......... / ..........'}
         </RendererText>
       </RendererView>
@@ -1004,15 +1098,25 @@ function LessonPlanTemplatePdfDocument({
   const content = template.content as LessonPlanTemplateContent;
   const cover = content.cover ?? {};
   const document = content.document;
+  const settings = content.pdfSettings ?? {};
+  const docStyles = createStyles(settings);
+  const showHeadings = settings.showHeadings !== false;
+  const num = (value: string | number) => formatNumerals(value, settings.numeralStyle);
   const displayValue = (value?: string | null) => value?.trim() || '-';
+  // teachingDate may be an ISO string from the date picker, or legacy free
+  // text typed before it was a date picker — fall back to the raw text when
+  // it doesn't parse as a date.
+  const displayTeachingDate = (value?: string | null) => {
+    if (!value?.trim()) return '-';
+    const date = dayjs(value);
+    return date.isValid() ? num(`${date.format('DD/MM')}/${date.year() + 543}`) : value;
+  };
   const durationHours =
     cover.durationHours ??
     document?.durationPeriods ??
     (template.metadata.estimatedMinutes ? template.metadata.estimatedMinutes / 60 : undefined);
   const durationLabel = durationHours
-    ? Number.isInteger(durationHours)
-      ? String(durationHours)
-      : durationHours.toFixed(1)
+    ? num(Number.isInteger(durationHours) ? String(durationHours) : durationHours.toFixed(1))
     : '-';
   const gradeLabel =
     cover.gradeLevel || document?.gradeLevels?.join(', ') || template.grade_levels?.join(', ');
@@ -1085,40 +1189,42 @@ function LessonPlanTemplatePdfDocument({
 
   return (
     <RendererDocument title={template.name} author="E-KRU">
-      <RendererPage size="A4" style={styles.page} wrap>
-        {cover.logoUrl ? <RendererImage src={cover.logoUrl} style={styles.coverLogo} /> : null}
-        <RendererText style={styles.coverHeading}>{displayValue(template.name)}</RendererText>
-        <RendererView style={styles.coverColumns}>
-          <RendererView style={styles.coverLeft}>
-            <RendererText style={styles.coverLine}>
+      <RendererPage size="A4" style={docStyles.page} wrap>
+        {cover.logoUrl ? <RendererImage src={cover.logoUrl} style={docStyles.coverLogo} /> : null}
+        <RendererText style={docStyles.coverHeading}>{displayValue(template.name)}</RendererText>
+        <RendererView style={docStyles.coverColumns}>
+          <RendererView style={docStyles.coverLeft}>
+            <RendererText style={docStyles.coverLine}>
               กลุ่มสาระการเรียนรู้ {displayValue(document?.unitName || cover.learningArea)}
             </RendererText>
-            <RendererText style={styles.coverLine}>
+            <RendererText style={docStyles.coverLine}>
               รายวิชา {displayValue(cover.subjectName || template.subject?.name)} รหัสวิชา{' '}
               {displayValue(cover.subjectCode || template.subject?.code)}
             </RendererText>
-            <RendererText style={styles.coverLine}>เรื่อง {displayValue(cover.topic)}</RendererText>
-            <RendererText style={styles.coverLine}>
+            <RendererText style={docStyles.coverLine}>
+              เรื่อง {displayValue(cover.topic)}
+            </RendererText>
+            <RendererText style={docStyles.coverLine}>
               ผู้สอน {displayValue(cover.teacherName)}
             </RendererText>
-            <RendererText style={styles.coverLine}>
-              วันที่สอน {displayValue(cover.teachingDate)}
+            <RendererText style={docStyles.coverLine}>
+              วันที่สอน {displayTeachingDate(cover.teachingDate)}
             </RendererText>
           </RendererView>
-          <RendererView style={styles.coverRight}>
-            <RendererText style={styles.coverLine}>ชั้น {displayValue(gradeLabel)}</RendererText>
-            <RendererText style={styles.coverLine}>
+          <RendererView style={docStyles.coverRight}>
+            <RendererText style={docStyles.coverLine}>ชั้น {displayValue(gradeLabel)}</RendererText>
+            <RendererText style={docStyles.coverLine}>
               ภาคเรียนที่ {displayValue(cover.semester)}
             </RendererText>
-            <RendererText style={styles.coverLine}>
+            <RendererText style={docStyles.coverLine}>
               เวลา {durationHours ? `${durationLabel} ชั่วโมง` : '-'}
             </RendererText>
-            <RendererText style={styles.coverLine}>
+            <RendererText style={docStyles.coverLine}>
               ปีการศึกษา {displayValue(cover.academicYear)}
             </RendererText>
           </RendererView>
         </RendererView>
-        <RendererView style={styles.coverDivider} />
+        <RendererView style={docStyles.coverDivider} />
 
         {renderedSections
           .filter(
@@ -1132,34 +1238,36 @@ function LessonPlanTemplatePdfDocument({
               ].includes(section.type)
           )
           .map((section) => (
-            <RendererView key={section.id} style={styles.section} minPresenceAhead={80}>
-              <RendererText style={styles.sectionTitle}>
-                {renderedSections.findIndex((item) => item.id === section.id) + 1}. {section.title}
-              </RendererText>
+            <RendererView key={section.id} style={docStyles.section} minPresenceAhead={80}>
+              {showHeadings ? (
+                <RendererText style={docStyles.sectionTitle}>
+                  {num(renderedSections.findIndex((item) => item.id === section.id) + 1)}.{' '}
+                  {section.title}
+                </RendererText>
+              ) : null}
               {section.subsections ? (
-                <RendererView style={styles.sectionContent}>
+                <RendererView style={docStyles.sectionContent}>
                   {section.subsections.map((subsection) => (
                     <RendererView key={subsection.title}>
-                      <RendererText style={styles.subsection}>{subsection.title}</RendererText>
+                      <RendererText style={docStyles.subsection}>{subsection.title}</RendererText>
                       {subsection.lines.length ? (
                         subsection.lines.map((line, lineIndex) => (
-                          <RendererText
+                          <ParagraphLine
                             key={`${section.id}-${subsection.title}-${lineIndex}`}
-                            style={styles.paragraph}
-                          >
-                            {line}
-                          </RendererText>
+                            line={line}
+                            styles={docStyles}
+                          />
                         ))
                       ) : (
-                        <RendererText style={styles.missing}>ยังไม่ได้ระบุ</RendererText>
+                        <RendererText style={docStyles.missing}>ยังไม่ได้ระบุ</RendererText>
                       )}
                     </RendererView>
                   ))}
                 </RendererView>
               ) : section.type === 'assessment' && section.assessmentRows?.length ? (
-                <RendererView style={styles.assessmentTable}>
+                <RendererView style={docStyles.assessmentTable}>
                   <RendererView
-                    style={[styles.assessmentRow, styles.assessmentHeader]}
+                    style={[docStyles.assessmentRow, docStyles.assessmentHeader]}
                     wrap={false}
                   >
                     {[
@@ -1170,37 +1278,45 @@ function LessonPlanTemplatePdfDocument({
                     ].map((label) => (
                       <RendererText
                         key={label}
-                        style={[styles.assessmentCell, styles.assessmentCellHeader]}
+                        style={[docStyles.assessmentCell, docStyles.assessmentCellHeader]}
                       >
                         {label}
                       </RendererText>
                     ))}
                   </RendererView>
                   {section.assessmentRows.map((row, rowIndex) => (
-                    <RendererView key={row.objectiveId} style={styles.assessmentRow} wrap={false}>
-                      <RendererText style={styles.assessmentCell}>
-                        {rowIndex + 1}. {row.issue || '-'}
+                    <RendererView
+                      key={row.objectiveId}
+                      style={docStyles.assessmentRow}
+                      wrap={false}
+                    >
+                      <RendererText style={docStyles.assessmentCell}>
+                        {num(rowIndex + 1)}. {row.issue || '-'}
                       </RendererText>
-                      <RendererText style={styles.assessmentCell}>{row.method || '-'}</RendererText>
-                      <RendererText style={styles.assessmentCell}>
+                      <RendererText style={docStyles.assessmentCell}>
+                        {row.method || '-'}
+                      </RendererText>
+                      <RendererText style={docStyles.assessmentCell}>
                         {row.instrument || '-'}
                       </RendererText>
-                      <RendererText style={styles.assessmentCell}>
+                      <RendererText style={docStyles.assessmentCell}>
                         {row.criteria || '-'}
                       </RendererText>
                     </RendererView>
                   ))}
                 </RendererView>
               ) : (
-                <RendererView style={styles.sectionContent}>
+                <RendererView style={docStyles.sectionContent}>
                   {section.lines.length ? (
                     section.lines.map((line, lineIndex) => (
-                      <RendererText key={`${section.id}-${lineIndex}`} style={styles.paragraph}>
-                        {line}
-                      </RendererText>
+                      <ParagraphLine
+                        key={`${section.id}-${lineIndex}`}
+                        line={line}
+                        styles={docStyles}
+                      />
                     ))
                   ) : (
-                    <RendererText style={styles.missing}>
+                    <RendererText style={docStyles.missing}>
                       หัวข้อนี้ยังไม่ได้เชื่อมกับ Template ย่อย
                     </RendererText>
                   )}
@@ -1222,7 +1338,7 @@ function LessonPlanTemplatePdfDocument({
             return Array.from({ length: Math.max(count, lines.length) }, (_, index) => (
               <RendererText
                 key={`${section.id}-writing-${String(value)}-${index}`}
-                style={styles.reflectionWritingLine}
+                style={docStyles.reflectionWritingLine}
               >
                 {lines[index] ?? ''}
               </RendererText>
@@ -1231,47 +1347,47 @@ function LessonPlanTemplatePdfDocument({
           const specialStudents = ((reflection.specialStudents ?? []) as string[]).filter(Boolean);
           const sectionNumber = renderedSections.findIndex((item) => item.id === section.id) + 1;
           return (
-            <RendererPage key={section.id} size="A4" style={styles.page} wrap={false}>
-              <RendererText style={styles.reflectionHeading}>
-                {sectionNumber}. บันทึกผลหลังการสอน
+            <RendererPage key={section.id} size="A4" style={docStyles.page} wrap={false}>
+              <RendererText style={docStyles.reflectionHeading}>
+                {num(sectionNumber)}. บันทึกผลหลังการสอน
               </RendererText>
-              <RendererText style={styles.reflectionSubheading}>
+              <RendererText style={docStyles.reflectionSubheading}>
                 ๑. ผลการจัดการเรียนรู้
               </RendererText>
-              <RendererView style={styles.reflectionBody}>
-                <RendererView style={styles.reflectionRow}>
-                  <RendererText style={styles.reflectionLabel}>นักเรียนจำนวน</RendererText>
-                  <RendererText style={styles.reflectionFill}>
+              <RendererView style={docStyles.reflectionBody}>
+                <RendererView style={docStyles.reflectionRow}>
+                  <RendererText style={docStyles.reflectionLabel}>นักเรียนจำนวน</RendererText>
+                  <RendererText style={docStyles.reflectionFill}>
                     {String(reflection.studentCount ?? '')}
                   </RendererText>
-                  <RendererText style={styles.reflectionLabel}>คน</RendererText>
+                  <RendererText style={docStyles.reflectionLabel}>คน</RendererText>
                 </RendererView>
-                <RendererView style={styles.reflectionRow}>
-                  <RendererText style={styles.reflectionLabel}>
+                <RendererView style={docStyles.reflectionRow}>
+                  <RendererText style={docStyles.reflectionLabel}>
                     ผ่านจุดประสงค์การเรียนรู้
                   </RendererText>
-                  <RendererText style={styles.reflectionFill}>
+                  <RendererText style={docStyles.reflectionFill}>
                     {String(reflection.passedCount ?? '')}
                   </RendererText>
-                  <RendererText style={styles.reflectionLabel}>คน คิดเป็นร้อยละ</RendererText>
-                  <RendererText style={styles.reflectionFill}>
+                  <RendererText style={docStyles.reflectionLabel}>คน คิดเป็นร้อยละ</RendererText>
+                  <RendererText style={docStyles.reflectionFill}>
                     {String(reflection.passedPercentage ?? '')}
                   </RendererText>
                 </RendererView>
-                <RendererView style={styles.reflectionRow}>
-                  <RendererText style={styles.reflectionLabel}>
+                <RendererView style={docStyles.reflectionRow}>
+                  <RendererText style={docStyles.reflectionLabel}>
                     ไม่ผ่านจุดประสงค์การเรียนรู้
                   </RendererText>
-                  <RendererText style={styles.reflectionFill}>
+                  <RendererText style={docStyles.reflectionFill}>
                     {String(reflection.notPassedCount ?? '')}
                   </RendererText>
-                  <RendererText style={styles.reflectionLabel}>คน คิดเป็นร้อยละ</RendererText>
-                  <RendererText style={styles.reflectionFill}>
+                  <RendererText style={docStyles.reflectionLabel}>คน คิดเป็นร้อยละ</RendererText>
+                  <RendererText style={docStyles.reflectionFill}>
                     {String(reflection.notPassedPercentage ?? '')}
                   </RendererText>
                 </RendererView>
-                <RendererView style={styles.reflectionBlock}>
-                  <RendererText style={styles.reflectionBlockTitle}>
+                <RendererView style={docStyles.reflectionBlock}>
+                  <RendererText style={docStyles.reflectionBlockTitle}>
                     นักเรียนที่มีความสามารถพิเศษ/นักเรียนเด็กพิเศษ ได้แก่
                   </RendererText>
                   {writeLines(specialStudents.join('\n'), 2)}
@@ -1283,20 +1399,22 @@ function LessonPlanTemplatePdfDocument({
                   ['๒. ปัญหา/อุปสรรค', reflection.problems, 2],
                   ['๓. แนวทางแก้ไข/ข้อเสนอแนะ', reflection.solutions, 3],
                 ].map(([label, value, count]) => (
-                  <RendererView key={String(label)} style={styles.reflectionBlock}>
-                    <RendererText style={styles.reflectionBlockTitle}>{String(label)}</RendererText>
+                  <RendererView key={String(label)} style={docStyles.reflectionBlock}>
+                    <RendererText style={docStyles.reflectionBlockTitle}>
+                      {String(label)}
+                    </RendererText>
                     {writeLines(value, Number(count))}
                   </RendererView>
                 ))}
               </RendererView>
-              <RendererView style={styles.reflectionSignature}>
-                <RendererText style={styles.reflectionSignatureLine}>
+              <RendererView style={docStyles.reflectionSignature}>
+                <RendererText style={docStyles.reflectionSignatureLine}>
                   ลงชื่อ................................................ครูผู้สอน
                 </RendererText>
-                <RendererText style={styles.reflectionSignatureLine}>
+                <RendererText style={docStyles.reflectionSignatureLine}>
                   ( {cover.teacherName || '................................................'} )
                 </RendererText>
-                <RendererText style={styles.reflectionSignatureLine}>ตำแหน่ง ครู</RendererText>
+                <RendererText style={docStyles.reflectionSignatureLine}>ตำแหน่ง ครู</RendererText>
               </RendererView>
             </RendererPage>
           );
@@ -1324,25 +1442,32 @@ function LessonPlanTemplatePdfDocument({
           const rubricLevelWidth = `${74 / rubricLevelCount}%`;
 
           return (
-            <RendererPage key={section.id} size="A4" style={styles.page} wrap>
-              <RendererText style={styles.worksheetTitle}>
+            <RendererPage key={section.id} size="A4" style={docStyles.page} wrap>
+              <RendererText style={docStyles.worksheetTitle}>
                 {record.title || 'แบบบันทึกผลการประเมินใบงาน'}
               </RendererText>
-              <RendererText style={styles.worksheetTopic}>
+              <RendererText style={docStyles.worksheetTopic}>
                 เรื่อง {record.topic || cover.topic || '-'}
               </RendererText>
 
-              <RendererView style={styles.worksheetTable}>
-                <RendererView style={[styles.worksheetRow, styles.worksheetHeader]} wrap={false}>
+              <RendererView style={docStyles.worksheetTable}>
+                <RendererView
+                  style={[docStyles.worksheetRow, docStyles.worksheetHeader]}
+                  wrap={false}
+                >
                   <RendererText
-                    style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '5%' }]}
+                    style={[
+                      docStyles.worksheetCell,
+                      docStyles.worksheetCellHeader,
+                      { width: '5%' },
+                    ]}
                   >
                     ที่
                   </RendererText>
                   <RendererText
                     style={[
-                      styles.worksheetCell,
-                      styles.worksheetCellHeader,
+                      docStyles.worksheetCell,
+                      docStyles.worksheetCellHeader,
                       { width: studentNameWidth },
                     ]}
                   >
@@ -1352,8 +1477,8 @@ function LessonPlanTemplatePdfDocument({
                     <RendererText
                       key={column.id}
                       style={[
-                        styles.worksheetCell,
-                        styles.worksheetCellHeader,
+                        docStyles.worksheetCell,
+                        docStyles.worksheetCellHeader,
                         { width: scoreWidth },
                       ]}
                     >
@@ -1362,12 +1487,20 @@ function LessonPlanTemplatePdfDocument({
                     </RendererText>
                   ))}
                   <RendererText
-                    style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '9%' }]}
+                    style={[
+                      docStyles.worksheetCell,
+                      docStyles.worksheetCellHeader,
+                      { width: '9%' },
+                    ]}
                   >
                     รวม
                   </RendererText>
                   <RendererText
-                    style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '14%' }]}
+                    style={[
+                      docStyles.worksheetCell,
+                      docStyles.worksheetCellHeader,
+                      { width: '14%' },
+                    ]}
                   >
                     ผลการประเมิน
                   </RendererText>
@@ -1383,23 +1516,27 @@ function LessonPlanTemplatePdfDocument({
                   return (
                     <RendererView
                       key={student.id || studentIndex}
-                      style={styles.worksheetRow}
+                      style={docStyles.worksheetRow}
                       wrap={false}
                     >
                       <RendererText
-                        style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '5%' }]}
+                        style={[
+                          docStyles.worksheetCell,
+                          docStyles.worksheetCellCenter,
+                          { width: '5%' },
+                        ]}
                       >
                         {studentIndex + 1}
                       </RendererText>
-                      <RendererText style={[styles.worksheetCell, { width: studentNameWidth }]}>
+                      <RendererText style={[docStyles.worksheetCell, { width: studentNameWidth }]}>
                         {student.name || '-'}
                       </RendererText>
                       {scores.map((score, scoreIndex) => (
                         <RendererText
                           key={`${student.id || studentIndex}-${scoreColumns[scoreIndex]?.id || scoreIndex}`}
                           style={[
-                            styles.worksheetCell,
-                            styles.worksheetCellCenter,
+                            docStyles.worksheetCell,
+                            docStyles.worksheetCellCenter,
                             { width: scoreWidth },
                           ]}
                         >
@@ -1407,12 +1544,20 @@ function LessonPlanTemplatePdfDocument({
                         </RendererText>
                       ))}
                       <RendererText
-                        style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '9%' }]}
+                        style={[
+                          docStyles.worksheetCell,
+                          docStyles.worksheetCellCenter,
+                          { width: '9%' },
+                        ]}
                       >
                         {total}
                       </RendererText>
                       <RendererText
-                        style={[styles.worksheetCell, styles.worksheetCellCenter, { width: '14%' }]}
+                        style={[
+                          docStyles.worksheetCell,
+                          docStyles.worksheetCellCenter,
+                          { width: '14%' },
+                        ]}
                       >
                         {result}
                       </RendererText>
@@ -1421,13 +1566,20 @@ function LessonPlanTemplatePdfDocument({
                 })}
               </RendererView>
 
-              <RendererText style={styles.worksheetSectionTitle}>
+              <RendererText style={docStyles.worksheetSectionTitle}>
                 เกณฑ์การประเมินใบงาน เรื่อง {record.topic || cover.topic || '-'}
               </RendererText>
-              <RendererView style={styles.worksheetTable}>
-                <RendererView style={[styles.worksheetRow, styles.worksheetHeader]} wrap={false}>
+              <RendererView style={docStyles.worksheetTable}>
+                <RendererView
+                  style={[docStyles.worksheetRow, docStyles.worksheetHeader]}
+                  wrap={false}
+                >
                   <RendererText
-                    style={[styles.worksheetCell, styles.worksheetCellHeader, { width: '26%' }]}
+                    style={[
+                      docStyles.worksheetCell,
+                      docStyles.worksheetCellHeader,
+                      { width: '26%' },
+                    ]}
                   >
                     รายการการประเมิน
                   </RendererText>
@@ -1439,8 +1591,8 @@ function LessonPlanTemplatePdfDocument({
                       <RendererText
                         key={`rubric-header-${levelIndex}`}
                         style={[
-                          styles.worksheetCell,
-                          styles.worksheetCellHeader,
+                          docStyles.worksheetCell,
+                          docStyles.worksheetCellHeader,
                           { width: rubricLevelWidth },
                         ]}
                       >
@@ -1452,16 +1604,16 @@ function LessonPlanTemplatePdfDocument({
                 {rubricCriteria.map((criterion, criterionIndex) => (
                   <RendererView
                     key={criterion.id || criterionIndex}
-                    style={styles.worksheetRow}
+                    style={docStyles.worksheetRow}
                     wrap={false}
                   >
-                    <RendererText style={[styles.worksheetCell, { width: '26%' }]}>
+                    <RendererText style={[docStyles.worksheetCell, { width: '26%' }]}>
                       {criterionIndex + 1}. {criterion.title || '-'}
                     </RendererText>
                     {Array.from({ length: rubricLevelCount }, (_, levelIndex) => (
                       <RendererText
                         key={`${criterion.id || criterionIndex}-level-${levelIndex}`}
-                        style={[styles.worksheetCell, { width: rubricLevelWidth }]}
+                        style={[docStyles.worksheetCell, { width: rubricLevelWidth }]}
                       >
                         {criterion.levels?.[levelIndex]?.description || '-'}
                       </RendererText>
@@ -1469,21 +1621,21 @@ function LessonPlanTemplatePdfDocument({
                   </RendererView>
                 ))}
               </RendererView>
-              <RendererText style={styles.worksheetNote}>
+              <RendererText style={docStyles.worksheetNote}>
                 เกณฑ์การผ่าน:{' '}
                 {record.passingCriteria ||
                   `ได้คะแนนรวมไม่น้อยกว่า ${record.passingScore ?? 0} คะแนน`}
               </RendererText>
 
-              <RendererView style={styles.worksheetSignature} wrap={false}>
-                <RendererText style={styles.worksheetSignatureLine}>
+              <RendererView style={docStyles.worksheetSignature} wrap={false}>
+                <RendererText style={docStyles.worksheetSignatureLine}>
                   ลงชื่อ................................................
                   {record.evaluatorRole || 'ผู้ประเมิน'}
                 </RendererText>
-                <RendererText style={styles.worksheetSignatureLine}>
+                <RendererText style={docStyles.worksheetSignatureLine}>
                   ( {record.evaluatorName || '................................................'} )
                 </RendererText>
-                <RendererText style={styles.worksheetSignatureLine}>
+                <RendererText style={docStyles.worksheetSignatureLine}>
                   {record.evaluationDate || 'วันที่ .......... / .......... / ..........'}
                 </RendererText>
               </RendererView>
@@ -1497,7 +1649,13 @@ function LessonPlanTemplatePdfDocument({
             (resolvedSections.find((item) => item.id === section.id)?.resolvedContent as
               | DesiredCharacteristicAssessmentContent
               | undefined) ?? ({} as DesiredCharacteristicAssessmentContent);
-          return <DesiredCharacteristicAssessmentPage key={section.id} assessment={assessment} />;
+          return (
+            <DesiredCharacteristicAssessmentPage
+              key={section.id}
+              assessment={assessment}
+              styles={docStyles}
+            />
+          );
         })}
       {renderedSections
         .filter((section) => section.type === 'competency_assessment')
@@ -1512,6 +1670,7 @@ function LessonPlanTemplatePdfDocument({
               assessment={assessment}
               domain={domain}
               domainIndex={domainIndex}
+              styles={docStyles}
             />
           ));
         })}
@@ -1522,7 +1681,13 @@ function LessonPlanTemplatePdfDocument({
             (resolvedSections.find((item) => item.id === section.id)?.resolvedContent as
               | BehaviorObservationContent
               | undefined) ?? ({} as BehaviorObservationContent);
-          return <BehaviorObservationPage key={section.id} observation={observation} />;
+          return (
+            <BehaviorObservationPage
+              key={section.id}
+              observation={observation}
+              styles={docStyles}
+            />
+          );
         })}
     </RendererDocument>
   );
@@ -1693,7 +1858,7 @@ export default function LessonPlanTemplatePdfViewer({
             borderBottom: { xs: '1px solid', lg: 0 },
             borderColor: 'divider',
             flexDirection: { xs: 'row', lg: 'column' },
-            maxHeight: { lg: 'calc(100vh - 190px)' },
+            maxHeight: { lg: 'calc(100vh - 0px)' },
           }}
         >
           {Array.from({ length: pageCount }, (_, index) => {
@@ -1751,7 +1916,7 @@ export default function LessonPlanTemplatePdfViewer({
             overflow: 'auto',
             alignContent: 'start',
             bgcolor: 'grey.100',
-            maxHeight: { lg: 'calc(100vh - 190px)' },
+            maxHeight: { lg: 'calc(100vh - 0px)' },
           }}
         >
           {Array.from({ length: pageCount }, (_, index) => {

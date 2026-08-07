@@ -235,6 +235,7 @@ export type SectionTemplateContent =
 
 export type LessonPlanTemplateContent = {
   cover?: LessonPlanTemplateCover;
+  pdfSettings?: PdfDisplaySettings;
   evaluationStudents?: EvaluationStudent[];
   sections: Array<{
     id: string;
@@ -247,6 +248,14 @@ export type LessonPlanTemplateContent = {
     content?: SectionTemplateContent;
   }>;
   document?: LessonPlanTemplateDocument;
+};
+
+export type PdfDisplaySettings = {
+  contentFontSize?: number;
+  headingFontSize?: number;
+  textColor?: string;
+  showHeadings?: boolean;
+  numeralStyle?: 'arabic' | 'thai';
 };
 
 export type LessonPlanTemplateCover = {

@@ -16,6 +16,7 @@ export const LESSON_PLAN_DRAFT_TAB_COLUMNS: Record<string, string[]> = {
     'duration_periods',
     'start_date',
     'end_date',
+    'template_section_contents',
   ],
   'lesson-plan-standards': [
     'subject_id',
@@ -34,6 +35,10 @@ export const LESSON_PLAN_DRAFT_TAB_COLUMNS: Record<string, string[]> = {
   'lesson-plan-activities': ['learning_activities', 'template_section_contents'],
   'lesson-plan-media': ['learning_media', 'template_section_contents'],
   'lesson-plan-assessment': ['assessment', 'template_section_contents'],
+  'lesson-plan-worksheet-assessment-record': ['template_section_contents'],
+  'lesson-plan-desired-characteristic-assessment': ['template_section_contents'],
+  'lesson-plan-competency-assessment': ['template_section_contents'],
+  'lesson-plan-behavior-observation': ['template_section_contents'],
 };
 
 const text = (value: unknown, max: number) =>

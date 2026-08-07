@@ -228,14 +228,7 @@ function FullPlanTemplateReader({
     .slice(0, 6);
 
   return (
-    <Box
-      sx={{
-        gap: 2,
-        display: 'grid',
-        alignItems: 'start',
-        gridTemplateColumns: { xs: 'minmax(0, 1fr)', xl: 'minmax(0, 1fr) 280px' },
-      }}
-    >
+    <Box sx={{ gap: 2, display: 'grid', alignItems: 'start' }}>
       <Card variant="outlined" sx={{ minWidth: 0, overflow: 'hidden' }}>
         <Box
           sx={{
@@ -359,55 +352,59 @@ function FullPlanTemplateReader({
         </Box>
       </Card>
 
-      <Card
-        component="aside"
-        variant="outlined"
-        sx={{
-          p: 2.5,
-          gap: 1.75,
-          display: 'grid',
-          alignContent: 'start',
-          overflow: 'auto',
-          boxShadow: 'none',
-          borderRadius: { xl: 0 },
-          borderTop: { xl: 0 },
-          borderRight: { xl: 0 },
-          borderBottom: { xl: 0 },
-          maxHeight: { xl: 'calc(100vh - 190px)' },
-          position: { xl: 'sticky' },
-          top: { xl: 16 },
-        }}
-      >
-        <Typography variant="h6">เนื้อหาใกล้เคียง</Typography>
-        {recommendations.map((template) => (
-          <LessonPlanDocumentCard
-            key={template.id}
-            compact
-            data={{
-              title: template.name,
-              unitName: template.description,
-              previewText: template.description,
-              sectionCount: Array.isArray((template.content as { sections?: unknown }).sections)
-                ? (template.content as { sections: unknown[] }).sections.length
-                : undefined,
-              versionNumber: template.version,
-              status: {
-                label: TEMPLATE_STATUS_LABELS[template.status],
-                color:
-                  template.status === 'active'
-                    ? 'success'
-                    : template.status === 'draft'
-                      ? 'warning'
-                      : 'default',
+      {recommendations.length ? (
+        <Box component="section">
+          <Typography variant="h6" sx={{ mb: 1.5 }}>
+            เนื้อหาใกล้เคียง
+          </Typography>
+          <Box
+            sx={{
+              gap: 2,
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'minmax(0, 1fr)',
+                md: 'repeat(2, minmax(0, 1fr))',
               },
-              caption:
-                [template.subject?.name, ...template.grade_levels].filter(Boolean).join(' · ') ||
-                'ใช้ได้ทุกระดับชั้น',
+              '@media (min-width:1440px)': {
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              },
+              '@media (min-width:1650px)': {
+                gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+              },
             }}
-            onOpen={() => onSelect(template)}
-          />
-        ))}
-      </Card>
+          >
+            {recommendations.map((template) => (
+              <LessonPlanDocumentCard
+                key={template.id}
+                compact
+                data={{
+                  title: template.name,
+                  unitName: template.description,
+                  previewText: template.description,
+                  sectionCount: Array.isArray((template.content as { sections?: unknown }).sections)
+                    ? (template.content as { sections: unknown[] }).sections.length
+                    : undefined,
+                  versionNumber: template.version,
+                  status: {
+                    label: TEMPLATE_STATUS_LABELS[template.status],
+                    color:
+                      template.status === 'active'
+                        ? 'success'
+                        : template.status === 'draft'
+                          ? 'warning'
+                          : 'default',
+                  },
+                  caption:
+                    [template.subject?.name, ...template.grade_levels]
+                      .filter(Boolean)
+                      .join(' · ') || 'ใช้ได้ทุกระดับชั้น',
+                }}
+                onOpen={() => onSelect(template)}
+              />
+            ))}
+          </Box>
+        </Box>
+      ) : null}
     </Box>
   );
 }
@@ -564,7 +561,7 @@ export function LessonPlanTemplateListView({
       >
         <Box>
           <Typography component="h1" variant="h3">
-            {isFullPlanCatalog ? 'เทมเพลตแผนการสอนฉบับเต็ม' : 'รวมเทมเพลตทุกประเภท'}
+            {isFullPlanCatalog ? 'เทมเพลตแผนการสอน' : 'รวมเทมเพลตทุกประเภท'}
           </Typography>
           <Typography color="text.secondary">
             {isFullPlanCatalog
