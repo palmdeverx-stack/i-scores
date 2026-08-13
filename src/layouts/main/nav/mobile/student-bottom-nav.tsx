@@ -2,6 +2,7 @@
 
 import type { NavMainProps } from '../types';
 
+import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Portal from '@mui/material/Portal';
 import BottomNavigation from '@mui/material/BottomNavigation';
@@ -83,7 +84,24 @@ export function StudentBottomNav({ data }: NavMainProps) {
               href={item.path}
               value={item.path}
               label={item.title}
-              icon={item.icon}
+              icon={
+                <Box sx={{ display: 'grid', position: 'relative', placeItems: 'center' }}>
+                  {item.icon}
+                  {item.info && (
+                    <Box
+                      sx={{
+                        top: -13,
+                        left: '50%',
+                        position: 'absolute',
+                        transform: 'translateX(-50%) scale(0.72)',
+                        transformOrigin: 'center',
+                      }}
+                    >
+                      {item.info}
+                    </Box>
+                  )}
+                </Box>
+              }
             />
           ))}
         </BottomNavigation>

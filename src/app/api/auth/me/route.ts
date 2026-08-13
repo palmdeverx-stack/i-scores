@@ -32,11 +32,14 @@ export async function GET(request: Request) {
   }
 
   if (payload.role === 'marketplace_user') {
-    const { data: marketplaceUser } = await supabaseAdmin
+    const { data: marketplaceUser, error: marketplaceError } = await supabaseAdmin
       .from('marketplace_users')
       .select('id, username, email, first_name, last_name, role, is_active, created_at, auth_user_id')
       .eq('id', payload.sub)
       .maybeSingle();
+    if (marketplaceError) {
+      return NextResponse.json({ message: 'ไม่สามารถตรวจสอบบัญชีได้ กรุณาลองใหม่' }, { status: 503 });
+    }
     if (!marketplaceUser?.is_active) {
       return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
@@ -55,11 +58,15 @@ export async function GET(request: Request) {
     });
   }
 
-  const { data: user } = await supabaseAdmin
+  const { data: user, error: userError } = await supabaseAdmin
     .from('app_users')
     .select('*')
     .eq('id', payload.sub)
-    .single();
+    .maybeSingle();
+
+  if (userError) {
+    return NextResponse.json({ message: 'ไม่สามารถตรวจสอบบัญชีได้ กรุณาลองใหม่' }, { status: 503 });
+  }
 
   const studentCannotAccess =
     user?.role === 'student' && (user.student_status ?? 'studying') !== 'studying';

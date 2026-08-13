@@ -6,7 +6,6 @@ import { getLegalDocument } from 'src/lib/legal-documents';
 import { LegalDocumentView } from 'src/sections/legal';
 
 export const metadata: Metadata = {
-  title: `ข้อกำหนดการใช้บริการ - ${CONFIG.appName}`,
   description: 'ข้อกำหนดและเงื่อนไขสำหรับการเข้าถึงและใช้บริการ eKru',
 };
 

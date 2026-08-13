@@ -100,7 +100,7 @@ export function StudentQuizView({ assignmentId }: Props) {
 
   if (quizQuery.isError || !quiz) {
     return (
-      <Container maxWidth="md" sx={{ py: 6 }}>
+      <Container maxWidth={false} sx={{ py: 6 }}>
         <Alert
           severity="error"
           action={

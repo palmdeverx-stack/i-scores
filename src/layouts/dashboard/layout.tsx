@@ -35,6 +35,7 @@ import { navData as dashboardNavData } from '../nav-config-dashboard';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import { ImpersonationBanner } from '../components/impersonation-banner';
 import { MainSection, layoutClasses, HeaderSection, LayoutSection } from '../core';
+import { ExperimentalFeedbackButton } from '../components/experimental-feedback-button';
 
 // ----------------------------------------------------------------------
 
@@ -105,9 +106,7 @@ export function DashboardLayout({
     };
 
     const headerSlots: HeaderSectionProps['slots'] = {
-      topArea: (
-        <ImpersonationBanner />
-      ),
+      topArea: <ImpersonationBanner />,
       bottomArea:
         isNavHorizontal || tabletHorizontalNav ? (
           <NavHorizontal
@@ -177,6 +176,7 @@ export function DashboardLayout({
           )}
 
           <MarketplaceButton sx={{ ml: { xs: 0.5, sm: 1 } }} />
+          <ExperimentalFeedbackButton />
 
           {/** @slot Workspace popover */}
           {/* <WorkspacesPopover

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { isSchoolAccessUsable } from 'src/lib/school-subscription';
+import { ensureMarketplaceUser } from 'src/lib/marketplace-profile';
+import { notifyPendingMarketplaceInvitation } from 'src/lib/marketplace-invitations';
 import { syncLinkedStaffAuth, defaultStaffAuthRole } from 'src/lib/staff-supabase-auth';
 import { recoverPersonalWorkspacePurchases } from 'src/lib/personal-workspace-provisioning';
 import {
@@ -45,73 +47,6 @@ function googleProfile(authUser: {
         ? authUser.user_metadata.last_name.trim()
         : '',
   };
-}
-
-async function ensureMarketplaceProfile(
-  authUser: Parameters<typeof googleProfile>[0],
-  profile: ReturnType<typeof googleProfile>
-) {
-  const { data: byAuthId } = await supabaseAdmin
-    .from('marketplace_users')
-    .select('id, auth_user_id, email')
-    .eq('auth_user_id', authUser.id)
-    .maybeSingle();
-  if (byAuthId) return byAuthId;
-
-  const { data: byEmail } = await supabaseAdmin
-    .from('marketplace_users')
-    .select('id, auth_user_id, email')
-    .ilike('email', profile.email)
-    .maybeSingle();
-  if (byEmail) {
-    if (byEmail.auth_user_id !== authUser.id) {
-      const { data: previousAuth } = await supabaseAdmin.auth.admin.getUserById(
-        byEmail.auth_user_id
-      );
-      if (previousAuth.user) {
-        throw new Error('อีเมลนี้เชื่อมกับบัญชี Marketplace อื่นอยู่แล้ว');
-      }
-
-      const { data: recoveredProfile, error: recoverError } = await supabaseAdmin
-        .from('marketplace_users')
-        .update({ auth_user_id: authUser.id })
-        .eq('id', byEmail.id)
-        .eq('auth_user_id', byEmail.auth_user_id)
-        .select('id, auth_user_id, email')
-        .maybeSingle();
-      if (recoverError || !recoveredProfile) {
-        throw new Error(
-          recoverError?.message ?? 'ไม่สามารถกู้คืนการเชื่อมบัญชี Marketplace ได้'
-        );
-      }
-      return recoveredProfile;
-    }
-    return byEmail;
-  }
-
-  const usernamePrefix =
-    profile.username ||
-    profile.email.split('@')[0].replaceAll(/[^a-zA-Z0-9._-]/g, '') ||
-    'google';
-  const username = `${usernamePrefix}_${authUser.id.slice(0, 8)}`;
-  const { data, error } = await supabaseAdmin
-    .from('marketplace_users')
-    .insert({
-      auth_user_id: authUser.id,
-      username,
-      email: profile.email,
-      first_name: profile.firstName || null,
-      last_name: profile.lastName || null,
-      role: 'marketplace_user',
-      is_active: true,
-    })
-    .select('id, auth_user_id, email')
-    .single();
-
-  if (error || !data) {
-    throw new Error(error?.message ?? 'ไม่สามารถสร้างโปรไฟล์ Marketplace ได้');
-  }
-  return data;
 }
 
 async function marketplaceLandingPath(marketplaceUserId: string) {
@@ -192,7 +127,13 @@ export async function POST(request: Request) {
 
   let marketplaceProfile;
   try {
-    marketplaceProfile = await ensureMarketplaceProfile(authUser, profile);
+    marketplaceProfile = await ensureMarketplaceUser({
+      authUserId: authUser.id,
+      email: profile.email,
+      usernameHint: profile.username,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+    });
   } catch (profileError) {
     return NextResponse.json(
       {
@@ -224,34 +165,40 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: linkedUsers } = await supabaseAdmin
-    .from('app_users')
-    .select('*, school:schools!app_users_school_id_fkey(workspace_type, owner_auth_user_id)')
-    .eq('auth_user_id', authUser.id)
-    .eq('is_active', true);
-
-  const linkedUser = (linkedUsers ?? []).find((candidate) => {
-    const school = Array.isArray(candidate.school) ? candidate.school[0] : candidate.school;
-    return school?.workspace_type === 'personal' && school.owner_auth_user_id === authUser.id;
-  }) ?? linkedUsers?.[0];
-
-  let appUser = linkedUser;
-  if (!appUser) {
-    const { data: emailUser } = await supabaseAdmin
+  const [{ data: linkedUsers }, { data: emailUsers }] = await Promise.all([
+    supabaseAdmin
       .from('app_users')
-      .select('*')
+      .select('*, school:schools!app_users_school_id_fkey(workspace_type, owner_auth_user_id)')
+      .eq('auth_user_id', authUser.id)
+      .eq('is_active', true),
+    supabaseAdmin
+      .from('app_users')
+      .select('*, school:schools!app_users_school_id_fkey(workspace_type, owner_auth_user_id)')
       .ilike('email', profile.email)
-      .neq('role', 'student')
-      .maybeSingle();
+      .neq('role', 'student'),
+  ]);
 
-    if (emailUser?.auth_user_id && emailUser.auth_user_id !== authUser.id) {
-      return NextResponse.json(
-        { message: 'อีเมลนี้เชื่อมกับบัญชีเข้าสู่ระบบอื่นอยู่แล้ว กรุณาติดต่อผู้ดูแลระบบ' },
-        { status: 409 }
-      );
-    }
+  const isPersonalWorkspace = (candidate: { school?: unknown }) => {
+    const school = Array.isArray(candidate.school) ? candidate.school[0] : candidate.school;
+    return (
+      (school as { workspace_type?: string; owner_auth_user_id?: string } | null)
+        ?.workspace_type === 'personal'
+    );
+  };
 
-    if (emailUser) {
+  // A real school account always outranks the auto-provisioned personal workspace —
+  // someone can be both a school teacher and an individual Marketplace buyer under the
+  // same email, and logging in should land them on the school, not their scratch space.
+  // The personal workspace's own placeholder row can also share that email, so the
+  // email lookup must exclude it explicitly rather than assume a single match.
+  const realSchoolLinked = (linkedUsers ?? []).find((candidate) => !isPersonalWorkspace(candidate));
+  const personalLinked = (linkedUsers ?? []).find((candidate) => isPersonalWorkspace(candidate));
+  const emailUser = (emailUsers ?? []).find((candidate) => !isPersonalWorkspace(candidate));
+
+  let appUser = realSchoolLinked;
+  if (!appUser && emailUser) {
+    if (!emailUser.auth_user_id) {
+      // First Google sign-in for this contact email — link it as the login identity.
       const authRole = emailUser.auth_role ?? defaultStaffAuthRole(emailUser.role);
       const { data: connectedUser, error: connectError } = await supabaseAdmin
         .from('app_users')
@@ -274,8 +221,14 @@ export async function POST(request: Request) {
         );
       }
       appUser = connectedUser;
+    } else {
+      // Already linked to a different Supabase Auth identity (e.g. password login).
+      // Google already verified this person owns the contact email, so let them in as
+      // this teacher without touching the existing password-login identity.
+      appUser = emailUser;
     }
   }
+  appUser ??= personalLinked;
 
   if (!appUser) {
     const redirectUrl = await marketplaceLandingPath(marketplaceProfile.id);
@@ -358,6 +311,14 @@ export async function POST(request: Request) {
     });
     response.cookies.delete(ACCESS_TOKEN_COOKIE);
     return response;
+  }
+
+  if (appUser.role === 'teacher' && appUser.school_id) {
+    await notifyPendingMarketplaceInvitation({
+      userId: appUser.id,
+      schoolId: appUser.school_id,
+      email: appUser.email,
+    });
   }
 
   const accessAppToken = signAppToken({

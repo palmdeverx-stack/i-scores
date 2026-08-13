@@ -120,7 +120,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
 
   if (subscriptionQuery.isError || !subscriptionQuery.data) {
     return (
-      <Container maxWidth="md">
+      <Container maxWidth={false}>
         <Alert
           severity="error"
           action={

@@ -3,7 +3,6 @@ import type { NavSectionProps } from 'src/components/nav-section';
 import { paths } from 'src/routes/paths';
 
 import {
-  RemixIcon,
   RiMailLine,
   RiApps2Line,
   RiAdminLine,
@@ -11,6 +10,7 @@ import {
   RiBuildingLine,
   RiDashboardLine,
   RiPriceTag3Line,
+  RiSettings3Line,
   RiShieldCheckLine,
 } from 'src/components/remix-icon';
 
@@ -24,8 +24,8 @@ const ICONS = {
   systemFlow: <RiFlowChart />,
   systemQuality: <RiShieldCheckLine />,
   emailSettings: <RiMailLine />,
+  uiSettings: <RiSettings3Line />,
   apps: <RiApps2Line />,
-  worksheetAi: <RemixIcon icon="solar:magic-stick-3-bold-duotone" />,
 };
 
 // ----------------------------------------------------------------------
@@ -64,6 +64,11 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.subscription,
       },
       {
+        title: 'ตั้งค่าหน้าตาระบบ',
+        path: paths.master.uiSettings,
+        icon: ICONS.uiSettings,
+      },
+      {
         title: 'ตั้งค่าการส่งอีเมล',
         path: paths.master.emailSettings,
         icon: ICONS.emailSettings,
@@ -72,11 +77,6 @@ export const navData: NavSectionProps['data'] = [
         title: 'ระบบย่อย E-KRU',
         path: paths.master.apps,
         icon: ICONS.apps,
-      },
-      {
-        title: 'Worksheet AI (พัฒนา)',
-        path: '/launch?app=WORKSHEET_AI',
-        icon: ICONS.worksheetAi,
       },
     ],
   },

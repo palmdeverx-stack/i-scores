@@ -114,7 +114,7 @@ export function LineNotificationSettingsView() {
   }
   if (query.isError || !query.data) {
     return (
-      <Container maxWidth="md" sx={{ py: 6 }}>
+      <Container maxWidth={false} sx={{ py: 6 }}>
         <Alert severity="error">{query.error?.message ?? 'ไม่สามารถโหลดการตั้งค่า LINE ได้'}</Alert>
       </Container>
     );

@@ -35,7 +35,7 @@ export function SchoolSubscriptionGuard({ children }: { children: ReactNode }) {
 
   if (subscriptionQuery.isError || !subscriptionQuery.data) {
     return (
-      <Container maxWidth="md" sx={{ py: 5 }}>
+      <Container maxWidth={false} sx={{ py: 5 }}>
         <Alert
           severity="error"
           action={
@@ -57,7 +57,7 @@ export function SchoolSubscriptionGuard({ children }: { children: ReactNode }) {
     (!subscription.ends_at || subscription.ends_at >= today);
   if (!usable) {
     return (
-      <Container maxWidth="md" sx={{ py: 5 }}>
+      <Container maxWidth={false} sx={{ py: 5 }}>
         <Alert severity="error">
           <Typography variant="subtitle1">แพ็กเกจ{workspaceLabel}ไม่พร้อมใช้งาน</Typography>
           กรุณาตรวจสอบ License การชำระเงิน หรือวันหมดอายุ

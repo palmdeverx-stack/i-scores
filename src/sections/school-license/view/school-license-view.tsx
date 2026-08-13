@@ -28,25 +28,63 @@ import TableContainer from '@mui/material/TableContainer';
 
 import { fDate } from 'src/utils/format-time';
 
+import { SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
+
 import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 
 import { inviteMarketplaceUser } from 'src/sections/user/user-actions';
 
 import {
+  resendInvitation,
+  revokeInvitation,
   getSchoolLicenses,
   assignTeacherLicense,
   revokeTeacherLicense,
+  removeMarketplaceMember,
 } from '../school-license-actions';
 
 // ----------------------------------------------------------------------
 
 type LicenseRow = SchoolLicenseData['licenses'][number];
 
+const FEATURE_LABELS = new Map<string, string>(
+  SCHOOL_FEATURES.map((feature) => [feature.key, feature.label])
+);
+
+const MEMBER_ROLE_LABELS: Record<string, string> = {
+  owner: 'เจ้าของบัญชีโรงเรียน',
+  admin: 'ผู้ดูแลระบบ E-KRU',
+  member: 'ผู้ใช้งาน',
+};
+
+function licenseStatus(license: LicenseRow) {
+  if (license.status === 'revoked') return 'ถูกยกเลิก';
+  if (license.starts_at > new Date().toISOString()) return 'ยังไม่ถึงวันเริ่มใช้';
+  if (!license.is_current) return 'หมดอายุแล้ว';
+  return 'ใช้งานได้';
+}
+
 function teacherName(teacher: SchoolLicenseData['teachers'][number]) {
   return (
     `${teacher.name_prefix ?? ''}${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim() ||
     teacher.username
+  );
+}
+
+function memberDisplayName(
+  member: SchoolLicenseData['members'][number],
+  teachers: SchoolLicenseData['teachers']
+) {
+  const matchedTeacher = member.user?.email
+    ? teachers.find((teacher) => teacher.email?.toLowerCase() === member.user!.email.toLowerCase())
+    : undefined;
+  if (matchedTeacher) return teacherName(matchedTeacher);
+
+  return (
+    [member.user?.first_name, member.user?.last_name].filter(Boolean).join(' ') ||
+    member.user?.username ||
+    '-'
   );
 }
 
@@ -79,7 +117,36 @@ export function SchoolLicenseView() {
         ? revokeTeacherLicense(assignmentId)
         : assignTeacherLicense({ licenseId, teacherId }),
     onSuccess: async (_result, variables) => {
-      toast.success(variables.assignmentId ? 'ถอน License จากครูแล้ว' : 'มอบ License ให้ครูแล้ว');
+      toast.success(
+        variables.assignmentId ? 'ถอนสิทธิ์ใช้งานจากครูแล้ว' : 'มอบสิทธิ์ใช้งานให้ครูแล้ว'
+      );
+      await refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: removeMarketplaceMember,
+    onSuccess: async () => {
+      toast.success('นำผู้ใช้ออกจากระบบ E-KRU ของโรงเรียนแล้ว');
+      await refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const revokeInvitationMutation = useMutation({
+    mutationFn: revokeInvitation,
+    onSuccess: async () => {
+      toast.success('ยกเลิกคำเชิญแล้ว');
+      await refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const resendInvitationMutation = useMutation({
+    mutationFn: resendInvitation,
+    onSuccess: async ({ notified }) => {
+      toast.success(notified ? 'แจ้งเตือนซ้ำแล้ว และต่ออายุคำเชิญแล้ว' : 'ต่ออายุคำเชิญแล้ว');
       await refresh();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -88,7 +155,11 @@ export function SchoolLicenseView() {
   const inviteMutation = useMutation({
     mutationFn: inviteMarketplaceUser,
     onSuccess: async ({ marketplaceUser }) => {
-      toast.success(`ส่งคำเชิญไปที่ ${marketplaceUser.email} แล้ว`);
+      toast.success(
+        marketplaceUser.notified
+          ? `แจ้งเตือน ${marketplaceUser.email} แล้ว รอครูกดยอมรับ`
+          : `สร้างคำเชิญสำหรับ ${marketplaceUser.email} แล้ว จะแจ้งเตือนอัตโนมัติเมื่อครูเข้าสู่ระบบครั้งแรก`
+      );
       setInviteOpen(false);
       setInviteEmail('');
       await refresh();
@@ -103,8 +174,9 @@ export function SchoolLicenseView() {
   const usedSeats = currentLicenses
     .filter((license) => license.license_scope === 'teacher')
     .reduce((sum, license) => sum + license.used_seats, 0);
-  const pendingInvitations =
-    data?.invitations.filter((invitation) => invitation.invitation_status === 'pending').length ?? 0;
+  const pendingInvitationsList =
+    data?.invitations.filter((invitation) => invitation.invitation_status === 'pending') ?? [];
+  const pendingInvitations = pendingInvitationsList.length;
   const currentSelectedLicense =
     data?.licenses.find((license) => license.id === selectedLicense?.id) ?? selectedLicense;
 
@@ -122,10 +194,10 @@ export function SchoolLicenseView() {
       >
         <Box>
           <Typography component="h1" variant="h3">
-            License โรงเรียน
+            ระบบ E-KRU ของโรงเรียน
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-            ตรวจสอบสิทธิ์ที่ซื้อจาก Marketplace และจัดสรรที่นั่งให้ครู
+            จัดการระบบ E-KRU ที่ซื้อผ่าน Marketplace และกำหนดครูที่เข้าใช้งานได้
           </Typography>
         </Box>
         <Button
@@ -133,7 +205,7 @@ export function SchoolLicenseView() {
           startIcon={<RemixIcon icon="solar:letter-bold-duotone" />}
           onClick={() => setInviteOpen(true)}
         >
-          เชิญสมาชิก Marketplace
+          เชิญครูใช้ระบบ E-KRU
         </Button>
       </Box>
 
@@ -162,13 +234,13 @@ export function SchoolLicenseView() {
       >
         {[
           {
-            label: 'License ที่ใช้งาน',
+            label: 'ระบบที่ใช้งานได้',
             value: currentLicenses.length,
             icon: 'solar:verified-check-bold-duotone',
           },
           {
-            label: 'ที่นั่งรายครู',
-            value: totalSeats ? `${usedSeats}/${totalSeats}` : 'ไม่จำกัด',
+            label: 'ครูที่ได้รับสิทธิ์',
+            value: totalSeats ? `${usedSeats} จาก ${totalSeats}` : 'ไม่มีแบบรายครู',
             icon: 'solar:users-group-rounded-bold-duotone',
           },
           {
@@ -193,17 +265,20 @@ export function SchoolLicenseView() {
 
       <Card variant="outlined" sx={{ mb: 3 }}>
         <Box sx={{ px: 3, py: 2.5 }}>
-          <Typography variant="h6">License จาก Marketplace</Typography>
+          <Typography variant="h6">ระบบ E-KRU ที่เปิดใช้งาน</Typography>
+          <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+            ระบบที่โรงเรียนซื้อผ่าน Marketplace พร้อมจำนวนครูที่มีสิทธิ์เข้าใช้งาน
+          </Typography>
         </Box>
         <TableContainer>
           <Table sx={{ minWidth: 900 }}>
             <TableHead>
               <TableRow>
-                <TableCell>สินค้า</TableCell>
-                <TableCell>ขอบเขต</TableCell>
-                <TableCell>Feature</TableCell>
-                <TableCell>ระยะเวลา</TableCell>
-                <TableCell>ที่นั่ง</TableCell>
+                <TableCell>ชื่อระบบ E-KRU</TableCell>
+                <TableCell>ผู้ที่ใช้ได้</TableCell>
+                <TableCell>ระบบและเมนูที่ได้รับ</TableCell>
+                <TableCell>วันที่ใช้งาน</TableCell>
+                <TableCell>จำนวนผู้ใช้</TableCell>
                 <TableCell>สถานะ</TableCell>
                 <TableCell align="right">การจัดการ</TableCell>
               </TableRow>
@@ -212,7 +287,7 @@ export function SchoolLicenseView() {
               {!data?.licenses.length && !licenseQuery.isLoading && (
                 <TableRow>
                   <TableCell colSpan={7} sx={{ py: 6, textAlign: 'center' }}>
-                    ยังไม่มี License จาก Marketplace
+                    โรงเรียนยังไม่มีระบบ E-KRU ที่ซื้อผ่าน Marketplace
                   </TableCell>
                 </TableRow>
               )}
@@ -220,7 +295,7 @@ export function SchoolLicenseView() {
                 <TableRow key={license.id} hover>
                   <TableCell>
                     <Typography variant="subtitle2">
-                      {license.product?.title ?? 'สินค้า Marketplace'}
+                      {license.product?.title ?? 'ระบบ E-KRU'}
                     </Typography>
                     {license.product?.title_en && (
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -232,13 +307,21 @@ export function SchoolLicenseView() {
                     <Chip
                       size="small"
                       variant="outlined"
-                      label={license.license_scope === 'school' ? 'ทั้งโรงเรียน' : 'รายครู'}
+                      label={
+                        license.license_scope === 'school'
+                          ? 'ทุกคนในโรงเรียน'
+                          : 'เฉพาะครูที่มอบสิทธิ์'
+                      }
                     />
                   </TableCell>
                   <TableCell>
                     <Box sx={{ gap: 0.5, display: 'flex', flexWrap: 'wrap', maxWidth: 320 }}>
                       {license.feature_keys.slice(0, 3).map((feature) => (
-                        <Chip key={feature} size="small" label={feature} />
+                        <Chip
+                          key={feature}
+                          size="small"
+                          label={FEATURE_LABELS.get(feature) ?? feature}
+                        />
                       ))}
                       {license.feature_keys.length > 3 && (
                         <Chip size="small" label={`+${license.feature_keys.length - 3}`} />
@@ -252,14 +335,14 @@ export function SchoolLicenseView() {
                   </TableCell>
                   <TableCell>
                     {license.license_scope === 'school'
-                      ? 'ทุกคน'
-                      : `${license.used_seats}/${license.seat_count}`}
+                      ? 'ไม่จำกัดจำนวน'
+                      : `${license.used_seats} จาก ${license.seat_count} คน`}
                   </TableCell>
                   <TableCell>
                     <Chip
                       size="small"
                       color={license.is_current ? 'success' : 'default'}
-                      label={license.is_current ? 'ใช้งานอยู่' : 'หมดอายุ/ยกเลิก'}
+                      label={licenseStatus(license)}
                     />
                   </TableCell>
                   <TableCell align="right">
@@ -269,7 +352,7 @@ export function SchoolLicenseView() {
                         disabled={!license.is_current}
                         onClick={() => setSelectedLicense(license)}
                       >
-                        จัดสรรที่นั่ง
+                        เลือกครูที่ใช้ได้
                       </Button>
                     )}
                   </TableCell>
@@ -289,22 +372,26 @@ export function SchoolLicenseView() {
       >
         <Card variant="outlined">
           <Box sx={{ px: 3, py: 2.5 }}>
-            <Typography variant="h6">สมาชิก Marketplace ของโรงเรียน</Typography>
+            <Typography variant="h6">ผู้ใช้ระบบ E-KRU ของโรงเรียน</Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+              ครูที่ตอบรับคำเชิญและเข้าใช้ระบบ E-KRU ที่โรงเรียนซื้อได้
+            </Typography>
           </Box>
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>สมาชิก</TableCell>
+                  <TableCell>ผู้ใช้งาน</TableCell>
                   <TableCell>บทบาท</TableCell>
                   <TableCell>เข้าร่วมเมื่อ</TableCell>
+                  <TableCell align="right" />
                 </TableRow>
               </TableHead>
               <TableBody>
                 {!data?.members.length && (
                   <TableRow>
-                    <TableCell colSpan={3} sx={{ py: 5, textAlign: 'center' }}>
-                      ยังไม่มีสมาชิก
+                    <TableCell colSpan={4} sx={{ py: 5, textAlign: 'center' }}>
+                      ยังไม่มีผู้ใช้งาน
                     </TableCell>
                   </TableRow>
                 )}
@@ -312,18 +399,34 @@ export function SchoolLicenseView() {
                   <TableRow key={member.id}>
                     <TableCell>
                       <Typography variant="subtitle2">
-                        {[member.user?.first_name, member.user?.last_name]
-                          .filter(Boolean)
-                          .join(' ') ||
-                          member.user?.username ||
-                          '-'}
+                        {memberDisplayName(member, data?.teachers ?? [])}
                       </Typography>
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                         {member.user?.email}
                       </Typography>
                     </TableCell>
-                    <TableCell>{member.membership_role}</TableCell>
+                    <TableCell>
+                      {MEMBER_ROLE_LABELS[member.membership_role] ?? member.membership_role}
+                    </TableCell>
                     <TableCell>{fDate(member.joined_at)}</TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        color="error"
+                        disabled={removeMemberMutation.isPending}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `นำ ${memberDisplayName(member, data?.teachers ?? [])} ออกจากผู้ใช้ระบบ E-KRU ของโรงเรียนใช่ไหม?`
+                            )
+                          ) {
+                            removeMemberMutation.mutate(member.id);
+                          }
+                        }}
+                      >
+                        นำออก
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -333,60 +436,60 @@ export function SchoolLicenseView() {
 
         <Card variant="outlined">
           <Box sx={{ px: 3, py: 2.5 }}>
-            <Typography variant="h6">คำเชิญล่าสุด</Typography>
+            <Typography variant="h6">คำเชิญที่รอการตอบรับ</Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+              ครูในรายการนี้ยังไม่ได้กดยอมรับการใช้ระบบ E-KRU ของโรงเรียน
+            </Typography>
           </Box>
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>อีเมล</TableCell>
-                  <TableCell>สถานะ</TableCell>
-                  <TableCell>การส่งอีเมล</TableCell>
-                  <TableCell>หมดอายุ</TableCell>
+                  <TableCell>อีเมลที่เชิญ</TableCell>
+                  <TableCell>ยอมรับได้ถึง</TableCell>
+                  <TableCell align="right" />
                 </TableRow>
               </TableHead>
               <TableBody>
-                {!data?.invitations.length && (
+                {!pendingInvitationsList.length && (
                   <TableRow>
-                    <TableCell colSpan={4} sx={{ py: 5, textAlign: 'center' }}>
-                      ยังไม่มีคำเชิญ
+                    <TableCell colSpan={3} sx={{ py: 5, textAlign: 'center' }}>
+                      ไม่มีคำเชิญที่รอตอบรับ
                     </TableCell>
                   </TableRow>
                 )}
-                {data?.invitations.slice(0, 10).map((invitation) => {
-                  const status = {
-                    accepted: 'ตอบรับแล้ว',
-                    revoked: 'ยกเลิก',
-                    expired: 'หมดอายุ',
-                    pending: 'รอตอบรับ',
-                  }[invitation.invitation_status];
-                  return (
-                    <TableRow key={invitation.id}>
-                      <TableCell>{invitation.invited_email}</TableCell>
-                      <TableCell>{status}</TableCell>
-                      <TableCell>
-                        <Chip
+                {pendingInvitationsList.map((invitation) => (
+                  <TableRow key={invitation.id}>
+                    <TableCell>{invitation.invited_email}</TableCell>
+                    <TableCell>{fDate(invitation.expires_at)}</TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Button
                           size="small"
-                          color={
-                            invitation.email_delivery_status === 'sent'
-                              ? 'success'
-                              : invitation.email_delivery_status === 'failed'
-                                ? 'error'
-                                : 'warning'
-                          }
-                          label={
-                            invitation.email_delivery_status === 'sent'
-                              ? 'ส่งแล้ว'
-                              : invitation.email_delivery_status === 'failed'
-                                ? 'ส่งไม่สำเร็จ'
-                                : 'กำลังส่ง'
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>{fDate(invitation.expires_at)}</TableCell>
-                    </TableRow>
-                  );
-                })}
+                          color="inherit"
+                          disabled={resendInvitationMutation.isPending}
+                          onClick={() => resendInvitationMutation.mutate(invitation.id)}
+                        >
+                          แจ้งเตือนอีกครั้ง
+                        </Button>
+                        <Button
+                          size="small"
+                          color="error"
+                          disabled={revokeInvitationMutation.isPending}
+                          onClick={() => {
+                            if (
+                              window.confirm(`ยกเลิกคำเชิญของ ${invitation.invited_email} ใช่ไหม?`)
+                            ) {
+                              revokeInvitationMutation.mutate(invitation.id);
+                            }
+                          }}
+                        >
+                          ยกเลิก
+                        </Button>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </TableContainer>
@@ -399,11 +502,12 @@ export function SchoolLicenseView() {
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>จัดสรร License รายครู</DialogTitle>
+        <DialogTitle>เลือกครูที่ได้ใช้ระบบ E-KRU นี้</DialogTitle>
         <DialogContent dividers>
           <Alert severity="info" sx={{ mb: 2 }}>
-            ใช้แล้ว {currentSelectedLicense?.used_seats ?? 0}/
-            {currentSelectedLicense?.seat_count ?? 0} ที่นั่ง
+            มอบสิทธิ์แล้ว {currentSelectedLicense?.used_seats ?? 0} จาก{' '}
+            {currentSelectedLicense?.seat_count ?? 0} คน —
+            ทำเครื่องหมายหน้าชื่อครูเพื่อมอบหรือถอนสิทธิ์
           </Alert>
           {data?.teachers.map((teacher) => {
             const assignment = data.assignments.find(
@@ -450,7 +554,12 @@ export function SchoolLicenseView() {
                   </Typography>
                 </Box>
                 {!teacher.auth_user_id && (
-                  <Chip size="small" color="warning" label="ยังไม่เชื่อม Auth" sx={{ ml: 'auto' }} />
+                  <Chip
+                    size="small"
+                    color="warning"
+                    label="ยังไม่เชื่อมบัญชีเข้าสู่ระบบ"
+                    sx={{ ml: 'auto' }}
+                  />
                 )}
               </Box>
             );
@@ -467,16 +576,17 @@ export function SchoolLicenseView() {
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>เชิญสมาชิก Marketplace</DialogTitle>
+        <DialogTitle>เชิญครูใช้ระบบ E-KRU</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-            ส่งได้ทุกอีเมล หากผู้รับยังไม่มีบัญชี ระบบจะให้สมัครก่อนตอบรับคำเชิญ
+            กรอกอีเมลที่ตรงกับบัญชีครู ระบบจะแสดงแจ้งเตือนให้ครูกดยอมรับ หากครูยังไม่มีบัญชี
+            คำเชิญจะแสดงอัตโนมัติเมื่อครูเข้าสู่ระบบด้วยอีเมลนี้
           </Typography>
           <TextField
             autoFocus
             fullWidth
             type="email"
-            label="อีเมล Marketplace"
+            label="อีเมลของครู"
             value={inviteEmail}
             onChange={(event) => setInviteEmail(event.target.value)}
           />

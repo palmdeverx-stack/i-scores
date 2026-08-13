@@ -153,27 +153,14 @@ export function WorksheetAiView({ workspaceId }: WorksheetAiViewProps) {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#F6F7FB', color: '#172033' }}>
-      <Box
-        component="header"
-        sx={{
-          top: 0,
-          zIndex: 10,
-          position: 'sticky',
-          bgcolor: 'rgba(255,255,255,0.92)',
-          borderBottom: '1px solid',
-          borderColor: '#E8EAF1',
-          backdropFilter: 'blur(12px)',
-        }}
-      >
-        <Container
-          maxWidth="xl"
-          sx={{
-            minHeight: 72,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
+    <Box sx={{ minHeight: '100%', bgcolor: '#F6F7FB', color: '#172033' }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          sx={{ mb: 3 }}
         >
           <Stack direction="row" spacing={1.5} alignItems="center">
             <Avatar
@@ -189,36 +176,18 @@ export function WorksheetAiView({ workspaceId }: WorksheetAiViewProps) {
               <RemixIcon icon="solar:magic-stick-3-bold-duotone" width={25} />
             </Avatar>
             <Box>
-              <Typography variant="h6" sx={{ lineHeight: 1.15, fontWeight: 800 }}>
+              <Typography component="h1" variant="h5" sx={{ lineHeight: 1.15, fontWeight: 800 }}>
                 Worksheet AI
               </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 ผู้ช่วยสร้างใบงานสำหรับคุณครู
               </Typography>
             </Box>
           </Stack>
 
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip
-              size="small"
-              label="ข้อมูลตัวอย่าง"
-              color="warning"
-              variant="outlined"
-              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
-            />
-            <Button
-              color="inherit"
-              href="/teacher"
-              startIcon={<RemixIcon icon="solar:arrow-left-linear" />}
-              sx={{ color: 'text.secondary' }}
-            >
-              กลับ eKru
-            </Button>
-          </Stack>
-        </Container>
-      </Box>
+          <Chip size="small" label="ข้อมูลตัวอย่าง" color="warning" variant="outlined" />
+        </Stack>
 
-      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
         <Paper
           id="create"
           elevation={0}

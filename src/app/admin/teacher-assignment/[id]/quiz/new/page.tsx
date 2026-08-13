@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
-
 import { QuizCreateView } from 'src/sections/assignment/view/quiz-create-view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
-
-export const metadata: Metadata = { title: `สร้างแบบทดสอบ - ${CONFIG.appName}` };
 
 type Props = {
   params: Promise<{ id: string }>;

@@ -4,16 +4,12 @@ import { notFound } from 'next/navigation';
 
 import { paths } from 'src/routes/paths';
 
-import { CONFIG } from 'src/global-config';
-
 import { getSchoolDocumentTemplate } from 'src/sections/documents/document-catalog';
 import { DocumentDetailView } from 'src/sections/documents/view/document-detail-view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
-
-export const metadata: Metadata = { title: `รายละเอียดเอกสาร - ${CONFIG.appName}` };
 
 type Props = {
   params: Promise<{ slug: string }>;

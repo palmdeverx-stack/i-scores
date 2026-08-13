@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
-
 import { LessonPlanFormView } from 'src/sections/lesson-plan/view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
-
-export const metadata: Metadata = { title: `สร้างแผนการสอน - ${CONFIG.appName}` };
 
 type Props = { searchParams: Promise<{ template?: string; catalogTemplate?: string }> };
 

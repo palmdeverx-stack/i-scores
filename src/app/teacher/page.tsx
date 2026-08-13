@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
-
 import { TeacherDashboardView } from 'src/sections/teacher-dashboard/view/teacher-dashboard-view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
-
-export const metadata: Metadata = { title: `หน้าหลัก - ${CONFIG.appName}` };
 
 export default function Page() {
   return (

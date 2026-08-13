@@ -10,6 +10,7 @@ import { paths } from 'src/routes/paths';
 import { resolveEkruAppAccess } from 'src/lib/ekru-app-access';
 import { verifyAppToken, ACCESS_TOKEN_COOKIE } from 'src/lib/auth-token';
 
+import { ChatAiView } from 'src/sections/chat-ai/view/chat-ai-view';
 import { WorksheetAiView } from 'src/sections/worksheet-ai/view/worksheet-ai-view';
 
 // ----------------------------------------------------------------------
@@ -39,6 +40,9 @@ export default async function Page({ params, searchParams }: Props) {
   }
   if (result.access.appCode === 'WORKSHEET_AI') {
     return <WorksheetAiView workspaceId={result.access.workspaceId} />;
+  }
+  if (result.access.appCode === 'CHAT_AI') {
+    return <ChatAiView workspaceId={result.access.workspaceId} />;
   }
 
   return (

@@ -24,7 +24,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     .maybeSingle();
   const license = assignment?.license as unknown as { school_id: string } | null;
   if (!assignment || license?.school_id !== caller.schoolId) {
-    return NextResponse.json({ message: 'ไม่พบการจัดสรร License' }, { status: 404 });
+    return NextResponse.json({ message: 'ไม่พบการมอบสิทธิ์ใช้งานระบบ E-KRU' }, { status: 404 });
   }
 
   const { error } = await supabaseAdmin
@@ -36,4 +36,3 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   }
   return NextResponse.json({ success: true });
 }
-

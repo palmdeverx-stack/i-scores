@@ -26,6 +26,7 @@ import { StudentBottomNav } from './nav/mobile/student-bottom-nav';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
 import { MarketplaceButton } from '../components/marketplace-button';
 import { ImpersonationBanner } from '../components/impersonation-banner';
+import { ExperimentalFeedbackButton } from '../components/experimental-feedback-button';
 
 // ----------------------------------------------------------------------
 
@@ -63,9 +64,7 @@ export function MainLayout({
 
   const renderHeader = () => {
     const headerSlots: HeaderSectionProps['slots'] = {
-      topArea: (
-        <ImpersonationBanner />
-      ),
+      topArea: <ImpersonationBanner />,
       leftArea: (
         <>
           {!mobileBottom && (
@@ -87,6 +86,7 @@ export function MainLayout({
           <MainSchoolLogo />
 
           <MarketplaceButton sx={{ ml: { xs: 0.5, sm: 1.5 } }} />
+          <ExperimentalFeedbackButton />
         </>
       ),
       rightArea: (

@@ -21,8 +21,8 @@ export async function sendMarketplaceSchoolInviteEmail(params: {
   }).format(new Date(expiresAt));
 
   const html = renderBrandedEmail({
-    preheader: `คำเชิญเข้าร่วม ${schoolName} บน E-KRU Marketplace`,
-    title: 'ตอบรับคำเชิญเข้าร่วมโรงเรียน',
+    preheader: `คำเชิญใช้ระบบ E-KRU ของ ${schoolName}`,
+    title: 'ตอบรับคำเชิญใช้ระบบ E-KRU',
     actionLabel: 'ดูและยอมรับคำเชิญ',
     actionUrl: inviteUrl,
     contentHtml: `
@@ -30,12 +30,12 @@ export async function sendMarketplaceSchoolInviteEmail(params: {
         <strong style="color:#1f2937;">${escapeEmailHtml(inviterName)}</strong>
         เชิญคุณเข้าร่วม
         <strong style="color:#1f2937;">${escapeEmailHtml(schoolName)}</strong>
-        บน E-KRU Marketplace
+        เพื่อใช้ระบบ E-KRU ที่โรงเรียนมอบสิทธิ์ให้
       </p>
       <p style="margin:0;">
         ${
           recipientHasAccount
-            ? 'เข้าสู่ระบบด้วยอีเมลที่ได้รับคำเชิญ แล้วกดยอมรับเพื่อรับสิทธิ์ของโรงเรียน'
+            ? 'เข้าสู่ระบบด้วยอีเมลที่ได้รับคำเชิญ แล้วกดยอมรับเพื่อใช้ระบบ E-KRU ของโรงเรียน'
             : 'ยังไม่มีบัญชีก็สามารถกดปุ่มด้านล่าง สมัครด้วยอีเมลนี้หรือ Google แล้วกลับมาตอบรับคำเชิญได้ทันที'
         }
       </p>
@@ -48,7 +48,7 @@ export async function sendMarketplaceSchoolInviteEmail(params: {
 
   await sendEmail({
     to,
-    subject: `คำเชิญเข้าร่วม ${schoolName} บน eKru Marketplace`,
+    subject: `คำเชิญใช้ระบบ E-KRU ของ ${schoolName}`,
     html,
   });
 }

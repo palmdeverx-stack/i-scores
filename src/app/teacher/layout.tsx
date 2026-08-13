@@ -2,10 +2,15 @@
 
 import { useMemo } from 'react';
 
+import Box from '@mui/material/Box';
+
 import { navData as teacherNavData } from 'src/layouts/nav-config-teacher';
 import { DashboardLayout, SchoolHeaderIdentity } from 'src/layouts/dashboard';
 
+import { useSystemUiSettings } from 'src/sections/system-ui-settings/use-system-ui-settings';
 import { SchoolSubscriptionGuard } from 'src/sections/school-subscription/school-subscription-guard';
+import { applyDashboardExperimentalBadges } from 'src/sections/system-ui-settings/apply-experimental-menu-badges';
+import { PersonalWorkspaceImportBanner } from 'src/sections/personal-workspace-import/personal-workspace-import-banner';
 import {
   filterDashboardNav,
   useSchoolSubscription,
@@ -33,40 +38,43 @@ type Props = {
 export default function Layout({ children }: Props) {
   const { user } = useAuthContext();
   const subscriptionQuery = useSchoolSubscription(user?.school_id);
-  const navData = useMemo(
-    () => {
-      const workspaceNav = user?.is_personal_workspace
-        ? teacherNavData.map((group) => ({
-            ...group,
-            subheader: group.subheader === 'ภาพรวม' ? 'พื้นที่ส่วนตัว' : group.subheader,
-            items: group.items.filter((item) => item.title !== 'ตรวจแผนการสอน'),
-          }))
-        : teacherNavData;
-      const licensedNav = filterDashboardNav(
-        workspaceNav,
-        subscriptionQuery.data?.subscription.enabled_features ?? []
-      );
-      if (user?.is_personal_workspace) {
-        return groupPersonalWorkspaceNav(dedupeTeacherNav(licensedNav));
-      }
+  const uiSettingsQuery = useSystemUiSettings(Boolean(user));
+  const navData = useMemo(() => {
+    const workspaceNav = user?.is_personal_workspace
+      ? teacherNavData.map((group) => ({
+          ...group,
+          subheader: group.subheader === 'ภาพรวม' ? 'พื้นที่ส่วนตัว' : group.subheader,
+          items: group.items.filter((item) => item.title !== 'ตรวจแผนการสอน'),
+        }))
+      : teacherNavData;
+    const licensedNav = filterDashboardNav(
+      workspaceNav,
+      subscriptionQuery.data?.subscription.enabled_features ?? []
+    );
+    const navWithExperimentalBadge = applyDashboardExperimentalBadges(
+      licensedNav,
+      uiSettingsQuery.data?.experimentalMenuPaths ?? ['/teacher/lesson-plans']
+    );
+    if (user?.is_personal_workspace) {
+      return groupPersonalWorkspaceNav(dedupeTeacherNav(navWithExperimentalBadge));
+    }
 
-      return dedupeTeacherNav(
-        filterNavByDepartment(
-          licensedNav,
-          user?.departments ?? [],
-          user?.department_permissions ?? [],
-          !!user?.is_school_director
-        )
-      );
-    },
-    [
-      subscriptionQuery.data?.subscription.enabled_features,
-      user?.departments,
-      user?.department_permissions,
-      user?.is_school_director,
-      user?.is_personal_workspace,
-    ]
-  );
+    return dedupeTeacherNav(
+      filterNavByDepartment(
+        navWithExperimentalBadge,
+        user?.departments ?? [],
+        user?.department_permissions ?? [],
+        !!user?.is_school_director
+      )
+    );
+  }, [
+    subscriptionQuery.data?.subscription.enabled_features,
+    uiSettingsQuery.data?.experimentalMenuPaths,
+    user?.departments,
+    user?.department_permissions,
+    user?.is_school_director,
+    user?.is_personal_workspace,
+  ]);
 
   return (
     <AuthGuard>
@@ -94,7 +102,14 @@ export default function Layout({ children }: Props) {
                 },
               }}
             >
-              <SchoolSubscriptionGuard>{children}</SchoolSubscriptionGuard>
+              <SchoolSubscriptionGuard>
+                {!user?.is_personal_workspace && (
+                  <Box sx={{ px: { xs: 2, sm: 3 }, pt: 2 }}>
+                    <PersonalWorkspaceImportBanner />
+                  </Box>
+                )}
+                {children}
+              </SchoolSubscriptionGuard>
             </DashboardLayout>
           </AcceptLegalGuard>
         </MustChangePasswordGuard>

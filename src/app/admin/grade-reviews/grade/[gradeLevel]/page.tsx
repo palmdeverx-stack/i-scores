@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
-
 import { GradeReviewListView } from 'src/sections/grade-review/view/grade-review-list-view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
-
-export const metadata: Metadata = { title: `รายวิชาตามชั้นปี - ${CONFIG.appName}` };
 
 type Props = { params: Promise<{ gradeLevel: string }> };
 

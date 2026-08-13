@@ -156,6 +156,12 @@ export const SCHOOL_FEATURES = [
     description: 'สร้างใบงานและสื่อการเรียนรู้ด้วย AI',
   },
   {
+    key: 'teacher.chat_ai',
+    group: 'ระบบย่อยสำหรับครู',
+    label: 'Chat AI',
+    description: 'ผู้ช่วยแชท AI ตอบคำถามและช่วยงานสอน',
+  },
+  {
     key: 'student.subjects',
     group: 'นักเรียน',
     label: 'วิชาเรียน',

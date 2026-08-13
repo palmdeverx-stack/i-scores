@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
-
 import { GradebookView } from 'src/sections/gradebook/view/gradebook-view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
-
-export const metadata: Metadata = { title: `กรอกคะแนน - ${CONFIG.appName}` };
 
 type Props = {
   params: Promise<{ assignmentId: string }>;

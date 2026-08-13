@@ -1,11 +1,9 @@
 import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 
-import { CONFIG } from 'src/global-config';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
-import { getResendFromEmail, isResendApiKeyConfigured } from 'src/lib/resend';
-import { sendMarketplaceSchoolInviteEmail } from 'src/lib/marketplace-invite-email';
+import { notifyInvitationForAppUser } from 'src/lib/marketplace-invitations';
 
 // ----------------------------------------------------------------------
 
@@ -14,7 +12,10 @@ const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export async function POST(request: Request) {
   const caller = requireRole(request, ['school_admin']);
   if (!caller?.schoolId) {
-    return NextResponse.json({ message: 'เฉพาะผู้ดูแลโรงเรียนเท่านั้นที่ส่งคำเชิญได้' }, { status: 403 });
+    return NextResponse.json(
+      { message: 'เฉพาะผู้ดูแลโรงเรียนเท่านั้นที่ส่งคำเชิญได้' },
+      { status: 403 }
+    );
   }
 
   const body = await request.json().catch(() => null);
@@ -22,32 +23,23 @@ export async function POST(request: Request) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ message: 'กรุณากรอกอีเมลให้ถูกต้อง' }, { status: 400 });
   }
-  if (!CONFIG.marketplaceUrl) {
-    return NextResponse.json(
-      { message: 'ยังไม่ได้กำหนด NEXT_PUBLIC_MARKETPLACE_URL' },
-      { status: 503 }
-    );
-  }
-  if (!isResendApiKeyConfigured() || !(await getResendFromEmail())) {
-    return NextResponse.json(
-      { message: 'ยังไม่ได้ตั้งค่า Resend API Key หรืออีเมลผู้ส่งสำหรับส่งอีเมลจริง' },
-      { status: 503 }
-    );
-  }
 
-  const [{ data: marketplaceUser }, { data: school }, { data: inviter }] = await Promise.all([
-    supabaseAdmin
-      .from('marketplace_users')
-      .select('id, email, username, first_name, last_name')
-      .ilike('email', email)
-      .maybeSingle(),
-    supabaseAdmin.from('schools').select('id, name').eq('id', caller.schoolId).maybeSingle(),
-    supabaseAdmin
-      .from('app_users')
-      .select('first_name, last_name, username')
-      .eq('id', caller.sub)
-      .maybeSingle(),
-  ]);
+  const [{ data: marketplaceUser }, { data: school }, { data: invitedAppUser }] = await Promise.all(
+    [
+      supabaseAdmin
+        .from('marketplace_users')
+        .select('id, email, username, first_name, last_name')
+        .ilike('email', email)
+        .maybeSingle(),
+      supabaseAdmin.from('schools').select('id, name').eq('id', caller.schoolId).maybeSingle(),
+      supabaseAdmin
+        .from('app_users')
+        .select('id, is_active')
+        .eq('school_id', caller.schoolId)
+        .ilike('email', email)
+        .maybeSingle(),
+    ]
+  );
 
   if (!school) {
     return NextResponse.json({ message: 'ไม่พบข้อมูลโรงเรียน' }, { status: 404 });
@@ -63,7 +55,7 @@ export async function POST(request: Request) {
     : { data: null };
   if (member) {
     return NextResponse.json(
-      { message: 'ผู้ใช้นี้เป็นสมาชิก Marketplace ของโรงเรียนอยู่แล้ว' },
+      { message: 'ผู้ใช้นี้เชื่อมกับระบบ E-KRU ของโรงเรียนอยู่แล้ว' },
       { status: 409 }
     );
   }
@@ -89,20 +81,18 @@ export async function POST(request: Request) {
     expires_at: expiresAt,
     accepted_at: null,
     revoked_at: null,
-    email_delivery_status: 'pending',
-    email_delivery_error: null,
   };
   const invitationResult = existingInvitation
     ? await supabaseAdmin
         .from('marketplace_school_invitations')
         .update(invitationPayload)
         .eq('id', existingInvitation.id)
-        .select('id, invited_email, expires_at, email_delivery_status, last_sent_at')
+        .select('id, invited_email, expires_at')
         .single()
     : await supabaseAdmin
         .from('marketplace_school_invitations')
         .insert(invitationPayload)
-        .select('id, invited_email, expires_at, email_delivery_status, last_sent_at')
+        .select('id, invited_email, expires_at')
         .single();
   const { data: invitation, error } = invitationResult;
 
@@ -113,68 +103,29 @@ export async function POST(request: Request) {
     );
   }
 
-  const inviteUrl = new URL('/invitations/accept', CONFIG.marketplaceUrl);
-  inviteUrl.searchParams.set('token', rawToken);
-  inviteUrl.searchParams.set('email', email);
-  if (!marketplaceUser) inviteUrl.searchParams.set('mode', 'signup');
-  const inviterName =
-    [inviter?.first_name, inviter?.last_name].filter(Boolean).join(' ') ||
-    inviter?.username ||
-    'ผู้ดูแลโรงเรียน';
-
-  try {
-    await sendMarketplaceSchoolInviteEmail({
-      to: email,
+  // No email is sent — the invitee accepts in-app instead. If they already have a
+  // teacher/school_admin account in this school, surface it as a notification now;
+  // otherwise it's picked up the next time that email signs in (see sign-in route).
+  if (invitedAppUser?.is_active) {
+    await notifyInvitationForAppUser({
+      invitationId: invitation.id,
+      userId: invitedAppUser.id,
+      schoolId: caller.schoolId,
       schoolName: school.name,
-      inviterName,
-      inviteUrl: inviteUrl.toString(),
-      expiresAt,
-      recipientHasAccount: Boolean(marketplaceUser),
     });
-  } catch (emailError) {
-    console.error('Failed to send Marketplace school invitation', emailError);
-    const message = emailError instanceof Error ? emailError.message : 'Unknown email error';
-    await supabaseAdmin
-      .from('marketplace_school_invitations')
-      .update({
-        email_delivery_status: 'failed',
-        email_delivery_error: message.slice(0, 500),
-      })
-      .eq('id', invitation.id);
-    return NextResponse.json(
-      { message: 'สร้างคำเชิญแล้ว แต่ส่งอีเมลไม่สำเร็จ กรุณาลองส่งอีกครั้ง' },
-      { status: 502 }
-    );
-  }
-
-  const sentAt = new Date().toISOString();
-  const { error: sentStatusError } = await supabaseAdmin
-    .from('marketplace_school_invitations')
-    .update({
-      email_delivery_status: 'sent',
-      email_delivery_error: null,
-      last_sent_at: sentAt,
-    })
-    .eq('id', invitation.id);
-  if (sentStatusError) {
-    console.error('Failed to update Marketplace invitation delivery status', sentStatusError);
   }
 
   return NextResponse.json({
-    invitation: {
-      ...invitation,
-      email_delivery_status: 'sent',
-      last_sent_at: sentAt,
-    },
+    invitation,
     marketplaceUser: {
       id: marketplaceUser?.id ?? null,
       email,
-      displayName:
-        marketplaceUser
-          ? [marketplaceUser.first_name, marketplaceUser.last_name].filter(Boolean).join(' ') ||
-            marketplaceUser.username
-          : null,
+      displayName: marketplaceUser
+        ? [marketplaceUser.first_name, marketplaceUser.last_name].filter(Boolean).join(' ') ||
+          marketplaceUser.username
+        : null,
       accountExists: Boolean(marketplaceUser),
+      notified: Boolean(invitedAppUser?.is_active),
     },
   });
 }

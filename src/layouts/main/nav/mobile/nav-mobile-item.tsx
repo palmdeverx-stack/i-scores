@@ -15,6 +15,7 @@ export function NavItem({
   path,
   icon,
   title,
+  info,
   /********/
   open,
   active,
@@ -47,6 +48,8 @@ export function NavItem({
       <ItemIcon {...ownerState}> {navItem.renderIcon}</ItemIcon>
 
       <ItemTitle {...ownerState}>{title}</ItemTitle>
+
+      {info}
 
       {hasChild && (
         <>{open ? <ItemArrowDown {...ownerState} /> : <ItemArrowRight {...ownerState} />}</>

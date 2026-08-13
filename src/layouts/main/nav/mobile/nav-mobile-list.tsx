@@ -43,6 +43,7 @@ export function NavList({ data, sx, ...other }: NavListProps) {
       path={data.path}
       icon={data.icon}
       title={data.title}
+      info={data.info}
       // state
       open={open}
       active={isActive}

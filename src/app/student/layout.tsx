@@ -5,7 +5,9 @@ import { useMemo } from 'react';
 import { MainLayout } from 'src/layouts/main';
 import { studentNavData } from 'src/layouts/nav-config-student';
 
+import { useSystemUiSettings } from 'src/sections/system-ui-settings/use-system-ui-settings';
 import { SchoolSubscriptionGuard } from 'src/sections/school-subscription/school-subscription-guard';
+import { applyMainExperimentalBadges } from 'src/sections/system-ui-settings/apply-experimental-menu-badges';
 import {
   filterMainNav,
   useSchoolSubscription,
@@ -28,10 +30,17 @@ type Props = {
 export default function Layout({ children }: Props) {
   const { user } = useAuthContext();
   const subscriptionQuery = useSchoolSubscription(user?.school_id);
+  const uiSettingsQuery = useSystemUiSettings(Boolean(user));
   const navData = useMemo(
     () =>
-      filterMainNav(studentNavData, subscriptionQuery.data?.subscription.enabled_features ?? []),
-    [subscriptionQuery.data?.subscription.enabled_features]
+      applyMainExperimentalBadges(
+        filterMainNav(studentNavData, subscriptionQuery.data?.subscription.enabled_features ?? []),
+        uiSettingsQuery.data?.experimentalMenuPaths ?? []
+      ),
+    [
+      subscriptionQuery.data?.subscription.enabled_features,
+      uiSettingsQuery.data?.experimentalMenuPaths,
+    ]
   );
 
   return (

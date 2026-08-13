@@ -1,12 +1,8 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
-
 import { QuizCreateView } from 'src/sections/assignment/view/quiz-create-view';
 
 // ----------------------------------------------------------------------
-
-export const metadata: Metadata = { title: `สร้างแบบทดสอบ - ${CONFIG.appName}` };
 
 type Props = {
   params: Promise<{ id: string }>;

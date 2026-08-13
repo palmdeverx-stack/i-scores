@@ -119,6 +119,8 @@ export type RemixIconName = string;
 type IconRule = readonly [pattern: RegExp, icon: RemixiconComponentType];
 
 const EXACT_ICONS: Record<string, RemixiconComponentType> = {
+  'solar:eye-bold': RiEyeLine,
+  'solar:eye-closed-bold': RiEyeOffLine,
   'socials:facebook': RiFacebookFill,
   'socials:github': RiGithubFill,
   'socials:google': RiGoogleFill,

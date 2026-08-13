@@ -13,6 +13,7 @@ import { createNavItem, navItemStyles, navSectionClasses } from 'src/components/
 
 export function NavItem({
   title,
+  info,
   path,
   /********/
   open,
@@ -41,6 +42,8 @@ export function NavItem({
       {...other}
     >
       <ItemTitle {...ownerState}> {title}</ItemTitle>
+
+      {info}
 
       {hasChild && <ItemArrow {...ownerState} />}
     </ItemRoot>

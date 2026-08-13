@@ -147,14 +147,13 @@ export async function inviteMarketplaceUser(email: string) {
       id: string;
       invited_email: string;
       expires_at: string;
-      email_delivery_status: 'sent';
-      last_sent_at: string;
     };
     marketplaceUser: {
       id: string | null;
       email: string;
       displayName: string | null;
       accountExists: boolean;
+      notified: boolean;
     };
   };
 }

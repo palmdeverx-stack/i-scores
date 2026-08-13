@@ -4,11 +4,7 @@ import { redirect } from 'next/navigation';
 
 import { paths } from 'src/routes/paths';
 
-import { CONFIG } from 'src/global-config';
-
 // ----------------------------------------------------------------------
-
-export const metadata: Metadata = { title: `แก้ไขรายวิชา - ${CONFIG.appName}` };
 
 type Props = { params: Promise<{ id: string }> };
 

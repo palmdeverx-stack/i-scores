@@ -72,21 +72,18 @@ export type SchoolLicenseData = {
 export async function getSchoolLicenses(): Promise<SchoolLicenseData> {
   const response = await fetch('/api/admin/licenses');
   const json = await response.json();
-  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลด License โรงเรียนได้');
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดระบบ E-KRU ของโรงเรียนได้');
   return json;
 }
 
-export async function assignTeacherLicense(params: {
-  licenseId: string;
-  teacherId: string;
-}) {
+export async function assignTeacherLicense(params: { licenseId: string; teacherId: string }) {
   const response = await fetch('/api/admin/licenses/assignments', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   const json = await response.json();
-  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถมอบ License ได้');
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถมอบสิทธิ์ใช้งานระบบ E-KRU ได้');
   return json.assignment;
 }
 
@@ -95,5 +92,30 @@ export async function revokeTeacherLicense(assignmentId: string) {
     method: 'DELETE',
   });
   const json = await response.json();
-  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถยกเลิก License ได้');
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถถอนสิทธิ์ใช้งานระบบ E-KRU ได้');
+}
+
+export async function removeMarketplaceMember(memberId: string) {
+  const response = await fetch(`/api/admin/licenses/members/${memberId}`, {
+    method: 'DELETE',
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถนำผู้ใช้ออกจากระบบ E-KRU ได้');
+}
+
+export async function revokeInvitation(invitationId: string) {
+  const response = await fetch(`/api/admin/licenses/invitations/${invitationId}`, {
+    method: 'DELETE',
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถยกเลิกคำเชิญได้');
+}
+
+export async function resendInvitation(invitationId: string) {
+  const response = await fetch(`/api/admin/licenses/invitations/${invitationId}/resend`, {
+    method: 'POST',
+  });
+  const json = await response.json();
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถส่งคำเชิญใหม่ได้');
+  return json as { notified: boolean };
 }

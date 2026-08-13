@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { paths } from 'src/routes/paths';
 
-import { isActiveSession } from 'src/lib/session-security';
+import { getSessionStatus } from 'src/lib/session-security';
 import { writeSecurityAudit } from 'src/lib/security-audit';
 import { isCrossSiteMutation } from 'src/lib/request-security';
 import { verifyAppToken, ACCESS_TOKEN_COOKIE } from 'src/lib/auth-token';
@@ -69,9 +69,7 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isApi = pathname.startsWith('/api/');
   const area = AREA_ROLES.find(
-    ({ prefix }) =>
-      pathname === prefix ||
-      pathname.startsWith(`${prefix}/`)
+    ({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
   const isExpiredPage = pathname === paths.licenseExpired;
   if (!area && !isApi && !isExpiredPage) return NextResponse.next();
@@ -96,7 +94,26 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
-  if (!(await isActiveSession(caller))) {
+  const sessionStatus = await getSessionStatus(caller);
+
+  if (sessionStatus === 'error') {
+    // The liveness check itself failed (DB timeout/unreachable) — this is not proof the
+    // session is invalid, so never redirect to sign-in or delete the cookie for it. Fail
+    // closed (block the request) rather than silently treating the caller as logged out.
+    await writeSecurityAudit({
+      action: 'session.check_failed',
+      actorUserId: caller.sub,
+      schoolId: caller.schoolId,
+      request,
+      metadata: { role: caller.role, pathname },
+    });
+    return NextResponse.json(
+      { code: 'SESSION_CHECK_FAILED', message: 'ไม่สามารถตรวจสอบสถานะบัญชีได้ กรุณาลองใหม่อีกครั้ง' },
+      { status: 503 }
+    );
+  }
+
+  if (sessionStatus === 'inactive') {
     await writeSecurityAudit({
       action: 'session.rejected',
       actorUserId: caller.sub,
@@ -105,9 +122,17 @@ export async function proxy(request: NextRequest) {
       metadata: { role: caller.role, pathname },
     });
     const response = isApi
-      ? NextResponse.json({ message: 'Session ถูกยกเลิกหรือบัญชีถูกปิดใช้งาน' }, { status: 401 })
+      ? NextResponse.json(
+          {
+            code: 'SESSION_REJECTED',
+            message: 'Session ถูกยกเลิกหรือบัญชีถูกปิดใช้งาน',
+          },
+          { status: 401 }
+        )
       : NextResponse.redirect(new URL(paths.auth.jwt.signIn, request.url));
-    response.cookies.delete(ACCESS_TOKEN_COOKIE);
+    // Never let a stale API response delete a newer cookie issued by a concurrent
+    // sign-in/PIN request. Page navigations can safely clear the rejected cookie.
+    if (!isApi) response.cookies.delete(ACCESS_TOKEN_COOKIE);
     return response;
   }
 
@@ -148,7 +173,9 @@ export async function proxy(request: NextRequest) {
         const requiredFeatures = requiredApiFeatures(caller.role, pathname);
         if (
           requiredFeatures.length > 0 &&
-          !requiredFeatures.some((feature) => entitlements.enabledFeatures.includes(feature as never))
+          !requiredFeatures.some((feature) =>
+            entitlements.enabledFeatures.includes(feature as never)
+          )
         ) {
           return NextResponse.json(
             { message: 'License ไม่รองรับความสามารถนี้', code: 'FEATURE_NOT_INCLUDED' },

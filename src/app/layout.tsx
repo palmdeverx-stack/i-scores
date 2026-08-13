@@ -33,6 +33,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  title: CONFIG.appName,
   icons: [
     {
       rel: 'icon',

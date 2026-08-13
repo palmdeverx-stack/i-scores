@@ -111,12 +111,7 @@ const AVATAR_ACCEPT = {
   'image/webp': ['.webp'],
 };
 
-const FORM_STEPS = [
-  'ข้อมูลประจำตัว',
-  'ข้อมูลส่วนบุคคล',
-  'บัญชีเข้าใช้งาน',
-  'ข้อมูลผู้ปกครอง',
-];
+const FORM_STEPS = ['ข้อมูลประจำตัว', 'ข้อมูลส่วนบุคคล', 'บัญชีเข้าใช้งาน', 'ข้อมูลผู้ปกครอง'];
 
 type Props = {
   studentId?: string;
@@ -238,7 +233,6 @@ export function StudentFormView({
         : { ...EMPTY_VALUES, password: generatePassword() }
     );
     setShowPassword(!student);
-     
   }, [student, isEdit, reset]);
 
   const prepareAvatar = async (file: File) => {
@@ -295,7 +289,7 @@ export function StudentFormView({
 
   if (isEdit && (studentError || !student)) {
     return (
-      <Container maxWidth="md">
+      <Container maxWidth={false}>
         <Alert
           severity="error"
           action={
@@ -484,9 +478,7 @@ export function StudentFormView({
                                   >
                                     <RemixIcon
                                       icon={
-                                        showPassword
-                                          ? 'solar:eye-bold'
-                                          : 'solar:eye-closed-bold'
+                                        showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'
                                       }
                                     />
                                   </IconButton>
@@ -520,8 +512,8 @@ export function StudentFormView({
                   <>
                     <SectionTitle title="ข้อมูลผู้ปกครองหลัก" />
                     <Alert severity="info" sx={{ mb: 2.5 }}>
-                      ผู้ปกครองรายนี้จะเป็นผู้ติดต่อหลัก
-                      และสามารถเชื่อมบัญชี LINE เพิ่มเติมได้หลังยืนยันข้อมูลนักเรียน
+                      ผู้ปกครองรายนี้จะเป็นผู้ติดต่อหลัก และสามารถเชื่อมบัญชี LINE
+                      เพิ่มเติมได้หลังยืนยันข้อมูลนักเรียน
                     </Alert>
                     <Box sx={fieldGridSx}>
                       <Field.Text

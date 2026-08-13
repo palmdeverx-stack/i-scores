@@ -6,7 +6,6 @@ import { getLegalDocument } from 'src/lib/legal-documents';
 import { LegalDocumentView } from 'src/sections/legal';
 
 export const metadata: Metadata = {
-  title: `นโยบายความเป็นส่วนตัว - ${CONFIG.appName}`,
   description: 'นโยบายการเก็บรวบรวม ใช้ เปิดเผย และคุ้มครองข้อมูลส่วนบุคคลของ eKru',
 };
 

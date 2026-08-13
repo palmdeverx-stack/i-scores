@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
-
 import { SubjectFormView } from 'src/sections/subject/view/subject-form-view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
-
-export const metadata: Metadata = { title: `แก้ไขรายวิชา - ${CONFIG.appName}` };
 
 type Props = { params: Promise<{ id: string }> };
 

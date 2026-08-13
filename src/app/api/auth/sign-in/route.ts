@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { writeSecurityAudit } from 'src/lib/security-audit';
 import { isSchoolAccessUsable } from 'src/lib/school-subscription';
+import { notifyPendingMarketplaceInvitation } from 'src/lib/marketplace-invitations';
 import {
   isSignInAllowed,
   AUTH_RATE_LIMIT_RETRY_AFTER_SECONDS,
@@ -185,6 +186,14 @@ export async function POST(request: Request) {
     });
     response.cookies.delete(ACCESS_TOKEN_COOKIE);
     return response;
+  }
+
+  if (user.role === 'teacher' && user.school_id) {
+    await notifyPendingMarketplaceInvitation({
+      userId: user.id,
+      schoolId: user.school_id,
+      email: user.email,
+    });
   }
 
   const accessToken = signAppToken({

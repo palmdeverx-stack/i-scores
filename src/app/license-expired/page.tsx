@@ -10,8 +10,6 @@ import { RemixIcon } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
-export const metadata: Metadata = { title: `License หมดอายุ | ${CONFIG.appName}` };
-
 export default function LicenseExpiredPage() {
   return (
     <Container

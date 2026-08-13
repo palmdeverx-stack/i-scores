@@ -97,7 +97,7 @@ export function StudentDetailView({
 
   if (isError || !student) {
     return (
-      <Container maxWidth="md">
+      <Container maxWidth={false}>
         <Alert
           severity="error"
           action={
@@ -198,7 +198,11 @@ export function StudentDetailView({
           sx={{
             gap: 2.5,
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              md: 'repeat(3, minmax(0, 1fr))',
+            },
           }}
         >
           <InfoField label="ชื่อ–นามสกุล (ไทย)" value={fullName} />
@@ -226,7 +230,10 @@ export function StudentDetailView({
         <StudentGuardiansPanel student={student} />
       </Card>
 
-      <StudentAvatarDialog student={avatarOpen ? student : null} onClose={() => setAvatarOpen(false)} />
+      <StudentAvatarDialog
+        student={avatarOpen ? student : null}
+        onClose={() => setAvatarOpen(false)}
+      />
     </Container>
   );
 }

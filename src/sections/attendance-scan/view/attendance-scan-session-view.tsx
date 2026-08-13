@@ -155,7 +155,7 @@ export function AttendanceScanSessionView({ sessionId }: { sessionId: string }) 
 
   if (sessionQuery.isError || !sessionQuery.data) {
     return (
-      <Container maxWidth="md">
+      <Container maxWidth={false}>
         <Alert
           severity="error"
           action={

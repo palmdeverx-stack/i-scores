@@ -20,6 +20,10 @@ export const paths = {
   licenseExpired: '/license-expired',
   components: '/components',
   docs: 'https://docs.minimals.cc/',
+  apps: {
+    worksheetAi: '/apps/worksheet-ai',
+    chatAi: '/apps/chat-ai',
+  },
   // AUTH
   auth: {
     jwt: {
@@ -127,6 +131,7 @@ export const paths = {
     root: ROOTS.MASTER,
     systemFlow: `${ROOTS.MASTER}/system-flow`,
     systemQuality: `${ROOTS.MASTER}/system-quality`,
+    uiSettings: `${ROOTS.MASTER}/ui-settings`,
     emailSettings: `${ROOTS.MASTER}/email-settings`,
     apps: `${ROOTS.MASTER}/apps`,
     school: {

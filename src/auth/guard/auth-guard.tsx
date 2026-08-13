@@ -19,7 +19,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { authenticated, loading } = useAuthContext();
+  const { authenticated, loading, checkFailed } = useAuthContext();
 
   const [isChecking, setIsChecking] = useState(true);
 
@@ -30,6 +30,12 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   const checkPermissions = async (): Promise<void> => {
     if (loading) {
+      return;
+    }
+
+    // A failed liveness check (DB timeout, etc.) is not proof the user is logged out —
+    // stay on the splash screen while the provider retries instead of bouncing to sign-in.
+    if (checkFailed) {
       return;
     }
 
@@ -47,7 +53,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   useEffect(() => {
     checkPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, loading]);
+  }, [authenticated, loading, checkFailed]);
 
   if (isChecking) {
     return <SplashScreen />;
