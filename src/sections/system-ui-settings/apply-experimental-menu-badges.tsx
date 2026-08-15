@@ -15,12 +15,21 @@ function experimentalBadge() {
   );
 }
 
+function clearDashboardChildBadges(items: NavItemDataProps[]): NavItemDataProps[] {
+  return items.map((item) => ({
+    ...item,
+    info: undefined,
+    ...(item.children && { children: clearDashboardChildBadges(item.children) }),
+  }));
+}
+
 function decorateRootDashboardItems(
   items: NavItemDataProps[],
   experimentalPaths: Set<string>
 ): NavItemDataProps[] {
   return items.map((item) => ({
     ...item,
+    ...(item.children && { children: clearDashboardChildBadges(item.children) }),
     ...(experimentalPaths.has(item.path) && { info: experimentalBadge() }),
   }));
 }
