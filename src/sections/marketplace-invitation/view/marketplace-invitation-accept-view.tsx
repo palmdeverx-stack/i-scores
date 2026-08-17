@@ -69,7 +69,7 @@ export function MarketplaceInvitationAcceptView({ invitationId }: { invitationId
   const acceptMutation = useMutation({
     mutationFn: () => acceptInvitation(invitationId),
     onSuccess: async () => {
-      toast.success('เชื่อมบัญชีกับระบบ E-KRU ของโรงเรียนแล้ว');
+      toast.success('เชื่อมบัญชีกับระบบ EKRU ของโรงเรียนแล้ว');
       await queryClient.invalidateQueries({ queryKey: ['notifications'] });
       router.push(user?.role === 'school_admin' ? paths.admin.root : paths.teacher.root);
     },
@@ -116,7 +116,7 @@ export function MarketplaceInvitationAcceptView({ invitationId }: { invitationId
             </Box>
 
             <Typography component="h1" variant="h4" sx={{ fontWeight: 800 }}>
-              คำเชิญใช้ระบบ E-KRU ของโรงเรียน
+              คำเชิญใช้ระบบ EKRU ของโรงเรียน
             </Typography>
             <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
               ตรวจสอบรายละเอียดก่อนยืนยันการเข้าร่วม
@@ -204,7 +204,7 @@ export function MarketplaceInvitationAcceptView({ invitationId }: { invitationId
                       variant="caption"
                       sx={{ textAlign: 'center', color: 'text.secondary' }}
                     >
-                      เมื่อยอมรับ คุณจะใช้ระบบ E-KRU ที่โรงเรียนมอบสิทธิ์ให้ได้
+                      เมื่อยอมรับ คุณจะใช้ระบบ EKRU ที่โรงเรียนมอบสิทธิ์ให้ได้
                     </Typography>
                   </Stack>
                 ) : (

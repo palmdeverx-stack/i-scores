@@ -21,7 +21,7 @@ export type ConfigValue = {
 // ----------------------------------------------------------------------
 
 export const CONFIG: ConfigValue = {
-  appName: 'E-KRU',
+  appName: 'EKRU',
   appVersion: packageJson.version,
   serverUrl: process.env.NEXT_PUBLIC_SERVER_URL ?? '',
   marketplaceUrl: process.env.NEXT_PUBLIC_MARKETPLACE_URL ?? '',

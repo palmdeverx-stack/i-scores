@@ -5,8 +5,9 @@ import { JwtSignInView } from 'src/auth/view/jwt';
 // ----------------------------------------------------------------------
 
 export const metadata: Metadata = {
+  title: { absolute: 'EKRU' },
   description:
-    'เข้าสู่ระบบ eKru เพื่อบริหารจัดการการศึกษา การเรียน การสอน และการประเมินผลออนไลน์',
+    'EKRU (อีครู) ระบบบริหารจัดการโรงเรียนสำหรับครู บุคลากร นักเรียน และผู้ดูแลระบบ ครบทั้งการเรียน การสอน และการวัดผล',
 };
 
 export default function Page() {

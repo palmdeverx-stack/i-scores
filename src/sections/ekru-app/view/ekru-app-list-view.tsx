@@ -135,7 +135,7 @@ export function EkruAppListView() {
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box>
           <Typography component="h1" variant="h3">
-            ระบบย่อย E-KRU
+            ระบบย่อย EKRU
           </Typography>
           <Typography sx={{ mt: 0.75, color: 'text.secondary' }}>
             Master App สำหรับผูก Feature, Workspace และ Marketplace License
@@ -299,8 +299,8 @@ function EkruAppGuide() {
   return (
     <Stack spacing={3}>
       <Alert severity="info" variant="outlined">
-        ระบบย่อย E-KRU ทำหน้าที่ตรวจ Session, License, Feature และ Workspace ก่อนส่งผู้ใช้ไปยัง
-        Launch path จึงต้องตั้งค่าทั้งฝั่ง E-KRU และสินค้า Marketplace ให้ตรงกัน
+        ระบบย่อย EKRU ทำหน้าที่ตรวจ Session, License, Feature และ Workspace ก่อนส่งผู้ใช้ไปยัง
+        Launch path จึงต้องตั้งค่าทั้งฝั่ง EKRU และสินค้า Marketplace ให้ตรงกัน
       </Alert>
 
       <Grid container spacing={2}>
@@ -383,7 +383,7 @@ function EkruAppGuide() {
                 2. ตรวจว่า Provision สำเร็จและสร้าง License พร้อม Workspace แล้ว
               </Typography>
               <Typography variant="body2">
-                3. Login ที่ E-KRU ด้วย Google บัญชีเดิม แล้วเปิด <b>/launch?app=CODE</b>
+                3. Login ที่ EKRU ด้วย Google บัญชีเดิม แล้วเปิด <b>/launch?app=CODE</b>
               </Typography>
               <Typography variant="body2">
                 4. ถ้าเข้าไม่ได้ ให้ตรวจ Scope, Feature key, วันหมดอายุ และสมาชิกโรงเรียนก่อน

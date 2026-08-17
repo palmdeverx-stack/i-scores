@@ -74,7 +74,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
   const displayName = user?.displayName || user?.username || 'ผู้ใช้งาน';
   const rawRoleLabel =
     user?.is_personal_workspace || user?.role === 'marketplace_user'
-      ? 'E-KRU Marketplace'
+      ? 'EKRU Marketplace'
       : (ROLE_LABEL[user?.role] ?? 'ผู้ใช้งาน');
   const roleLabel = t(rawRoleLabel, { defaultValue: rawRoleLabel });
 

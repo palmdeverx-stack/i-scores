@@ -20,7 +20,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     .eq('id', id)
     .maybeSingle();
   if (!member || member.school_id !== caller.schoolId) {
-    return NextResponse.json({ message: 'ไม่พบผู้ใช้ระบบ E-KRU นี้' }, { status: 404 });
+    return NextResponse.json({ message: 'ไม่พบผู้ใช้ระบบ EKRU นี้' }, { status: 404 });
   }
 
   const { error } = await supabaseAdmin.from('marketplace_school_members').delete().eq('id', id);

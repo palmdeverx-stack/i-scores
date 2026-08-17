@@ -126,8 +126,8 @@ export function JwtSignInView() {
         <>
           <Field.Text
             name="username"
-            label="ชื่อผู้ใช้งาน"
-            placeholder="กรอกชื่อผู้ใช้งาน"
+            label="ชื่อผู้ใช้"
+            placeholder="กรอกชื่อผู้ใช้หรือรหัสประจำตัว"
             slotProps={{
               inputLabel: { shrink: true },
               input: {
@@ -144,7 +144,7 @@ export function JwtSignInView() {
             <Field.Text
               name="password"
               label="รหัสผ่าน"
-              placeholder="6 ตัวอักษรขึ้นไป"
+              placeholder="กรอกรหัสผ่าน"
               type={showPassword.value ? 'text' : 'password'}
               slotProps={{
                 inputLabel: { shrink: true },
@@ -247,13 +247,13 @@ export function JwtSignInView() {
       </Box>
 
       <FormHead
-        title={pinChallenge ? 'ยืนยัน PIN' : 'ยินดีต้อนรับกลับมา'}
+        title={pinChallenge ? 'ยืนยัน PIN' : 'เข้าสู่ระบบ EKRU'}
         description={
           pinChallenge?.role === 'school_admin'
             ? 'กรอกรหัสโรงเรียน 8 หลักเพื่อเข้าสู่ระบบ'
             : pinChallenge
               ? 'กรอก PIN ผู้ดูแลระบบ 8 หลักเพื่อเข้าสู่ระบบ'
-              : 'เข้าสู่ระบบบริหารจัดการการศึกษา การเรียน การสอน และการประเมินผลออนไลน์'
+              : 'ระบบบริหารจัดการโรงเรียนสำหรับครู บุคลากร นักเรียน และผู้ดูแลระบบ'
         }
         sx={{ mt: 0.5, mb: 3, textAlign: 'left' }}
       />
@@ -264,9 +264,11 @@ export function JwtSignInView() {
         </Alert>
       )}
 
-      <Form methods={methods} onSubmit={onSubmit}>
-        {renderForm()}
-      </Form>
+      <Box data-nosnippet>
+        <Form methods={methods} onSubmit={onSubmit}>
+          {renderForm()}
+        </Form>
+      </Box>
 
       {!pinChallenge && (
         <>

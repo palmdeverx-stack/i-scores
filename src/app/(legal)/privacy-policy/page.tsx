@@ -6,7 +6,7 @@ import { getLegalDocument } from 'src/lib/legal-documents';
 import { LegalDocumentView } from 'src/sections/legal';
 
 export const metadata: Metadata = {
-  description: 'นโยบายการเก็บรวบรวม ใช้ เปิดเผย และคุ้มครองข้อมูลส่วนบุคคลของ eKru',
+  description: 'นโยบายการเก็บรวบรวม ใช้ เปิดเผย และคุ้มครองข้อมูลส่วนบุคคลของ EKRU',
 };
 
 export default async function Page() {

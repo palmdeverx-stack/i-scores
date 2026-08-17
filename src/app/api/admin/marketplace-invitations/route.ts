@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     : { data: null };
   if (member) {
     return NextResponse.json(
-      { message: 'ผู้ใช้นี้เชื่อมกับระบบ E-KRU ของโรงเรียนอยู่แล้ว' },
+      { message: 'ผู้ใช้นี้เชื่อมกับระบบ EKRU ของโรงเรียนอยู่แล้ว' },
       { status: 409 }
     );
   }

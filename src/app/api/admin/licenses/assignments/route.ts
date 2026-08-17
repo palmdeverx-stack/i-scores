@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const licenseId = typeof body?.licenseId === 'string' ? body.licenseId : '';
   const teacherId = typeof body?.teacherId === 'string' ? body.teacherId : '';
   if (!licenseId || !teacherId) {
-    return NextResponse.json({ message: 'ข้อมูลระบบ E-KRU หรือครูไม่ครบถ้วน' }, { status: 400 });
+    return NextResponse.json({ message: 'ข้อมูลระบบ EKRU หรือครูไม่ครบถ้วน' }, { status: 400 });
   }
 
   const now = new Date().toISOString();
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     license.expires_at <= now
   ) {
     return NextResponse.json(
-      { message: 'ระบบ E-KRU นี้ไม่พร้อมสำหรับการมอบสิทธิ์รายครู' },
+      { message: 'ระบบ EKRU นี้ไม่พร้อมสำหรับการมอบสิทธิ์รายครู' },
       { status: 409 }
     );
   }
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
 
   if (result.error || !result.data) {
     return NextResponse.json(
-      { message: result.error?.message ?? 'ไม่สามารถมอบสิทธิ์ใช้งานระบบ E-KRU ได้' },
+      { message: result.error?.message ?? 'ไม่สามารถมอบสิทธิ์ใช้งานระบบ EKRU ได้' },
       { status: 500 }
     );
   }

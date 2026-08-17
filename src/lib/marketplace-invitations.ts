@@ -25,8 +25,8 @@ export async function notifyInvitationForAppUser(params: {
       userId: params.userId,
       schoolId: params.schoolId,
       type: 'marketplace_invite',
-      title: 'คำเชิญใช้ระบบ E-KRU',
-      body: `โรงเรียน ${params.schoolName} เชิญคุณเข้าใช้ระบบ E-KRU ที่โรงเรียนมอบสิทธิ์ให้`,
+      title: 'คำเชิญใช้ระบบ EKRU',
+      body: `โรงเรียน ${params.schoolName} เชิญคุณเข้าใช้ระบบ EKRU ที่โรงเรียนมอบสิทธิ์ให้`,
       link,
     },
   ]);
@@ -66,8 +66,8 @@ export async function notifyPendingMarketplaceInvitation(params: {
         userId: params.userId,
         schoolId: params.schoolId,
         type: 'marketplace_invite',
-        title: 'คำเชิญใช้ระบบ E-KRU',
-        body: 'คุณมีคำเชิญใช้ระบบ E-KRU ของโรงเรียนที่รอการตอบรับ กดเพื่อดูรายละเอียด',
+        title: 'คำเชิญใช้ระบบ EKRU',
+        body: 'คุณมีคำเชิญใช้ระบบ EKRU ของโรงเรียนที่รอการตอบรับ กดเพื่อดูรายละเอียด',
         link,
       },
     ]);

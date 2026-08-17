@@ -119,7 +119,7 @@ function BrandSummary() {
         <MainSchoolLogo size={48} />
         <Box>
           <Typography variant="subtitle1" sx={{ lineHeight: 1.2 }}>
-            {school?.name ?? 'eKru'}
+            {school?.name ?? 'EKRU'}
           </Typography>
           <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
             {t('brand.tagline')}
@@ -203,7 +203,7 @@ function FooterBottom() {
         }}
       >
         <Typography variant="caption">
-          © {year} eKru {t('brand.copyright')}
+          © {year} EKRU {t('brand.copyright')}
         </Typography>
         <Typography variant="caption">
           {t('brand.version')} {CONFIG.appVersion} · {t('brand.languages')}

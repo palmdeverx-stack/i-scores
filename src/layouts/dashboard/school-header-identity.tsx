@@ -38,7 +38,7 @@ export function SchoolHeaderIdentity() {
       <Box sx={{ gap: 1.25, display: 'flex', minWidth: 0, alignItems: 'center' }}>
         <Logo href={paths.teacher.root} />
         <Stack sx={{ minWidth: 0 }}>
-          <Typography variant="subtitle1">eKru</Typography>
+          <Typography variant="subtitle1">EKRU</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {t('brand.educationManagementSystem')}
           </Typography>

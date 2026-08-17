@@ -247,7 +247,7 @@ export function SubscriptionPlanCreateView() {
       </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        ราคาขาย ประเภทการขาย และระยะเวลา License กำหนดที่ E-KRU Marketplace
+        ราคาขาย ประเภทการขาย และระยะเวลา License กำหนดที่ EKRU Marketplace
         หน้านี้ใช้กำหนดขอบเขตและสิทธิ์ของแพ็กเกจเท่านั้น
       </Alert>
 

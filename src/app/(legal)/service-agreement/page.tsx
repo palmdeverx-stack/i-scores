@@ -6,7 +6,7 @@ import { getLegalDocument } from 'src/lib/legal-documents';
 import { LegalDocumentView } from 'src/sections/legal';
 
 export const metadata: Metadata = {
-  description: 'แม่แบบข้อตกลงการให้บริการ eKru สำหรับสถานศึกษา',
+  description: 'แม่แบบข้อตกลงการให้บริการ EKRU สำหรับสถานศึกษา',
 };
 
 export default async function Page() {

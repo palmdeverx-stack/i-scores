@@ -178,7 +178,7 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
         )}
 
         <Alert severity="info" sx={{ mb: 2 }}>
-          ราคาและระยะเวลา License จัดการที่ E-KRU Marketplace
+          ราคาและระยะเวลา License จัดการที่ EKRU Marketplace
         </Alert>
 
         <Typography variant="subtitle1">ข้อมูลแพ็กเกจ</Typography>

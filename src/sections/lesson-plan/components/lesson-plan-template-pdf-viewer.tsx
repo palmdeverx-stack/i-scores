@@ -1188,7 +1188,7 @@ function LessonPlanTemplatePdfDocument({
         });
 
   return (
-    <RendererDocument title={template.name} author="E-KRU">
+    <RendererDocument title={template.name} author="EKRU">
       <RendererPage size="A4" style={docStyles.page} wrap>
         {cover.logoUrl ? <RendererImage src={cover.logoUrl} style={docStyles.coverLogo} /> : null}
         <RendererText style={docStyles.coverHeading}>{displayValue(template.name)}</RendererText>

@@ -73,7 +73,7 @@ export async function PATCH(request: Request) {
   const resendFromEmail = normalizeFromEmail(body?.resendFromEmail);
   if (!resendFromEmail) {
     return NextResponse.json(
-      { message: 'รูปแบบอีเมลผู้ส่งไม่ถูกต้อง เช่น E-KRU <invite@example.com>' },
+      { message: 'รูปแบบอีเมลผู้ส่งไม่ถูกต้อง เช่น EKRU <invite@example.com>' },
       { status: 400 }
     );
   }

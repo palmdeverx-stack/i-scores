@@ -72,7 +72,7 @@ export type SchoolLicenseData = {
 export async function getSchoolLicenses(): Promise<SchoolLicenseData> {
   const response = await fetch('/api/admin/licenses');
   const json = await response.json();
-  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดระบบ E-KRU ของโรงเรียนได้');
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถโหลดระบบ EKRU ของโรงเรียนได้');
   return json;
 }
 
@@ -83,7 +83,7 @@ export async function assignTeacherLicense(params: { licenseId: string; teacherI
     body: JSON.stringify(params),
   });
   const json = await response.json();
-  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถมอบสิทธิ์ใช้งานระบบ E-KRU ได้');
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถมอบสิทธิ์ใช้งานระบบ EKRU ได้');
   return json.assignment;
 }
 
@@ -92,7 +92,7 @@ export async function revokeTeacherLicense(assignmentId: string) {
     method: 'DELETE',
   });
   const json = await response.json();
-  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถถอนสิทธิ์ใช้งานระบบ E-KRU ได้');
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถถอนสิทธิ์ใช้งานระบบ EKRU ได้');
 }
 
 export async function removeMarketplaceMember(memberId: string) {
@@ -100,7 +100,7 @@ export async function removeMarketplaceMember(memberId: string) {
     method: 'DELETE',
   });
   const json = await response.json();
-  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถนำผู้ใช้ออกจากระบบ E-KRU ได้');
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถนำผู้ใช้ออกจากระบบ EKRU ได้');
 }
 
 export async function revokeInvitation(invitationId: string) {

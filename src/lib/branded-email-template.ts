@@ -54,7 +54,7 @@ export function renderBrandedEmail(params: {
                     <td style="padding:0 0 36px;">
                       <span style="font-family:Arial,'Helvetica Neue',sans-serif; font-size:30px;
                         line-height:36px; font-weight:800; letter-spacing:-1px; color:#2563eb;">
-                        E-KRU
+                        EKRU
                       </span>
                     </td>
                   </tr>
@@ -90,7 +90,7 @@ export function renderBrandedEmail(params: {
                   <tr>
                     <td style="font-family:Arial,'Noto Sans Thai',Tahoma,sans-serif; font-size:16px;
                       line-height:26px; color:#374151;">
-                      — ทีมงาน E-KRU
+                      — ทีมงาน EKRU
                     </td>
                   </tr>
                   ${
@@ -109,7 +109,7 @@ export function renderBrandedEmail(params: {
             <tr>
               <td align="center" style="padding:28px 20px 0; font-family:Arial,'Noto Sans Thai',
                 Tahoma,sans-serif; font-size:12px; line-height:20px; color:#8b98aa;">
-                อีเมลนี้ส่งโดยระบบ E-KRU · ระบบบริหารจัดการสถานศึกษา
+                อีเมลนี้ส่งโดยระบบ EKRU · ระบบบริหารจัดการสถานศึกษา
               </td>
             </tr>
           </table>

@@ -17,8 +17,8 @@ export async function sendSchoolInviteEmail(params: {
 
   const html = renderBrandedEmail({
     preheader: `บัญชีผู้ดูแลโรงเรียน ${schoolName} พร้อมใช้งานแล้ว`,
-    title: 'ยินดีต้อนรับสู่ระบบ E-KRU',
-    actionLabel: 'เข้าสู่ระบบ E-KRU',
+    title: 'ยินดีต้อนรับสู่ระบบ EKRU',
+    actionLabel: 'เข้าสู่ระบบ EKRU',
     actionUrl: signInUrl,
     contentHtml: `
       <p style="margin:0 0 14px;">
@@ -43,12 +43,12 @@ export async function sendSchoolInviteEmail(params: {
       </table>
       <p style="margin:0;">ระบบจะให้เปลี่ยนรหัสผ่านทันทีหลังเข้าสู่ระบบครั้งแรก</p>
     `,
-    footerHtml: 'หากคุณไม่ได้เป็นผู้ดำเนินการนี้ กรุณาติดต่อผู้ดูแลระบบ E-KRU',
+    footerHtml: 'หากคุณไม่ได้เป็นผู้ดำเนินการนี้ กรุณาติดต่อผู้ดูแลระบบ EKRU',
   });
 
   await sendEmail({
     to,
-    subject: `เชิญเข้าใช้งานระบบ eKru — โรงเรียน${schoolName}`,
+    subject: `เชิญเข้าใช้งานระบบ EKRU — โรงเรียน${schoolName}`,
     html,
   });
 }

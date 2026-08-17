@@ -41,7 +41,7 @@ export default function LicenseExpiredPage() {
           startIcon={<RemixIcon icon="solar:cart-large-2-bold" />}
           sx={{ mt: 4, mx: 'auto' }}
         >
-          ต่ออายุที่ E-KRU Marketplace
+          ต่ออายุที่ EKRU Marketplace
         </Button>
       ) : null}
     </Container>

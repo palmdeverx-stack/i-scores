@@ -33,18 +33,53 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: CONFIG.appName,
-  icons: [
-    {
-      rel: 'icon',
-      url: `${CONFIG.assetsDir}/favicon.ico`,
-    },
+  applicationName: CONFIG.appName,
+  title: {
+    default: CONFIG.appName,
+    template: `%s | ${CONFIG.appName}`,
+  },
+  description:
+    'EKRU (อีครู) ระบบบริหารจัดการโรงเรียนสำหรับครู การเรียน การสอน การวัดผล และติดตามผลการเรียน',
+  keywords: [
+    'อีครู',
+    'อิครู',
+    'ekru',
+    'EKRU',
+    'E-KRU',
+    'ครู',
+    'ระบบโรงเรียน',
+    'ระบบบริหารโรงเรียน',
+    'ระบบจัดการเรียนการสอน',
+    'ระบบวัดผลการเรียน',
   ],
+  manifest: '/favicon/site.webmanifest',
+  icons: {
+    icon: [
+      { url: `${CONFIG.assetsDir}/favicon.ico`, sizes: '48x48', type: 'image/x-icon' },
+      { url: `${CONFIG.assetsDir}/favicon/favicon-32x32.png`, sizes: '32x32', type: 'image/png' },
+      { url: `${CONFIG.assetsDir}/favicon/favicon-16x16.png`, sizes: '16x16', type: 'image/png' },
+    ],
+    shortcut: `${CONFIG.assetsDir}/favicon.ico`,
+    apple: [
+      {
+        url: `${CONFIG.assetsDir}/favicon/apple-touch-icon.png`,
+        sizes: '180x180',
+        type: 'image/png',
+      },
+    ],
+  },
   openGraph: {
+    title: CONFIG.appName,
+    siteName: CONFIG.appName,
+    description:
+      'EKRU (อีครู) ระบบบริหารจัดการโรงเรียนสำหรับครู การเรียน การสอน การวัดผล และติดตามผลการเรียน',
     images: [OG_IMAGE_URL],
   },
   twitter: {
     card: 'summary_large_image',
+    title: CONFIG.appName,
+    description:
+      'EKRU (อีครู) ระบบบริหารจัดการโรงเรียนสำหรับครู การเรียน การสอน การวัดผล และติดตามผลการเรียน',
     images: [OG_IMAGE_URL],
   },
 };

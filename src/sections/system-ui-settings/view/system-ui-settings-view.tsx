@@ -75,7 +75,7 @@ export function SystemUiSettingsView() {
           ตั้งค่าหน้าตาระบบ
         </Typography>
         <Typography sx={{ mt: 0.75, color: 'text.secondary' }}>
-          การเปลี่ยนแปลงมีผลกับผู้ใช้งานทุกโรงเรียนใน E-KRU
+          การเปลี่ยนแปลงมีผลกับผู้ใช้งานทุกโรงเรียนใน EKRU
         </Typography>
       </Box>
 

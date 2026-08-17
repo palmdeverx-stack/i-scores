@@ -54,7 +54,7 @@ const FEATURE_LABELS = new Map<string, string>(
 
 const MEMBER_ROLE_LABELS: Record<string, string> = {
   owner: 'เจ้าของบัญชีโรงเรียน',
-  admin: 'ผู้ดูแลระบบ E-KRU',
+  admin: 'ผู้ดูแลระบบ EKRU',
   member: 'ผู้ใช้งาน',
 };
 
@@ -128,7 +128,7 @@ export function SchoolLicenseView() {
   const removeMemberMutation = useMutation({
     mutationFn: removeMarketplaceMember,
     onSuccess: async () => {
-      toast.success('นำผู้ใช้ออกจากระบบ E-KRU ของโรงเรียนแล้ว');
+      toast.success('นำผู้ใช้ออกจากระบบ EKRU ของโรงเรียนแล้ว');
       await refresh();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -194,10 +194,10 @@ export function SchoolLicenseView() {
       >
         <Box>
           <Typography component="h1" variant="h3">
-            ระบบ E-KRU ของโรงเรียน
+            ระบบ EKRU ของโรงเรียน
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
-            จัดการระบบ E-KRU ที่ซื้อผ่าน Marketplace และกำหนดครูที่เข้าใช้งานได้
+            จัดการระบบ EKRU ที่ซื้อผ่าน Marketplace และกำหนดครูที่เข้าใช้งานได้
           </Typography>
         </Box>
         <Button
@@ -205,7 +205,7 @@ export function SchoolLicenseView() {
           startIcon={<RemixIcon icon="solar:letter-bold-duotone" />}
           onClick={() => setInviteOpen(true)}
         >
-          เชิญครูใช้ระบบ E-KRU
+          เชิญครูใช้ระบบ EKRU
         </Button>
       </Box>
 
@@ -265,7 +265,7 @@ export function SchoolLicenseView() {
 
       <Card variant="outlined" sx={{ mb: 3 }}>
         <Box sx={{ px: 3, py: 2.5 }}>
-          <Typography variant="h6">ระบบ E-KRU ที่เปิดใช้งาน</Typography>
+          <Typography variant="h6">ระบบ EKRU ที่เปิดใช้งาน</Typography>
           <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
             ระบบที่โรงเรียนซื้อผ่าน Marketplace พร้อมจำนวนครูที่มีสิทธิ์เข้าใช้งาน
           </Typography>
@@ -274,7 +274,7 @@ export function SchoolLicenseView() {
           <Table sx={{ minWidth: 900 }}>
             <TableHead>
               <TableRow>
-                <TableCell>ชื่อระบบ E-KRU</TableCell>
+                <TableCell>ชื่อระบบ EKRU</TableCell>
                 <TableCell>ผู้ที่ใช้ได้</TableCell>
                 <TableCell>ระบบและเมนูที่ได้รับ</TableCell>
                 <TableCell>วันที่ใช้งาน</TableCell>
@@ -287,7 +287,7 @@ export function SchoolLicenseView() {
               {!data?.licenses.length && !licenseQuery.isLoading && (
                 <TableRow>
                   <TableCell colSpan={7} sx={{ py: 6, textAlign: 'center' }}>
-                    โรงเรียนยังไม่มีระบบ E-KRU ที่ซื้อผ่าน Marketplace
+                    โรงเรียนยังไม่มีระบบ EKRU ที่ซื้อผ่าน Marketplace
                   </TableCell>
                 </TableRow>
               )}
@@ -295,7 +295,7 @@ export function SchoolLicenseView() {
                 <TableRow key={license.id} hover>
                   <TableCell>
                     <Typography variant="subtitle2">
-                      {license.product?.title ?? 'ระบบ E-KRU'}
+                      {license.product?.title ?? 'ระบบ EKRU'}
                     </Typography>
                     {license.product?.title_en && (
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -372,9 +372,9 @@ export function SchoolLicenseView() {
       >
         <Card variant="outlined">
           <Box sx={{ px: 3, py: 2.5 }}>
-            <Typography variant="h6">ผู้ใช้ระบบ E-KRU ของโรงเรียน</Typography>
+            <Typography variant="h6">ผู้ใช้ระบบ EKRU ของโรงเรียน</Typography>
             <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-              ครูที่ตอบรับคำเชิญและเข้าใช้ระบบ E-KRU ที่โรงเรียนซื้อได้
+              ครูที่ตอบรับคำเชิญและเข้าใช้ระบบ EKRU ที่โรงเรียนซื้อได้
             </Typography>
           </Box>
           <TableContainer>
@@ -417,7 +417,7 @@ export function SchoolLicenseView() {
                         onClick={() => {
                           if (
                             window.confirm(
-                              `นำ ${memberDisplayName(member, data?.teachers ?? [])} ออกจากผู้ใช้ระบบ E-KRU ของโรงเรียนใช่ไหม?`
+                              `นำ ${memberDisplayName(member, data?.teachers ?? [])} ออกจากผู้ใช้ระบบ EKRU ของโรงเรียนใช่ไหม?`
                             )
                           ) {
                             removeMemberMutation.mutate(member.id);
@@ -438,7 +438,7 @@ export function SchoolLicenseView() {
           <Box sx={{ px: 3, py: 2.5 }}>
             <Typography variant="h6">คำเชิญที่รอการตอบรับ</Typography>
             <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-              ครูในรายการนี้ยังไม่ได้กดยอมรับการใช้ระบบ E-KRU ของโรงเรียน
+              ครูในรายการนี้ยังไม่ได้กดยอมรับการใช้ระบบ EKRU ของโรงเรียน
             </Typography>
           </Box>
           <TableContainer>
@@ -502,7 +502,7 @@ export function SchoolLicenseView() {
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>เลือกครูที่ได้ใช้ระบบ E-KRU นี้</DialogTitle>
+        <DialogTitle>เลือกครูที่ได้ใช้ระบบ EKRU นี้</DialogTitle>
         <DialogContent dividers>
           <Alert severity="info" sx={{ mb: 2 }}>
             มอบสิทธิ์แล้ว {currentSelectedLicense?.used_seats ?? 0} จาก{' '}
@@ -576,7 +576,7 @@ export function SchoolLicenseView() {
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>เชิญครูใช้ระบบ E-KRU</DialogTitle>
+        <DialogTitle>เชิญครูใช้ระบบ EKRU</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
             กรอกอีเมลที่ตรงกับบัญชีครู ระบบจะแสดงแจ้งเตือนให้ครูกดยอมรับ หากครูยังไม่มีบัญชี

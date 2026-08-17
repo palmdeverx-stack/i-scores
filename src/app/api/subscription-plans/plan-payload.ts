@@ -119,7 +119,7 @@ export function parsePlanPayload(body: unknown): PlanPayload | null {
     name,
     description: description || null,
     target_scope: targetScope as (typeof PLAN_TARGET_SCOPES)[number],
-    // Pricing and billing are authoritative in E-KRU Marketplace. These
+    // Pricing and billing are authoritative in EKRU Marketplace. These
     // compatibility columns are intentionally neutral in this system.
     billing_cycle: 'custom',
     price: 0,

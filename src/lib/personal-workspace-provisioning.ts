@@ -176,7 +176,7 @@ export async function finalizePersonalWorkspace(
 
 /**
  * Repairs paid individual orders created by free checkout flows that wrote a
- * buyer license but skipped the normal E-KRU provisioning callback.
+ * buyer license but skipped the normal EKRU provisioning callback.
  */
 export async function recoverPersonalWorkspacePurchases(authUserId: string) {
   const now = new Date().toISOString();
@@ -244,7 +244,7 @@ export async function recoverPersonalWorkspacePurchases(authUserId: string) {
     const planCode =
       license.grants_plan_code || planByProduct.get(license.product_id) || matchedPlan?.code;
     if (!planCode) {
-      throw new Error('Unable to map the individual license to an E-KRU subscription plan');
+      throw new Error('Unable to map the individual license to an EKRU subscription plan');
     }
 
     const { error } = await supabaseAdmin.rpc('provision_personal_workspace_purchase', {

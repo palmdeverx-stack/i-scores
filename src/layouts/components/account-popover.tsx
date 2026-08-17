@@ -76,7 +76,7 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
   const [workspaceError, setWorkspaceError] = useState('');
   const positionTitle =
     user?.is_personal_workspace || user?.role === 'marketplace_user'
-      ? 'E-KRU Marketplace'
+      ? 'EKRU Marketplace'
       : user?.position_title || POSITION_FALLBACK[user?.role] || '-';
   const workspaces: WorkspaceOption[] = Array.isArray(user?.workspaces) ? user.workspaces : [];
 

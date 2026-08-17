@@ -74,7 +74,7 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.emailSettings,
       },
       {
-        title: 'ระบบย่อย E-KRU',
+        title: 'ระบบย่อย EKRU',
         path: paths.master.apps,
         icon: ICONS.apps,
       },

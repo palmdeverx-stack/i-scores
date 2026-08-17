@@ -56,7 +56,7 @@ export function EmailSettingsView() {
           ตั้งค่าการส่งอีเมล
         </Typography>
         <Typography sx={{ mt: 0.75, color: 'text.secondary' }}>
-          กำหนดชื่อและอีเมลผู้ส่งสำหรับคำเชิญและอีเมลจากระบบ E-KRU
+          กำหนดชื่อและอีเมลผู้ส่งสำหรับคำเชิญและอีเมลจากระบบ EKRU
         </Typography>
       </Box>
 
@@ -155,7 +155,7 @@ export function EmailSettingsView() {
         <TextField
           fullWidth
           label="RESEND_FROM_EMAIL"
-          placeholder="E-KRU <invite@notify.example.com>"
+          placeholder="EKRU <invite@notify.example.com>"
           value={fromEmail}
           disabled={saveMutation.isPending}
           helperText="ต้องใช้อีเมลภายใต้โดเมนที่ Verified ใน Resend"
