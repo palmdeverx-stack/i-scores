@@ -10,8 +10,7 @@ import {
 
 // ----------------------------------------------------------------------
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function GET(request: Request) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
@@ -25,15 +24,20 @@ export async function GET(request: Request) {
   const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
   const search = searchParams.get('search')?.trim().slice(0, 200) || null;
   const classroomId = searchParams.get('classroomId') || null;
+  const semesterId = searchParams.get('semesterId') || null;
 
-  if (classroomId && !UUID_PATTERN.test(classroomId)) {
-    return NextResponse.json({ message: 'Invalid classroomId' }, { status: 400 });
+  if (
+    (classroomId && !UUID_PATTERN.test(classroomId)) ||
+    (semesterId && !UUID_PATTERN.test(semesterId))
+  ) {
+    return NextResponse.json({ message: 'Invalid filter' }, { status: 400 });
   }
 
   const { data, error } = await supabaseAdmin.rpc('search_teacher_assignments', {
     p_school_id: caller.schoolId,
     p_teacher_id: caller.role === 'teacher' ? caller.sub : null,
     p_classroom_id: classroomId,
+    p_semester_id: semesterId,
     p_search: search,
     p_limit: limit,
     p_offset: offset,
@@ -116,8 +120,7 @@ export async function POST(request: Request) {
   }
 
   const canManageAssignments =
-    caller.role === 'school_admin' ||
-    (await hasTimetableCapability(caller.sub, caller.schoolId));
+    caller.role === 'school_admin' || (await hasTimetableCapability(caller.sub, caller.schoolId));
 
   if (!canManageAssignments) {
     return NextResponse.json(
@@ -134,26 +137,26 @@ export async function POST(request: Request) {
   }
 
   const [teacherResult, subject, classroomResult, semesterResult] = await Promise.all([
-      supabaseAdmin
-        .from('app_users')
-        .select('id')
-        .eq('id', resolvedTeacherId)
-        .eq('role', 'teacher')
-        .eq('school_id', caller.schoolId)
-        .maybeSingle(),
-      loadSubjectForTeaching(caller, subjectId, semesterId),
-      supabaseAdmin
-        .from('classrooms')
-        .select('id, academic_year_id')
-        .eq('id', classroomId)
-        .eq('school_id', caller.schoolId)
-        .maybeSingle(),
-      supabaseAdmin
-        .from('semesters')
-        .select('id, academic_year_id, academic_years!inner(school_id)')
-        .eq('id', semesterId)
-        .eq('academic_years.school_id', caller.schoolId)
-        .maybeSingle(),
+    supabaseAdmin
+      .from('app_users')
+      .select('id')
+      .eq('id', resolvedTeacherId)
+      .eq('role', 'teacher')
+      .eq('school_id', caller.schoolId)
+      .maybeSingle(),
+    loadSubjectForTeaching(caller, subjectId, semesterId),
+    supabaseAdmin
+      .from('classrooms')
+      .select('id, academic_year_id')
+      .eq('id', classroomId)
+      .eq('school_id', caller.schoolId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('semesters')
+      .select('id, academic_year_id, academic_years!inner(school_id)')
+      .eq('id', semesterId)
+      .eq('academic_years.school_id', caller.schoolId)
+      .maybeSingle(),
   ]);
   const { data: teacher } = teacherResult;
   const { data: classroom } = classroomResult;

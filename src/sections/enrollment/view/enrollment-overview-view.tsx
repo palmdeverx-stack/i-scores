@@ -465,7 +465,7 @@ function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: Cl
             variant="body2"
             sx={{
               fontWeight: 600,
-              color: teachers.length ? 'text.primary' : 'warning.dark',
+              color: teachers.length ? 'text.primary' : 'error.main',
               overflow: 'hidden',
               display: '-webkit-box',
               WebkitLineClamp: 2,

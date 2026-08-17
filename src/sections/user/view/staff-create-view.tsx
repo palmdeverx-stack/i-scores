@@ -190,7 +190,7 @@ export function StaffCreateView({ userId }: { userId?: string } = {}) {
   const onSubmit = handleSubmit((values) => saveMutation.mutate(values));
 
   return (
-    <Container maxWidth="xl" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Button
         component={RouterLink}
         href={paths.admin.user.root}

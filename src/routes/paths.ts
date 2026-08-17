@@ -60,6 +60,9 @@ export const paths = {
     attendanceHistory: `${ROOTS.TEACHER}/students/attendance-history`,
     attendanceScan: `${ROOTS.TEACHER}/attendance-scan`,
     attendanceScanSession: (id: string) => `${ROOTS.TEACHER}/attendance-scan/session/${id}`,
+    dutyRoster: `${ROOTS.TEACHER}/duty-roster`,
+    dutyOperation: (scheduleId: string) => `${ROOTS.TEACHER}/duty-roster/${scheduleId}`,
+    workAttendance: `${ROOTS.TEACHER}/work-attendance`,
     assignmentAttendanceHistory: (id: string) =>
       `${ROOTS.TEACHER}/assignments/${id}/attendance-history`,
     assignmentDetail: (id: string) => `${ROOTS.TEACHER}/assignments/${id}`,
@@ -157,6 +160,9 @@ export const paths = {
     announcements: `${ROOTS.ADMIN}/announcements`,
     lineNotifications: `${ROOTS.ADMIN}/line-notifications`,
     schoolHolidays: `${ROOTS.ADMIN}/school-holidays`,
+    schoolTimeSettings: `${ROOTS.ADMIN}/school-time-settings`,
+    dutyRoster: `${ROOTS.ADMIN}/duty-roster`,
+    workAttendance: `${ROOTS.ADMIN}/work-attendance`,
     accessPermissions: `${ROOTS.ADMIN}/access-permissions`,
     masterData: {
       staffTypes: `${ROOTS.ADMIN}/master-data/staff-types`,

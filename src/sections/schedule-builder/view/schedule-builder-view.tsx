@@ -1,6 +1,9 @@
 'use client';
 
-import type { ClassroomScheduleSlot, ClassroomScheduleAssignment } from '../schedule-builder-actions';
+import type {
+  ClassroomScheduleSlot,
+  ClassroomScheduleAssignment,
+} from '../schedule-builder-actions';
 
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -32,7 +35,9 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { RouterLink } from 'src/routes/components';
 
+import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
@@ -48,11 +53,15 @@ import {
 import { useAuthContext } from 'src/auth/hooks';
 
 import { ScheduleGrid } from '../components/schedule-grid';
-import { listSchedulePeriods } from '../schedule-period-actions';
 import { AssignmentFormDialog } from '../components/assignment-form-dialog';
-import { SchedulePeriodsDialog } from '../components/schedule-periods-dialog';
 import { ScheduleSlotFormDialog } from '../components/schedule-slot-form-dialog';
 import { getScheduleMode, updateScheduleMode } from '../schedule-settings-actions';
+import {
+  listSchedulePeriods,
+  syncSchedulePeriods,
+  undoSchedulePeriodSync,
+  getSchedulePeriodSyncStatus,
+} from '../schedule-period-actions';
 import {
   addScheduleSlot,
   deleteScheduleSlot,
@@ -73,13 +82,15 @@ export function ScheduleBuilderView() {
   const [semesterId, setSemesterId] = useState('');
   const [classroomId, setClassroomId] = useState('');
   const [classroomSearch, setClassroomSearch] = useState('');
-  const [periodsDialogOpen, setPeriodsDialogOpen] = useState(false);
+  const [syncPeriodsDialogOpen, setSyncPeriodsDialogOpen] = useState(false);
+  const [undoSyncDialogOpen, setUndoSyncDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ClassroomScheduleSlot | null>(null);
   const [deletingSlot, setDeletingSlot] = useState<ClassroomScheduleSlot | null>(null);
   const [addAssignmentDialogOpen, setAddAssignmentDialogOpen] = useState(false);
-  const [deletingAssignment, setDeletingAssignment] =
-    useState<ClassroomScheduleAssignment | null>(null);
+  const [deletingAssignment, setDeletingAssignment] = useState<ClassroomScheduleAssignment | null>(
+    null
+  );
 
   const academicYearsQuery = useQuery({
     queryKey: ['schedule-builder-academic-years'],
@@ -131,6 +142,44 @@ export function ScheduleBuilderView() {
     queryKey: ['schedule-periods', semesterId],
     queryFn: () => listSchedulePeriods(semesterId),
     enabled: !!semesterId,
+  });
+
+  const syncStatusQuery = useQuery({
+    queryKey: ['schedule-period-sync-status', semesterId],
+    queryFn: () => getSchedulePeriodSyncStatus(semesterId),
+    enabled: user?.role === 'school_admin' && !!semesterId,
+  });
+
+  const syncPeriodsMutation = useMutation({
+    mutationFn: () => syncSchedulePeriods(semesterId),
+    onSuccess: async (result) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['schedule-periods', semesterId] }),
+        queryClient.invalidateQueries({ queryKey: ['classroom-schedule'] }),
+        queryClient.invalidateQueries({ queryKey: ['classroom-schedule-approval'] }),
+        queryClient.invalidateQueries({ queryKey: ['schedule-period-sync-status', semesterId] }),
+      ]);
+      setSyncPeriodsDialogOpen(false);
+      toast.success(
+        result.created || result.updated || result.deleted
+          ? `ซิงค์สำเร็จ · เพิ่ม ${result.created} อัปเดต ${result.updated} ลบส่วนเกิน ${result.deleted} ช่วง`
+          : 'คาบของภาคเรียนตรงกับเวลามาตรฐานอยู่แล้ว'
+      );
+    },
+  });
+
+  const undoSyncMutation = useMutation({
+    mutationFn: () => undoSchedulePeriodSync(semesterId),
+    onSuccess: async (result) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['schedule-periods', semesterId] }),
+        queryClient.invalidateQueries({ queryKey: ['classroom-schedule'] }),
+        queryClient.invalidateQueries({ queryKey: ['classroom-schedule-approval'] }),
+        queryClient.invalidateQueries({ queryKey: ['schedule-period-sync-status', semesterId] }),
+      ]);
+      setUndoSyncDialogOpen(false);
+      toast.success(`ย้อนกลับการซิงค์สำเร็จ · คืนค่า ${result.restoredPeriods} ช่วง`);
+    },
   });
 
   useEffect(() => {
@@ -234,8 +283,7 @@ export function ScheduleBuilderView() {
   });
 
   const removeAssignmentMutation = useMutation({
-    mutationFn: (assignment: ClassroomScheduleAssignment) =>
-      deleteTeacherAssignment(assignment.id),
+    mutationFn: (assignment: ClassroomScheduleAssignment) => deleteTeacherAssignment(assignment.id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ['classroom-schedule', classroomId, semesterId],
@@ -273,8 +321,7 @@ export function ScheduleBuilderView() {
   const wasApprovedButModified =
     approvalQuery.data?.status === 'draft' && !!approvalQuery.data.approved_at;
   const isAwaitingDirector =
-    approvalQuery.data?.status === 'submitted' &&
-    !!approvalQuery.data.submitter_signature_url;
+    approvalQuery.data?.status === 'submitted' && !!approvalQuery.data.submitter_signature_url;
 
   const approvalStatusChip = (() => {
     if (approvalQuery.data?.status === 'approved') {
@@ -293,9 +340,7 @@ export function ScheduleBuilderView() {
       return <Chip size="small" color="default" label="ยกเลิกการส่งแล้ว" />;
     }
     if (wasApprovedButModified) {
-      return (
-        <Chip size="small" color="error" label="ยืนยันแล้ว แต่มีการแก้ไข ต้องส่งยืนยันใหม่" />
-      );
+      return <Chip size="small" color="error" label="ยืนยันแล้ว แต่มีการแก้ไข ต้องส่งยืนยันใหม่" />;
     }
     return null;
   })();
@@ -396,13 +441,39 @@ export function ScheduleBuilderView() {
           </TextField>
         </Box>
         {user?.role === 'school_admin' && semesterId && scheduleMode === 'period' && (
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <Box
+            sx={{ mt: 2, gap: 1, display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end' }}
+          >
             <Button
+              variant="contained"
+              startIcon={<RemixIcon icon="solar:refresh-circle-bold" />}
+              onClick={() => {
+                syncPeriodsMutation.reset();
+                setSyncPeriodsDialogOpen(true);
+              }}
+            >
+              ซิงค์จากเวลามาตรฐาน
+            </Button>
+            {syncStatusQuery.data?.canUndo && (
+              <Button
+                color="warning"
+                variant="outlined"
+                startIcon={<RemixIcon icon="solar:undo-left-round-bold" />}
+                onClick={() => {
+                  undoSyncMutation.reset();
+                  setUndoSyncDialogOpen(true);
+                }}
+              >
+                ย้อนกลับการซิงค์ล่าสุด
+              </Button>
+            )}
+            <Button
+              component={RouterLink}
+              href={paths.admin.schoolTimeSettings}
               variant="outlined"
               startIcon={<RemixIcon icon="solar:clock-circle-bold" />}
-              onClick={() => setPeriodsDialogOpen(true)}
             >
-              ตั้งค่าคาบเรียนและเวลา
+              ตั้งค่าเวลามาตรฐานโรงเรียน
             </Button>
           </Box>
         )}
@@ -415,7 +486,7 @@ export function ScheduleBuilderView() {
           <Alert severity="warning" sx={{ mb: 3 }}>
             เปิดใช้งานแบบคาบแล้ว แต่ภาคเรียนนี้ยังไม่มีโครงสร้างคาบ{' '}
             {user?.role === 'school_admin'
-              ? 'กรุณากด “ตั้งค่าคาบเรียนและเวลา”'
+              ? 'กรุณาตั้งค่าเวลามาตรฐานโรงเรียนแล้วกดซิงค์'
               : 'กรุณาติดต่อผู้ดูแลโรงเรียนเพื่อตั้งค่าคาบเรียน'}
           </Alert>
         )}
@@ -498,9 +569,8 @@ export function ScheduleBuilderView() {
                   )}
                   {visibleClassrooms.map((classroom) => {
                     const homeroomNames = classroom.homeroom_teachers
-                      .map(
-                        (teacher) =>
-                          `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim()
+                      .map((teacher) =>
+                        `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim()
                       )
                       .filter(Boolean)
                       .join(', ');
@@ -601,9 +671,9 @@ export function ScheduleBuilderView() {
                       : 'ลงนามผู้จัดทำ'
                     : approvalQuery.data?.status === 'canceled'
                       ? 'ลงนามส่งอีกครั้ง'
-                    : wasApprovedButModified
-                      ? 'ตรวจสอบและลงนามใหม่'
-                      : 'ตรวจสอบและลงนามส่ง'}
+                      : wasApprovedButModified
+                        ? 'ตรวจสอบและลงนามใหม่'
+                        : 'ตรวจสอบและลงนามส่ง'}
                 </Button>
               )}
               {approvalQuery.data?.status === 'submitted' && (
@@ -660,7 +730,8 @@ export function ScheduleBuilderView() {
             ) : (
               <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
                 {assignments.map((assignment) => {
-                  const teacherName = `${assignment.teacher?.first_name ?? ''} ${assignment.teacher?.last_name ?? ''}`.trim();
+                  const teacherName =
+                    `${assignment.teacher?.first_name ?? ''} ${assignment.teacher?.last_name ?? ''}`.trim();
                   return (
                     <Chip
                       key={assignment.id}
@@ -693,7 +764,7 @@ export function ScheduleBuilderView() {
         key={editingSlot?.id ?? 'new'}
         open={addDialogOpen || !!editingSlot}
         assignments={assignments}
-        periods={scheduleMode === 'period' ? periodsQuery.data ?? [] : []}
+        periods={scheduleMode === 'period' ? (periodsQuery.data ?? []) : []}
         editingSlot={editingSlot}
         onClose={() => {
           setAddDialogOpen(false);
@@ -711,16 +782,86 @@ export function ScheduleBuilderView() {
         }}
       />
 
-      <SchedulePeriodsDialog
-        key={`${semesterId}-${periodsQuery.data?.length ?? 0}`}
-        open={periodsDialogOpen}
-        semesterId={semesterId}
-        periods={periodsQuery.data ?? []}
-        onClose={() => setPeriodsDialogOpen(false)}
-        onChanged={async () => {
-          await periodsQuery.refetch();
-        }}
-      />
+      <Dialog
+        open={syncPeriodsDialogOpen}
+        onClose={() => !syncPeriodsMutation.isPending && setSyncPeriodsDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>ซิงค์คาบจากเวลามาตรฐาน</DialogTitle>
+        <DialogContent>
+          {syncPeriodsMutation.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {syncPeriodsMutation.error.message}
+            </Alert>
+          )}
+          <Typography variant="body2">
+            ระบบจะเพิ่มคาบที่ยังไม่มีและอัปเดตเวลาของคาบที่ตรงกันในภาคเรียนนี้
+            ตารางสอนที่อ้างอิงคาบดังกล่าวจะเปลี่ยนเวลาตาม
+            และเอกสารที่เคยส่งอนุมัติจะกลับเป็นฉบับร่าง
+          </Typography>
+          <Alert severity="info" sx={{ mt: 2 }}>
+            คาบส่วนเกินที่ยังไม่ถูกใช้จะถูกลบ หากมีวิชาจัดอยู่ในคาบส่วนเกิน
+            ระบบจะหยุดและแจ้งให้แก้ไขก่อน
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="inherit"
+            onClick={() => setSyncPeriodsDialogOpen(false)}
+            disabled={syncPeriodsMutation.isPending}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            variant="contained"
+            loading={syncPeriodsMutation.isPending}
+            onClick={() => syncPeriodsMutation.mutate()}
+          >
+            ยืนยันการซิงค์
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={undoSyncDialogOpen}
+        onClose={() => !undoSyncMutation.isPending && setUndoSyncDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>ย้อนกลับการซิงค์ล่าสุด</DialogTitle>
+        <DialogContent>
+          {undoSyncMutation.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {undoSyncMutation.error.message}
+            </Alert>
+          )}
+          <Typography variant="body2">
+            ระบบจะคืนค่าคาบ เวลาในตารางสอน และสถานะการอนุมัติให้เหมือนก่อนซิงค์ครั้งล่าสุด
+          </Typography>
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            หากมีการแก้ไขตารางสอนหรือสถานะอนุมัติหลังซิงค์ ระบบจะไม่อนุญาตให้ย้อนกลับ
+            เพื่อป้องกันข้อมูลใหม่สูญหาย
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="inherit"
+            onClick={() => setUndoSyncDialogOpen(false)}
+            disabled={undoSyncMutation.isPending}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            color="warning"
+            variant="contained"
+            loading={undoSyncMutation.isPending}
+            onClick={() => undoSyncMutation.mutate()}
+          >
+            ยืนยันย้อนกลับ
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <AssignmentFormDialog
         open={addAssignmentDialogOpen}
@@ -759,7 +900,9 @@ export function ScheduleBuilderView() {
             color="error"
             variant="contained"
             loading={removeAssignmentMutation.isPending}
-            onClick={() => deletingAssignment && removeAssignmentMutation.mutate(deletingAssignment)}
+            onClick={() =>
+              deletingAssignment && removeAssignmentMutation.mutate(deletingAssignment)
+            }
           >
             ลบวิชานี้
           </Button>

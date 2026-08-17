@@ -80,7 +80,7 @@ export function LessonPlanReviewListView() {
   const detail = detailQuery.data;
 
   return (
-    <Container maxWidth="xl" sx={{ pb: 7 }}>
+    <Container maxWidth={false} sx={{ pb: 7 }}>
       <Box sx={{ mb: 4 }}>
         <Typography component="h1" variant="h3">
           ตรวจแผนการสอน

@@ -24,7 +24,7 @@ function parsePositiveInteger(value: string | null, fallback: number) {
 }
 
 export async function GET(request: Request) {
-  const caller = requireRole(request, ['teacher']);
+  const caller = requireRole(request, ['teacher', 'school_admin']);
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
@@ -32,6 +32,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const classroomId = searchParams.get('classroomId') ?? '';
   const studentId = searchParams.get('studentId') ?? '';
+  const search = searchParams.get('search')?.trim().slice(0, 100).toLocaleLowerCase('th') ?? '';
   const startDate = searchParams.get('startDate');
   const endDate = searchParams.get('endDate');
   const period = searchParams.get('period') ?? '';
@@ -49,24 +50,33 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: 'สถานะไม่ถูกต้อง' }, { status: 400 });
   }
 
-  const { data: homeroomRows, error: homeroomError } = await supabaseAdmin
-    .from('classroom_homeroom_teachers')
-    .select('classroom:classrooms!inner(id, name, grade_level, school_id, academic_years(year))')
-    .eq('teacher_id', caller.sub)
-    .eq('classroom.school_id', caller.schoolId);
+  const { data: homeroomRows, error: homeroomError } =
+    caller.role === 'school_admin'
+      ? await supabaseAdmin
+          .from('classrooms')
+          .select('id, name, grade_level, school_id, academic_years(year)')
+          .eq('school_id', caller.schoolId)
+      : await supabaseAdmin
+          .from('classroom_homeroom_teachers')
+          .select(
+            'classroom:classrooms!inner(id, name, grade_level, school_id, academic_years(year))'
+          )
+          .eq('teacher_id', caller.sub)
+          .eq('classroom.school_id', caller.schoolId);
 
   if (homeroomError) {
     return NextResponse.json({ message: homeroomError.message }, { status: 500 });
   }
 
-  const ownedClassrooms = (homeroomRows ?? []).flatMap((row) => {
+  const ownedClassroomIds = (homeroomRows ?? []).flatMap((row) => {
+    if ('id' in row && typeof row.id === 'string') return [row.id];
+    if (!('classroom' in row)) return [];
     const classroom = Array.isArray(row.classroom) ? row.classroom[0] : row.classroom;
-    return classroom ? [classroom] : [];
+    return classroom && typeof classroom.id === 'string' ? [classroom.id] : [];
   });
-  const ownedClassroomIds = ownedClassrooms.map((classroom) => classroom.id);
 
   if (classroomId && !ownedClassroomIds.includes(classroomId)) {
-    return NextResponse.json({ message: 'คุณไม่ใช่ครูประจำชั้นของห้องเรียนนี้' }, { status: 403 });
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึงห้องเรียนนี้' }, { status: 403 });
   }
   if (!ownedClassroomIds.length) {
     return NextResponse.json({
@@ -75,6 +85,43 @@ export async function GET(request: Request) {
       page,
       pageSize,
     });
+  }
+
+  let matchedStudentIds: string[] | null = null;
+  if (search && classroomId) {
+    const { data: enrollmentRows, error: enrollmentError } = await supabaseAdmin
+      .from('enrollments')
+      .select(
+        `student_number,
+         student:app_users!enrollments_student_id_fkey!inner(
+           id, username, first_name, last_name, student_code, school_id, role
+         )`
+      )
+      .eq('classroom_id', classroomId)
+      .eq('student.school_id', caller.schoolId)
+      .eq('student.role', 'student');
+    if (enrollmentError) {
+      return NextResponse.json({ message: enrollmentError.message }, { status: 500 });
+    }
+    matchedStudentIds = (enrollmentRows ?? []).flatMap((row) => {
+      const student = Array.isArray(row.student) ? row.student[0] : row.student;
+      if (!student) return [];
+      const searchable = [
+        row.student_number,
+        student.student_code,
+        student.username,
+        student.first_name,
+        student.last_name,
+        `${student.first_name ?? ''} ${student.last_name ?? ''}`,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('th');
+      return searchable.includes(search) ? [student.id] : [];
+    });
+    if (!matchedStudentIds.length) {
+      return NextResponse.json({ records: [], total: 0, page, pageSize });
+    }
   }
 
   const from = (page - 1) * pageSize;
@@ -101,6 +148,7 @@ export async function GET(request: Request) {
     .range(from, to);
 
   if (studentId) query = query.eq('student_id', studentId);
+  if (matchedStudentIds) query = query.in('student_id', matchedStudentIds);
   if (period) query = query.eq('period', period);
   if (status) query = query.eq('status', status);
 

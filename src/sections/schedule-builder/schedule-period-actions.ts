@@ -60,3 +60,36 @@ export async function deleteSchedulePeriod(id: string): Promise<void> {
   const response = await fetch(`/api/schedule-periods/${id}`, { method: 'DELETE' });
   await parseResponse(response);
 }
+
+export async function syncSchedulePeriods(semesterId: string): Promise<{
+  created: number;
+  updated: number;
+  deleted: number;
+}> {
+  const response = await fetch('/api/schedule-periods/sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ semesterId }),
+  });
+  const json = await parseResponse(response);
+  return json.result;
+}
+
+export async function getSchedulePeriodSyncStatus(semesterId: string): Promise<{
+  canUndo: boolean;
+  syncedAt: string | null;
+}> {
+  const response = await fetch(`/api/schedule-periods/sync?semesterId=${semesterId}`);
+  return parseResponse(response);
+}
+
+export async function undoSchedulePeriodSync(semesterId: string): Promise<{
+  restoredPeriods: number;
+  syncRunId: string;
+}> {
+  const response = await fetch(`/api/schedule-periods/sync?semesterId=${semesterId}`, {
+    method: 'DELETE',
+  });
+  const json = await parseResponse(response);
+  return json.result;
+}

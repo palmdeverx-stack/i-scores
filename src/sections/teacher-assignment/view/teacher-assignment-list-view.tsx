@@ -9,21 +9,34 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tansta
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
+import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import Tooltip from '@mui/material/Tooltip';
 import Skeleton from '@mui/material/Skeleton';
 import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
 import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
+import ToggleButton from '@mui/material/ToggleButton';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import TableContainer from '@mui/material/TableContainer';
 import InputAdornment from '@mui/material/InputAdornment';
+import TablePagination from '@mui/material/TablePagination';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
 import { RemixIcon } from 'src/components/remix-icon';
 
@@ -40,6 +53,7 @@ import {
 // ----------------------------------------------------------------------
 
 const PAGE_SIZE = 9;
+const TABLE_ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
 const summaryItems = [
   {
@@ -80,6 +94,10 @@ export function TeacherAssignmentListView() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
   const [classroomFilter, setClassroomFilter] = useState('');
+  const [semesterFilter, setSemesterFilter] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [tablePage, setTablePage] = useState(0);
+  const [tableRowsPerPage, setTableRowsPerPage] = useState(10);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<TeacherAssignment | null>(null);
   const [deletingRow, setDeletingRow] = useState<TeacherAssignment | null>(null);
@@ -89,41 +107,88 @@ export function TeacherAssignmentListView() {
   const detailPath = (id: string) =>
     isTeacher ? paths.teacher.assignmentDetail(id) : paths.admin.teacherAssignment.detail(id);
 
-  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery({
-      queryKey: [
-        'teacher-assignments',
-        'list',
-        user?.school_id,
-        user?.id,
-        classroomFilter,
-        debouncedSearch,
-      ],
-      queryFn: ({ pageParam }) =>
-        listTeacherAssignmentsPage({
-          classroomId: classroomFilter || undefined,
-          search: debouncedSearch || undefined,
-          limit: PAGE_SIZE,
-          offset: pageParam,
-        }),
-      initialPageParam: 0,
-      getNextPageParam: (lastPage, allPages) => {
-        if (!lastPage.hasMore) return undefined;
-        return allPages.reduce((total, page) => total + page.teacherAssignments.length, 0);
-      },
-      enabled: !!user?.school_id && !!user?.id,
-    });
+  const gridQuery = useInfiniteQuery({
+    queryKey: [
+      'teacher-assignments',
+      'list',
+      user?.school_id,
+      user?.id,
+      classroomFilter,
+      semesterFilter,
+      debouncedSearch,
+    ],
+    queryFn: ({ pageParam }) =>
+      listTeacherAssignmentsPage({
+        classroomId: classroomFilter || undefined,
+        semesterId: semesterFilter || undefined,
+        search: debouncedSearch || undefined,
+        limit: PAGE_SIZE,
+        offset: pageParam,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage.hasMore) return undefined;
+      return allPages.reduce((total, page) => total + page.teacherAssignments.length, 0);
+    },
+    enabled: !!user?.school_id && !!user?.id && semesterFilter !== null && viewMode === 'grid',
+  });
+
+  const tableQuery = useQuery({
+    queryKey: [
+      'teacher-assignments',
+      'table',
+      user?.school_id,
+      user?.id,
+      classroomFilter,
+      semesterFilter,
+      debouncedSearch,
+      tablePage,
+      tableRowsPerPage,
+    ],
+    queryFn: () =>
+      listTeacherAssignmentsPage({
+        classroomId: classroomFilter || undefined,
+        semesterId: semesterFilter || undefined,
+        search: debouncedSearch || undefined,
+        limit: tableRowsPerPage,
+        offset: tablePage * tableRowsPerPage,
+      }),
+    enabled: !!user?.school_id && !!user?.id && semesterFilter !== null && viewMode === 'table',
+  });
 
   const summaryQuery = useQuery({
-    queryKey: ['teacher-assignments', 'summary', user?.school_id, user?.id],
-    queryFn: getTeacherAssignmentSummary,
+    queryKey: ['teacher-assignments', 'summary', user?.school_id, user?.id, semesterFilter],
+    queryFn: () => getTeacherAssignmentSummary(semesterFilter || undefined),
     enabled: !!user?.school_id && !!user?.id,
   });
 
-  const rows = data?.pages.flatMap((page) => page.teacherAssignments) ?? [];
-  const total = data?.pages[0]?.total ?? 0;
+  useEffect(() => {
+    if (semesterFilter !== null || !summaryQuery.data) return;
+    setSemesterFilter(
+      summaryQuery.data.currentSemesterId ?? summaryQuery.data.semesterOptions[0]?.id ?? ''
+    );
+  }, [semesterFilter, summaryQuery.data]);
+
+  const gridRows = gridQuery.data?.pages.flatMap((page) => page.teacherAssignments) ?? [];
+  const tableRows = tableQuery.data?.teacherAssignments ?? [];
+  const rows = viewMode === 'grid' ? gridRows : tableRows;
+  const total =
+    viewMode === 'grid' ? (gridQuery.data?.pages[0]?.total ?? 0) : (tableQuery.data?.total ?? 0);
+  const isLoading = viewMode === 'grid' ? gridQuery.isLoading : tableQuery.isLoading;
+  const isError = viewMode === 'grid' ? gridQuery.isError : tableQuery.isError;
+  const refetch = viewMode === 'grid' ? gridQuery.refetch : tableQuery.refetch;
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = gridQuery;
   const classroomOptions = summaryQuery.data?.classroomOptions ?? [];
-  const summary = summaryQuery.data ?? { classes: 0, subjects: 0, classrooms: 0, semesters: 0 };
+  const semesterOptions = summaryQuery.data?.semesterOptions ?? [];
+  const summary = summaryQuery.data ?? {
+    classes: 0,
+    subjects: 0,
+    classrooms: 0,
+    semesters: 0,
+    classroomOptions: [],
+    semesterOptions: [],
+    currentSemesterId: null,
+  };
 
   const loadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -131,7 +196,7 @@ export function TeacherAssignmentListView() {
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel) return undefined;
+    if (!sentinel || viewMode !== 'grid') return undefined;
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting) loadMore();
@@ -139,7 +204,7 @@ export function TeacherAssignmentListView() {
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [loadMore]);
+  }, [loadMore, viewMode]);
 
   const deleteMutation = useMutation({
     mutationFn: deleteTeacherAssignment,
@@ -170,6 +235,7 @@ export function TeacherAssignmentListView() {
   const clearFilters = () => {
     setSearch('');
     setClassroomFilter('');
+    setTablePage(0);
   };
 
   return (
@@ -313,11 +379,60 @@ export function TeacherAssignmentListView() {
             flexDirection: { xs: 'column', sm: 'row' },
           }}
         >
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={viewMode}
+            aria-label="รูปแบบการแสดงผล"
+            onChange={(_, nextView: 'grid' | 'table' | null) => {
+              if (nextView) setViewMode(nextView);
+            }}
+          >
+            <ToggleButton value="grid" aria-label="มุมมองการ์ด">
+              <RemixIcon icon="solar:widget-4-bold" width={20} />
+            </ToggleButton>
+            <ToggleButton value="table" aria-label="มุมมองตาราง">
+              <RemixIcon icon="solar:list-bold" width={20} />
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          <TextField
+            select
+            label="ภาคเรียน"
+            value={semesterFilter ?? ''}
+            disabled={summaryQuery.isLoading || !semesterOptions.length}
+            onChange={(event) => {
+              setSemesterFilter(event.target.value);
+              setClassroomFilter('');
+              setTablePage(0);
+            }}
+            sx={{ width: { xs: 1, sm: 240 } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <RemixIcon icon="solar:calendar-date-bold" width={20} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          >
+            {semesterOptions.map((semester) => (
+              <MenuItem key={semester.id} value={semester.id}>
+                {semester.name} / {semester.academicYear}
+                {semester.id === summary.currentSemesterId ? ' (ปัจจุบัน)' : ''}
+              </MenuItem>
+            ))}
+          </TextField>
+
           <TextField
             select
             label="ระดับชั้น"
             value={classroomFilter}
-            onChange={(event) => setClassroomFilter(event.target.value)}
+            onChange={(event) => {
+              setClassroomFilter(event.target.value);
+              setTablePage(0);
+            }}
             sx={{ width: { xs: 1, sm: 280 } }}
             slotProps={{
               input: {
@@ -339,7 +454,10 @@ export function TeacherAssignmentListView() {
 
           <TextField
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setTablePage(0);
+            }}
             placeholder="ค้นหารายวิชา ห้องเรียน หรือภาคเรียน"
             aria-label="ค้นหาชั้นเรียน"
             sx={{ width: { xs: 1, sm: 360 } }}
@@ -352,7 +470,14 @@ export function TeacherAssignmentListView() {
                 ),
                 endAdornment: search ? (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearch('')} aria-label="ล้างคำค้นหา">
+                    <IconButton
+                      size="small"
+                      aria-label="ล้างคำค้นหา"
+                      onClick={() => {
+                        setSearch('');
+                        setTablePage(0);
+                      }}
+                    >
                       <RemixIcon icon="mingcute:close-line" width={19} />
                     </IconButton>
                   </InputAdornment>
@@ -377,7 +502,7 @@ export function TeacherAssignmentListView() {
         </Alert>
       )}
 
-      {isLoading ? (
+      {isLoading && viewMode === 'grid' ? (
         <Box
           aria-label="กำลังโหลดชั้นเรียน"
           sx={{
@@ -390,7 +515,7 @@ export function TeacherAssignmentListView() {
             <Skeleton key={item} variant="rounded" height={235} sx={{ borderRadius: 2 }} />
           ))}
         </Box>
-      ) : (
+      ) : viewMode === 'grid' ? (
         <Box
           sx={{
             gap: 2.5,
@@ -417,9 +542,141 @@ export function TeacherAssignmentListView() {
             />
           ))}
         </Box>
+      ) : (
+        <Card variant="outlined">
+          <TableContainer>
+            <Table sx={{ minWidth: 900 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>รายวิชา</TableCell>
+                  <TableCell>ครูผู้สอน</TableCell>
+                  <TableCell>ห้องเรียน</TableCell>
+                  <TableCell>ภาคเรียน</TableCell>
+                  <TableCell align="right">จัดการ</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {isLoading
+                  ? Array.from({ length: tableRowsPerPage }, (_, index) => (
+                      <TableRow key={index}>
+                        <TableCell colSpan={5}>
+                          <Skeleton height={36} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  : tableRows.map((row) => {
+                      const teacherName =
+                        `${row.teacher.first_name ?? ''} ${row.teacher.last_name ?? ''}`.trim() ||
+                        row.teacher.username;
+
+                      return (
+                        <TableRow key={row.id} hover>
+                          <TableCell>
+                            <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+                              <Avatar
+                                variant="rounded"
+                                src={row.subject.image_url ?? undefined}
+                                sx={{ width: 44, height: 44, bgcolor: 'primary.lighter' }}
+                              >
+                                <RemixIcon icon="solar:notebook-bold-duotone" />
+                              </Avatar>
+                              <Box sx={{ minWidth: 0 }}>
+                                <Typography
+                                  component={RouterLink}
+                                  href={detailPath(row.id)}
+                                  variant="subtitle2"
+                                  sx={{ color: 'text.primary', textDecoration: 'none' }}
+                                >
+                                  {row.subject.name}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  sx={{ display: 'block', color: 'text.secondary' }}
+                                >
+                                  {row.subject.code || 'ไม่มีรหัสวิชา'}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
+                              <Avatar
+                                src={row.teacher.avatar_url ?? undefined}
+                                sx={{ width: 32, height: 32, typography: 'caption' }}
+                              >
+                                {teacherName.charAt(0).toUpperCase()}
+                              </Avatar>
+                              <Typography variant="body2">{teacherName}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              size="small"
+                              variant="soft"
+                              color="primary"
+                              label={row.classroom.name}
+                            />
+                          </TableCell>
+                          <TableCell>{row.semester.name}</TableCell>
+                          <TableCell align="right">
+                            <Tooltip title="เปิดห้องเรียน">
+                              <IconButton
+                                component={RouterLink}
+                                href={detailPath(row.id)}
+                                color="primary"
+                              >
+                                <RemixIcon icon="eva:arrow-ios-forward-fill" />
+                              </IconButton>
+                            </Tooltip>
+                            {canManageAssignments && (
+                              <Tooltip title="แก้ไข">
+                                <IconButton onClick={() => openEditDialog(row)}>
+                                  <RemixIcon icon="solar:pen-bold" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            <Tooltip title="ลบ">
+                              <IconButton
+                                color="error"
+                                onClick={() => {
+                                  deleteMutation.reset();
+                                  setDeletingRow(row);
+                                }}
+                              >
+                                <RemixIcon icon="solar:trash-bin-trash-bold" />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                {!isLoading && !tableRows.length && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                      {hasFilters ? 'ไม่พบชั้นเรียนที่ค้นหา' : 'ยังไม่มีชั้นเรียนที่ได้รับมอบหมาย'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={total}
+            page={tablePage}
+            rowsPerPage={tableRowsPerPage}
+            rowsPerPageOptions={TABLE_ROWS_PER_PAGE_OPTIONS}
+            labelRowsPerPage="แถวต่อหน้า"
+            onPageChange={(_, nextPage) => setTablePage(nextPage)}
+            onRowsPerPageChange={(event) => {
+              setTableRowsPerPage(Number(event.target.value));
+              setTablePage(0);
+            }}
+          />
+        </Card>
       )}
 
-      {!isLoading && !isError && !!rows.length && (
+      {viewMode === 'grid' && !isLoading && !isError && !!rows.length && (
         <Box ref={sentinelRef} sx={{ mt: 2.5 }}>
           {isFetchingNextPage && (
             <Box
@@ -442,7 +699,7 @@ export function TeacherAssignmentListView() {
         </Box>
       )}
 
-      {!isLoading && !isError && !rows.length && (
+      {viewMode === 'grid' && !isLoading && !isError && !rows.length && (
         <Card variant="outlined" sx={{ py: 7, px: 3, textAlign: 'center' }}>
           <Box
             sx={{

@@ -8,8 +8,10 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
+import Tabs from '@mui/material/Tabs';
 import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
@@ -42,6 +44,7 @@ import { BulkPromoteDialog } from '../components/bulk-promote-dialog';
 import { EnrollmentFormDialog } from '../components/enrollment-form-dialog';
 import { StudentProgressDialog } from '../components/student-progress-dialog';
 import { DeleteEnrollmentDialog } from '../components/delete-enrollment-dialog';
+import { ClassroomAttendancePanel } from '../components/classroom-attendance-panel';
 import {
   listEnrollments,
   updateEnrollment,
@@ -85,6 +88,9 @@ export function EnrollmentListView({ initialClassroomId, classroomMode = false }
   const [editingEnrollment, setEditingEnrollment] = useState<Enrollment | null>(null);
   const [deletingEnrollment, setDeletingEnrollment] = useState<Enrollment | null>(null);
   const [dialogClassroomId, setDialogClassroomId] = useState('');
+  const [classroomTab, setClassroomTab] = useState<'students' | 'homeroom' | 'subjects'>(
+    'students'
+  );
   const queryClient = useQueryClient();
 
   const {
@@ -283,14 +289,16 @@ export function EnrollmentListView({ initialClassroomId, classroomMode = false }
               เลื่อนชั้นยกชุด
             </Button>
           )}
-          <Button
-            variant="contained"
-            onClick={() => openCreateDialog()}
-            disabled={classroomMode && !selectedFilterClassroom}
-            startIcon={<RemixIcon icon="solar:user-plus-bold" />}
-          >
-            เพิ่มนักเรียนเข้าชั้นเรียน
-          </Button>
+          {(!classroomMode || classroomTab === 'students') && (
+            <Button
+              variant="contained"
+              onClick={() => openCreateDialog()}
+              disabled={classroomMode && !selectedFilterClassroom}
+              startIcon={<RemixIcon icon="solar:user-plus-bold" />}
+            >
+              เพิ่มนักเรียนเข้าชั้นเรียน
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -434,39 +442,56 @@ export function EnrollmentListView({ initialClassroomId, classroomMode = false }
         </Box>
       )}
 
-      <Card variant="outlined">
-        <Box
-          sx={{
-            gap: 2,
-            px: 3,
-            py: 2.5,
-            display: 'flex',
-            alignItems: { xs: 'stretch', md: 'center' },
-            flexDirection: { xs: 'column', md: 'row' },
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Box>
-            <Typography component="h2" variant="h6">
-              {selectedFilterClassroom ? `รายชื่อนักเรียน` : 'รายชื่อนักเรียนทั้งหมด'}
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              {isLoading ? 'กำลังโหลด...' : `พบ ${filteredRows.length} รายการ`}
-            </Typography>
-          </Box>
-          <Box sx={{ gap: 1.5, display: 'flex', flexDirection: { xs: 'column', sm: 'row' } }}>
+      {classroomMode && selectedFilterClassroom && (
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <Box
+            sx={{
+              gap: 2,
+              pr: { xs: 2, md: 2.5 },
+              py:2,
+              display: 'flex',
+              alignItems: { xs: 'stretch', md: 'center' },
+              flexDirection: { xs: 'column', md: 'row' },
+              justifyContent: 'space-between',
+            }}
+          >
+            <Tabs
+              value={classroomTab}
+              onChange={(_event, value: 'students' | 'homeroom' | 'subjects') =>
+                setClassroomTab(value)
+              }
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{ px: { xs: 1, sm: 2 } }}
+            >
+              <Tab
+                value="students"
+                label="รายชื่อนักเรียน"
+                icon={<RemixIcon icon="solar:users-group-rounded-bold" width={20} />}
+                iconPosition="start"
+              />
+              <Tab
+                value="homeroom"
+                label="เข้าเรียน–เลิกเรียน"
+                icon={<RemixIcon icon="solar:clock-circle-bold" width={20} />}
+                iconPosition="start"
+              />
+              <Tab
+                value="subjects"
+                label="การเข้าเรียนรายวิชา"
+                icon={<RemixIcon icon="solar:notebook-bold-duotone" width={20} />}
+                iconPosition="start"
+              />
+            </Tabs>
             <TextField
               size="small"
               value={search}
+              placeholder="ค้นหาเลขที่หรือชื่อนักเรียน"
               onChange={(event) => {
                 setSearch(event.target.value);
                 table.onResetPage();
               }}
-              placeholder="ค้นหานักเรียนหรือเลขที่"
-              aria-label="ค้นหารายการลงทะเบียน"
-              sx={{ width: { xs: 1, sm: 270 } }}
+              sx={{ mx: { xs: 2, md: 0 }, mb: { xs: 2, md: 0 }, minWidth: { md: 280 } }}
               slotProps={{
                 input: {
                   startAdornment: (
@@ -477,186 +502,246 @@ export function EnrollmentListView({ initialClassroomId, classroomMode = false }
                 },
               }}
             />
-            {!classroomMode && (
-              <TextField
-                select
-                size="small"
-                label="ห้องเรียน"
-                value={classroomFilter}
-                onChange={(event) => {
-                  setClassroomFilter(event.target.value);
-                  table.onResetPage();
-                }}
-                sx={{ minWidth: { xs: 1, sm: 180 } }}
-              >
-                <MenuItem value="all">ทุกห้องเรียน</MenuItem>
-                {classrooms.map((classroom) => (
-                  <MenuItem key={classroom.id} value={classroom.id}>
-                    {classroom.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
           </Box>
-        </Box>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>นักเรียน</TableCell>
-                <TableCell>ชื่อผู้ใช้งาน</TableCell>
-                <TableCell>ห้องเรียน</TableCell>
-                <TableCell>เลขที่</TableCell>
-                <TableCell width={180}>สถานะการเรียน</TableCell>
-                <TableCell align="right">จัดการ</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={6}>กำลังโหลด...</TableCell>
-                </TableRow>
-              )}
-              {!isLoading && !filteredRows.length && (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
-                  >
-                    {rows.length ? 'ไม่พบรายการที่ตรงกับการค้นหา' : 'ยังไม่มีนักเรียนในห้อง'}
-                  </TableCell>
-                </TableRow>
-              )}
-              {visibleRows.map((row) => {
-                const studentName =
-                  `${row.student.first_name ?? ''} ${row.student.last_name ?? ''}`.trim() ||
-                  row.student.username;
+        </Card>
+      )}
 
-                return (
-                  <TableRow key={row.id} hover>
-                    <TableCell>
-                      <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
-                        <Avatar
-                          sx={{
-                            width: 36,
-                            height: 36,
-                            bgcolor: 'primary.lighter',
-                            color: 'primary.main',
-                            typography: 'subtitle2',
-                          }}
-                        >
-                          {studentName.charAt(0).toUpperCase()}
-                        </Avatar>
-                        <Typography variant="subtitle2">{studentName}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        @{row.student.username}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        variant="soft"
-                        color="primary"
-                        label={row.classroom.name}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="subtitle2">{row.student_number ?? '-'}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        select
-                        size="small"
-                        fullWidth
-                        value={row.student.student_status ?? 'studying'}
-                        disabled={
-                          statusMutation.isPending &&
-                          statusMutation.variables?.studentId === row.student.id
-                        }
-                        onChange={(event) =>
-                          statusMutation.mutate({
-                            studentId: row.student.id,
-                            status: event.target.value as StudentStatus,
-                          })
-                        }
-                        slotProps={{
-                          select: {
-                            renderValue: (value) => (
-                              <Label
-                                variant="soft"
-                                color={STUDENT_STATUS_COLOR[value as StudentStatus]}
-                              >
-                                {STUDENT_STATUS_LABEL[value as StudentStatus]}
-                              </Label>
-                            ),
-                          },
-                        }}
-                      >
-                        {(Object.keys(STUDENT_STATUS_LABEL) as StudentStatus[]).map((status) => (
-                          <MenuItem key={status} value={status}>
-                            {STUDENT_STATUS_LABEL[status]}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ gap: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => setProgressEnrollmentId(row.id)}
-                          startIcon={<RemixIcon icon="solar:list-bold" />}
-                        >
-                          ผลการเรียน
-                        </Button>
-                        <IconButton
-                          size="small"
-                          onClick={() => openEditDialog(row)}
-                          aria-label={`แก้ไขการลงทะเบียนของ ${studentName}`}
-                        >
-                          <RemixIcon icon="solar:pen-bold" width={18} />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => {
-                            deleteMutation.reset();
-                            setDeletingEnrollment(row);
-                          }}
-                          aria-label={`ลบการลงทะเบียนของ ${studentName}`}
-                        >
-                          <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
-                        </IconButton>
-                      </Box>
+      {classroomMode && selectedFilterClassroom && classroomTab !== 'students' && (
+        <ClassroomAttendancePanel
+          classroomId={selectedFilterClassroom.id}
+          academicYearId={selectedFilterClassroom.academic_year_id}
+          mode={classroomTab}
+          search={search}
+        />
+      )}
+
+      {(!classroomMode || classroomTab === 'students') && (
+        <Card variant="outlined">
+          <Box
+            sx={{
+              gap: 2,
+              px: 3,
+              py: 2.5,
+              display: 'flex',
+              alignItems: { xs: 'stretch', md: 'center' },
+              flexDirection: { xs: 'column', md: 'row' },
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box>
+              <Typography component="h2" variant="h6">
+                {selectedFilterClassroom ? `รายชื่อนักเรียน` : 'รายชื่อนักเรียนทั้งหมด'}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {isLoading ? 'กำลังโหลด...' : `พบ ${filteredRows.length} รายการ`}
+              </Typography>
+            </Box>
+            <Box sx={{ gap: 1.5, display: 'flex', flexDirection: { xs: 'column', sm: 'row' } }}>
+              {!classroomMode && (
+                <TextField
+                  size="small"
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    table.onResetPage();
+                  }}
+                  placeholder="ค้นหานักเรียนหรือเลขที่"
+                  aria-label="ค้นหารายการลงทะเบียน"
+                  sx={{ width: { xs: 1, sm: 270 } }}
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <RemixIcon icon="eva:search-fill" />
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              )}
+              {!classroomMode && (
+                <TextField
+                  select
+                  size="small"
+                  label="ห้องเรียน"
+                  value={classroomFilter}
+                  onChange={(event) => {
+                    setClassroomFilter(event.target.value);
+                    table.onResetPage();
+                  }}
+                  sx={{ minWidth: { xs: 1, sm: 180 } }}
+                >
+                  <MenuItem value="all">ทุกห้องเรียน</MenuItem>
+                  {classrooms.map((classroom) => (
+                    <MenuItem key={classroom.id} value={classroom.id}>
+                      {classroom.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            </Box>
+          </Box>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>นักเรียน</TableCell>
+                  <TableCell>ชื่อผู้ใช้งาน</TableCell>
+                  <TableCell>ห้องเรียน</TableCell>
+                  <TableCell>เลขที่</TableCell>
+                  <TableCell width={180}>สถานะการเรียน</TableCell>
+                  <TableCell align="right">จัดการ</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={6}>กำลังโหลด...</TableCell>
+                  </TableRow>
+                )}
+                {!isLoading && !filteredRows.length && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
+                    >
+                      {rows.length ? 'ไม่พบรายการที่ตรงกับการค้นหา' : 'ยังไม่มีนักเรียนในห้อง'}
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                )}
+                {visibleRows.map((row) => {
+                  const studentName =
+                    `${row.student.first_name ?? ''} ${row.student.last_name ?? ''}`.trim() ||
+                    row.student.username;
 
-        <TablePaginationCustom
-          page={table.page}
-          count={filteredRows.length}
-          rowsPerPage={table.rowsPerPage}
-          rowsPerPageOptions={[10, 25, 50]}
-          onPageChange={table.onChangePage}
-          onRowsPerPageChange={table.onChangeRowsPerPage}
-          labelRowsPerPage="แสดงต่อหน้า"
-          labelDisplayedRows={({ from, to, count }) => `${from}–${to} จาก ${count}`}
-          getItemAriaLabel={(type) => {
-            if (type === 'first') return 'หน้าแรก';
-            if (type === 'last') return 'หน้าสุดท้าย';
-            if (type === 'next') return 'หน้าถัดไป';
-            return 'หน้าก่อนหน้า';
-          }}
-          sx={{ borderTop: '1px solid', borderColor: 'divider' }}
-        />
-      </Card>
+                  return (
+                    <TableRow key={row.id} hover>
+                      <TableCell>
+                        <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+                          <Avatar
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              bgcolor: 'primary.lighter',
+                              color: 'primary.main',
+                              typography: 'subtitle2',
+                            }}
+                          >
+                            {studentName.charAt(0).toUpperCase()}
+                          </Avatar>
+                          <Typography variant="subtitle2">{studentName}</Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          @{row.student.username}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          variant="soft"
+                          color="primary"
+                          label={row.classroom.name}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="subtitle2">{row.student_number ?? '-'}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          select
+                          size="small"
+                          fullWidth
+                          value={row.student.student_status ?? 'studying'}
+                          disabled={
+                            statusMutation.isPending &&
+                            statusMutation.variables?.studentId === row.student.id
+                          }
+                          onChange={(event) =>
+                            statusMutation.mutate({
+                              studentId: row.student.id,
+                              status: event.target.value as StudentStatus,
+                            })
+                          }
+                          slotProps={{
+                            select: {
+                              renderValue: (value) => (
+                                <Label
+                                  variant="soft"
+                                  color={STUDENT_STATUS_COLOR[value as StudentStatus]}
+                                >
+                                  {STUDENT_STATUS_LABEL[value as StudentStatus]}
+                                </Label>
+                              ),
+                            },
+                          }}
+                        >
+                          {(Object.keys(STUDENT_STATUS_LABEL) as StudentStatus[]).map((status) => (
+                            <MenuItem key={status} value={status}>
+                              {STUDENT_STATUS_LABEL[status]}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Box sx={{ gap: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => setProgressEnrollmentId(row.id)}
+                            startIcon={<RemixIcon icon="solar:list-bold" />}
+                          >
+                            ผลการเรียน
+                          </Button>
+                          <IconButton
+                            size="small"
+                            onClick={() => openEditDialog(row)}
+                            aria-label={`แก้ไขการลงทะเบียนของ ${studentName}`}
+                          >
+                            <RemixIcon icon="solar:pen-bold" width={18} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => {
+                              deleteMutation.reset();
+                              setDeletingEnrollment(row);
+                            }}
+                            aria-label={`ลบการลงทะเบียนของ ${studentName}`}
+                          >
+                            <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <TablePaginationCustom
+            page={table.page}
+            count={filteredRows.length}
+            rowsPerPage={table.rowsPerPage}
+            rowsPerPageOptions={[10, 25, 50]}
+            onPageChange={table.onChangePage}
+            onRowsPerPageChange={table.onChangeRowsPerPage}
+            labelRowsPerPage="แสดงต่อหน้า"
+            labelDisplayedRows={({ from, to, count }) => `${from}–${to} จาก ${count}`}
+            getItemAriaLabel={(type) => {
+              if (type === 'first') return 'หน้าแรก';
+              if (type === 'last') return 'หน้าสุดท้าย';
+              if (type === 'next') return 'หน้าถัดไป';
+              return 'หน้าก่อนหน้า';
+            }}
+            sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+          />
+        </Card>
+      )}
 
       <EnrollmentFormDialog
         open={dialogOpen}

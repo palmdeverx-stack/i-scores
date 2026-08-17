@@ -32,6 +32,7 @@ export type HomeroomAttendanceHistoryRecord = {
 export type HomeroomAttendanceHistoryFilters = {
   classroomId?: string;
   studentId?: string;
+  search?: string;
   startDate: string;
   endDate: string;
   period?: HomeroomAttendancePeriod;
@@ -58,6 +59,7 @@ export async function getHomeroomAttendanceHistory(
   });
   if (filters.classroomId) params.set('classroomId', filters.classroomId);
   if (filters.studentId) params.set('studentId', filters.studentId);
+  if (filters.search) params.set('search', filters.search);
   if (filters.period) params.set('period', filters.period);
   if (filters.status) params.set('status', filters.status);
 

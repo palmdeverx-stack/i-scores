@@ -164,6 +164,16 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'teaching.attendance',
       },
       {
+        title: 'ลงเวลาปฏิบัติงาน',
+        path: paths.teacher.workAttendance,
+        icon: ICONS.timetable,
+      },
+      {
+        title: 'เวรของฉัน',
+        path: paths.teacher.dutyRoster,
+        icon: ICONS.timetable,
+      },
+      {
         title: 'ตารางสอน',
         path: paths.teacher.timetable,
         icon: ICONS.timetable,

@@ -45,6 +45,13 @@ export type TeacherAssignmentSummary = {
   classrooms: number;
   semesters: number;
   classroomOptions: Array<{ id: string; name: string }>;
+  semesterOptions: Array<{
+    id: string;
+    name: string;
+    academicYear: string;
+    isActive: boolean;
+  }>;
+  currentSemesterId: string | null;
 };
 
 export type RosterStudent = {
@@ -112,6 +119,7 @@ export type CreateScheduleParams = {
 
 export async function listTeacherAssignmentsPage(params: {
   classroomId?: string;
+  semesterId?: string;
   search?: string;
   limit: number;
   offset: number;
@@ -121,6 +129,7 @@ export async function listTeacherAssignmentsPage(params: {
     offset: String(params.offset),
   });
   if (params.classroomId) query.set('classroomId', params.classroomId);
+  if (params.semesterId) query.set('semesterId', params.semesterId);
   if (params.search) query.set('search', params.search);
 
   const response = await fetch(`/api/teacher-assignments?${query.toString()}`, {});
@@ -131,8 +140,12 @@ export async function listTeacherAssignmentsPage(params: {
   return json;
 }
 
-export async function getTeacherAssignmentSummary(): Promise<TeacherAssignmentSummary> {
-  const response = await fetch('/api/teacher-assignments/summary', {});
+export async function getTeacherAssignmentSummary(
+  semesterId?: string
+): Promise<TeacherAssignmentSummary> {
+  const query = new URLSearchParams();
+  if (semesterId) query.set('semesterId', semesterId);
+  const response = await fetch(`/api/teacher-assignments/summary?${query.toString()}`, {});
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load teacher assignment summary');

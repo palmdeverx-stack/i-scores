@@ -98,6 +98,11 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'announcements.manage',
       },
       {
+        title: 'ตั้งเวลาเรียนและคาบ',
+        path: paths.admin.schoolTimeSettings,
+        icon: ICONS.scheduleBuilder,
+      },
+      {
         title: 'ข้อมูลโรงเรียน',
         path: paths.admin.school,
         icon: ICONS.school,
@@ -136,7 +141,7 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'subjects.manage',
       },
       {
-        title: 'ลงทะเบียนนักเรียน',
+        title: 'ทะเบียนนักเรียน',
         path: paths.admin.enrollment.root,
         icon: ICONS.enrollment,
         featureKey: 'admin.enrollments',
@@ -236,6 +241,16 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.staff,
         featureKey: 'admin.staff',
         requiresDepartmentPermission: 'staff.manage',
+      },
+      {
+        title: 'เวลาปฏิบัติงานบุคลากร',
+        path: paths.admin.workAttendance,
+        icon: ICONS.scheduleApprovals,
+      },
+      {
+        title: 'จัดตารางครูเวร',
+        path: paths.admin.dutyRoster,
+        icon: ICONS.scheduleBuilder,
       },
       {
         title: 'นักเรียน',

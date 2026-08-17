@@ -57,7 +57,7 @@ export function TeacherTeachingOverviewView({ teacherId, backHref }: Props) {
   });
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box sx={{ mb: 1 }}>
         <Button
           component={RouterLink}

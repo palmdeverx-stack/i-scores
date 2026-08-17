@@ -157,7 +157,7 @@ export function MasterItemListView<TItem extends MasterItem>({
   const columnCount = showCode ? 5 : 4;
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5 }}>
       <Box
         sx={{
           mb: 3,
