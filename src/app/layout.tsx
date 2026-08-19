@@ -115,6 +115,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+      </head>
       <body>
         <InitColorSchemeScript
           modeStorageKey={themeConfig.modeStorageKey}
