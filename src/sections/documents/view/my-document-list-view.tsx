@@ -6,17 +6,19 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
+import Menu from '@mui/material/Menu';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
-import Table from '@mui/material/Table';
 import Alert from '@mui/material/Alert';
+import Table from '@mui/material/Table';
 import Button from '@mui/material/Button';
+import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
+import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TextField from '@mui/material/TextField';
-import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -29,8 +31,9 @@ import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 import { getSchoolDocumentTemplate } from '../document-catalog';
-import { DocumentFormDialog } from '../components/document-form-dialog';
 import { DocumentDeleteDialog } from '../components/document-delete-dialog';
 import { listMyDocuments, updateMyDocumentStatus } from '../document-actions';
 
@@ -40,6 +43,7 @@ const STATUS_CONFIG: Record<
   UserDocumentStatus,
   { label: string; color: 'default' | 'info' | 'success' | 'warning' }
 > = {
+  reserved: { label: 'จองเลขแล้ว', color: 'info' },
   draft: { label: 'ฉบับร่าง', color: 'warning' },
   submitted: { label: 'ส่งดำเนินการแล้ว', color: 'info' },
   ready: { label: 'พร้อมใช้งาน', color: 'success' },
@@ -51,11 +55,11 @@ export function MyDocumentListView({
 }: {
   detailBasePath?: string;
 }) {
+  const { user } = useAuthContext();
   const queryClient = useQueryClient();
   const table = useTable({ defaultRowsPerPage: 10 });
   const [search, setSearch] = useState('');
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingDocument, setEditingDocument] = useState<UserDocument | null>(null);
+  const [menu, setMenu] = useState<{ anchor: HTMLElement; document: UserDocument } | null>(null);
   const [deletingDocument, setDeletingDocument] = useState<UserDocument | null>(null);
   const {
     data: documents = [],
@@ -63,7 +67,7 @@ export function MyDocumentListView({
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['my-documents'],
+    queryKey: ['my-documents', user?.school_id, user?.id],
     queryFn: listMyDocuments,
   });
   const statusMutation = useMutation({
@@ -94,7 +98,7 @@ export function MyDocumentListView({
   const visibleDocuments = rowInPage(filteredDocuments, table.page, table.rowsPerPage);
 
   return (
-    <Container maxWidth={false} sx={{ pb: 6 }}>
+    <Container maxWidth="xl" sx={{ pb: 6 }}>
       <Box
         sx={{
           mb: 4,
@@ -113,16 +117,19 @@ export function MyDocumentListView({
             สร้างเอกสารจากแม่แบบและติดตามสถานะเอกสารที่คุณจัดทำ
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          onClick={() => {
-            setEditingDocument(null);
-            setFormOpen(true);
-          }}
-          startIcon={<RemixIcon icon="mingcute:add-line" />}
-        >
-          สร้างเอกสาร
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button component={RouterLink} href={`${detailBasePath}/reserve`} variant="outlined">
+            จองเลขล่วงหน้า
+          </Button>
+          <Button
+            variant="contained"
+            component={RouterLink}
+            href={`${detailBasePath}/new`}
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
+          >
+            สร้างเอกสาร
+          </Button>
+        </Box>
       </Box>
 
       {isError && (
@@ -214,10 +221,25 @@ export function MyDocumentListView({
                       <TableCell>
                         <Typography variant="body2">{template?.code ?? '-'}</Typography>
                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          {template?.name ?? 'ไม่พบแม่แบบ'}
+                          {template?.name ??
+                            (document.status === 'reserved'
+                              ? 'เลือกแม่แบบเมื่อเริ่มเขียน'
+                              : 'ไม่พบแม่แบบ')}
                         </Typography>
                       </TableCell>
-                      <TableCell>{formatThaiDate(document.created_at)}</TableCell>
+                      <TableCell>
+                        {formatThaiDate(document.created_at)}
+                        {document.planned_date && (
+                          <Typography variant="caption" component="div">
+                            วางแผน {document.planned_date}
+                          </Typography>
+                        )}
+                        {document.document_number && (
+                          <Typography variant="caption" component="div">
+                            เลขที่ {document.document_number}
+                          </Typography>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Chip
                           size="small"
@@ -228,26 +250,13 @@ export function MyDocumentListView({
                       </TableCell>
                       <TableCell align="right">
                         <Box sx={{ gap: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                          {template && (
-                            <Button
-                              component={RouterLink}
-                              href={`${detailBasePath}/${template.slug}?preview=1`}
-                              size="small"
-                              variant="outlined"
-                              startIcon={<RemixIcon icon="solar:eye-bold" />}
-                            >
-                              ดูแม่แบบ
-                            </Button>
-                          )}
                           {document.status === 'draft' && (
                             <>
                               <IconButton
                                 size="small"
                                 aria-label={`แก้ไข ${document.title}`}
-                                onClick={() => {
-                                  setEditingDocument(document);
-                                  setFormOpen(true);
-                                }}
+                                component={RouterLink}
+                                href={`${detailBasePath}/my/${document.id}`}
                               >
                                 <RemixIcon icon="solar:pen-bold" width={18} />
                               </IconButton>
@@ -259,21 +268,17 @@ export function MyDocumentListView({
                               >
                                 <RemixIcon icon="solar:trash-bin-trash-bold" width={18} />
                               </IconButton>
-                              <Button
-                                size="small"
-                                variant="contained"
-                                loading={
-                                  statusMutation.isPending &&
-                                  statusMutation.variables?.id === document.id
-                                }
-                                onClick={() =>
-                                  statusMutation.mutate({ id: document.id, action: 'submit' })
-                                }
-                              >
-                                ส่งดำเนินการ
-                              </Button>
                             </>
                           )}
+                          <IconButton
+                            size="small"
+                            aria-label={`เมนูเพิ่มเติม ${document.title}`}
+                            aria-haspopup="menu"
+                            aria-expanded={menu?.document.id === document.id ? true : undefined}
+                            onClick={(event) => setMenu({ anchor: event.currentTarget, document })}
+                          >
+                            <RemixIcon icon="eva:more-vertical-fill" width={20} />
+                          </IconButton>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -314,14 +319,48 @@ export function MyDocumentListView({
         />
       </Card>
 
-      <DocumentFormDialog
-        open={formOpen}
-        document={editingDocument}
-        onClose={() => {
-          setFormOpen(false);
-          setEditingDocument(null);
-        }}
-      />
+      <Menu anchorEl={menu?.anchor} open={Boolean(menu)} onClose={() => setMenu(null)}>
+        <MenuItem
+          component={RouterLink}
+          href={`${detailBasePath}/my/${menu?.document.id}`}
+          onClick={() => setMenu(null)}
+        >
+          ดูเอกสาร / PDF
+        </MenuItem>
+        {menu && getSchoolDocumentTemplate(menu.document.template_slug) && (
+          <MenuItem
+            component={RouterLink}
+            href={`${detailBasePath}/${menu.document.template_slug}?preview=1`}
+            onClick={() => setMenu(null)}
+          >
+            ดูแม่แบบ
+          </MenuItem>
+        )}
+        {menu?.document.status === 'reserved' && (
+          <MenuItem
+            component={RouterLink}
+            href={`${detailBasePath}/my/${menu.document.id}`}
+            onClick={() => setMenu(null)}
+          >
+            เติมเนื้อหาเลขที่จอง
+          </MenuItem>
+        )}
+        {menu && (menu.document.status === 'reserved' || menu.document.status === 'draft') && (
+          <MenuItem
+            disabled={statusMutation.isPending}
+            sx={{ color: menu.document.status === 'reserved' ? 'error.main' : undefined }}
+            onClick={() => {
+              statusMutation.mutate({
+                id: menu.document.id,
+                action: menu.document.status === 'reserved' ? 'cancel' : 'submit',
+              });
+              setMenu(null);
+            }}
+          >
+            {menu.document.status === 'reserved' ? 'ยกเลิกการจอง' : 'ส่งดำเนินการ'}
+          </MenuItem>
+        )}
+      </Menu>
       <DocumentDeleteDialog document={deletingDocument} onClose={() => setDeletingDocument(null)} />
     </Container>
   );

@@ -3,32 +3,36 @@ import type { NavSectionProps } from 'src/components/nav-section';
 import { paths } from 'src/routes/paths';
 
 import {
-  RiTeamLine,
-  RiKey2Line,
   RiBook2Line,
-  RiPulseLine,
-  RiIdCardLine,
-  RiSchoolLine,
-  RiStairsLine,
-  RiUserAddLine,
-  RiCalendarLine,
-  RiUserStarLine,
-  RiMessage2Line,
-  RiFileChartLine,
-  RiFileList3Line,
-  RiMegaphoneLine,
-  RiDashboardLine,
-  RiSettings3Line,
-  RiFileSearchLine,
-  RiFileHistoryLine,
-  RiShieldCheckLine,
-  RiPresentationLine,
-  RiCalendarCloseLine,
   RiCalendarCheckLine,
-  RiGraduationCapLine,
-  RiOrganizationChart,
+  RiCalendarCloseLine,
+  RiCalendarLine,
   RiCalendarScheduleLine,
+  RiDashboardLine,
+  RiFileChartLine,
+  RiFileHistoryLine,
+  RiFileList3Line,
+  RiFileSearchLine,
+  RiGraduationCapLine,
+  RiIdCardLine,
+  RiKey2Line,
+  RiMegaphoneLine,
+  RiMessage2Line,
+  RiOrganizationChart,
+  RiPresentationLine,
+  RiPulseLine,
+  RiSchoolLine,
+  RiSettings3Line,
+  RiShieldCheckLine,
+  RiStairsLine,
+  RiTeamLine,
+  RiUserAddLine,
+  RiUserStarLine,
 } from 'src/components/remix-icon';
+
+import { SCHOOL_DOCUMENT_TEMPLATES } from 'src/sections/documents/document-catalog';
+
+import { createInventoryNav } from './nav-config-inventory';
 
 // ----------------------------------------------------------------------
 
@@ -209,6 +213,10 @@ export const navData: NavSectionProps['data'] = [
     ],
   },
   {
+    subheader: 'งานงบประมาณ',
+    items: [...createInventoryNav(paths.admin.inventory)],
+  },
+  {
     subheader: 'เอกสาร',
     items: [
       {
@@ -224,8 +232,16 @@ export const navData: NavSectionProps['data'] = [
             icon: ICONS.documents,
           },
           {
+            title: 'จองเลขเอกสาร',
+            path: paths.admin.documents.reserve,
+            icon: ICONS.documents,
+          },
+          {
             title: 'ตัวอย่างเอกสาร',
             path: paths.admin.documents.templates,
+            activePaths: SCHOOL_DOCUMENT_TEMPLATES.map((template) =>
+              paths.admin.documents.detail(template.slug)
+            ),
             icon: ICONS.gradeReviews,
           },
         ],
@@ -301,6 +317,30 @@ export const navData: NavSectionProps['data'] = [
             path: paths.admin.masterData.prefixes,
             icon: ICONS.positions,
             featureKey: 'admin.staff_masters',
+          },
+          {
+            title: 'ข้อมูลหลักพัสดุ',
+            path: paths.admin.masterData.inventoryItems,
+            icon: ICONS.documents,
+            requiresDepartmentPermission: 'inventory.manage',
+          },
+          {
+            title: 'หมวดหมู่พัสดุ',
+            path: paths.admin.masterData.inventoryCategories,
+            icon: ICONS.documents,
+            requiresDepartmentPermission: 'inventory.manage',
+          },
+          {
+            title: 'ที่จัดเก็บพัสดุ',
+            path: paths.admin.masterData.inventoryLocations,
+            icon: ICONS.documents,
+            requiresDepartmentPermission: 'inventory.manage',
+          },
+          {
+            title: 'หน่วยนับพัสดุ',
+            path: paths.admin.masterData.inventoryUnits,
+            icon: ICONS.documents,
+            requiresDepartmentPermission: 'inventory.manage',
           },
           {
             title: 'ตำแหน่ง',

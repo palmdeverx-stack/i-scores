@@ -5,9 +5,9 @@ import type { UserDocument } from '../document-actions';
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import { Alert, Stack } from '@mui/material';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -88,45 +88,47 @@ export function DocumentFormDialog({ open, document = null, onClose }: Props) {
             : 'เลือกประเภทและระบุรายละเอียด เอกสารใหม่จะบันทึกเป็นฉบับร่าง'}
         </Typography>
       </DialogTitle>
-      <DialogContent sx={{ pt: 2 }}>
-        {mutation.error && (
-          <Alert severity="error" sx={{ mb: 2.5 }}>
-            {mutation.error.message}
-          </Alert>
-        )}
-        <TextField
-          select
-          fullWidth
-          required
-          label="ประเภทเอกสาร"
-          value={templateSlug}
-          onChange={(event) => handleTemplateChange(event.target.value)}
-        >
-          {SCHOOL_DOCUMENT_TEMPLATES.map((template) => (
-            <MenuItem key={template.slug} value={template.slug}>
-              {template.code} — {template.name}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          fullWidth
-          required
-          label="ชื่อเอกสาร"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          slotProps={{ htmlInput: { maxLength: 200 } }}
-          sx={{ mt: 2.5 }}
-        />
-        <TextField
-          fullWidth
-          multiline
-          minRows={3}
-          label="วัตถุประสงค์ / หมายเหตุ"
-          value={purpose}
-          onChange={(event) => setPurpose(event.target.value)}
-          slotProps={{ htmlInput: { maxLength: 1000 } }}
-          sx={{ mt: 2.5 }}
-        />
+      <DialogContent sx={{ py: 2 }}>
+        <Stack sx={{ py: 2 }}>
+          {mutation.error && (
+            <Alert severity="error" sx={{ mb: 2.5 }}>
+              {mutation.error.message}
+            </Alert>
+          )}
+          <TextField
+            select
+            fullWidth
+            required
+            label="ประเภทเอกสาร"
+            value={templateSlug}
+            onChange={(event) => handleTemplateChange(event.target.value)}
+          >
+            {SCHOOL_DOCUMENT_TEMPLATES.map((template) => (
+              <MenuItem key={template.slug} value={template.slug}>
+                {template.code} — {template.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            fullWidth
+            required
+            label="ชื่อเอกสาร"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            slotProps={{ htmlInput: { maxLength: 200 } }}
+            sx={{ mt: 2.5 }}
+          />
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="วัตถุประสงค์ / หมายเหตุ"
+            value={purpose}
+            onChange={(event) => setPurpose(event.target.value)}
+            slotProps={{ htmlInput: { maxLength: 1000 } }}
+            sx={{ mt: 2.5 }}
+          />
+        </Stack>
       </DialogContent>
       <DialogActions>
         <Button color="inherit" onClick={handleClose} disabled={mutation.isPending}>

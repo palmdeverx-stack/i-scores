@@ -4,6 +4,7 @@ import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { canViewViaPermission } from 'src/lib/department-permission-access';
 
+import { DocumentContentSchema } from 'src/sections/documents/document-content';
 import { getSchoolDocumentTemplate } from 'src/sections/documents/document-catalog';
 
 // ----------------------------------------------------------------------
@@ -11,7 +12,24 @@ import { getSchoolDocumentTemplate } from 'src/sections/documents/document-catal
 type RouteParams = { params: Promise<{ id: string }> };
 
 const DOCUMENT_FIELDS =
-  'id, school_id, created_by, template_slug, title, purpose, status, submitted_at, completed_at, created_at, updated_at';
+  'id, school_id, created_by, template_slug, title, purpose, content, document_number, document_sequence, planned_date, reserved_at, status, submitted_at, completed_at, created_at, updated_at';
+
+export async function GET(request: Request, { params }: RouteParams) {
+  const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (!caller?.schoolId || !(await canViewViaPermission(caller, 'documents.access')))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดูเอกสาร' }, { status: 403 });
+  const { id } = await params;
+  const { data, error } = await supabaseAdmin
+    .from('school_user_documents')
+    .select(DOCUMENT_FIELDS)
+    .eq('id', id)
+    .eq('school_id', caller.schoolId)
+    .eq('created_by', caller.sub)
+    .maybeSingle();
+  if (error) return NextResponse.json({ message: 'โหลดเอกสารไม่สำเร็จ' }, { status: 500 });
+  if (!data) return NextResponse.json({ message: 'ไม่พบเอกสาร' }, { status: 404 });
+  return NextResponse.json({ document: data });
+}
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
@@ -48,14 +66,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (action === 'submit' && current.status !== 'draft') {
     return NextResponse.json({ message: 'ส่งได้เฉพาะเอกสารฉบับร่าง' }, { status: 409 });
   }
-  if (action === 'update' && current.status !== 'draft') {
+  if (action === 'update' && !['draft', 'reserved'].includes(current.status)) {
     return NextResponse.json({ message: 'แก้ไขได้เฉพาะเอกสารฉบับร่าง' }, { status: 409 });
   }
-  if (action === 'cancel' && !['draft', 'submitted'].includes(current.status)) {
+  if (action === 'cancel' && !['draft', 'submitted', 'reserved'].includes(current.status)) {
     return NextResponse.json({ message: 'ไม่สามารถยกเลิกเอกสารสถานะนี้ได้' }, { status: 409 });
   }
 
-  let changes: Record<string, string | null>;
+  let changes: Record<string, unknown>;
   if (action === 'update') {
     const templateSlug = typeof body.templateSlug === 'string' ? body.templateSlug.trim() : '';
     const title = typeof body.title === 'string' ? body.title.trim() : '';
@@ -72,7 +90,20 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ message: 'ข้อมูลเอกสารยาวเกินกำหนด' }, { status: 400 });
     }
 
+    const content =
+      body.content === undefined
+        ? undefined
+        : body.content === null
+          ? null
+          : DocumentContentSchema.safeParse(body.content);
+    if (content && !content.success)
+      return NextResponse.json(
+        { message: 'เนื้อหาเอกสารไม่ถูกต้องหรือยาวเกินกำหนด' },
+        { status: 400 }
+      );
     changes = {
+      ...(current.status === 'reserved' && content?.success && { status: 'draft' }),
+      ...(content !== undefined && { content: content ? content.data : null }),
       template_slug: template.slug,
       title,
       purpose: purpose || null,
@@ -87,9 +118,17 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .from('school_user_documents')
     .update(changes)
     .eq('id', current.id)
+    .eq('school_id', caller.schoolId)
+    .eq('created_by', caller.sub)
+    .eq('status', current.status)
     .select(DOCUMENT_FIELDS)
-    .single();
+    .maybeSingle();
 
+  if (!error && !data)
+    return NextResponse.json(
+      { message: 'สถานะเอกสารเปลี่ยนแล้ว กรุณาโหลดข้อมูลใหม่' },
+      { status: 409 }
+    );
   if (error || !data) {
     return NextResponse.json(
       { message: error?.message ?? 'ไม่สามารถอัปเดตสถานะเอกสารได้' },

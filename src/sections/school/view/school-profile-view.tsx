@@ -36,6 +36,12 @@ import { getSchool, updateSchool, uploadSchoolLogo, listSchoolTeachers } from '.
 export const SchoolProfileSchema = z.object({
   name: z.string().trim().min(1, { error: 'กรุณากรอกชื่อโรงเรียนภาษาไทย!' }),
   nameEn: z.string().trim(),
+  documentSequenceCurrent: z
+    .number({ error: 'กรุณากรอกเลขล่าสุดเป็นตัวเลข' })
+    .int('กรุณากรอกจำนวนเต็ม')
+    .min(0)
+    .max(999999999999),
+  documentPrefix: z.string().trim().max(100, 'กรอกได้ไม่เกิน 100 ตัวอักษร'),
 });
 
 type SchoolProfileSchemaType = z.infer<typeof SchoolProfileSchema>;
@@ -77,8 +83,15 @@ export function SchoolProfileView({ readOnly = false }: Props) {
 
   const methods = useForm<SchoolProfileSchemaType>({
     resolver: zodResolver(SchoolProfileSchema),
-    defaultValues: { name: '', nameEn: '' },
-    values: school ? { name: school.name, nameEn: school.name_en ?? '' } : undefined,
+    defaultValues: { name: '', nameEn: '', documentPrefix: '', documentSequenceCurrent: 0 },
+    values: school
+      ? {
+          name: school.name,
+          nameEn: school.name_en ?? '',
+          documentPrefix: school.document_prefix ?? '',
+          documentSequenceCurrent: Number(school.document_sequence_current ?? 0),
+        }
+      : undefined,
   });
 
   const {
@@ -87,7 +100,12 @@ export function SchoolProfileView({ readOnly = false }: Props) {
   } = methods;
 
   const updateMutation = useMutation({
-    mutationFn: (params: { name: string; nameEn?: string }) => updateSchool(schoolId, params),
+    mutationFn: (params: {
+      name: string;
+      nameEn?: string;
+      documentPrefix?: string;
+      documentSequenceCurrent?: number;
+    }) => updateSchool(schoolId, params),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['school', schoolId] }),
   });
 
@@ -100,6 +118,10 @@ export function SchoolProfileView({ readOnly = false }: Props) {
     updateMutation.mutate({
       name: data.name.trim(),
       nameEn: data.nameEn.trim(),
+      documentPrefix: data.documentPrefix.trim(),
+      documentSequenceCurrent: methods.formState.dirtyFields.documentSequenceCurrent
+        ? data.documentSequenceCurrent
+        : undefined,
     })
   );
 
@@ -391,6 +413,21 @@ export function SchoolProfileView({ readOnly = false }: Props) {
                     label="ชื่อโรงเรียนภาษาไทย *"
                     placeholder="เช่น โรงเรียนตัวอย่างวิทยา"
                     helperText="ชื่อหลักที่ใช้แสดงในระบบ"
+                  />
+                  <Field.Text
+                    name="documentSequenceCurrent"
+                    label="เลขที่เอกสารล่าสุด / เลขตั้งต้น"
+                    type="number"
+                    required
+                    helperText="กรอกเลขที่ใช้ถึงปัจจุบัน เช่น 100 เอกสารถัดไปจะเป็น /101 ห้ามลดต่ำกว่าค่าปัจจุบัน"
+                    slotProps={{ htmlInput: { min: 0, max: 999999999999, step: 1 } }}
+                  />
+                  <Field.Text
+                    name="documentPrefix"
+                    label="เลขที่เอกสารโรงเรียน"
+                    placeholder="เช่น ศธ ๐๔๐๐๑.๑๒๓"
+                    helperText="รหัสต้นหนังสือสำหรับใช้ในเอกสาร เลขลำดับกำหนดแยกแต่ละฉบับ"
+                    slotProps={{ htmlInput: { maxLength: 100 } }}
                   />
                   <Field.Text
                     name="nameEn"

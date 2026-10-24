@@ -18,6 +18,7 @@ type DepartmentPermissionGuardProps = {
    * permissions (e.g. department management itself).
    */
   permission?: string;
+  permissions?: string[];
   schoolWorkspaceOnly?: boolean;
   children: React.ReactNode;
 };
@@ -39,6 +40,7 @@ type DepartmentWorkspaceGuardProps = {
  */
 export function DepartmentPermissionGuard({
   permission,
+  permissions = [],
   schoolWorkspaceOnly = false,
   children,
 }: DepartmentPermissionGuardProps) {
@@ -46,7 +48,9 @@ export function DepartmentPermissionGuard({
   const router = useRouter();
 
   const isSchoolAdmin = user?.role === 'school_admin';
-  const hasPermission = !!permission && (user?.department_permissions ?? []).includes(permission);
+  const hasPermission = [permission, ...permissions].some(
+    (key) => Boolean(key) && (user?.department_permissions ?? []).includes(key!)
+  );
   const isAllowed =
     (isSchoolAdmin || hasPermission) &&
     (!schoolWorkspaceOnly || user?.is_personal_workspace !== true);
@@ -73,9 +77,7 @@ export function DepartmentWorkspaceGuard({ children }: DepartmentWorkspaceGuardP
   const router = useRouter();
 
   const isAllowed =
-    user?.role === 'teacher' &&
-    !user.is_school_director &&
-    (user.departments ?? []).length > 0;
+    user?.role === 'teacher' && !user.is_school_director && (user.departments ?? []).length > 0;
 
   useEffect(() => {
     if (user && !isAllowed) {

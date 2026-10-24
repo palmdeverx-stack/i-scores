@@ -30,7 +30,9 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   const { data: school, error } = await supabaseAdmin
     .from('schools')
-    .select('id, name, name_en, code, logo_url, is_active, created_at')
+    .select(
+      'id, name, name_en, code, document_prefix, document_sequence_current, logo_url, is_active, created_at'
+    )
     .eq('id', id)
     .single();
 
@@ -54,7 +56,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { name, nameEn, code, isActive } = await request.json();
+  const { name, nameEn, code, isActive, documentPrefix, documentSequenceCurrent } =
+    await request.json();
 
   const updates: Record<string, unknown> = {};
 
@@ -72,6 +75,27 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     updates.name_en = nameEn.trim() || null;
   }
 
+  if (documentSequenceCurrent !== undefined) {
+    if (
+      !Number.isSafeInteger(documentSequenceCurrent) ||
+      documentSequenceCurrent < 0 ||
+      documentSequenceCurrent > 999999999999
+    )
+      return NextResponse.json(
+        { message: 'เลขที่เอกสารล่าสุดต้องเป็นจำนวนเต็มตั้งแต่ 0 ถึง 999999999999' },
+        { status: 400 }
+      );
+    updates.document_sequence_current = documentSequenceCurrent;
+  }
+  if (documentPrefix !== undefined) {
+    if (typeof documentPrefix !== 'string' || documentPrefix.trim().length > 100)
+      return NextResponse.json(
+        { message: 'เลขที่เอกสารต้องเป็นข้อความไม่เกิน 100 ตัวอักษร' },
+        { status: 400 }
+      );
+    updates.document_prefix = documentPrefix.trim() || null;
+  }
+
   if (code !== undefined) {
     if (caller.role !== 'master_admin') {
       return NextResponse.json(
@@ -83,10 +107,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ message: 'กรุณากรอกรหัสโรงเรียน' }, { status: 400 });
     }
     if (!/^\d{8}$/.test(code.trim())) {
-      return NextResponse.json(
-        { message: 'รหัสโรงเรียนต้องเป็นตัวเลข 8 หลัก' },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: 'รหัสโรงเรียนต้องเป็นตัวเลข 8 หลัก' }, { status: 400 });
     }
 
     const { data: duplicate } = await supabaseAdmin
@@ -126,13 +147,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .from('schools')
     .update(updates)
     .eq('id', id)
-    .select('id, name, name_en, code, logo_url, is_active, created_at')
+    .select(
+      'id, name, name_en, code, document_prefix, document_sequence_current, logo_url, is_active, created_at'
+    )
     .single();
 
   if (error || !school) {
     return NextResponse.json(
-      { message: error?.message ?? 'ไม่สามารถอัปเดตข้อมูลโรงเรียนได้' },
-      { status: 500 }
+      {
+        message: error?.message?.includes('counter cannot go backwards')
+          ? 'เลขเอกสารล่าสุดต้องไม่น้อยกว่าค่าปัจจุบัน กรุณาโหลดข้อมูลใหม่'
+          : (error?.message ?? 'ไม่สามารถอัปเดตข้อมูลโรงเรียนได้'),
+      },
+      { status: error?.message?.includes('counter cannot go backwards') ? 409 : 500 }
     );
   }
 

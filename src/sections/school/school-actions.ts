@@ -22,6 +22,8 @@ export type School = {
 };
 
 export type SchoolProfile = {
+  document_prefix: string | null;
+  document_sequence_current: number;
   id: string;
   name: string;
   name_en: string | null;
@@ -107,7 +109,13 @@ export async function getSchool(id: string): Promise<SchoolProfile> {
 
 export async function updateSchool(
   id: string,
-  params: { name?: string; nameEn?: string; code?: string }
+  params: {
+    name?: string;
+    nameEn?: string;
+    code?: string;
+    documentPrefix?: string;
+    documentSequenceCurrent?: number;
+  }
 ): Promise<SchoolProfile> {
   const response = await fetch(`/api/schools/${id}`, {
     method: 'PATCH',

@@ -2,21 +2,21 @@
 
 import { useMemo, useState } from 'react';
 
-import Box from '@mui/material/Box';
+import { Box, Stack } from '@mui/material';
+import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
-import Button from '@mui/material/Button';
+import Container from '@mui/material/Container';
+import InputAdornment from '@mui/material/InputAdornment';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
-import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import InputAdornment from '@mui/material/InputAdornment';
 
-import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
+import { paths } from 'src/routes/paths';
 
 import { RemixIcon } from 'src/components/remix-icon';
-import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
+import { rowInPage, TablePaginationCustom, useTable } from 'src/components/table';
 
 import { SCHOOL_DOCUMENT_TEMPLATES } from '../document-catalog';
 
@@ -193,6 +193,7 @@ export function DocumentListView({
                 xs: '1fr',
                 sm: 'repeat(2, minmax(0, 1fr))',
                 lg: 'repeat(3, minmax(0, 1fr))',
+                xl: 'repeat(4, minmax(0, 1fr))',
               },
             }}
           >
@@ -286,27 +287,41 @@ export function DocumentListView({
                 </Box>
 
                 <Box sx={{ flexGrow: 1 }} />
-                <Box sx={{ gap: 1, mt: 2.5, display: 'flex' }}>
-                  <Button
-                    component={RouterLink}
-                    href={`${detailBasePath}/${document.slug}`}
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                  >
-                    รายละเอียด
-                  </Button>
-                  <Button
-                    component={RouterLink}
-                    href={`${detailBasePath}/${document.slug}?preview=1`}
-                    fullWidth
-                    size="small"
-                    variant="contained"
-                    startIcon={<RemixIcon icon="solar:eye-bold" />}
-                  >
-                    พรีวิว PDF
-                  </Button>
-                </Box>
+                <Stack spacing={1} sx={{ display: 'flex', flexDirection: 'row' }}>
+                  <Box>
+                    <Button
+                      component={RouterLink}
+                      href={`${detailBasePath}/new?template=${document.slug}`}
+                      variant="contained"
+                      size="small"
+                    >
+                      ใช้แม่แบบนี้
+                    </Button>
+                  </Box>
+                  <Box>
+                    <Button
+                      component={RouterLink}
+                      href={`${detailBasePath}/${document.slug}`}
+                      fullWidth
+                      size="small"
+                      variant="contained"
+                    >
+                      รายละเอียด
+                    </Button>
+                  </Box>
+                  <Box>
+                    <Button
+                      component={RouterLink}
+                      href={`${detailBasePath}/${document.slug}?preview=1`}
+                      fullWidth
+                      size="small"
+                      variant="contained"
+                      startIcon={<RemixIcon icon="solar:eye-bold" />}
+                    >
+                      พรีวิว PDF
+                    </Button>
+                  </Box>
+                </Stack>
               </Card>
             ))}
           </Box>

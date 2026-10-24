@@ -4,30 +4,44 @@ import type { SchoolDocumentTemplate } from '../document-catalog';
 import type { ScoreReport } from 'src/sections/teacher-assignment/score-report-actions';
 import type { GradeReviewSubmission } from 'src/sections/grade-review/grade-review-actions';
 
+import { useQuery } from '@tanstack/react-query';
+import { useRef, useState, useEffect } from 'react';
+import { pdfjs, Page as PdfPage, Document as PdfPages } from 'react-pdf';
 import {
   Font,
   Page,
   Text,
   View,
   Document,
-  PDFViewer,
   StyleSheet,
+  BlobProvider,
   PDFDownloadLink,
 } from '@react-pdf/renderer';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
 
 import { RemixIcon } from 'src/components/remix-icon';
 
+import { getSchool } from 'src/sections/school/school-actions';
 import { GradeResultDocument } from 'src/sections/grade-review/components/grade-result-pdf-dialog';
 
+import { useAuthContext } from 'src/auth/hooks';
+
+import { MemoExampleDocument } from './memo-example-document';
+
 // ----------------------------------------------------------------------
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 Font.register({
   family: 'LINE Seed Sans TH',
@@ -117,7 +131,17 @@ const SAMPLE_PP5_SUBMISSION: GradeReviewSubmission = {
   approved_by: { first_name: 'ผู้อำนวยการ', last_name: 'ตัวอย่าง' },
 };
 
-function ExampleDocument({ template }: { template: SchoolDocumentTemplate }) {
+function ExampleDocument({
+  template,
+  schoolName,
+  documentPrefix,
+}: {
+  template: SchoolDocumentTemplate;
+  schoolName?: string;
+  documentPrefix?: string;
+}) {
+  if (template.slug === 'memo')
+    return <MemoExampleDocument schoolName={schoolName} documentPrefix={documentPrefix} />;
   const landscape = template.paper === 'A4 แนวนอน';
   return (
     <Document title={`ตัวอย่าง-${template.code}-${template.name}`}>
@@ -176,14 +200,169 @@ type Props = {
   template: SchoolDocumentTemplate;
 };
 
-export default function DocumentExamplePdfDialog({ open, onClose, template }: Props) {
+function A4PreviewPage({
+  pageNumber,
+  availableWidth,
+}: {
+  pageNumber: number;
+  availableWidth: number;
+}) {
+  const [paperWidth, setPaperWidth] = useState((210 / 25.4) * 96);
+
+  return (
+    <PdfPage
+      pageNumber={pageNumber}
+      width={Math.min(availableWidth, paperWidth)}
+      onLoadSuccess={(page) => {
+        // PDF points use 72 units/inch; CSS uses 96 pixels/inch.
+        // Read each page separately to preserve mixed portrait/landscape PDFs.
+        setPaperWidth(page.getViewport({ scale: 96 / 72 }).width);
+      }}
+      renderTextLayer={false}
+      renderAnnotationLayer={false}
+    />
+  );
+}
+
+function AllPdfPages({ url }: { url: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [pageCount, setPageCount] = useState(0);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <Box ref={containerRef} sx={{ width: 1 }}>
+      <PdfPages
+        file={url}
+        loading={<Typography role="status">กำลังโหลดเอกสาร…</Typography>}
+        error={<Typography role="alert">ไม่สามารถแสดงเอกสารได้ กรุณาลองใหม่</Typography>}
+        onLoadSuccess={({ numPages }) => setPageCount(numPages)}
+      >
+        {width > 0 &&
+          Array.from({ length: pageCount }, (_, index) => (
+            <Box
+              key={index + 1}
+              aria-label={`หน้า ${index + 1} จาก ${pageCount}`}
+              sx={{
+                mb: 3,
+                mx: 'auto',
+                width: 'fit-content',
+                maxWidth: 1,
+                bgcolor: 'common.white',
+                '& canvas': { display: 'block', maxWidth: '100%', height: 'auto !important' },
+              }}
+            >
+              <A4PreviewPage pageNumber={index + 1} availableWidth={width} />
+            </Box>
+          ))}
+      </PdfPages>
+    </Box>
+  );
+}
+
+function DocumentPages({
+  document,
+}: {
+  document: React.ReactElement<React.ComponentProps<typeof Document>>;
+}) {
+  return (
+    <BlobProvider document={document}>
+      {({ url, loading, error }) => {
+        if (loading) return <Typography role="status">กำลังสร้างเอกสาร…</Typography>;
+        if (error || !url)
+          return <Typography role="alert">ไม่สามารถสร้างเอกสารได้ กรุณาลองใหม่</Typography>;
+        return <AllPdfPages key={url} url={url} />;
+      }}
+    </BlobProvider>
+  );
+}
+
+function useDocumentSchool(template: SchoolDocumentTemplate) {
+  const { user } = useAuthContext();
+  const school = useQuery({
+    queryKey: ['school', user?.school_id],
+    queryFn: () => getSchool(user!.school_id!),
+    enabled: template.slug === 'memo' && Boolean(user?.school_id),
+  });
+  return {
+    schoolName: school.data?.name,
+    documentPrefix: school.data?.document_prefix || undefined,
+  };
+}
+
+export function DocumentExamplePreview({ template }: { template: SchoolDocumentTemplate }) {
+  const theme = useTheme();
+  const school = useDocumentSchool(template);
+
   const document =
     template.slug === 'pp5' ? (
       <GradeResultDocument report={SAMPLE_PP5_REPORT} submission={SAMPLE_PP5_SUBMISSION} />
     ) : (
-      <ExampleDocument template={template} />
+      <ExampleDocument template={template} {...school} />
     );
-  const landscape = template.paper === 'A4 แนวนอน';
+
+  return (
+    <Box sx={{ p: { xs: 2, md: 3 }, borderRadius: 2.5, bgcolor: theme.palette.primary.lighter }}>
+      <Box
+        sx={{
+          mb: 2,
+          gap: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+        }}
+      >
+        <Typography variant="body2" sx={{ color: '#243D33' }}>
+          {template.paper} · {template.code} · ตัวอย่างเอกสาร
+        </Typography>
+        <PDFDownloadLink
+          document={document}
+          fileName={`ตัวอย่าง-${template.code}-${template.name}.pdf`}
+          style={{ textDecoration: 'none' }}
+        >
+          {({ loading, error }) => (
+            <Button
+              variant="outlined"
+              loading={loading}
+              disabled={Boolean(error)}
+              startIcon={<RemixIcon icon="solar:download-minimalistic-bold" />}
+              sx={{ color: '#006B42', borderColor: '#78A992' }}
+            >
+              {error ? 'สร้าง PDF ไม่สำเร็จ' : 'บันทึก PDF'}
+            </Button>
+          )}
+        </PDFDownloadLink>
+      </Box>
+      <Box
+        sx={{
+          mx: 'auto',
+          width: 1,
+          maxWidth: '210mm',
+          borderRadius: 2,
+        }}
+      >
+        <DocumentPages document={document} />
+      </Box>
+    </Box>
+  );
+}
+
+export default function DocumentExamplePdfDialog({ open, onClose, template }: Props) {
+  const school = useDocumentSchool(template);
+  const document =
+    template.slug === 'pp5' ? (
+      <GradeResultDocument report={SAMPLE_PP5_REPORT} submission={SAMPLE_PP5_SUBMISSION} />
+    ) : (
+      <ExampleDocument template={template} {...school} />
+    );
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xl">
       <DialogTitle>
@@ -192,17 +371,16 @@ export default function DocumentExamplePdfDialog({ open, onClose, template }: Pr
           {template.paper}
         </Typography>
       </DialogTitle>
-      <DialogContent sx={{ p: 2, display: 'flex', justifyContent: 'center', bgcolor: 'grey.900' }}>
+      <DialogContent
+        sx={{ p: 2, display: 'flex', justifyContent: 'center', bgcolor: 'background.neutral' }}
+      >
         <Box
           sx={{
-            width: landscape ? 1 : { xs: 1, md: 'min(100%, 720px)' },
-            aspectRatio: landscape ? '297 / 210' : '210 / 297',
-            bgcolor: 'common.white',
+            width: 1,
+            maxWidth: '210mm',
           }}
         >
-          <PDFViewer width="100%" height="100%" showToolbar={false}>
-            {document}
-          </PDFViewer>
+          <DocumentPages document={document} />
         </Box>
       </DialogContent>
       <DialogActions>

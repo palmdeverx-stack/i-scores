@@ -17,11 +17,28 @@ import { RouterLink } from 'src/routes/components';
 
 import { RemixIcon } from 'src/components/remix-icon';
 
+import { useAuthContext } from 'src/auth/hooks';
+
 // ----------------------------------------------------------------------
 
 const DocumentExamplePdfDialog = dynamic(
   () => import('../components/document-example-pdf-dialog'),
   { ssr: false }
+);
+
+const DocumentExamplePreview = dynamic(
+  () =>
+    import('../components/document-example-pdf-dialog').then(
+      (module) => module.DocumentExamplePreview
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <Box role="status" sx={{ p: 4, borderRadius: 2.5, bgcolor: '#C7D9D2', textAlign: 'center' }}>
+        กำลังโหลดตัวอย่างเอกสาร…
+      </Box>
+    ),
+  }
 );
 
 export function DocumentDetailView({
@@ -33,6 +50,9 @@ export function DocumentDetailView({
   initialPreview?: boolean;
   backPath?: string;
 }) {
+  const { user } = useAuthContext();
+  const documentRoot =
+    user?.role === 'school_admin' ? paths.admin.documents.root : paths.teacher.documents.root;
   const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -70,13 +90,26 @@ export function DocumentDetailView({
           </Box>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>{template.description}</Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<RemixIcon icon="solar:eye-bold" />}
-          onClick={() => setPreviewOpen(true)}
-        >
-          พรีวิว PDF
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button
+            component={RouterLink}
+            href={`${documentRoot}/new?template=${template.slug}`}
+            variant="contained"
+          >
+            ใช้แม่แบบนี้สร้างเอกสาร
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<RemixIcon icon="solar:eye-bold" />}
+            onClick={() => setPreviewOpen(true)}
+          >
+            พรีวิว PDF
+          </Button>
+        </Box>
+      </Box>
+
+      <Box sx={{ mb: 3 }}>
+        <DocumentExamplePreview template={template} />
       </Box>
 
       <Box
@@ -108,7 +141,7 @@ export function DocumentDetailView({
             mt: 2,
             gap: 1.5,
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
           }}
         >
           {template.sections.map((section, index) => (

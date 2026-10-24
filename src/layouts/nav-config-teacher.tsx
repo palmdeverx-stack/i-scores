@@ -24,6 +24,10 @@ import {
   RiCalendarScheduleLine,
 } from 'src/components/remix-icon';
 
+import { SCHOOL_DOCUMENT_TEMPLATES } from 'src/sections/documents/document-catalog';
+
+import { createInventoryNav } from './nav-config-inventory';
+
 // ----------------------------------------------------------------------
 
 const ICONS = {
@@ -286,6 +290,19 @@ export const navData: NavSectionProps['data'] = [
         requiresDepartmentPermission: 'staff.manage',
       },
       {
+        title: 'ข้อมูลกลางพัสดุ',
+        path: paths.teacher.inventoryMasterData.items,
+        icon: ICONS.documents,
+        requiresDepartmentPermission: 'inventory.manage',
+        children: [
+          { title: 'ข้อมูลหลักพัสดุ', path: paths.teacher.inventoryMasterData.items },
+          { title: 'หมวดหมู่พัสดุ', path: paths.teacher.inventoryMasterData.categories },
+          { title: 'ที่จัดเก็บพัสดุ', path: paths.teacher.inventoryMasterData.locations },
+          { title: 'หน่วยนับพัสดุ', path: paths.teacher.inventoryMasterData.units },
+        ],
+      },
+      ...createInventoryNav(paths.teacher.inventory),
+      {
         title: 'เอกสาร',
         path: paths.teacher.documents.root,
         icon: ICONS.documents,
@@ -298,8 +315,16 @@ export const navData: NavSectionProps['data'] = [
             icon: ICONS.documents,
           },
           {
+            title: 'จองเลขเอกสาร',
+            path: paths.teacher.documents.reserve,
+            icon: ICONS.documents,
+          },
+          {
             title: 'ตัวอย่างเอกสาร',
             path: paths.teacher.documents.templates,
+            activePaths: SCHOOL_DOCUMENT_TEMPLATES.map((template) =>
+              paths.teacher.documents.detail(template.slug)
+            ),
             icon: ICONS.gradeReviews,
           },
         ],

@@ -105,9 +105,17 @@ export const paths = {
     gradeResultClassroom: (classroomId: string, semesterId: string) =>
       `${ROOTS.TEACHER}/grade-results/classroom/${classroomId}/${semesterId}`,
     gradeResultDetail: (id: string) => `${ROOTS.TEACHER}/grade-results/${id}`,
+    inventory: `${ROOTS.TEACHER}/inventory`,
+    inventoryMasterData: {
+      locations: `${ROOTS.TEACHER}/master-data/inventory-locations`,
+      items: `${ROOTS.TEACHER}/master-data/inventory-items`,
+      categories: `${ROOTS.TEACHER}/master-data/inventory-categories`,
+      units: `${ROOTS.TEACHER}/master-data/inventory-units`,
+    },
     documents: {
       root: `${ROOTS.TEACHER}/documents`,
       my: `${ROOTS.TEACHER}/documents/my`,
+      reserve: `${ROOTS.TEACHER}/documents/reserve`,
       templates: `${ROOTS.TEACHER}/documents/templates`,
       pp5: `${ROOTS.TEACHER}/documents/pp5`,
       detail: (slug: string) => `${ROOTS.TEACHER}/documents/${slug}`,
@@ -165,6 +173,10 @@ export const paths = {
     workAttendance: `${ROOTS.ADMIN}/work-attendance`,
     accessPermissions: `${ROOTS.ADMIN}/access-permissions`,
     masterData: {
+      inventoryLocations: `${ROOTS.ADMIN}/master-data/inventory-locations`,
+      inventoryItems: `${ROOTS.ADMIN}/master-data/inventory-items`,
+      inventoryCategories: `${ROOTS.ADMIN}/master-data/inventory-categories`,
+      inventoryUnits: `${ROOTS.ADMIN}/master-data/inventory-units`,
       staffTypes: `${ROOTS.ADMIN}/master-data/staff-types`,
       prefixes: `${ROOTS.ADMIN}/master-data/prefixes`,
       positions: `${ROOTS.ADMIN}/master-data/positions`,
@@ -227,9 +239,11 @@ export const paths = {
     gradeResultClassroom: (classroomId: string, semesterId: string) =>
       `${ROOTS.ADMIN}/grade-results/classroom/${classroomId}/${semesterId}`,
     gradeResultDetail: (id: string) => `${ROOTS.ADMIN}/grade-results/${id}`,
+    inventory: `${ROOTS.ADMIN}/inventory`,
     documents: {
       root: `${ROOTS.ADMIN}/documents`,
       my: `${ROOTS.ADMIN}/documents/my`,
+      reserve: `${ROOTS.ADMIN}/documents/reserve`,
       templates: `${ROOTS.ADMIN}/documents/templates`,
       pp5: `${ROOTS.ADMIN}/documents/pp5`,
       detail: (slug: string) => `${ROOTS.ADMIN}/documents/${slug}`,

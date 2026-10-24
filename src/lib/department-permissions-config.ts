@@ -4,6 +4,16 @@
 
 export const DEPARTMENT_PERMISSIONS = [
   {
+    key: 'inventory.approve',
+    label: 'อนุมัติพัสดุ',
+    description: 'พิจารณาใบขอจัดซื้อและใบขอเบิกพัสดุ โดยใบขอเบิกจะตัดสต็อกเมื่ออนุมัติ',
+  },
+  {
+    key: 'inventory.manage',
+    label: 'งานพัสดุ',
+    description: 'จัดการทะเบียนพัสดุ รับเข้า เบิกจ่าย และตรวจสอบยอดคงเหลือของโรงเรียน',
+  },
+  {
     key: 'dashboard.view',
     label: 'ภาพรวมโรงเรียน',
     description: 'ดูสถิติ จำนวนนักเรียน บุคลากร ห้องเรียน และกิจกรรมล่าสุดของโรงเรียน',

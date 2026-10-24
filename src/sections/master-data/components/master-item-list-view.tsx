@@ -57,6 +57,7 @@ type Props<TItem extends MasterItem> = {
   description: string;
   itemLabel: string;
   showCode?: boolean;
+  readOnly?: boolean;
   queryKey: string[];
   listItems: () => Promise<TItem[]>;
   createItem: (input: { nameTh: string; nameEn: string; sortOrder: number }) => Promise<TItem>;
@@ -72,6 +73,7 @@ export function MasterItemListView<TItem extends MasterItem>({
   description,
   itemLabel,
   showCode = false,
+  readOnly = false,
   queryKey,
   listItems,
   createItem,
@@ -177,6 +179,7 @@ export function MasterItemListView<TItem extends MasterItem>({
         <Button
           variant="contained"
           startIcon={<RemixIcon icon="mingcute:add-line" />}
+          disabled={readOnly}
           onClick={openCreate}
         >
           เพิ่ม{itemLabel}
@@ -244,7 +247,7 @@ export function MasterItemListView<TItem extends MasterItem>({
                   </TableCell>
                   <TableCell align="right">
                     <Tooltip title="แก้ไข">
-                      <IconButton onClick={() => openEdit(item)}>
+                      <IconButton disabled={readOnly} onClick={() => openEdit(item)}>
                         <RemixIcon icon="solar:pen-bold" />
                       </IconButton>
                     </Tooltip>
@@ -252,7 +255,7 @@ export function MasterItemListView<TItem extends MasterItem>({
                       <span>
                         <IconButton
                           color="error"
-                          disabled={item.is_system}
+                          disabled={readOnly || item.is_system}
                           onClick={() => {
                             deleteMutation.reset();
                             setDeletingItem(item);

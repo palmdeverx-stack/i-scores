@@ -33,10 +33,12 @@ export function isNavDataActive(pathname: string, item: NavItemDataProps): boole
 
   if (
     !isExcluded &&
-    isNavItemActive(pathname, item.path, {
-      deepMatch: item.deepMatch,
-      hasChildren: !!item.children,
-    })
+    [item.path, ...(item.activePaths ?? [])].some((path) =>
+      isNavItemActive(pathname, path, {
+        deepMatch: item.deepMatch,
+        hasChildren: !!item.children,
+      })
+    )
   ) {
     return true;
   }

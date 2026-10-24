@@ -1,8 +1,16 @@
 'use client';
 
-export type UserDocumentStatus = 'draft' | 'submitted' | 'ready' | 'cancelled';
+import type { DocumentContent } from './document-content';
+import type { DocumentReservationValues } from './document-reservation-schema';
+
+export type UserDocumentStatus = 'reserved' | 'draft' | 'submitted' | 'ready' | 'cancelled';
 
 export type UserDocument = {
+  planned_date: string | null;
+  reserved_at: string | null;
+  content: DocumentContent | null;
+  document_number: string | null;
+  document_sequence: number | null;
   id: string;
   school_id: string;
   created_by: string;
@@ -31,6 +39,7 @@ export async function createMyDocument(params: {
   templateSlug: string;
   title: string;
   purpose?: string;
+  content?: DocumentContent;
 }): Promise<UserDocument> {
   const response = await fetch('/api/documents', {
     method: 'POST',
@@ -66,7 +75,7 @@ export async function updateMyDocumentStatus(
 
 export async function updateMyDocument(
   id: string,
-  params: { templateSlug: string; title: string; purpose?: string }
+  params: { templateSlug: string; title: string; purpose?: string; content?: DocumentContent }
 ): Promise<UserDocument> {
   const response = await fetch(`/api/documents/${id}`, {
     method: 'PATCH',
@@ -89,4 +98,24 @@ export async function deleteMyDocument(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error(json.message ?? 'ไม่สามารถลบเอกสารได้');
   }
+}
+
+export async function getMyDocument(id: string): Promise<UserDocument> {
+  const response = await fetch(`/api/documents/${encodeURIComponent(id)}`, { cache: 'no-store' });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message ?? 'โหลดเอกสารไม่สำเร็จ');
+  return data.document;
+}
+
+export async function reserveDocumentNumber(
+  input: DocumentReservationValues & { id: string }
+): Promise<UserDocument> {
+  const response = await fetch('/api/documents', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...input, action: 'reserve' }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message ?? 'จองเลขเอกสารไม่สำเร็จ');
+  return data.document;
 }
