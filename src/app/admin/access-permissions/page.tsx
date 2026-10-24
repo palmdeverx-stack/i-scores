@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { DepartmentPermissionsView } from 'src/sections/department-management/view/department-permissions-view';
 

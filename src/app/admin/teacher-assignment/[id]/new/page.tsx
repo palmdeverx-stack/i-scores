@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { AssignmentCreateView } from 'src/sections/assignment/view/assignment-create-view';
 

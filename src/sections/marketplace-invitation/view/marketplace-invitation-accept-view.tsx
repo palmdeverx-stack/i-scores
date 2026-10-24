@@ -49,13 +49,6 @@ async function acceptInvitation(id: string): Promise<void> {
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถยอมรับคำเชิญได้');
 }
 
-const STATUS_LABEL: Record<InvitationStatus, string> = {
-  pending: 'รอการยอมรับ',
-  accepted: 'ยอมรับแล้ว',
-  revoked: 'ถูกยกเลิก',
-  expired: 'หมดอายุ',
-};
-
 export function MarketplaceInvitationAcceptView({ invitationId }: { invitationId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();

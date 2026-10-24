@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
 import { getLegalDocument } from 'src/lib/legal-documents';
 
 import { LegalDocumentView } from 'src/sections/legal';

@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { StudentSubjectDetailView } from 'src/sections/student-dashboard/view/student-subject-detail-view';
 

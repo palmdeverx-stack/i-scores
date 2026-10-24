@@ -1,6 +1,4 @@
-import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
 import { getLegalDocument } from 'src/lib/legal-documents';
 
 import { JwtAcceptLegalView } from 'src/auth/view/jwt';

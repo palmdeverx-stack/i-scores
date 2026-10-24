@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { TeacherAnnouncementListView } from 'src/sections/teacher-announcement/view/teacher-announcement-list-view';
 

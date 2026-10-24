@@ -34,6 +34,9 @@ const securityHeaders = [
 // ----------------------------------------------------------------------
 
 const nextConfig: NextConfig = {
+  images: {
+    dangerouslyAllowSVG: false,
+  },
   trailingSlash: true,
   // LINE does not follow the 308 redirect returned for POST webhooks.
   // Accept both webhook URL forms instead of redirecting before the route handler.

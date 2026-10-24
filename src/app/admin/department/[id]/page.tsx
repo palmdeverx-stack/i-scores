@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { DepartmentDetailView } from 'src/sections/department-management/view/department-detail-view';
 

@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { AdminDashboardView } from 'src/sections/admin-dashboard/view/admin-dashboard-view';
 

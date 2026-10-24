@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { DocumentListView } from 'src/sections/documents/view/document-list-view';
 

@@ -2,21 +2,21 @@
 
 import { useMemo, useState } from 'react';
 
-import { Box, Stack } from '@mui/material';
-import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
-import Container from '@mui/material/Container';
-import InputAdornment from '@mui/material/InputAdornment';
+import Button from '@mui/material/Button';
+import { Box, Stack } from '@mui/material';
 import MenuItem from '@mui/material/MenuItem';
+import Container from '@mui/material/Container';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import InputAdornment from '@mui/material/InputAdornment';
 
-import { RouterLink } from 'src/routes/components';
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
 import { RemixIcon } from 'src/components/remix-icon';
-import { rowInPage, TablePaginationCustom, useTable } from 'src/components/table';
+import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
 
 import { SCHOOL_DOCUMENT_TEMPLATES } from '../document-catalog';
 

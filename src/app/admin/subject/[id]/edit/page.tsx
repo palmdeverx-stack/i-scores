@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { SubjectFormView } from 'src/sections/subject/view/subject-form-view';
 

@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { JwtSignUpView } from 'src/auth/view/jwt';
 

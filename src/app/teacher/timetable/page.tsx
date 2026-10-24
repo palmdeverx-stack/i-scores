@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { TimetableView } from 'src/sections/timetable/view/timetable-view';
 

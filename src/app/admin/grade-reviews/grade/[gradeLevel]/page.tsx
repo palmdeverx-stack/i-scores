@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { GradeReviewListView } from 'src/sections/grade-review/view/grade-review-list-view';
 

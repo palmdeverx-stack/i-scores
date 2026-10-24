@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { LessonPlanTemplateLibraryView } from 'src/sections/lesson-plan/view';
 

@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { StaffCreateView } from 'src/sections/user/view/staff-create-view';
 

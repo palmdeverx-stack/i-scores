@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { ScheduleSubmissionSignView } from 'src/sections/schedule-builder/view/schedule-submission-sign-view';
 

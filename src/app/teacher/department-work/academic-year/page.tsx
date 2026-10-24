@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { AcademicYearListView } from 'src/sections/academic-year/view/academic-year-list-view';
 

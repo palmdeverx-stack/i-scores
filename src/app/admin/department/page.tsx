@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { DepartmentListView } from 'src/sections/department-management/view/department-list-view';
 

@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { SchoolLicenseView } from 'src/sections/school-license/view';
 

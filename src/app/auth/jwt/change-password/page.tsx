@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { JwtChangePasswordView } from 'src/auth/view/jwt';
 

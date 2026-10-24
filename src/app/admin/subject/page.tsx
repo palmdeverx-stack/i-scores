@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { SubjectListView } from 'src/sections/subject/view/subject-list-view';
 

@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';

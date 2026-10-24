@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';

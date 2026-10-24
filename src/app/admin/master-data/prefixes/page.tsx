@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { PrefixListView } from 'src/sections/staff-master/view/prefix-list-view';
 

@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { QuizCreateView } from 'src/sections/assignment/view/quiz-create-view';
 

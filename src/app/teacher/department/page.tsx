@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { TeacherDepartmentView } from 'src/sections/teacher-department/view/teacher-department-view';
 

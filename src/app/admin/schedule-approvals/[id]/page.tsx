@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { ScheduleApprovalDetailView } from 'src/sections/schedule-approvals/view/schedule-approval-detail-view';
 

@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { EnrollmentOverviewView } from 'src/sections/enrollment/view/enrollment-overview-view';
 

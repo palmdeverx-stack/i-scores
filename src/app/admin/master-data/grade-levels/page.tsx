@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { GradeLevelListView } from 'src/sections/subject-master/view/grade-level-list-view';
 

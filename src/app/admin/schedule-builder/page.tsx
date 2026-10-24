@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 
 import { ScheduleBuilderView } from 'src/sections/schedule-builder/view/schedule-builder-view';
 
