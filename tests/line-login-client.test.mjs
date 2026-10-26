@@ -10,6 +10,9 @@ function setup({
   link = false,
   redirect = '/teacher',
   initFail = false,
+  permission = null,
+  refreshedToken = null,
+  consentFails = false,
 } = {}) {
   const calls = [];
   const exports = {};
@@ -35,6 +38,7 @@ function setup({
       },
     }
   );
+  let currentToken = token;
   const liff = {
     init: async (config) => {
       calls.push(['init', config]);
@@ -42,7 +46,22 @@ function setup({
     },
     isLoggedIn: () => loggedIn,
     login: (config) => calls.push(['login', config]),
-    getIDToken: () => token,
+    getIDToken: () => currentToken,
+    ...(permission
+      ? {
+          permission: {
+            query: async (scope) => {
+              calls.push(['permission', scope]);
+              return { state: permission[scope] ?? 'granted' };
+            },
+            requestAll: async () => {
+              calls.push(['consent']);
+              if (consentFails) throw new Error('denied');
+              currentToken = refreshedToken;
+            },
+          },
+        }
+      : {}),
   };
   return { run: () => exports.completeLiffLogin(liff, '2012217961-zWHJVvh5'), calls };
 }
@@ -79,3 +98,42 @@ for (const config of [
     const s = setup(config);
     await assert.rejects(s.run());
   });
+
+test('MINI App requests missing consent once and sends only the fresh ID token', async () => {
+  const s = setup({
+    token: null,
+    permission: { openid: 'granted', profile: 'prompt' },
+    refreshedToken: 'fresh-id-token',
+  });
+  assert.equal(await s.run(), '/teacher');
+  assert.equal(s.calls.filter((c) => c[0] === 'consent').length, 1);
+  assert.deepEqual(
+    s.calls.find((c) => c[0] === '/api/auth/line/verify'),
+    ['/api/auth/line/verify', { idToken: 'fresh-id-token' }]
+  );
+});
+for (const options of [
+  { permission: { openid: 'unavailable' } },
+  { permission: { openid: 'granted', profile: 'granted' } },
+  { permission: { openid: 'prompt', profile: 'prompt' }, consentFails: true },
+  { permission: { openid: 'prompt', profile: 'prompt' }, refreshedToken: null },
+])
+  test(
+    'missing token never creates a session or loops consent ' + JSON.stringify(options),
+    async () => {
+      const s = setup({ token: null, ...options });
+      await assert.rejects(s.run());
+      assert.ok(
+        !s.calls.some((c) => c[0] === '/api/auth/line/verify' || c[0] === '/api/auth/line/start')
+      );
+      assert.ok(s.calls.filter((c) => c[0] === 'consent').length <= 1);
+      if (options.permission.profile === 'granted' || options.permission.openid === 'unavailable')
+        assert.ok(!s.calls.some((c) => c[0] === 'consent'));
+    }
+  );
+
+test('an existing valid token does not trigger additional permissions or consent', async () => {
+  const s = setup({ permission: { openid: 'granted', profile: 'prompt' } });
+  assert.equal(await s.run(), '/teacher');
+  assert.ok(!s.calls.some((c) => c[0] === 'permission' || c[0] === 'consent'));
+});

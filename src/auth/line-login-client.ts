@@ -5,6 +5,12 @@ export type LiffLoginClient = {
   isLoggedIn: () => boolean;
   login: (config: { redirectUri: string }) => void;
   getIDToken: () => string | null;
+  permission?: {
+    query: (
+      scope: 'openid' | 'profile'
+    ) => Promise<{ state: 'granted' | 'prompt' | 'unavailable' }>;
+    requestAll: () => Promise<void>;
+  };
 };
 
 export async function completeLiffLogin(liff: LiffLoginClient, liffId: string) {
@@ -30,9 +36,33 @@ export async function completeLiffLogin(liff: LiffLoginClient, liffId: string) {
       throw new Error(getLineLoginMessage(data.code) || 'เชื่อมต่อ LINE ไม่สำเร็จ กรุณาลองใหม่');
     return data;
   };
-  const idToken = liff.getIDToken();
+  let idToken = liff.getIDToken();
+  if (!idToken && liff.permission) {
+    const openid = await liff.permission.query('openid');
+    if (openid.state === 'unavailable') {
+      throw new Error(
+        'LINE channel นี้ไม่มีสิทธิ์ openid กรุณาตรวจ LIFF ID และการตั้งค่าของ stage ที่กำลังใช้งาน'
+      );
+    }
+    const profile = await liff.permission.query('profile');
+    // MINI Apps may defer consent. Request only when consent is missing:
+    // requestAll rejects when all permissions have already been granted.
+    if (openid.state === 'prompt' || profile.state === 'prompt') {
+      try {
+        await liff.permission.requestAll();
+      } catch {
+        throw new Error(
+          'ยังไม่ได้ยืนยันสิทธิ์กับ LINE กรุณาเปิด MINI App ผ่าน LINE แล้วอนุญาตการเข้าสู่ระบบ'
+        );
+      }
+      // Consent can refresh credentials. Never keep the token read before consent.
+      idToken = liff.getIDToken();
+    }
+  }
   if (!idToken)
-    throw new Error('ไม่พบ ID token จาก LINE กรุณาเปิดสิทธิ์ openid และยืนยันการเข้าสู่ระบบ');
+    throw new Error(
+      'LINE ยังไม่ส่ง ID token กรุณาปิด MINI App แล้วเปิดใหม่ผ่าน LINE และตรวจว่า LIFF ID ตรงกับ stage ที่ใช้งาน'
+    );
   await post('/api/auth/line/start', { intent: 'resume', expectedIntent });
   const result = await post('/api/auth/line/verify', { idToken });
   if (!['/teacher', '/teacher/profile?lineLogin=pending'].includes(result.redirectTo))
