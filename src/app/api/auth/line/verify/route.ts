@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { writeSecurityAudit } from 'src/lib/security-audit';
+import { verifyLineAccessToken } from 'src/lib/line-access-token';
 import { signAppToken, ACCESS_TOKEN_COOKIE, accessTokenCookieOptions } from 'src/lib/auth-token';
 import {
   LineLoginError,
@@ -25,7 +26,13 @@ export async function POST(request: NextRequest) {
     if (!lineSameOrigin(request, origin)) throw new LineLoginError('invalid_state', 403);
     const secrets = lineFlowSecrets(request);
     const body = await request.json().catch(() => null);
-    if (typeof body?.idToken !== 'string' || !body.idToken || body.idToken.length > 16384)
+    const hasIdToken = typeof body?.idToken === 'string' && body.idToken.length > 0;
+    const hasAccessToken = typeof body?.accessToken === 'string' && body.accessToken.length > 0;
+    if (
+      (body?.idToken !== undefined && body?.accessToken !== undefined) ||
+      hasIdToken === hasAccessToken ||
+      (hasIdToken ? body.idToken.length : body.accessToken.length) > 16384
+    )
       throw new LineLoginError('line_verification_failed', 401);
     const claimed = await supabaseAdmin.rpc('claim_line_login_flow', {
       p_state: secrets.stateHash,
@@ -49,7 +56,9 @@ export async function POST(request: NextRequest) {
       )
         throw new LineLoginError('session_changed', 403);
     }
-    const identity = await verifyLineIdToken(config, body.idToken);
+    const identity = hasIdToken
+      ? await verifyLineIdToken(config, body.idToken)
+      : await verifyLineAccessToken(config, body.accessToken);
     if (linking) {
       const saved = await supabaseAdmin
         .from('line_login_flows')

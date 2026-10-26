@@ -1,4 +1,6 @@
 export const LINE_LOGIN_MESSAGES: Record<string, string> = {
+  profile_permission_required:
+    'LINE ยังไม่อนุญาตสิทธิ์ profile กรุณาเปิด MINI App และอนุญาตข้อมูลโปรไฟล์ก่อนเข้าสู่ระบบ',
   not_configured: 'ยังไม่ได้เปิดใช้งาน LINE Login',
   not_linked:
     'LINE นี้ยังไม่ได้เชื่อมบัญชีครู กรุณาเข้าสู่ระบบเดิม แล้วเชื่อม LINE Login ในหน้าโปรไฟล์ก่อน',

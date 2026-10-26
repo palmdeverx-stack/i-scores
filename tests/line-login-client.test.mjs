@@ -13,6 +13,7 @@ function setup({
   permission = null,
   refreshedToken = null,
   consentFails = false,
+  accessToken = null,
 } = {}) {
   const calls = [];
   const exports = {};
@@ -47,6 +48,7 @@ function setup({
     isLoggedIn: () => loggedIn,
     login: (config) => calls.push(['login', config]),
     getIDToken: () => currentToken,
+    getAccessToken: () => accessToken,
     ...(permission
       ? {
           permission: {
@@ -136,4 +138,18 @@ test('an existing valid token does not trigger additional permissions or consent
   const s = setup({ permission: { openid: 'granted', profile: 'prompt' } });
   assert.equal(await s.run(), '/teacher');
   assert.ok(!s.calls.some((c) => c[0] === 'permission' || c[0] === 'consent'));
+});
+
+test('MINI App without openid submits access token to server verification when profile is granted', async () => {
+  const s = setup({
+    token: null,
+    accessToken: 'line-access-token',
+    permission: { openid: 'unavailable', profile: 'granted' },
+  });
+  assert.equal(await s.run(), '/teacher');
+  assert.deepEqual(
+    s.calls.find((c) => c[0] === '/api/auth/line/verify'),
+    ['/api/auth/line/verify', { accessToken: 'line-access-token' }]
+  );
+  assert.ok(!s.calls.some((c) => c[0] === 'consent'));
 });

@@ -122,6 +122,14 @@ function setup({
       Date,
       require(name) {
         if (name === 'next/server') return { NextResponse: { json: response } };
+        if (name.endsWith('/line-access-token'))
+          return {
+            verifyLineAccessToken: async (_config, token) => {
+              calls.push(['verify-access', token]);
+              if (!verification) throw new LineLoginError('line_verification_failed');
+              return { subject: 'line-subject', displayName: 'LINE Name' };
+            },
+          };
         if (name.endsWith('/line-login')) return lib;
         if (name.endsWith('/supabase-admin')) return { supabaseAdmin: db };
         if (name.endsWith('/auth-token'))
@@ -291,4 +299,20 @@ test('direct LIFF open may create only a login flow and never a teacher or schoo
     s.calls.filter((c) => c[0] === 'table').map((c) => c[1]),
     ['line_login_flows']
   );
+});
+
+test('access token is verified by the server before entering the same existing teacher', async () => {
+  const s = setup();
+  const result = await s.verify.POST(
+    s.request({ accessToken: 'line-access-token', userId: 'attacker' })
+  );
+  assert.equal(result.body.redirectTo, '/teacher');
+  assert.ok(s.calls.some((c) => c[0] === 'verify-access' && c[1] === 'line-access-token'));
+  assert.equal(s.calls.find((c) => c[0] === 'mint')[1].sub, caller.sub);
+});
+test('two competing token credentials are rejected before verification or session minting', async () => {
+  const s = setup();
+  const result = await s.verify.POST(s.request({ idToken: 'id', accessToken: 'access' }));
+  assert.equal(result.status, 401);
+  assert.ok(!s.calls.some((c) => c[0] === 'verify-access' || c[0] === 'verify' || c[0] === 'mint'));
 });

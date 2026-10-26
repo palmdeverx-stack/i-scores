@@ -5,6 +5,7 @@ export type LiffLoginClient = {
   isLoggedIn: () => boolean;
   login: (config: { redirectUri: string }) => void;
   getIDToken: () => string | null;
+  getAccessToken?: () => string | null;
   permission?: {
     query: (
       scope: 'openid' | 'profile'
@@ -39,11 +40,6 @@ export async function completeLiffLogin(liff: LiffLoginClient, liffId: string) {
   let idToken = liff.getIDToken();
   if (!idToken && liff.permission) {
     const openid = await liff.permission.query('openid');
-    if (openid.state === 'unavailable') {
-      throw new Error(
-        'LINE channel นี้ไม่มีสิทธิ์ openid กรุณาตรวจ LIFF ID และการตั้งค่าของ stage ที่กำลังใช้งาน'
-      );
-    }
     const profile = await liff.permission.query('profile');
     // MINI Apps may defer consent. Request only when consent is missing:
     // requestAll rejects when all permissions have already been granted.
@@ -59,12 +55,18 @@ export async function completeLiffLogin(liff: LiffLoginClient, liffId: string) {
       idToken = liff.getIDToken();
     }
   }
-  if (!idToken)
+  // Channels without OpenID can authenticate via a verified access token and
+  // a profile fetched directly from LINE by the server, never from client claims.
+  const accessToken = !idToken ? liff.getAccessToken?.() : null;
+  if (!idToken && !accessToken)
     throw new Error(
-      'LINE ยังไม่ส่ง ID token กรุณาปิด MINI App แล้วเปิดใหม่ผ่าน LINE และตรวจว่า LIFF ID ตรงกับ stage ที่ใช้งาน'
+      'LINE ยังไม่ส่ง token กรุณาปิด MINI App แล้วเปิดใหม่ผ่าน LINE และอนุญาตสิทธิ์ข้อมูลโปรไฟล์'
     );
   await post('/api/auth/line/start', { intent: 'resume', expectedIntent });
-  const result = await post('/api/auth/line/verify', { idToken });
+  const result = await post(
+    '/api/auth/line/verify',
+    idToken ? { idToken } : { accessToken: accessToken! }
+  );
   if (!['/teacher', '/teacher/profile?lineLogin=pending'].includes(result.redirectTo))
     throw new Error('ปลายทางเข้าสู่ระบบไม่ถูกต้อง');
   return result.redirectTo as string;
