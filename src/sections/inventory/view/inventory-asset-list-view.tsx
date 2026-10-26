@@ -147,7 +147,13 @@ export function InventoryAssetListView() {
                     <Chip
                       size="small"
                       color={asset.status === 'in_use' ? 'success' : 'info'}
-                      label={asset.status === 'in_use' ? 'ใช้งาน' : 'ขึ้นทะเบียนแล้ว'}
+                      label={
+                        asset.status === 'in_use'
+                          ? 'ใช้งาน'
+                          : asset.status === 'maintenance'
+                            ? 'ชำรุด / รอตรวจสอบ'
+                            : 'พร้อมนำไปใช้งาน'
+                      }
                     />
                   </TableCell>
                   <TableCell>
@@ -159,6 +165,14 @@ export function InventoryAssetListView() {
                   <TableCell>
                     {query.data?.canManage && asset.status === 'registered' && (
                       <Button onClick={() => setSelected(asset)}>นำไปใช้งาน</Button>
+                    )}
+                    {query.data?.canManage && asset.status === 'in_use' && (
+                      <Button
+                        component={RouterLink}
+                        href={`${root}/returns/new?kind=equipment&asset=${asset.id}`}
+                      >
+                        รับคืน
+                      </Button>
                     )}
                   </TableCell>
                 </TableRow>

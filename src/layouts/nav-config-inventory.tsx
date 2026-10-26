@@ -5,67 +5,42 @@ import { RiArchiveLine, RiHandCoinLine, RiShoppingCartLine } from 'src/component
 export function createInventoryNav(root: string): NavItemDataProps[] {
   return [
     {
-      title: 'จัดซื้อพัสดุ',
+      title: 'ขอซื้อและออกใบสั่งซื้อ',
       path: `${root}/purchases`,
       icon: <RiShoppingCartLine />,
-      children: [
-        {
-          title: 'ใบขอจัดซื้อ / แบบร่าง',
-          path: `${root}/purchases`,
-          requiresDepartmentPermission: 'inventory.manage',
-        },
-        {
-          title: 'อนุมัติจัดซื้อ',
-          path: `${root}/purchase-approvals`,
-          requiresDepartmentPermission: 'inventory.approve',
-        },
-      ],
+      requiresDepartmentPermission: 'inventory.manage',
     },
     {
-      title: 'คลังพัสดุ (STOCK)',
+      title: 'คลังและทะเบียนพัสดุ',
       path: root,
       deepMatch: false,
       icon: <RiArchiveLine />,
+      requiresDepartmentPermission: 'inventory.manage',
       children: [
-        {
-          title: 'ทะเบียน / ยอดคงเหลือ',
-          path: root,
-          deepMatch: false,
-          requiresDepartmentPermission: 'inventory.manage',
-        },
-        {
-          title: 'ทะเบียนครุภัณฑ์ / นำไปใช้งาน',
-          path: `${root}/assets`,
-          requiresDepartmentPermission: 'inventory.manage',
-        },
-        {
-          title: 'รับเข้าพัสดุ',
-          path: `${root}/receive`,
-          requiresDepartmentPermission: 'inventory.manage',
-        },
-        {
-          title: 'ประวัติรับเข้า–จ่ายออก',
-          path: `${root}/history`,
-          requiresDepartmentPermission: 'inventory.manage',
-        },
+        { title: 'ยอดคงเหลือวัสดุ', path: root, deepMatch: false },
+        { title: 'รับเข้าตามเอกสาร', path: `${root}/receive` },
+        { title: 'ทะเบียนครุภัณฑ์และการใช้งาน', path: `${root}/assets` },
+        { title: 'รับคืนวัสดุและครุภัณฑ์', path: `${root}/returns` },
+        { title: 'ประวัติการเคลื่อนไหว', path: `${root}/history` },
       ],
     },
     {
-      title: 'เบิกจ่ายพัสดุ',
+      title: 'ขอเบิกวัสดุ',
       path: `${root}/issue`,
       icon: <RiHandCoinLine />,
-      children: [
-        {
-          title: 'ใบขอเบิกพัสดุ',
-          path: `${root}/issue`,
-          requiresDepartmentPermission: 'inventory.manage',
-        },
-        {
-          title: 'อนุมัติใบขอเบิก',
-          path: `${root}/approvals`,
-          requiresDepartmentPermission: 'inventory.approve',
-        },
-      ],
+      requiresDepartmentPermission: 'inventory.manage',
+    },
+    {
+      title: 'พิจารณาคำขอจัดซื้อ',
+      path: `${root}/purchase-approvals`,
+      icon: <RiShoppingCartLine />,
+      requiresDepartmentPermission: 'inventory.approve',
+    },
+    {
+      title: 'พิจารณาคำขอเบิกวัสดุ',
+      path: `${root}/approvals`,
+      icon: <RiHandCoinLine />,
+      requiresDepartmentPermission: 'inventory.approve',
     },
   ];
 }

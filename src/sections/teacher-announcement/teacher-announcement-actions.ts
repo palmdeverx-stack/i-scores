@@ -6,6 +6,7 @@ export type AnnouncementType = 'general' | 'holiday' | 'exam';
 export type AnnouncementPriority = 'normal' | 'important' | 'urgent';
 
 export type TeacherAnnouncement = {
+  created_by: string | null;
   id: string;
   title: string;
   content: string;

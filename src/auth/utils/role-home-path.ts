@@ -7,7 +7,7 @@ const ROLE_HOME_PATHS: Record<string, string> = {
   school_admin: paths.admin.root,
   teacher: paths.teacher.root,
   student: paths.student.root,
-  marketplace_user: paths.page403,
+  marketplace_user: paths.account.apps,
 };
 
 export function getHomePathForRole(role?: string): string {

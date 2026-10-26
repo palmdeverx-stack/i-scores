@@ -1,12 +1,9 @@
 'use client';
 
 import type { StaffType } from 'src/types/staff-employment';
-import type {
-  AccessLevel,
-  OverrideAccessLevel,
-} from '../access-permission-actions';
+import type { AccessLevel, OverrideAccessLevel } from '../access-permission-actions';
 
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
@@ -26,11 +23,13 @@ import TableContainer from '@mui/material/TableContainer';
 
 import {
   DEPARTMENT_PERMISSIONS,
+  departmentPermissionGroup,
   isManageableDepartmentPermission,
 } from 'src/lib/department-permissions-config';
 
 import { RemixIcon } from 'src/components/remix-icon';
 
+import { StaffMenuPreviewDialog } from './staff-menu-preview-dialog';
 import {
   getAccessPermissions,
   saveStaffTypePermissions,
@@ -42,6 +41,22 @@ import {
 type Props = {
   mode: 'staff_type' | 'individual';
 };
+
+const permissionGroups = [
+  'ภาพรวมและข้อมูลโรงเรียน',
+  'งานสอนของฉัน',
+  'งานวิชาการ',
+  'งานตรวจสอบและอนุมัติ',
+  'งานพัสดุ',
+  'งานเอกสาร',
+  'บุคลากรและนักเรียน',
+  'ประกาศและการสื่อสาร',
+];
+const permissionRows = [...DEPARTMENT_PERMISSIONS].sort(
+  (a, b) =>
+    permissionGroups.indexOf(departmentPermissionGroup(a.key)) -
+    permissionGroups.indexOf(departmentPermissionGroup(b.key))
+);
 
 function PermissionRows({
   values,
@@ -65,49 +80,66 @@ function PermissionRows({
           </TableRow>
         </TableHead>
         <TableBody>
-          {DEPARTMENT_PERMISSIONS.map((permission) => (
-            <TableRow key={permission.key} hover>
-              <TableCell>
-                <Typography variant="subtitle2">{permission.label}</Typography>
-                {!isManageableDepartmentPermission(permission.key) && (
-                  <Chip
-                    size="small"
-                    variant="soft"
-                    color="warning"
-                    label="ดูข้อมูลเท่านั้น"
-                    sx={{ mt: 0.75 }}
-                  />
-                )}
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  {permission.description}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <TextField
-                  select
-                  fullWidth
-                  size="small"
-                  value={values[permission.key] ?? (overrideMode ? 'inherit' : 'none')}
-                  disabled={disabled}
-                  onChange={(event) =>
-                    onChange(
-                      permission.key,
-                      event.target.value as AccessLevel | OverrideAccessLevel
-                    )
-                  }
-                  slotProps={{ select: { displayEmpty: true } }}
-                >
-                  {overrideMode && <MenuItem value="inherit">ตามค่าหลัก</MenuItem>}
-                  <MenuItem value="none">ไม่มีสิทธิ์</MenuItem>
-                  <MenuItem value="view">ดูข้อมูล</MenuItem>
-                  {isManageableDepartmentPermission(permission.key) && (
-                    <MenuItem value="manage">ดูและจัดการ</MenuItem>
+          {permissionRows.map((permission, index) => (
+            <Fragment key={permission.key}>
+              {(index === 0 ||
+                departmentPermissionGroup(permissionRows[index - 1].key) !==
+                  departmentPermissionGroup(permission.key)) && (
+                <TableRow>
+                  <TableCell colSpan={3} sx={{ bgcolor: 'background.neutral', fontWeight: 600 }}>
+                    {departmentPermissionGroup(permission.key)}
+                  </TableCell>
+                </TableRow>
+              )}
+              <TableRow key={permission.key} hover>
+                <TableCell>
+                  <Typography variant="subtitle2">{permission.label}</Typography>
+                  {!isManageableDepartmentPermission(permission.key) && (
+                    <Chip
+                      size="small"
+                      variant="soft"
+                      color="warning"
+                      label={
+                        permission.key === 'documents.access'
+                          ? 'เฉพาะเอกสารของตนเอง'
+                          : 'ดูข้อมูลเท่านั้น'
+                      }
+                      sx={{ mt: 0.75 }}
+                    />
                   )}
-                </TextField>
-              </TableCell>
-            </TableRow>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {permission.description}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    value={values[permission.key] ?? (overrideMode ? 'inherit' : 'none')}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      onChange(
+                        permission.key,
+                        event.target.value as AccessLevel | OverrideAccessLevel
+                      )
+                    }
+                    slotProps={{ select: { displayEmpty: true } }}
+                  >
+                    {overrideMode && <MenuItem value="inherit">ตามค่าหลัก</MenuItem>}
+                    <MenuItem value="none">ไม่มีสิทธิ์</MenuItem>
+                    <MenuItem value="view">
+                      {permission.key === 'documents.access' ? 'ใช้งานเอกสารของตนเอง' : 'ดูข้อมูล'}
+                    </MenuItem>
+                    {isManageableDepartmentPermission(permission.key) && (
+                      <MenuItem value="manage">ดูและจัดการ</MenuItem>
+                    )}
+                  </TextField>
+                </TableCell>
+              </TableRow>
+            </Fragment>
           ))}
         </TableBody>
       </Table>
@@ -122,10 +154,9 @@ export function StaffAccessPermissionsPanel({ mode }: Props) {
     queryFn: getAccessPermissions,
   });
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedStaffType, setSelectedStaffType] = useState<StaffType>('executive');
-  const [values, setValues] = useState<
-    Record<string, AccessLevel | OverrideAccessLevel>
-  >({});
+  const [values, setValues] = useState<Record<string, AccessLevel | OverrideAccessLevel>>({});
 
   const selectedUser = data?.staff.find((staff) => staff.id === selectedUserId);
 
@@ -135,10 +166,7 @@ export function StaffAccessPermissionsPanel({ mode }: Props) {
         Object.fromEntries(
           data.staffTypePermissions
             .filter((permission) => permission.staff_type === selectedStaffType)
-            .map((permission) => [
-              permission.permission_key,
-              permission.access_level,
-            ])
+            .map((permission) => [permission.permission_key, permission.access_level])
         )
       );
       return;
@@ -165,8 +193,7 @@ export function StaffAccessPermissionsPanel({ mode }: Props) {
     mutationFn: () => {
       const permissions = DEPARTMENT_PERMISSIONS.map((permission) => ({
         key: permission.key,
-        level:
-          values[permission.key] ?? (mode === 'individual' ? 'inherit' : 'none'),
+        level: values[permission.key] ?? (mode === 'individual' ? 'inherit' : 'none'),
       }));
       return mode === 'staff_type'
         ? saveStaffTypePermissions(
@@ -181,10 +208,16 @@ export function StaffAccessPermissionsPanel({ mode }: Props) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['access-permissions'] });
       await queryClient.invalidateQueries({ queryKey: ['users'] });
+      await queryClient.invalidateQueries({ queryKey: ['staff-menu-preview'] });
     },
   });
 
-  if (isLoading) return <Card variant="outlined" sx={{ p: 3 }}>กำลังโหลดสิทธิ์...</Card>;
+  if (isLoading)
+    return (
+      <Card variant="outlined" sx={{ p: 3 }}>
+        กำลังโหลดสิทธิ์...
+      </Card>
+    );
   if (isError) {
     return (
       <Alert
@@ -202,10 +235,25 @@ export function StaffAccessPermissionsPanel({ mode }: Props) {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {mode === 'individual' && selectedUserId && (
+        <Button variant="outlined" onClick={() => setPreviewOpen(true)}>
+          ดูเมนูที่บุคคลนี้เข้าถึงได้
+        </Button>
+      )}
+      {previewOpen && (
+        <StaffMenuPreviewDialog userId={selectedUserId} onClose={() => setPreviewOpen(false)} />
+      )}
       {mode === 'staff_type' && (
         <Alert severity="info">
-          หลังตรวจ role เป็นครู ระบบจะตรวจประเภทบุคลากรต่อ
-          และแสดงเฉพาะหน้าที่ประเภทนั้นได้รับสิทธิ์
+          กำหนดสิทธิ์ตั้งต้นตามประเภทบุคลากร แล้วปรับข้อยกเว้นเป็นรายบุคคลได้
+          สิทธิ์ดูข้อมูลส่วนกลางไม่อนุญาตให้แก้ไขหรืออนุมัติ
+          ส่วนสิทธิ์เอกสารให้ใช้งานเฉพาะเอกสารของตนเอง
+        </Alert>
+      )}
+      {mode === 'individual' && (
+        <Alert severity="info">
+          “ตามค่าหลัก” ใช้สิทธิ์จากประเภทบุคลากรและฝ่ายงาน ส่วน “ไม่มีสิทธิ์”
+          จะปิดสิทธิ์หัวข้อนั้นเฉพาะบุคคล แม้ได้รับสิทธิ์จากฝ่ายหรือประเภทบุคลากร
         </Alert>
       )}
       {mode === 'staff_type' && (

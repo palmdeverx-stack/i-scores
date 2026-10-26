@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canAccessTeacherWork } from 'src/lib/teacher-work-access';
 import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
-import { isPersonalWorkspaceOwner } from 'src/lib/department-permission-access';
 import { ownsLessonPlan, loadLessonPlan, canReviewLessonPlans } from 'src/lib/lesson-plan-access';
+import {
+  canManageViaPermission,
+  isPersonalWorkspaceOwner,
+} from 'src/lib/department-permission-access';
 
 // ----------------------------------------------------------------------
 
@@ -26,15 +30,14 @@ const ALLOWED_FROM: Record<string, LessonPlanStatus[]> = {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   const { id } = await params;
   const plan = caller ? await loadLessonPlan(id) : null;
   if (!caller?.schoolId || !plan || plan.school_id !== caller.schoolId) {
     return NextResponse.json({ message: 'ไม่พบแผนการสอน' }, { status: 404 });
   }
-  if (
-    caller.role === 'teacher' &&
-    (await isPersonalWorkspaceOwner(caller.sub, caller.schoolId))
-  ) {
+  if (caller.role === 'teacher' && (await isPersonalWorkspaceOwner(caller.sub, caller.schoolId))) {
     return NextResponse.json(
       { message: 'พื้นที่ส่วนตัวไม่มีขั้นตอนส่งตรวจแผนการสอน' },
       { status: 403 }
@@ -50,7 +53,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const isOwnerAction = action === 'submit' || action === 'archive';
   const allowed = isOwnerAction
-    ? ownsLessonPlan(caller, plan)
+    ? ownsLessonPlan(caller, plan) && (await canManageViaPermission(caller, 'teaching.assignments'))
     : await canReviewLessonPlans(caller, true);
   if (!allowed) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการ' }, { status: 403 });

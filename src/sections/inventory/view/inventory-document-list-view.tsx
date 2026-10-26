@@ -169,6 +169,14 @@ export function InventoryDocumentListView({
                   </TableCell>
                   <TableCell>
                     <Button onClick={() => open(doc)}>{approval ? 'พิจารณา' : 'ดูรายการ'}</Button>
+                    {query.data?.canManage && doc.kind === 'issue' && doc.status === 'posted' && (
+                      <Button
+                        component={RouterLink}
+                        href={`${user?.role === 'school_admin' ? paths.admin.inventory : paths.teacher.inventory}/returns/new?source=${doc.id}`}
+                      >
+                        รับคืนวัสดุ
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

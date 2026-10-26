@@ -1,4 +1,3 @@
-
 import { LessonPlanFormView } from 'src/sections/lesson-plan/view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
@@ -11,7 +10,7 @@ export default async function Page({ searchParams }: Props) {
   const { template, catalogTemplate } = await searchParams;
 
   return (
-    <DepartmentPermissionGuard permission="teaching.assignments">
+    <DepartmentPermissionGuard permission="teaching.assignments" access="manage">
       <LessonPlanFormView templateId={template} catalogSourceTemplateId={catalogTemplate} />
     </DepartmentPermissionGuard>
   );

@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
+import { hasWorkspacePermission } from 'src/lib/workspace-access';
+
 import { SplashScreen } from 'src/components/loading-screen';
 
 import { useAuthContext } from '../hooks';
@@ -19,9 +21,7 @@ export function SchoolDirectorGuard({ children }: { children: React.ReactNode })
   const { user } = useAuthContext();
   const router = useRouter();
 
-  const isAllowed =
-    user?.role === 'school_admin' ||
-    (user?.department_permissions ?? []).includes('schedule.approve');
+  const isAllowed = hasWorkspacePermission(user, 'schedule.approve');
 
   useEffect(() => {
     if (user && !isAllowed) {

@@ -2,6 +2,7 @@ import { after, NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canAccessTeacherWork } from 'src/lib/teacher-work-access';
 import { loadOwnedAttendanceScanSession } from 'src/lib/attendance-scan-access';
 import {
   queueAttendanceNotifications,
@@ -14,6 +15,8 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['teacher']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
@@ -44,6 +47,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['teacher']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }

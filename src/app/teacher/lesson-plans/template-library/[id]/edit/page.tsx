@@ -1,4 +1,3 @@
-
 import { paths } from 'src/routes/paths';
 
 import { TemplateFormView } from 'src/features/templates/view';
@@ -9,7 +8,7 @@ import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <DepartmentPermissionGuard permission="teaching.assignments">
+    <DepartmentPermissionGuard permission="teaching.assignments" access="manage">
       <TemplateFormView
         templateId={(await params).id}
         returnPath={paths.teacher.lessonPlans.templateLibrary}

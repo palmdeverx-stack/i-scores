@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canAccessTeacherWork } from 'src/lib/teacher-work-access';
 import { loadTeacherAssignment } from 'src/lib/teacher-assignment-access';
 import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import {
@@ -14,10 +15,7 @@ import {
   resolveCurriculumReference,
 } from 'src/features/curriculum/server/resolve-curriculum-reference';
 
-import {
-  parseLessonPlanPayload,
-  LESSON_PLAN_DRAFT_TAB_COLUMNS,
-} from '../lesson-plan-payload';
+import { parseLessonPlanPayload, LESSON_PLAN_DRAFT_TAB_COLUMNS } from '../lesson-plan-payload';
 
 // ----------------------------------------------------------------------
 
@@ -25,6 +23,8 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: RouteParams) {
   const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   const { id } = await params;
   const plan = caller ? await loadLessonPlan(id) : null;
   if (!caller || !(await canViewLessonPlan(caller, plan))) {
@@ -55,6 +55,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const caller = await requireLessonPlanFeature(request, ['teacher']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   const { id } = await params;
   const plan = caller ? await loadLessonPlan(id) : null;
   if (!caller || !caller.schoolId || !ownsLessonPlan(caller, plan)) {
@@ -178,6 +180,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   const caller = await requireLessonPlanFeature(request, ['teacher']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   const { id } = await params;
   const plan = caller ? await loadLessonPlan(id) : null;
   if (!caller || !ownsLessonPlan(caller, plan)) {

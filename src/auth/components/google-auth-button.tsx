@@ -13,6 +13,7 @@ import { getSupabaseBrowserClient } from 'src/lib/supabase-browser';
 
 import { useAuthContext } from 'src/auth/hooks';
 import { getHomePathForRole } from 'src/auth/utils';
+import { safeInternalPath } from 'src/auth/utils/safe-internal-path';
 
 // ----------------------------------------------------------------------
 
@@ -101,11 +102,10 @@ export function GoogleAuthButton({ intent, onError }: GoogleAuthButtonProps) {
 
       try {
         const supabase = getSupabaseBrowserClient();
-        const { data, error: authError } =
-          await supabase.auth.signInWithIdToken({
-            provider: 'google',
-            token: credential,
-          });
+        const { data, error: authError } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: credential,
+        });
         if (authError || !data.session) throw authError ?? new Error('ไม่พบ Google session');
 
         const response = await fetch('/api/auth/google', {
@@ -121,7 +121,16 @@ export function GoogleAuthButton({ intent, onError }: GoogleAuthButtonProps) {
 
         await supabase.auth.signOut({ scope: 'local' });
 
+        const returnTo = safeInternalPath(
+          new URLSearchParams(window.location.search).get('returnTo'),
+          true
+        );
         if (result.marketplaceOnly) {
+          if (returnTo) {
+            await checkUserSession?.();
+            router.replace(returnTo);
+            return;
+          }
           if (!result.redirectUrl) throw new Error('ยังไม่ได้กำหนด URL ของ Marketplace');
           window.location.replace(result.redirectUrl);
           return;
@@ -131,17 +140,16 @@ export function GoogleAuthButton({ intent, onError }: GoogleAuthButtonProps) {
             pinChallengeToken: result.pinChallengeToken,
             pinRole: result.role,
           });
+          if (returnTo) params.set('returnTo', returnTo);
           router.replace(`${paths.auth.jwt.signIn}?${params.toString()}`);
           return;
         }
 
         await checkUserSession?.();
-        router.replace(getHomePathForRole(result.user?.role));
+        router.replace(returnTo ?? getHomePathForRole(result.user?.role));
       } catch (googleError) {
         onError(
-          googleError instanceof Error
-            ? googleError.message
-            : 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้'
+          googleError instanceof Error ? googleError.message : 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้'
         );
         setLoading(false);
       }

@@ -24,6 +24,8 @@ import LinearProgress from '@mui/material/LinearProgress';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
+import { hasWorkspacePermission } from 'src/lib/workspace-access';
+
 import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 
@@ -100,6 +102,7 @@ function toPreviewInput(plan: LessonPlan): LessonPlanInput {
 
 export function LessonPlanListView() {
   const { user } = useAuthContext();
+  const canManage = hasWorkspacePermission(user, 'teaching.assignments', 'manage');
   const isPersonalWorkspace = user?.is_personal_workspace === true;
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<'all' | LessonPlanStatus>('all');
@@ -173,14 +176,16 @@ export function LessonPlanListView() {
             สร้างแผนดิจิทัล เก็บประวัติเวอร์ชัน และส่งให้ฝ่ายวิชาการตรวจสอบ
           </Typography>
         </Box>
-        <Button
-          component={RouterLink}
-          href={paths.teacher.lessonPlans.new}
-          variant="contained"
-          startIcon={<RemixIcon icon="mingcute:add-line" />}
-        >
-          สร้างแผนใหม่
-        </Button>
+        {canManage && (
+          <Button
+            component={RouterLink}
+            href={paths.teacher.lessonPlans.new}
+            variant="contained"
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
+          >
+            สร้างแผนใหม่
+          </Button>
+        )}
       </Box>
 
       {plansQuery.isError ||
@@ -258,7 +263,7 @@ export function LessonPlanListView() {
         >
           {plans.map((plan) => {
             const statusConfig = STATUS_CONFIG[plan.status];
-            const editable = ['draft', 'revision'].includes(plan.status);
+            const editable = canManage && ['draft', 'revision'].includes(plan.status);
 
             return (
               <LessonPlanDocumentCard
@@ -298,12 +303,13 @@ export function LessonPlanListView() {
                       size="small"
                       color="inherit"
                       loading={copyMutation.isPending}
+                      disabled={!canManage}
                       onClick={() => copyMutation.mutate(plan.id)}
                       startIcon={<RemixIcon icon="solar:copy-linear" />}
                     >
                       คัดลอก
                     </Button>
-                    {plan.status === 'draft' ? (
+                    {canManage && plan.status === 'draft' ? (
                       <Button
                         size="small"
                         color="error"

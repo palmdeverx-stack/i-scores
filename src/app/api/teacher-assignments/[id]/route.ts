@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canAccessTeacherWork } from 'src/lib/teacher-work-access';
 import {
   loadTeacherAssignment,
   canAccessTeacherAssignment,
@@ -22,6 +23,8 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
 
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
@@ -35,12 +38,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const canManageAssignments =
-    caller.role === 'school_admin' ||
-    (await hasTimetableCapability(caller.sub, caller.schoolId));
+    caller.role === 'school_admin' || (await hasTimetableCapability(caller.sub, caller.schoolId));
 
   if (!canManageAssignments) {
     return NextResponse.json(
-      { message: 'ไม่มีสิทธิ์แก้ไขวิชา ห้องเรียน หรือภาคเรียนของรายการสอนนี้ กรุณาติดต่อผู้ดูแลโรงเรียน' },
+      {
+        message:
+          'ไม่มีสิทธิ์แก้ไขวิชา ห้องเรียน หรือภาคเรียนของรายการสอนนี้ กรุณาติดต่อผู้ดูแลโรงเรียน',
+      },
       { status: 403 }
     );
   }
@@ -53,26 +58,26 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const [teacherResult, subject, classroomResult, semesterResult] = await Promise.all([
-      supabaseAdmin
-        .from('app_users')
-        .select('id')
-        .eq('id', resolvedTeacherId)
-        .eq('role', 'teacher')
-        .eq('school_id', caller.schoolId)
-        .maybeSingle(),
-      loadSubjectForTeaching(caller, subjectId, semesterId),
-      supabaseAdmin
-        .from('classrooms')
-        .select('id, academic_year_id')
-        .eq('id', classroomId)
-        .eq('school_id', caller.schoolId)
-        .maybeSingle(),
-      supabaseAdmin
-        .from('semesters')
-        .select('id, academic_year_id, academic_years!inner(school_id)')
-        .eq('id', semesterId)
-        .eq('academic_years.school_id', caller.schoolId)
-        .maybeSingle(),
+    supabaseAdmin
+      .from('app_users')
+      .select('id')
+      .eq('id', resolvedTeacherId)
+      .eq('role', 'teacher')
+      .eq('school_id', caller.schoolId)
+      .maybeSingle(),
+    loadSubjectForTeaching(caller, subjectId, semesterId),
+    supabaseAdmin
+      .from('classrooms')
+      .select('id, academic_year_id')
+      .eq('id', classroomId)
+      .eq('school_id', caller.schoolId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('semesters')
+      .select('id, academic_year_id, academic_years!inner(school_id)')
+      .eq('id', semesterId)
+      .eq('academic_years.school_id', caller.schoolId)
+      .maybeSingle(),
   ]);
   const { data: teacher } = teacherResult;
   const { data: classroom } = classroomResult;
@@ -141,6 +146,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
 
   if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });

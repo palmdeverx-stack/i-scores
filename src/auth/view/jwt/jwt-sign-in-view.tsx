@@ -18,14 +18,18 @@ import InputAdornment from '@mui/material/InputAdornment';
 import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { CONFIG } from 'src/global-config';
+import { getLineLoginMessage } from 'src/lib/line-login-messages';
 
 import { Image } from 'src/components/image';
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
+import { safeInternalPath } from 'src/auth/utils/safe-internal-path';
+
 import { useAuthContext } from '../../hooks';
 import { FormHead } from '../../components/form-head';
 import { getErrorMessage, getHomePathForRole } from '../../utils';
+import { LineLoginButton } from '../../components/line-login-button';
 import { GoogleAuthButton } from '../../components/google-auth-button';
 import { verifySignInPin, signInWithPassword } from '../../context/jwt';
 
@@ -89,7 +93,9 @@ export function JwtSignInView() {
 
       await checkUserSession?.();
 
-      router.replace(getHomePathForRole(result.role));
+      router.replace(
+        safeInternalPath(searchParams.get('returnTo'), true) ?? getHomePathForRole(result.role)
+      );
     },
   });
 
@@ -98,7 +104,9 @@ export function JwtSignInView() {
     onSuccess: async (user) => {
       await checkUserSession?.();
 
-      router.replace(getHomePathForRole(user.role));
+      router.replace(
+        safeInternalPath(searchParams.get('returnTo'), true) ?? getHomePathForRole(user.role)
+      );
     },
   });
 
@@ -118,7 +126,10 @@ export function JwtSignInView() {
 
   const error = pinChallenge ? verifyPinMutation.error : signInMutation.error;
   const errorMessage =
-    googleError || (error ? getErrorMessage(error) : null) || searchParams.get('googleError');
+    googleError ||
+    getLineLoginMessage(searchParams.get('lineError')) ||
+    (error ? getErrorMessage(error) : null) ||
+    searchParams.get('googleError');
 
   const renderForm = () => (
     <Box sx={{ gap: 2.5, display: 'flex', flexDirection: 'column' }}>
@@ -274,6 +285,7 @@ export function JwtSignInView() {
         <>
           <Divider sx={{ my: 2.5 }}>หรือ</Divider>
           <GoogleAuthButton intent="sign-in" onError={setGoogleError} />
+          <LineLoginButton onError={setGoogleError} />
           {/* <Alert severity="info" sx={{ mt: 2 }}>
             Google ใช้สำหรับครูและผู้ดูแลที่มีอีเมลอยู่ในระบบ ส่วนนักเรียนใช้ชื่อผู้ใช้งานและรหัสผ่าน
           </Alert> */}

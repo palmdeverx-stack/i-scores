@@ -1,4 +1,3 @@
-
 import { AssignmentCreateView } from 'src/sections/assignment/view/assignment-create-view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
@@ -15,7 +14,7 @@ export default async function Page({ params, searchParams }: Props) {
   const { returnTab } = await searchParams;
 
   return (
-    <DepartmentPermissionGuard permission="schedule.manage">
+    <DepartmentPermissionGuard permission="schedule.manage" access="manage">
       <AssignmentCreateView teacherAssignmentId={id} returnTab={returnTab} />
     </DepartmentPermissionGuard>
   );

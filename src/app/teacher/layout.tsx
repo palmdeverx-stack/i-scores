@@ -44,7 +44,7 @@ export default function Layout({ children }: Props) {
       ? teacherNavData.map((group) => ({
           ...group,
           subheader: group.subheader === 'ภาพรวม' ? 'พื้นที่ส่วนตัว' : group.subheader,
-          items: group.items.filter((item) => item.title !== 'ตรวจแผนการสอน'),
+          items: group.items.filter((item) => !item.path.endsWith('/lesson-plan-reviews')),
         }))
       : teacherNavData;
     const licensedNav = filterDashboardNav(
@@ -64,7 +64,8 @@ export default function Layout({ children }: Props) {
         navWithExperimentalBadge,
         user?.departments ?? [],
         user?.department_permissions ?? [],
-        !!user?.is_school_director
+        !!user?.is_school_director,
+        user?.manage_permissions ?? []
       )
     );
   }, [
@@ -72,6 +73,7 @@ export default function Layout({ children }: Props) {
     uiSettingsQuery.data?.experimentalMenuPaths,
     user?.departments,
     user?.department_permissions,
+    user?.manage_permissions,
     user?.is_school_director,
     user?.is_personal_workspace,
   ]);

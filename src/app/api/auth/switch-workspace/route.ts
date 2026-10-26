@@ -14,8 +14,7 @@ import {
 
 // ----------------------------------------------------------------------
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
   const token = getRequestToken(request);
@@ -23,6 +22,12 @@ export async function POST(request: Request) {
   if (!caller || caller.role === 'marketplace_user' || caller.impersonatedBy) {
     return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
   }
+
+  if (caller.authProvider === 'line' || caller.authProvider === 'marketplace')
+    return NextResponse.json(
+      { message: 'กรุณาเข้าสู่ระบบด้วยรหัสผ่านหรือ Google เพื่อสลับบัญชี' },
+      { status: 403 }
+    );
 
   const body = await request.json().catch(() => null);
   const profileId = typeof body?.profileId === 'string' ? body.profileId : '';

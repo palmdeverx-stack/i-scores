@@ -14,6 +14,7 @@ import { getSupabaseBrowserClient } from 'src/lib/supabase-browser';
 
 import { useAuthContext } from 'src/auth/hooks';
 import { getHomePathForRole } from 'src/auth/utils';
+import { safeInternalPath } from 'src/auth/utils/safe-internal-path';
 
 // ----------------------------------------------------------------------
 
@@ -49,7 +50,16 @@ export default function GoogleAuthCallbackPage() {
 
         await supabase.auth.signOut({ scope: 'local' });
 
+        const returnTo = safeInternalPath(
+          new URLSearchParams(window.location.search).get('returnTo'),
+          true
+        );
         if (result.marketplaceOnly) {
+          if (returnTo) {
+            await checkUserSession?.();
+            router.replace(returnTo);
+            return;
+          }
           if (!result.redirectUrl) {
             throw new Error('ยังไม่ได้กำหนด URL ของ Marketplace');
           }
@@ -61,20 +71,19 @@ export default function GoogleAuthCallbackPage() {
             pinChallengeToken: result.pinChallengeToken,
             pinRole: result.role,
           });
+          if (returnTo) params.set('returnTo', returnTo);
           router.replace(`${paths.auth.jwt.signIn}?${params.toString()}`);
           return;
         }
 
         await checkUserSession?.();
-        router.replace(getHomePathForRole(result.user?.role));
+        router.replace(returnTo ?? getHomePathForRole(result.user?.role));
       } catch (callbackError) {
         const message =
           callbackError instanceof Error
             ? callbackError.message
             : 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้';
-        router.replace(
-          `${paths.auth.jwt.signIn}?googleError=${encodeURIComponent(message)}`
-        );
+        router.replace(`${paths.auth.jwt.signIn}?googleError=${encodeURIComponent(message)}`);
       }
     };
 

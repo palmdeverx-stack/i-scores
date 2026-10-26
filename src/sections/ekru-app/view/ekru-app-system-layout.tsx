@@ -65,7 +65,7 @@ export function EkruAppSystemLayout({ role, children }: Props) {
       ? teacherNavData.map((group) => ({
           ...group,
           subheader: group.subheader === 'ภาพรวม' ? 'พื้นที่ส่วนตัว' : group.subheader,
-          items: group.items.filter((item) => item.title !== 'ตรวจแผนการสอน'),
+          items: group.items.filter((item) => !item.path.endsWith('/lesson-plan-reviews')),
         }))
       : teacherNavData;
     const navWithExperimentalBadges = applyDashboardExperimentalBadges(
@@ -82,7 +82,8 @@ export function EkruAppSystemLayout({ role, children }: Props) {
         navWithExperimentalBadges,
         user?.departments ?? [],
         user?.department_permissions ?? [],
-        Boolean(user?.is_school_director)
+        Boolean(user?.is_school_director),
+        user?.manage_permissions ?? []
       )
     );
   }, [
@@ -91,6 +92,7 @@ export function EkruAppSystemLayout({ role, children }: Props) {
     role,
     user?.departments,
     user?.department_permissions,
+    user?.manage_permissions,
     user?.is_personal_workspace,
     user?.is_school_director,
   ]);

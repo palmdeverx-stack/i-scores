@@ -33,6 +33,7 @@ import {
 import { SCHOOL_DOCUMENT_TEMPLATES } from 'src/sections/documents/document-catalog';
 
 import { createInventoryNav } from './nav-config-inventory';
+import { organizeSchoolNavigation } from './organize-school-navigation';
 
 // ----------------------------------------------------------------------
 
@@ -73,7 +74,7 @@ const ICONS = {
 /**
  * School admin navigation — manages everything within their own school.
  */
-export const navData: NavSectionProps['data'] = [
+const rawNavData: NavSectionProps['data'] = [
   {
     subheader: 'ภาพรวม',
     items: [
@@ -400,3 +401,5 @@ export const navData: NavSectionProps['data'] = [
     ],
   },
 ];
+
+export const navData = organizeSchoolNavigation(rawNavData, 'school_admin');

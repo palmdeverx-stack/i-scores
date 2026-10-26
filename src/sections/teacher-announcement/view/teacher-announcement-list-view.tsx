@@ -31,9 +31,13 @@ import DialogContent from '@mui/material/DialogContent';
 import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
 
+import { hasWorkspacePermission } from 'src/lib/workspace-access';
+
 import { RemixIcon } from 'src/components/remix-icon';
 import { CustomPopover } from 'src/components/custom-popover';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
+
+import { useAuthContext } from 'src/auth/hooks';
 
 import { TeacherAnnouncementFormDialog } from '../components/teacher-announcement-form-dialog';
 import {
@@ -64,6 +68,10 @@ const priorityConfig = {
 };
 
 export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teacher' | 'admin' }) {
+  const { user } = useAuthContext();
+  const canManageAll = hasWorkspacePermission(user, 'announcements.manage', 'manage');
+  const canManageOwn = hasWorkspacePermission(user, 'teaching.announcements', 'manage');
+  const canCreate = canManageAll || canManageOwn;
   const table = useTable({ defaultRowsPerPage: 10 });
   const rowMenu = usePopover();
   const queryClient = useQueryClient();
@@ -77,7 +85,7 @@ export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teac
   const [deleting, setDeleting] = useState<TeacherAnnouncement | null>(null);
 
   const { data, isLoading, isError, refetch, dataUpdatedAt } = useQuery({
-    queryKey: ['teacher-announcements'],
+    queryKey: ['teacher-announcements', user?.school_id, user?.id],
     queryFn: getTeacherAnnouncements,
   });
   const deleteMutation = useMutation({
@@ -142,14 +150,16 @@ export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teac
               : 'แจ้งข่าว วันหยุด และวันสอบเฉพาะห้องที่คุณเป็นครูประจำชั้น'}
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<RemixIcon icon="mingcute:add-line" />}
-          onClick={openCreate}
-        >
-          สร้างประกาศ
-        </Button>
+        {canCreate && (
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
+            onClick={openCreate}
+          >
+            สร้างประกาศ
+          </Button>
+        )}
       </Box>
 
       {isError && (
@@ -386,6 +396,9 @@ export function TeacherAnnouncementListView({ mode = 'teacher' }: { mode?: 'teac
                     <TableCell align="right">
                       <IconButton
                         size="small"
+                        disabled={
+                          !canManageAll && !(canManageOwn && announcement.created_by === user?.id)
+                        }
                         onClick={(event) => {
                           setMenuAnnouncement(announcement);
                           rowMenu.onOpen(event);

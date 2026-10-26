@@ -9,6 +9,7 @@ const ROOTS = {
 // ----------------------------------------------------------------------
 
 export const paths = {
+  account: { access: '/account/access', apps: '/account/apps' },
   legal: {
     privacyPolicy: '/privacy-policy',
     termsOfService: '/terms-of-service',

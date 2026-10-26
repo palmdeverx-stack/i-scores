@@ -25,6 +25,7 @@ import { NavHorizontal } from './nav-horizontal';
 import { _account } from '../nav-config-account';
 import { MainSchoolLogo } from '../main/school-brand';
 import { MenuButton } from '../components/menu-button';
+import { useNavTaskCounts } from './use-nav-task-counts';
 import { DashboardBottomNav } from './dashboard-bottom-nav';
 import { AccountDrawer } from '../components/account-drawer';
 import { AccountPopover } from '../components/account-popover';
@@ -76,7 +77,7 @@ export function DashboardLayout({
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
   const rawNavData = slotProps?.nav?.data ?? dashboardNavData;
-  const navData = useTranslatedNavSections(rawNavData);
+  const navData = useNavTaskCounts(useTranslatedNavSections(rawNavData));
   const headerIdentity = slotProps?.nav?.headerIdentity;
   const mobileBottom = slotProps?.nav?.mobileBottom ?? false;
 

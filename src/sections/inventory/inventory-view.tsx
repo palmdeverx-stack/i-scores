@@ -417,7 +417,13 @@ export function InventoryView({
                           <Chip
                             size="small"
                             color={movement.kind === 'receive' ? 'success' : 'warning'}
-                            label={movement.kind === 'receive' ? 'รับเข้า' : 'เบิกจ่าย'}
+                            label={
+                              movement.return_id
+                                ? 'รับคืนวัสดุ'
+                                : movement.kind === 'receive'
+                                  ? 'รับเข้า'
+                                  : 'เบิกจ่าย'
+                            }
                           />
                         </TableCell>
                         <TableCell>

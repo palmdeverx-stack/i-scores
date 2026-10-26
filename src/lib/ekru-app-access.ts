@@ -3,6 +3,7 @@ import 'server-only';
 import type { AppTokenPayload } from './auth-token';
 
 import { supabaseAdmin } from './supabase-admin';
+import { getSessionStatus } from './session-security';
 
 // ----------------------------------------------------------------------
 
@@ -22,30 +23,25 @@ type AccessResult = { allowed: true; access: EkruAppAccess } | { allowed: false;
 
 async function findOrCreateWorkspace(params: {
   appId: string;
-  authUserId: string;
+  authUserId: string | null;
+  marketplaceUserId: string;
   schoolId: string | null;
   scope: 'individual' | 'school';
 }) {
   const isIndividual = params.scope === 'individual';
+  const ownerColumn = params.authUserId ? 'owner_auth_user_id' : 'owner_marketplace_user_id';
+  const ownerId = params.authUserId ?? params.marketplaceUserId;
   let query = supabaseAdmin
     .from('ekru_app_workspaces')
     .select('id, status')
     .eq('app_id', params.appId);
   query = isIndividual
-    ? query.eq('owner_auth_user_id', params.authUserId).is('school_id', null)
+    ? query.eq(ownerColumn, ownerId).is('school_id', null)
     : query.eq('school_id', params.schoolId).is('owner_auth_user_id', null);
 
   const { data: existing } = await query.maybeSingle();
   if (existing) {
-    if (existing.status !== 'active') {
-      const { data } = await supabaseAdmin
-        .from('ekru_app_workspaces')
-        .update({ status: 'active' })
-        .eq('id', existing.id)
-        .select('id')
-        .single();
-      return data?.id ?? existing.id;
-    }
+    if (existing.status !== 'active') return null;
     return existing.id;
   }
 
@@ -54,6 +50,8 @@ async function findOrCreateWorkspace(params: {
     .insert({
       app_id: params.appId,
       owner_auth_user_id: isIndividual ? params.authUserId : null,
+      owner_marketplace_user_id:
+        isIndividual && !params.authUserId ? params.marketplaceUserId : null,
       school_id: isIndividual ? null : params.schoolId,
     })
     .select('id')
@@ -63,9 +61,10 @@ async function findOrCreateWorkspace(params: {
   let retryQuery = supabaseAdmin
     .from('ekru_app_workspaces')
     .select('id')
+    .eq('status', 'active')
     .eq('app_id', params.appId);
   retryQuery = isIndividual
-    ? retryQuery.eq('owner_auth_user_id', params.authUserId)
+    ? retryQuery.eq(ownerColumn, ownerId)
     : retryQuery.eq('school_id', params.schoolId);
   const { data: racedWorkspace } = await retryQuery.maybeSingle();
   return racedWorkspace?.id ?? null;
@@ -75,6 +74,8 @@ export async function resolveEkruAppAccess(
   caller: AppTokenPayload,
   identifier: { code?: string; launchPath?: string }
 ): Promise<AccessResult> {
+  if ((await getSessionStatus(caller)) !== 'active')
+    return { allowed: false, reason: 'Session หรือบัญชีไม่พร้อมใช้งาน' };
   const appQuery = supabaseAdmin
     .from('ekru_apps')
     .select('id, code, name, launch_path, required_feature_key, supported_scope')
@@ -133,6 +134,7 @@ export async function resolveEkruAppAccess(
       const workspaceId = await findOrCreateWorkspace({
         appId: app.id,
         authUserId: marketplaceUser.auth_user_id,
+        marketplaceUserId: marketplaceUser.id,
         schoolId: usesSchoolData ? appUser.school_id : null,
         scope: usesSchoolData ? 'school' : 'individual',
       });
@@ -211,6 +213,7 @@ export async function resolveEkruAppAccess(
   const workspaceId = await findOrCreateWorkspace({
     appId: app.id,
     authUserId: marketplaceUser.auth_user_id,
+    marketplaceUserId: marketplaceUser.id,
     schoolId: appUser.school_id,
     scope: 'school',
   });

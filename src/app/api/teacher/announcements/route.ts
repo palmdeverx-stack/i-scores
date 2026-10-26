@@ -2,6 +2,7 @@ import { after, NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canAccessTeacherWork } from 'src/lib/teacher-work-access';
 import { replaceAnnouncementImage, validateAnnouncementImage } from 'src/lib/announcement-image';
 import { canViewViaPermission, canManageViaPermission } from 'src/lib/department-permission-access';
 import {
@@ -89,17 +90,20 @@ function parseFormData(formData: FormData) {
 
 export async function GET(request: Request) {
   const caller = requireRole(request, ['teacher', 'school_admin']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
   try {
     const isAdminLike = await canViewViaPermission(caller, 'announcements.manage');
+    const canManageAll = await canManageViaPermission(caller, 'announcements.manage');
 
     const announcementQuery = supabaseAdmin
       .from('school_announcements')
       .select(
-        `id, title, content, image_url, priority, announcement_type, is_published, published_at,
+        `id, created_by, title, content, image_url, priority, announcement_type, is_published, published_at,
          expires_at, event_start, event_end, created_at,
          targets:announcement_classrooms(classroom_id, classroom:classrooms(id, name, grade_level))`
       )
@@ -111,7 +115,7 @@ export async function GET(request: Request) {
 
     const [{ data, error }, classrooms] = await Promise.all([
       announcements,
-      isAdminLike
+      canManageAll
         ? getSchoolClassrooms(caller.schoolId)
         : getTeacherClassrooms(caller.sub, caller.schoolId),
     ]);
@@ -128,6 +132,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const caller = requireRole(request, ['teacher', 'school_admin']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }

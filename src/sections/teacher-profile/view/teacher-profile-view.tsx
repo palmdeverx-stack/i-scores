@@ -36,6 +36,7 @@ import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
 import { TeacherLineDialog } from 'src/sections/teacher-line/components/teacher-line-dialog';
+import { TeacherLineLoginCard } from 'src/sections/teacher-line-login/components/teacher-line-login-card';
 import {
   unlinkTeacherLine,
   getTeacherLineStatus,
@@ -771,11 +772,15 @@ export function TeacherProfileView() {
                 icon="solar:home-angle-bold-duotone"
                 label={isPersonalWorkspace ? 'พื้นที่ใช้งาน' : 'โรงเรียน'}
                 value={
-                  isPersonalWorkspace ? 'พื้นที่ส่วนตัว' : (profile.school?.name ?? 'ยังไม่มีข้อมูล')
+                  isPersonalWorkspace
+                    ? 'พื้นที่ส่วนตัว'
+                    : (profile.school?.name ?? 'ยังไม่มีข้อมูล')
                 }
               />
             </Box>
           </Card>
+
+          <TeacherLineLoginCard />
 
           <Card variant="outlined" sx={{ p: 3 }}>
             <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>

@@ -16,8 +16,7 @@ const pinChallengeSecret = `${secret}:pin-challenge`;
 export const ACCESS_TOKEN_COOKIE = 'access_token';
 export const MASTER_SESSION_COOKIE = 'master_access_token';
 const ACCESS_TOKEN_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SESSION_ROLES: readonly SessionRole[] = [
   'master_admin',
   'school_admin',
@@ -41,7 +40,7 @@ export const masterSessionCookieOptions = {
 
 export type AppRole = 'master_admin' | 'school_admin' | 'teacher' | 'student';
 export type SessionRole = AppRole | 'marketplace_user';
-export type AuthProvider = 'password' | 'google';
+export type AuthProvider = 'password' | 'google' | 'line' | 'marketplace';
 
 export type AppTokenPayload = {
   sub: string;
@@ -49,6 +48,8 @@ export type AppTokenPayload = {
   role: SessionRole;
   schoolId: string | null;
   authProvider?: AuthProvider;
+  lineLoginId?: string;
+  marketplaceIdentityId?: string;
   impersonatedBy?: string;
   impersonationAuditId?: string;
   previewAllFeatures?: boolean;
@@ -59,6 +60,7 @@ export type AppTokenPayload = {
 type PinChallengePayload = {
   sub: string;
   purpose: 'pin_verification';
+  marketplaceIdentityId?: string;
   authProvider?: AuthProvider;
 };
 
@@ -78,7 +80,16 @@ function isAppTokenPayload(payload: string | JwtPayload): payload is AppTokenPay
       (typeof payload.schoolId === 'string' && UUID_PATTERN.test(payload.schoolId))) &&
     (payload.authProvider === undefined ||
       payload.authProvider === 'password' ||
-      payload.authProvider === 'google') &&
+      payload.authProvider === 'google' ||
+      payload.authProvider === 'line' ||
+      payload.authProvider === 'marketplace') &&
+    (payload.authProvider !== 'marketplace' ||
+      (typeof payload.marketplaceIdentityId === 'string' &&
+        UUID_PATTERN.test(payload.marketplaceIdentityId))) &&
+    (payload.authProvider !== 'line' ||
+      (payload.role === 'teacher' &&
+        typeof payload.lineLoginId === 'string' &&
+        UUID_PATTERN.test(payload.lineLoginId))) &&
     (payload.impersonatedBy === undefined ||
       (typeof payload.impersonatedBy === 'string' && UUID_PATTERN.test(payload.impersonatedBy))) &&
     (payload.impersonationAuditId === undefined ||
@@ -98,12 +109,15 @@ export function verifyAppToken(token: string): AppTokenPayload | null {
 
 export function signPinChallenge(
   userId: string,
-  authProvider: AuthProvider = 'password'
+  authProvider: Exclude<AuthProvider, 'line'> = 'password',
+  marketplaceIdentityId?: string
 ): string {
   return jwt.sign(
-    { sub: userId, purpose: 'pin_verification', authProvider },
+    { sub: userId, purpose: 'pin_verification', authProvider, marketplaceIdentityId },
     pinChallengeSecret,
-    { expiresIn: '5m' }
+    {
+      expiresIn: '5m',
+    }
   );
 }
 
@@ -116,7 +130,10 @@ export function verifyPinChallenge(token: string): PinChallengePayload | null {
       UUID_PATTERN.test(payload.sub) &&
       (payload.authProvider === undefined ||
         payload.authProvider === 'password' ||
-        payload.authProvider === 'google')
+        payload.authProvider === 'google' ||
+        (payload.authProvider === 'marketplace' &&
+          typeof payload.marketplaceIdentityId === 'string' &&
+          UUID_PATTERN.test(payload.marketplaceIdentityId)))
       ? (payload as PinChallengePayload)
       : null;
   } catch {

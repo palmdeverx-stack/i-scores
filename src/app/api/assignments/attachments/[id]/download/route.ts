@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canAccessTeacherWork } from 'src/lib/teacher-work-access';
 import {
   loadTeacherAssignment,
   canAccessTeacherAssignment,
@@ -13,6 +14,8 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['school_admin', 'teacher', 'student']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์ดาวน์โหลดไฟล์' }, { status: 403 });
   }

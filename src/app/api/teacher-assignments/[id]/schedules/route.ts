@@ -2,11 +2,9 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canAccessTeacherWork } from 'src/lib/teacher-work-access';
 import { loadTeacherAssignment } from 'src/lib/teacher-assignment-access';
-import {
-  canManageAssignmentSchedule,
-  revertScheduleApprovalOnEdit,
-} from 'src/lib/schedule-access';
+import { canManageAssignmentSchedule, revertScheduleApprovalOnEdit } from 'src/lib/schedule-access';
 
 // ----------------------------------------------------------------------
 
@@ -16,6 +14,8 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['teacher', 'school_admin']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
 
   if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
@@ -44,6 +44,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function POST(request: Request, { params }: RouteParams) {
   const caller = requireRole(request, ['teacher', 'school_admin']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
 
   if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
@@ -89,10 +91,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   if (resolvedStartTime >= resolvedEndTime) {
-    return NextResponse.json(
-      { message: 'เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น' },
-      { status: 400 }
-    );
+    return NextResponse.json({ message: 'เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น' }, { status: 400 });
   }
   if (normalizedLocation.length > 200) {
     return NextResponse.json(
@@ -186,7 +185,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
   }
 
-  await revertScheduleApprovalOnEdit(teacherAssignment!.classroom_id, teacherAssignment!.semester_id);
+  await revertScheduleApprovalOnEdit(
+    teacherAssignment!.classroom_id,
+    teacherAssignment!.semester_id
+  );
 
   return NextResponse.json({ schedule }, { status: 201 });
 }

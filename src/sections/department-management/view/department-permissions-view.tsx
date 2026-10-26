@@ -39,9 +39,11 @@ import { StaffAccessPermissionsPanel } from '../components/staff-access-permissi
 // ----------------------------------------------------------------------
 
 function flattenNav(data: typeof teacherNavData) {
-  return data.flatMap((group) =>
-    group.items.flatMap((item) => (item.children?.length ? item.children : [item]))
-  );
+  const flattenItems = (
+    items: (typeof teacherNavData)[number]['items']
+  ): (typeof teacherNavData)[number]['items'] =>
+    items.flatMap((item) => (item.children?.length ? flattenItems(item.children) : [item]));
+  return data.flatMap((group) => flattenItems(group.items));
 }
 
 // Flatten the actual sidebar configs so this page always reflects what's
@@ -63,9 +65,13 @@ const departmentMenuItems = teacherMenuItems.filter(
 const PERMISSION_MENU_ITEMS: Record<string, string[]> = Object.fromEntries(
   DEPARTMENT_DELEGABLE_PERMISSIONS.map((permission) => [
     permission.key,
-    adminMenuItems
-      .filter((item) => item.requiresDepartmentPermission === permission.key)
-      .map((item) => item.title),
+    [
+      ...new Set(
+        [...adminMenuItems, ...teacherMenuItems]
+          .filter((item) => item.requiresDepartmentPermission === permission.key)
+          .map((item) => item.title)
+      ),
+    ],
   ])
 );
 

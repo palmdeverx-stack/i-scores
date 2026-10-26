@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { getSessionStatus } from 'src/lib/session-security';
 import { listUserWorkspaces } from 'src/lib/user-workspaces';
 import { toPublicUser, verifyAppToken, getRequestToken } from 'src/lib/auth-token';
 import { DEPARTMENT_PERMISSION_KEYS } from 'src/lib/department-permissions-config';
@@ -12,7 +13,7 @@ import {
 // ----------------------------------------------------------------------
 
 async function resolveAuthProvider(
-  sessionProvider: 'password' | 'google' | undefined,
+  sessionProvider: 'password' | 'google' | 'line' | 'marketplace' | undefined,
   authUserId: string | null | undefined
 ) {
   if (sessionProvider || !authUserId) return sessionProvider ?? 'password';
@@ -31,14 +32,28 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
   }
 
+  if (payload.authProvider === 'line' || payload.authProvider === 'marketplace') {
+    const status = await getSessionStatus(payload);
+    if (status !== 'active')
+      return NextResponse.json(
+        { message: 'กรุณาเข้าสู่ระบบใหม่' },
+        { status: status === 'error' ? 503 : 401 }
+      );
+  }
+
   if (payload.role === 'marketplace_user') {
     const { data: marketplaceUser, error: marketplaceError } = await supabaseAdmin
       .from('marketplace_users')
-      .select('id, username, email, first_name, last_name, role, is_active, created_at, auth_user_id')
+      .select(
+        'id, username, email, first_name, last_name, role, is_active, created_at, auth_user_id'
+      )
       .eq('id', payload.sub)
       .maybeSingle();
     if (marketplaceError) {
-      return NextResponse.json({ message: 'ไม่สามารถตรวจสอบบัญชีได้ กรุณาลองใหม่' }, { status: 503 });
+      return NextResponse.json(
+        { message: 'ไม่สามารถตรวจสอบบัญชีได้ กรุณาลองใหม่' },
+        { status: 503 }
+      );
     }
     if (!marketplaceUser?.is_active) {
       return NextResponse.json({ message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
@@ -131,7 +146,9 @@ export async function GET(request: Request) {
       department_permissions: payload.previewAllFeatures
         ? DEPARTMENT_PERMISSION_KEYS
         : departmentPermissions,
-      manage_permissions: payload.previewAllFeatures ? DEPARTMENT_PERMISSION_KEYS : managePermissions,
+      manage_permissions: payload.previewAllFeatures
+        ? DEPARTMENT_PERMISSION_KEYS
+        : managePermissions,
       is_personal_workspace: isPersonalWorkspace,
       auth_provider: authProvider,
       active_workspace_profile_id: user.id,

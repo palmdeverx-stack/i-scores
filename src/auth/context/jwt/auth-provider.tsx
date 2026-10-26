@@ -95,6 +95,34 @@ export function AuthProvider({ children }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Keep individual overrides and staff-role changes reflected in open menus.
+  useEffect(() => {
+    if (!state.user?.id) return undefined;
+    let checking = false;
+    let lastCheck = Date.now();
+    const refresh = async () => {
+      if (document.visibilityState !== 'visible' || checking || Date.now() - lastCheck < 30000)
+        return;
+      checking = true;
+      lastCheck = Date.now();
+      try {
+        await checkUserSession();
+      } finally {
+        checking = false;
+      }
+    };
+    const timer = setInterval(() => {
+      void refresh();
+    }, 60000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [state.user?.id, checkUserSession]);
+
   // ----------------------------------------------------------------------
 
   const checkAuthenticated = state.user ? 'authenticated' : 'unauthenticated';

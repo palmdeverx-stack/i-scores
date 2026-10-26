@@ -1,4 +1,3 @@
-
 import { paths } from 'src/routes/paths';
 
 import { StudentFormView } from 'src/sections/user/view/student-form-view';
@@ -13,7 +12,7 @@ export default async function Page({ params }: Props) {
   const { id } = await params;
 
   return (
-    <DepartmentPermissionGuard permission="students.manage">
+    <DepartmentPermissionGuard permission="students.manage" access="manage">
       <StudentFormView studentId={id} basePath={paths.admin.student.root} />
     </DepartmentPermissionGuard>
   );

@@ -1,4 +1,3 @@
-
 import { StaffCreateView } from 'src/sections/user/view/staff-create-view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
@@ -11,7 +10,7 @@ export default async function Page({ params }: Props) {
   const { id } = await params;
 
   return (
-    <DepartmentPermissionGuard permission="staff.manage">
+    <DepartmentPermissionGuard permission="staff.manage" access="manage">
       <StaffCreateView userId={id} />
     </DepartmentPermissionGuard>
   );

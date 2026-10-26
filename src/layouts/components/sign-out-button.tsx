@@ -1,3 +1,5 @@
+'use client';
+
 import type { ButtonProps } from '@mui/material/Button';
 
 import { useCallback } from 'react';
@@ -39,7 +41,15 @@ export function SignOutButton({ onClose, sx, ...other }: Props) {
   }, [checkUserSession, onClose, router, t]);
 
   return (
-    <Button fullWidth variant="soft" size="large" color="error" onClick={handleLogout} sx={sx} {...other}>
+    <Button
+      fullWidth
+      variant="soft"
+      size="large"
+      color="error"
+      onClick={handleLogout}
+      sx={sx}
+      {...other}
+    >
       {t('actions.signOut')}
     </Button>
   );

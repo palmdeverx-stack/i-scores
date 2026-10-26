@@ -1,4 +1,3 @@
-
 import { SubjectFormView } from 'src/sections/subject/view/subject-form-view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
@@ -11,7 +10,7 @@ export default async function Page({ params }: Props) {
   const { id } = await params;
 
   return (
-    <DepartmentPermissionGuard permission="subjects.manage">
+    <DepartmentPermissionGuard permission="subjects.manage" access="manage">
       <SubjectFormView subjectId={id} />
     </DepartmentPermissionGuard>
   );

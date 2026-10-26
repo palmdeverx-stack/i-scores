@@ -21,6 +21,7 @@ export type InventoryItem = {
   quantity: number;
 };
 export type InventoryMovement = {
+  return_id?: string | null;
   document_id: string | null;
   document: { document_number: number } | null;
   id: string;
@@ -107,7 +108,8 @@ export type InventoryAsset = {
   serial_number: string;
   acquisition_date: string;
   acquisition_cost: number;
-  status: 'registered' | 'in_use';
+  status: 'registered' | 'in_use' | 'maintenance';
+  activated_at: string | null;
   custodian: string;
   location: string | null;
   notes: string;

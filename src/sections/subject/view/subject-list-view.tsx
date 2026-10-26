@@ -39,6 +39,7 @@ import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table
 import { listSubjectMasterItems } from 'src/sections/subject-master/subject-master-actions';
 import { listSemesters, listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
 
+import { subjectRoutePaths } from '../subject-routing';
 import {
   listSubjects,
   deleteSubject,
@@ -68,12 +69,7 @@ export function SubjectListView({
   const [areaFilter, setAreaFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
-  const createPath =
-    basePath === paths.teacher.departmentSubject ? paths.teacher.subjectNew : `${basePath}/new`;
-  const editPath = (subjectId: string) =>
-    basePath === paths.teacher.departmentSubject
-      ? paths.teacher.subjectEdit(subjectId)
-      : `${basePath}/${subjectId}/edit`;
+  const { create: createPath, edit: editPath } = subjectRoutePaths(basePath);
 
   const {
     data: allSubjects = [],

@@ -1,4 +1,3 @@
-
 import { QuizCreateView } from 'src/sections/assignment/view/quiz-create-view';
 
 import { DepartmentPermissionGuard } from 'src/auth/guard';
@@ -15,7 +14,7 @@ export default async function Page({ params, searchParams }: Props) {
   const { returnTab } = await searchParams;
 
   return (
-    <DepartmentPermissionGuard permission="schedule.manage">
+    <DepartmentPermissionGuard permission="schedule.manage" access="manage">
       <QuizCreateView teacherAssignmentId={id} returnTab={returnTab} />
     </DepartmentPermissionGuard>
   );

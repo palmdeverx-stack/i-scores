@@ -19,6 +19,8 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
+import { hasWorkspacePermission } from 'src/lib/workspace-access';
+
 import { RemixIcon } from 'src/components/remix-icon';
 
 import { getMyHomeroomStudents } from 'src/sections/teacher-students/teacher-students-actions';
@@ -96,6 +98,7 @@ export function AttendanceScanStartView() {
   });
 
   const canCreate =
+    hasWorkspacePermission(user, 'teaching.attendance', 'manage') &&
     (sessionType === 'class_period'
       ? !!teacherAssignmentId && !!periodLabel.trim()
       : !!classroomId) &&

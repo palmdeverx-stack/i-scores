@@ -18,7 +18,8 @@ const isStaticExport = false;
 const securityHeaders = [
   {
     key: 'Content-Security-Policy',
-    value: "base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",
+    value:
+      "base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",
   },
   // Google Identity Services needs to keep the opener relationship for its
   // popup fallback when FedCM is unavailable or disabled.
@@ -34,6 +35,11 @@ const securityHeaders = [
 // ----------------------------------------------------------------------
 
 const nextConfig: NextConfig = {
+  logging: {
+    incomingRequests: {
+      ignore: [/^\/auth\/marketplace\/callback(?:[/?]|$)/, /^\/auth\/marketplace-sso(?:[/?]|$)/],
+    },
+  },
   images: {
     dangerouslyAllowSVG: false,
   },
@@ -46,7 +52,16 @@ const nextConfig: NextConfig = {
     BUILD_STATIC_EXPORT: JSON.stringify(isStaticExport),
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      ...['/auth/marketplace/:path*', '/api/auth/marketplace/:path*'].map((source) => ({
+        source,
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
+      })),
+    ];
   },
   // Without --turbopack (next dev)
   webpack(config, { isServer }) {

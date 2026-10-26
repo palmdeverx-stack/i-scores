@@ -17,7 +17,6 @@ import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
-import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
@@ -101,6 +100,24 @@ export function InventoryMovementForm({
   const selectedPurchase = purchasesQuery.data?.purchases.find(
     (purchase) => purchase.id === sourceId
   );
+  const purchaseOptions = (purchasesQuery.data?.purchases ?? [])
+    .filter(
+      (purchase) =>
+        ['ordered', 'partially_received'].includes(purchase.status) || purchase.id === sourceId
+    )
+    .map((purchase) => ({
+      id: purchase.id,
+      name: `PO ${purchase.order_number} · ${purchase.title} · ${purchase.lines.length} รายการ`,
+    }));
+  if (sourceId && !purchaseOptions.some((option) => option.id === sourceId)) {
+    purchaseOptions.push({ id: sourceId, name: 'ใบสั่งซื้อที่เลือกจากหน้าจัดซื้อ' });
+  }
+  const itemOptions = inventory.items
+    .filter((item) => kind === 'receive' || item.item_type !== 'equipment')
+    .filter(
+      (item) =>
+        !sourceId || sourceLines?.some((entry) => entry.item_id === item.id && entry.quantity > 0)
+    );
   const { setValue, getValues } = methods;
   useEffect(() => {
     if (selectedPurchase?.supplier && !getValues('recipient'))
@@ -174,14 +191,20 @@ export function InventoryMovementForm({
             <Box sx={{ mt: 3, display: 'grid', gap: 2.5 }}>
               {kind === 'receive' && (
                 <>
-                  <Field.Select
+                  <Field.Autocomplete
                     name="source_purchase_id"
                     label="รับเข้าตามใบสั่งซื้อ (ถ้ามี)"
-                    value={sourceId ?? ''}
+                    placeholder="รับเข้าโดยไม่อ้างอิงใบสั่งซื้อ"
+                    options={purchaseOptions}
+                    value={purchaseOptions.find((option) => option.id === sourceId) ?? null}
+                    loading={purchasesQuery.isLoading}
                     disabled={mutation.isPending}
-                    onChange={(event) => {
-                      const id = event.target.value;
-                      methods.setValue('source_purchase_id', id || null, { shouldDirty: true });
+                    onChange={(_event, option) => {
+                      const id = option?.id ?? null;
+                      methods.setValue('source_purchase_id', id, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
                       setSourceLines(null);
                       sourceMutation.reset();
                       if (id) {
@@ -193,19 +216,7 @@ export function InventoryMovementForm({
                         sourceMutation.mutate(id);
                       } else replace([{ item_id: '', quantity: 1 }]);
                     }}
-                  >
-                    <MenuItem value="">รับเข้าโดยไม่อ้างอิงใบสั่งซื้อ</MenuItem>
-                    {sourceId && !selectedPurchase && (
-                      <MenuItem value={sourceId}>ใบสั่งซื้อที่เลือกจากหน้าจัดซื้อ</MenuItem>
-                    )}
-                    {(purchasesQuery.data?.purchases ?? [])
-                      .filter((doc) => ['ordered', 'partially_received'].includes(doc.status))
-                      .map((doc) => (
-                        <MenuItem key={doc.id} value={doc.id}>
-                          PO {doc.order_number} · {doc.title} · {doc.lines.length} รายการ
-                        </MenuItem>
-                      ))}
-                  </Field.Select>
+                  />
                   {purchasesQuery.error && (
                     <Alert
                       severity="error"
@@ -269,12 +280,17 @@ export function InventoryMovementForm({
                 required={kind === 'receive'}
                 slotProps={{ htmlInput: { maxLength: 200 } }}
               />
-              <Field.Text
+              <Field.DatePicker
                 name="document_date"
                 label="วันที่เอกสาร"
-                type="date"
                 required={kind === 'receive'}
-                slotProps={{ inputLabel: { shrink: true } }}
+                onChange={(value) =>
+                  methods.setValue('document_date', value ? value.format('YYYY-MM-DD') : '', {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
+                slotProps={{ textField: { fullWidth: true } }}
               />
               <Box
                 sx={{
@@ -341,42 +357,27 @@ export function InventoryMovementForm({
                         {index + 1}
                       </Box>
                       <Box sx={{ minWidth: 0 }}>
-                        <Field.Select
+                        <Field.Autocomplete
                           name={`lines.${index}.item_id`}
                           label="พัสดุ"
                           size="small"
                           required
                           disabled={mutation.isPending}
-                          sx={{
-                            '& .MuiSelect-select': {
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            },
-                          }}
-                        >
-                          <MenuItem value="">เลือกพัสดุ</MenuItem>
-                          {inventory.items
-                            .filter((item) => kind === 'receive' || item.item_type !== 'equipment')
-                            .filter(
-                              (item) =>
-                                !sourceId ||
-                                sourceLines?.some(
-                                  (entry) => entry.item_id === item.id && entry.quantity > 0
-                                )
-                            )
-                            .map((item) => (
-                              <MenuItem
-                                key={item.id}
-                                value={item.id}
-                                disabled={lines.some(
-                                  (line, other) => other !== index && line.item_id === item.id
-                                )}
-                              >
-                                {item.code} · {item.name}
-                              </MenuItem>
-                            ))}
-                        </Field.Select>
+                          options={itemOptions}
+                          value={
+                            itemOptions.find((item) => item.id === lines[index]?.item_id) ?? null
+                          }
+                          getOptionLabel={(item) => `${item.code} · ${item.name}`}
+                          getOptionDisabled={(item) =>
+                            lines.some((line, other) => other !== index && line.item_id === item.id)
+                          }
+                          onChange={(_event, item) =>
+                            methods.setValue(`lines.${index}.item_id`, item?.id ?? '', {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                        />
                         {selected && (
                           <Box
                             sx={{

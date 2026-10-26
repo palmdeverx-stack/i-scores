@@ -4,7 +4,7 @@ import { DepartmentPermissionGuard } from 'src/auth/guard';
 
 export default function Page() {
   return (
-    <DepartmentPermissionGuard permission="inventory.manage">
+    <DepartmentPermissionGuard permission="inventory.manage" access="manage">
       <InventoryAssetFormView />
     </DepartmentPermissionGuard>
   );

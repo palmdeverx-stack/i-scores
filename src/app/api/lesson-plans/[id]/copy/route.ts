@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canAccessTeacherWork } from 'src/lib/teacher-work-access';
 import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import { ownsLessonPlan, loadLessonPlan, lessonPlanSnapshot } from 'src/lib/lesson-plan-access';
 
@@ -10,6 +11,8 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: RouteParams) {
   const caller = await requireLessonPlanFeature(request, ['teacher']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   const { id } = await params;
   const source = caller ? await loadLessonPlan(id) : null;
   if (!caller?.schoolId || !source || !ownsLessonPlan(caller, source)) {

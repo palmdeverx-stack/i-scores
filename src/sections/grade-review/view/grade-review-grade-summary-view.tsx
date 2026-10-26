@@ -36,7 +36,12 @@ export function GradeReviewGradeSummaryView({
   gradeBasePath?: string;
 }) {
   const table = useTable({ defaultRowsPerPage: 10 });
-  const { data = [], isLoading, isError, refetch } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['grade-reviews'],
     queryFn: listGradeReviews,
   });
@@ -86,7 +91,7 @@ export function GradeReviewGradeSummaryView({
   );
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
+    <Container maxWidth="xl" sx={{ pb: 6 }}>
       <Box sx={{ mb: 4 }}>
         <Typography component="h1" variant="h3">
           ตรวจสอบผลการเรียนรายชั้นปี
@@ -143,7 +148,10 @@ export function GradeReviewGradeSummaryView({
               )}
               {!isLoading && !gradeGroups.length && (
                 <TableRow>
-                  <TableCell colSpan={8} sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}>
+                  <TableCell
+                    colSpan={8}
+                    sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
+                  >
                     ยังไม่มีข้อมูลรายวิชาในชั้นปี
                   </TableCell>
                 </TableRow>
@@ -164,7 +172,9 @@ export function GradeReviewGradeSummaryView({
                     <TableCell align="center">{group.revision}</TableCell>
                     <TableCell sx={{ minWidth: 180 }}>
                       <Box sx={{ mb: 0.5, display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="caption">ผ่าน {group.completed}/{group.subjects}</Typography>
+                        <Typography variant="caption">
+                          ผ่าน {group.completed}/{group.subjects}
+                        </Typography>
                         <Typography variant="caption">{percent}%</Typography>
                       </Box>
                       <LinearProgress

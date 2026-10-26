@@ -5,13 +5,14 @@
 export const DEPARTMENT_PERMISSIONS = [
   {
     key: 'inventory.approve',
-    label: 'อนุมัติพัสดุ',
+    label: 'พิจารณาคำขอจัดซื้อและเบิกวัสดุ',
     description: 'พิจารณาใบขอจัดซื้อและใบขอเบิกพัสดุ โดยใบขอเบิกจะตัดสต็อกเมื่ออนุมัติ',
   },
   {
     key: 'inventory.manage',
-    label: 'งานพัสดุ',
-    description: 'จัดการทะเบียนพัสดุ รับเข้า เบิกจ่าย และตรวจสอบยอดคงเหลือของโรงเรียน',
+    label: 'จัดซื้อ คลัง เบิก และรับคืนพัสดุ',
+    description:
+      'จัดซื้อ รับเข้า เบิก รับคืนวัสดุ ขึ้นทะเบียนครุภัณฑ์ และตรวจสอบยอดคงเหลือ โดยการอนุมัติเป็นสิทธิ์แยก',
   },
   {
     key: 'dashboard.view',
@@ -59,17 +60,17 @@ export const DEPARTMENT_PERMISSIONS = [
   },
   {
     key: 'lesson_plans.review',
-    label: 'ตรวจแผนการสอน',
+    label: 'พิจารณาแผนการสอน',
     description: 'ตรวจแผนการสอนที่ครูส่งมา อนุมัติ หรือส่งกลับให้แก้ไขก่อนจัดตารางสอน',
   },
   {
     key: 'schedule.approve',
-    label: 'อนุมัติตารางสอน',
+    label: 'พิจารณาตารางสอน',
     description: 'ดูรายการที่ส่งมา ตรวจสอบ และลงนามอนุมัติตารางสอน',
   },
   {
     key: 'grades.review',
-    label: 'ตรวจสอบผลการเรียน',
+    label: 'ตรวจรับและติดตามผลการเรียน',
     description: 'รับผลการเรียนจากครู ตรวจความครบถ้วน เทียบข้อมูล สพฐ. และรับรองผลการเรียน',
   },
   {
@@ -79,7 +80,7 @@ export const DEPARTMENT_PERMISSIONS = [
   },
   {
     key: 'documents.access',
-    label: 'เอกสาร',
+    label: 'เอกสารส่วนบุคคลและการจองเลข',
     description: 'สร้างและติดตามเอกสารของตนเอง รวมถึงดูตัวอย่างเอกสารของโรงเรียน',
     manageable: false,
   },
@@ -141,4 +142,18 @@ export function isManageableDepartmentPermission(value: DepartmentPermissionKey)
 
 export function isDepartmentDelegablePermission(value: DepartmentPermissionKey): boolean {
   return !value.startsWith('teaching.') && !['schedule.approve', 'grades.approve'].includes(value);
+}
+
+export function departmentPermissionGroup(key: string): string {
+  if (
+    ['inventory.approve', 'lesson_plans.review', 'schedule.approve', 'grades.approve'].includes(key)
+  )
+    return 'งานตรวจสอบและอนุมัติ';
+  if (key.startsWith('teaching.')) return 'งานสอนของฉัน';
+  if (key.startsWith('inventory.')) return 'งานพัสดุ';
+  if (key.startsWith('documents.')) return 'งานเอกสาร';
+  if (['staff.manage', 'students.manage'].includes(key)) return 'บุคลากรและนักเรียน';
+  if (key.startsWith('announcements.')) return 'ประกาศและการสื่อสาร';
+  if (['dashboard.view', 'school_profile.view'].includes(key)) return 'ภาพรวมและข้อมูลโรงเรียน';
+  return 'งานวิชาการ';
 }

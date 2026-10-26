@@ -27,6 +27,7 @@ import {
 import { SCHOOL_DOCUMENT_TEMPLATES } from 'src/sections/documents/document-catalog';
 
 import { createInventoryNav } from './nav-config-inventory';
+import { organizeSchoolNavigation } from './organize-school-navigation';
 
 // ----------------------------------------------------------------------
 
@@ -57,7 +58,7 @@ const ICONS = {
 /**
  * Teacher navigation — scoped to the subjects/classrooms they're assigned to.
  */
-export const navData: NavSectionProps['data'] = [
+const rawNavData: NavSectionProps['data'] = [
   {
     subheader: 'ภาพรวม',
     items: [
@@ -332,3 +333,5 @@ export const navData: NavSectionProps['data'] = [
     ],
   },
 ];
+
+export const navData = organizeSchoolNavigation(rawNavData, 'teacher');

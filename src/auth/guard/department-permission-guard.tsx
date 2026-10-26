@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
+import { hasWorkspacePermission } from 'src/lib/workspace-access';
+
 import { SplashScreen } from 'src/components/loading-screen';
 
 import { useAuthContext } from '../hooks';
@@ -18,6 +20,7 @@ type DepartmentPermissionGuardProps = {
    * permissions (e.g. department management itself).
    */
   permission?: string;
+  access?: 'view' | 'manage';
   permissions?: string[];
   schoolWorkspaceOnly?: boolean;
   children: React.ReactNode;
@@ -30,7 +33,8 @@ type DepartmentWorkspaceGuardProps = {
 /**
  * Blocks direct URL access to admin pages that manage department-scoped
  * data. A school admin always passes. A delegated teacher must hold
- * `permission` in `department_permissions` — the same check the nav already
+ * `permission` in `department_permissions` (view) or `manage_permissions`
+ * (manage) — the same check the nav already
  * uses to hide/show these links (see filterAdminNavForTeacher /
  * filterNavByDepartment), so this just closes the direct-URL bypass.
  *
@@ -40,6 +44,7 @@ type DepartmentWorkspaceGuardProps = {
  */
 export function DepartmentPermissionGuard({
   permission,
+  access = 'view',
   permissions = [],
   schoolWorkspaceOnly = false,
   children,
@@ -47,12 +52,12 @@ export function DepartmentPermissionGuard({
   const { user } = useAuthContext();
   const router = useRouter();
 
-  const isSchoolAdmin = user?.role === 'school_admin';
-  const hasPermission = [permission, ...permissions].some(
-    (key) => Boolean(key) && (user?.department_permissions ?? []).includes(key!)
+  const hasPermission = [permission, ...permissions].some((key) =>
+    hasWorkspacePermission(user, key, access)
   );
   const isAllowed =
-    (isSchoolAdmin || hasPermission) &&
+    user?.is_active !== false &&
+    (user?.role === 'school_admin' || hasPermission) &&
     (!schoolWorkspaceOnly || user?.is_personal_workspace !== true);
 
   useEffect(() => {

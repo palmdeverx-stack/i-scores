@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canAccessTeacherWork } from 'src/lib/teacher-work-access';
 import { loadTeacherAssignment } from 'src/lib/teacher-assignment-access';
 import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 import {
@@ -13,15 +14,14 @@ import {
   resolveCurriculumReference,
 } from 'src/features/curriculum/server/resolve-curriculum-reference';
 
-import {
-  parseLessonPlanPayload,
-  LESSON_PLAN_DRAFT_TAB_COLUMNS,
-} from './lesson-plan-payload';
+import { parseLessonPlanPayload, LESSON_PLAN_DRAFT_TAB_COLUMNS } from './lesson-plan-payload';
 
 // ----------------------------------------------------------------------
 
 export async function GET(request: Request) {
   const caller = await requireLessonPlanFeature(request, ['teacher', 'school_admin']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
@@ -54,6 +54,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const caller = await requireLessonPlanFeature(request, ['teacher']);
+  if (!(await canAccessTeacherWork(request, caller)))
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์ดำเนินการงานนี้' }, { status: 403 });
   if (!caller?.schoolId) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์สร้างแผนการสอน' }, { status: 403 });
   }
@@ -121,8 +123,7 @@ export async function POST(request: Request) {
       learning_outcome_ids: curriculum.learningOutcomeIds,
       school_id: caller.schoolId,
       teacher_id: caller.sub,
-      saved_tabs:
-        isDraftSave && LESSON_PLAN_DRAFT_TAB_COLUMNS[draftTab] ? [draftTab] : [],
+      saved_tabs: isDraftSave && LESSON_PLAN_DRAFT_TAB_COLUMNS[draftTab] ? [draftTab] : [],
     })
     .select('*')
     .single();

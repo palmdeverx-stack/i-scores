@@ -10,6 +10,8 @@ import { isCrossSiteMutation } from 'src/lib/request-security';
 import { verifyAppToken, ACCESS_TOKEN_COOKIE } from 'src/lib/auth-token';
 import { loadEffectiveSchoolEntitlements } from 'src/lib/school-subscription';
 
+import { getHomePathForRole } from 'src/auth/utils/role-home-path';
+
 // ----------------------------------------------------------------------
 
 const AREA_ROLES: Array<{ prefix: string; roles: AppRole[] }> = [
@@ -18,14 +20,6 @@ const AREA_ROLES: Array<{ prefix: string; roles: AppRole[] }> = [
   { prefix: '/teacher', roles: ['teacher'] },
   { prefix: '/student', roles: ['student'] },
 ];
-
-function homeForRole(role: SessionRole) {
-  if (role === 'master_admin') return paths.master.root;
-  if (role === 'school_admin') return paths.admin.root;
-  if (role === 'teacher') return paths.teacher.root;
-  if (role === 'student') return paths.student.root;
-  return paths.page403;
-}
 
 const LICENSE_API_EXEMPT_PREFIXES = [
   '/api/auth/',
@@ -87,6 +81,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ message: 'Cross-site request blocked' }, { status: 403 });
   }
 
+  if (
+    [
+      '/api/auth/line/start',
+      '/api/auth/line/verify',
+      '/api/auth/line/config',
+      '/api/auth/marketplace/pending',
+      '/api/auth/marketplace/complete',
+    ].includes(pathname)
+  )
+    return NextResponse.next();
+
   if (!caller) {
     if (isApi) return NextResponse.next();
     const signInUrl = new URL(paths.auth.jwt.signIn, request.url);
@@ -108,7 +113,10 @@ export async function proxy(request: NextRequest) {
       metadata: { role: caller.role, pathname },
     });
     return NextResponse.json(
-      { code: 'SESSION_CHECK_FAILED', message: 'ไม่สามารถตรวจสอบสถานะบัญชีได้ กรุณาลองใหม่อีกครั้ง' },
+      {
+        code: 'SESSION_CHECK_FAILED',
+        message: 'ไม่สามารถตรวจสอบสถานะบัญชีได้ กรุณาลองใหม่อีกครั้ง',
+      },
       { status: 503 }
     );
   }
@@ -137,7 +145,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (area && !area.roles.includes(caller.role as AppRole)) {
-    return NextResponse.redirect(new URL(homeForRole(caller.role), request.url));
+    return NextResponse.redirect(new URL(getHomePathForRole(caller.role), request.url));
   }
 
   const schoolRole = ['school_admin', 'teacher', 'student'].includes(caller.role);
@@ -167,7 +175,7 @@ export async function proxy(request: NextRequest) {
       }
     } else {
       if (isExpiredPage) {
-        return NextResponse.redirect(new URL(homeForRole(caller.role), request.url));
+        return NextResponse.redirect(new URL(getHomePathForRole(caller.role), request.url));
       }
       if (isApi) {
         const requiredFeatures = requiredApiFeatures(caller.role, pathname);

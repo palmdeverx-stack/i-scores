@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { canAccessTeacherWork } from 'src/lib/teacher-work-access';
 import { ownsLessonPlan, loadLessonPlan } from 'src/lib/lesson-plan-access';
 import { requireLessonPlanFeature } from 'src/lib/lesson-plan-feature-access';
 
@@ -12,6 +13,7 @@ const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 async function editableLessonPlan(request: Request, id: string) {
   const caller = await requireLessonPlanFeature(request, ['teacher']);
+  if (!(await canAccessTeacherWork(request, caller))) return null;
   if (!caller) return null;
   const plan = await loadLessonPlan(id);
   if (!plan || !ownsLessonPlan(caller, plan)) return null;

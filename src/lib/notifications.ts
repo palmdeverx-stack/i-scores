@@ -16,7 +16,7 @@ export async function createNotifications(
 ): Promise<void> {
   if (!notifications.length) return;
 
-  await supabaseAdmin.from('notifications').insert(
+  const { error } = await supabaseAdmin.from('notifications').insert(
     notifications.map((notification) => ({
       user_id: notification.userId,
       school_id: notification.schoolId,
@@ -26,4 +26,5 @@ export async function createNotifications(
       link: notification.link ?? null,
     }))
   );
+  if (error) console.error('In-app notification delivery failed', error.code);
 }

@@ -159,7 +159,14 @@ export async function getDepartmentGrantedPermissions(
   // Academic staff who may inspect grades must also be able to open the
   // approval queue. Only an explicit manage-level grades.approve grant can
   // perform the executive approval action.
-  if (resolved.includes('grades.review') && !resolved.includes('grades.approve')) {
+  const approvalExplicitlyDenied = staffAccess.overrides.some(
+    (override) => override.permission_key === 'grades.approve' && override.access_level === 'none'
+  );
+  if (
+    resolved.includes('grades.review') &&
+    !resolved.includes('grades.approve') &&
+    !approvalExplicitlyDenied
+  ) {
     resolved.push('grades.approve');
   }
   return resolved;
@@ -210,12 +217,7 @@ export async function getEffectiveDepartmentPermissions(
           isDepartmentDelegablePermission(key)
       )
   );
-  return applyStaffAccess(
-    base,
-    staffAccess.typePermissions,
-    staffAccess.overrides,
-    'manage'
-  );
+  return applyStaffAccess(base, staffAccess.typePermissions, staffAccess.overrides, 'manage');
 }
 
 export async function hasDepartmentPermission(

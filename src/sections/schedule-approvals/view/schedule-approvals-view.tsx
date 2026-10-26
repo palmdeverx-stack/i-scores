@@ -175,11 +175,7 @@ export function ScheduleApprovalsView({
           sx={{ px: 3, borderBottom: '1px solid', borderColor: 'divider' }}
         >
           {(Object.keys(STATUS_CONTENT) as ScheduleApprovalListStatus[]).map((itemStatus) => (
-            <Tab
-              key={itemStatus}
-              value={itemStatus}
-              label={STATUS_CONTENT[itemStatus].tabLabel}
-            />
+            <Tab key={itemStatus} value={itemStatus} label={STATUS_CONTENT[itemStatus].tabLabel} />
           ))}
         </Tabs>
 
@@ -257,9 +253,7 @@ export function ScheduleApprovalsView({
                     colSpan={tracking ? 9 : 7}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
-                    {search
-                      ? 'ไม่พบรายการที่ตรงกับคำค้นหา'
-                      : STATUS_CONTENT[status].emptyLabel}
+                    {search ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : STATUS_CONTENT[status].emptyLabel}
                   </TableCell>
                 </TableRow>
               )}

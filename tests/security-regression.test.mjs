@@ -46,7 +46,8 @@ test('Google authentication exchanges a bearer token for an app session', () => 
 test('admin sessions are only issued after PIN verification', () => {
   const googleRoute = read('src/app/api/auth/google/route.ts');
   const passwordRoute = read('src/app/api/auth/sign-in/route.ts');
-  const verifyPinRoute = read('src/app/api/auth/verify-pin/route.ts');
+  const verifyPinRoute = read('src/lib/verify-staff-pin.ts');
+  assert.match(read('src/app/api/auth/verify-pin/route.ts'), /return verifyStaffPinRequest\(request\)/);
 
   assert.match(
     googleRoute,
@@ -226,7 +227,7 @@ test('rate limit fails closed on infrastructure errors', () => {
 test('rate limit uses trusted IPs, hashed bounded keys and atomic counters', () => {
   const source = read('src/lib/auth-rate-limit.ts');
   const signIn = read('src/app/api/auth/sign-in/route.ts');
-  const verifyPin = read('src/app/api/auth/verify-pin/route.ts');
+  const verifyPin = read('src/lib/verify-staff-pin.ts');
   const migration = read('supabase/migrations/20260803030000_rate_limit_hardening.sql');
 
   assert.match(source, /x-vercel-forwarded-for/);

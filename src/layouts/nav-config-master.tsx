@@ -14,6 +14,8 @@ import {
   RiShieldCheckLine,
 } from 'src/components/remix-icon';
 
+import { organizeMasterNavigation } from './organize-school-navigation';
+
 // ----------------------------------------------------------------------
 
 const ICONS = {
@@ -33,7 +35,7 @@ const ICONS = {
 /**
  * Master admin navigation — system-wide, across every school.
  */
-export const navData: NavSectionProps['data'] = [
+const rawNavData: NavSectionProps['data'] = [
   {
     subheader: 'ภาพรวม',
     items: [
@@ -91,3 +93,5 @@ export const navData: NavSectionProps['data'] = [
     ],
   },
 ];
+
+export const navData = organizeMasterNavigation(rawNavData);

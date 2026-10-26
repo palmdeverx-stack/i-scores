@@ -20,6 +20,21 @@ function issuedAfterRevocation(payload: AppTokenPayload, revokedAt: string | nul
  * check as proof the session is invalid.
  */
 export async function getSessionStatus(payload: AppTokenPayload): Promise<SessionStatus> {
+  if (payload.authProvider === 'marketplace') {
+    const identity = await supabaseAdmin
+      .from('marketplace_sso_identities')
+      .select('app_user_id,marketplace_user_id,is_active')
+      .eq('id', payload.marketplaceIdentityId)
+      .maybeSingle();
+    if (identity.error) return 'error';
+    if (
+      !identity.data?.is_active ||
+      (payload.role === 'marketplace_user'
+        ? identity.data.marketplace_user_id
+        : identity.data.app_user_id) !== payload.sub
+    )
+      return 'inactive';
+  }
   if (payload.role === 'marketplace_user') {
     const { data, error } = await supabaseAdmin
       .from('marketplace_users')
@@ -46,6 +61,18 @@ export async function getSessionStatus(payload: AppTokenPayload): Promise<Sessio
     !issuedAfterRevocation(payload, user.session_revoked_at)
   ) {
     return 'inactive';
+  }
+
+  if (payload.authProvider === 'line') {
+    const link = await supabaseAdmin
+      .from('teacher_line_login_links')
+      .select('id')
+      .eq('id', payload.lineLoginId)
+      .eq('app_user_id', payload.sub)
+      .eq('school_id', payload.schoolId)
+      .maybeSingle();
+    if (link.error) return 'error';
+    if (!link.data) return 'inactive';
   }
 
   if (!user.school_id || user.role === 'master_admin') return 'active';
