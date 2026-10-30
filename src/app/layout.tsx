@@ -52,17 +52,17 @@ export const metadata: Metadata = {
     'ระบบจัดการเรียนการสอน',
     'ระบบวัดผลการเรียน',
   ],
-  manifest: '/favicon/site.webmanifest',
+  manifest: '/favicon/site.webmanifest?v=3',
   icons: {
     icon: [
-      { url: `${CONFIG.assetsDir}/favicon.ico`, sizes: '48x48', type: 'image/x-icon' },
-      { url: `${CONFIG.assetsDir}/favicon/favicon-32x32.png`, sizes: '32x32', type: 'image/png' },
-      { url: `${CONFIG.assetsDir}/favicon/favicon-16x16.png`, sizes: '16x16', type: 'image/png' },
+      { url: `${CONFIG.assetsDir}/favicon.ico?v=3`, sizes: '48x48', type: 'image/x-icon' },
+      { url: `${CONFIG.assetsDir}/favicon/favicon-32x32.png?v=3`, sizes: '32x32', type: 'image/png' },
+      { url: `${CONFIG.assetsDir}/favicon/favicon-16x16.png?v=3`, sizes: '16x16', type: 'image/png' },
     ],
-    shortcut: `${CONFIG.assetsDir}/favicon.ico`,
+    shortcut: `${CONFIG.assetsDir}/favicon.ico?v=3`,
     apple: [
       {
-        url: `${CONFIG.assetsDir}/favicon/apple-touch-icon.png`,
+        url: `${CONFIG.assetsDir}/favicon/apple-touch-icon.png?v=3`,
         sizes: '180x180',
         type: 'image/png',
       },
@@ -115,9 +115,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-      </head>
       <body>
         <InitColorSchemeScript
           modeStorageKey={themeConfig.modeStorageKey}
