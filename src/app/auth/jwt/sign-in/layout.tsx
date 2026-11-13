@@ -37,6 +37,7 @@ export default function Layout({ children }: Props) {
           }}
         />
         <AuthSplitLayout
+          cssVars={{ '--layout-auth-content-width': '440px' }}
           sx={{
             minHeight: '100dvh',
             backgroundSize: 'cover',
@@ -47,6 +48,7 @@ export default function Layout({ children }: Props) {
           slotProps={{
             header: {
               slots: {
+                leftArea: null,
                 rightArea: (
                   <LanguagePopover
                     showTranslateIcon
@@ -64,7 +66,7 @@ export default function Layout({ children }: Props) {
             content: {
               sx: {
                 px: { xs: 2, sm: 4, md: 8 },
-                py: { xs: 10, md: 12 },
+                py: { xs: 3, md: 9 },
                 alignItems: 'center',
               },
             },

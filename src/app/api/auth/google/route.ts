@@ -24,11 +24,8 @@ function googleProfile(authUser: {
   identities?: { provider: string }[];
 }) {
   const providers = authUser.identities?.map((identity) => identity.provider) ?? [];
-  const isGoogle =
-    authUser.app_metadata.provider === 'google' ||
-    providers.includes('google');
-  const emailVerified =
-    authUser.user_metadata.email_verified === true || isGoogle;
+  const isGoogle = authUser.app_metadata.provider === 'google' || providers.includes('google');
+  const emailVerified = authUser.user_metadata.email_verified === true || isGoogle;
 
   return {
     isGoogle,
@@ -125,46 +122,6 @@ export async function POST(request: Request) {
     );
   }
 
-  let marketplaceProfile;
-  try {
-    marketplaceProfile = await ensureMarketplaceUser({
-      authUserId: authUser.id,
-      email: profile.email,
-      usernameHint: profile.username,
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-    });
-  } catch (profileError) {
-    return NextResponse.json(
-      {
-        message:
-          profileError instanceof Error
-            ? profileError.message
-            : 'ไม่สามารถตรวจสอบบัญชี Marketplace ได้',
-      },
-      { status: 409 }
-    );
-  }
-
-  try {
-    await recoverPersonalWorkspacePurchases(authUser.id);
-  } catch (recoveryError) {
-    console.error('[auth/google] Personal workspace recovery failed', {
-      authUserId: authUser.id,
-      message: recoveryError instanceof Error ? recoveryError.message : String(recoveryError),
-    });
-    return NextResponse.json(
-      {
-        code: 'PERSONAL_WORKSPACE_PROVISION_FAILED',
-        message:
-          recoveryError instanceof Error
-            ? recoveryError.message
-            : 'ไม่สามารถสร้างพื้นที่ส่วนตัวจาก License ได้',
-      },
-      { status: 409 }
-    );
-  }
-
   const [{ data: linkedUsers }, { data: emailUsers }] = await Promise.all([
     supabaseAdmin
       .from('app_users')
@@ -192,8 +149,66 @@ export async function POST(request: Request) {
   // The personal workspace's own placeholder row can also share that email, so the
   // email lookup must exclude it explicitly rather than assume a single match.
   const realSchoolLinked = (linkedUsers ?? []).find((candidate) => !isPersonalWorkspace(candidate));
-  const personalLinked = (linkedUsers ?? []).find((candidate) => isPersonalWorkspace(candidate));
+  let personalLinked = (linkedUsers ?? []).find((candidate) => isPersonalWorkspace(candidate));
   const emailUser = (emailUsers ?? []).find((candidate) => !isPersonalWorkspace(candidate));
+
+  let marketplaceProfile;
+
+  // Personal purchases must not block existing staff or administrator logins.
+  // Recover only the personal fallback, then reload rows created by provisioning.
+  if (!realSchoolLinked && !emailUser) {
+    try {
+      marketplaceProfile = await ensureMarketplaceUser({
+        authUserId: authUser.id,
+        email: profile.email,
+        usernameHint: profile.username,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+      });
+    } catch (profileError) {
+      return NextResponse.json(
+        {
+          message:
+            profileError instanceof Error
+              ? profileError.message
+              : 'ไม่สามารถตรวจสอบบัญชี Marketplace ได้',
+        },
+        { status: 409 }
+      );
+    }
+
+    try {
+      await recoverPersonalWorkspacePurchases(authUser.id);
+    } catch (recoveryError) {
+      console.error('[auth/google] Personal workspace recovery failed', {
+        authUserId: authUser.id,
+        message: recoveryError instanceof Error ? recoveryError.message : String(recoveryError),
+      });
+      return NextResponse.json(
+        {
+          code: 'PERSONAL_WORKSPACE_PROVISION_FAILED',
+          message:
+            recoveryError instanceof Error
+              ? recoveryError.message
+              : 'ไม่สามารถสร้างพื้นที่ส่วนตัวจาก License ได้',
+        },
+        { status: 409 }
+      );
+    }
+
+    const { data: recoveredUsers, error: recoveredUsersError } = await supabaseAdmin
+      .from('app_users')
+      .select('*, school:schools!app_users_school_id_fkey(workspace_type, owner_auth_user_id)')
+      .eq('auth_user_id', authUser.id)
+      .eq('is_active', true);
+    if (recoveredUsersError) {
+      return NextResponse.json(
+        { message: 'ไม่สามารถตรวจสอบพื้นที่ส่วนตัวได้ กรุณาลองใหม่' },
+        { status: 503 }
+      );
+    }
+    personalLinked = (recoveredUsers ?? []).find((candidate) => isPersonalWorkspace(candidate));
+  }
 
   let appUser = realSchoolLinked;
   if (!appUser && emailUser) {
@@ -230,13 +245,10 @@ export async function POST(request: Request) {
   }
   appUser ??= personalLinked;
 
-  if (!appUser) {
+  if (!appUser && marketplaceProfile) {
     const redirectUrl = await marketplaceLandingPath(marketplaceProfile.id);
     if (!redirectUrl) {
-      return NextResponse.json(
-        { message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
     }
 
     const accessAppToken = signAppToken({
@@ -262,6 +274,9 @@ export async function POST(request: Request) {
     response.cookies.set(ACCESS_TOKEN_COOKIE, accessAppToken, accessTokenCookieOptions);
     return response;
   }
+  if (!appUser) {
+    return NextResponse.json({ message: 'ไม่พบบัญชีผู้ใช้งาน' }, { status: 401 });
+  }
   if (appUser.role === 'student') {
     return NextResponse.json(
       { message: 'บัญชีนักเรียนไม่รองรับการเข้าสู่ระบบด้วย Google' },
@@ -277,11 +292,7 @@ export async function POST(request: Request) {
 
   if (appUser.role !== 'master_admin') {
     const [{ data: school }, schoolAccessUsable] = await Promise.all([
-      supabaseAdmin
-        .from('schools')
-        .select('is_active')
-        .eq('id', appUser.school_id)
-        .maybeSingle(),
+      supabaseAdmin.from('schools').select('is_active').eq('id', appUser.school_id).maybeSingle(),
       isSchoolAccessUsable(appUser.school_id, {
         userId: appUser.id,
         role: appUser.role,

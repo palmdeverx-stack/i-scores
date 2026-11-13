@@ -42,6 +42,7 @@ import { listUsers, updateSchoolAdmin, deleteSchoolAdmin } from 'src/sections/us
 export function SchoolAdminListView() {
   const [search, setSearch] = useState('');
   const [editingAdmin, setEditingAdmin] = useState<UserRow | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [deletingAdmin, setDeletingAdmin] = useState<UserRow | null>(null);
   const [editForm, setEditForm] = useState<UpdateSchoolAdminParams>({
     firstName: '',
@@ -82,6 +83,7 @@ export function SchoolAdminListView() {
 
   const openEditDialog = (admin: UserRow) => {
     updateMutation.reset();
+    setShowPassword(false);
     setEditingAdmin(admin);
     setEditForm({
       firstName: admin.first_name ?? '',
@@ -428,7 +430,28 @@ export function SchoolAdminListView() {
             />
             <TextField
               label="รหัสผ่านใหม่ (ไม่บังคับ)"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        type="button"
+                        edge="end"
+                        aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+                        aria-pressed={showPassword}
+                        onClick={() => setShowPassword((current) => !current)}
+                        onMouseDown={(event) => event.preventDefault()}
+                      >
+                        <RemixIcon
+                          icon={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
+                        />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
               value={editForm.password ?? ''}
               onChange={(event) => updateEditField('password', event.target.value)}
               helperText="เว้นว่างไว้หากไม่ต้องการเปลี่ยน อย่างน้อย 6 ตัวอักษร"
