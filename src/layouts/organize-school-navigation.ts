@@ -199,7 +199,7 @@ export function organizeMasterNavigation(data: NavSectionProps['data']): NavSect
     const group =
       path.endsWith('/master') || path.includes('system-quality')
         ? groups[0]
-        : path.includes('school')
+        : path.includes('school') || path.includes('marketplace-customers')
           ? groups[1]
           : path.includes('subscription') || path.endsWith('/apps')
             ? groups[2]

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { RiLineFill } from '@remixicon/react';
 import { useQuery } from '@tanstack/react-query';
 
 import Button from '@mui/material/Button';
@@ -30,7 +31,20 @@ export function LineLoginButton({ onError }: { onError: (message: string) => voi
   });
   return (
     <Button
-      sx={{ mt: 1.5 }}
+      sx={{
+        mt: 2,
+        minHeight: 40,
+        borderRadius: '999px',
+        borderColor: '#dadce0',
+        color: '#3c4043',
+        backgroundColor: '#fff',
+        fontSize: 14,
+        fontWeight: 400,
+        px: 5,
+        '& .MuiButton-startIcon': { position: 'absolute', left: 12, margin: 0 },
+        '&:hover': { borderColor: '#dadce0', backgroundColor: '#f8faff' },
+      }}
+      startIcon={<RiLineFill size={20} color="#06C755" aria-hidden="true" />}
       fullWidth
       variant="outlined"
       disabled={!config.data?.enabled || loading}
@@ -44,7 +58,7 @@ export function LineLoginButton({ onError }: { onError: (message: string) => voi
         }
       }}
     >
-      เข้าสู่ระบบด้วย LINE
+      ลงชื่อเข้าใช้ด้วย LINE
     </Button>
   );
 }

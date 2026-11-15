@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { supabaseAdmin } from './supabase-admin';
+import { resolvePersonalLicensePlan } from './personal-license-plan';
 import { ALL_SCHOOL_FEATURE_KEYS } from './school-subscription-config';
 
 // ----------------------------------------------------------------------
@@ -21,12 +22,6 @@ function personalWorkspaceCode(authUserId: string, attempt: number) {
   const hex = authUserId.replaceAll('-', '').slice(0, 12);
   const value = (Number.parseInt(hex, 16) + attempt) % 100_000_000;
   return value.toString().padStart(8, '0');
-}
-
-function sameFeatures(left: string[], right: string[]) {
-  if (left.length !== right.length) return false;
-  const expected = new Set(right);
-  return left.every((feature) => expected.has(feature));
 }
 
 export function hasPersonalWorkspaceFeatures(featureKeys: string[]) {
@@ -209,44 +204,48 @@ export async function recoverPersonalWorkspacePurchases(authUserId: string) {
 
   const orderItemIds = licenses.map((license) => license.order_item_id);
   const productIds = [...new Set(licenses.map((license) => license.product_id))];
-  const [{ data: events }, { data: products }, { data: plans }] = await Promise.all([
+  const [eventsResult, productsResult, plansResult] = await Promise.all([
     supabaseAdmin
       .from('marketplace_provision_events')
       .select('order_item_id')
       .in('order_item_id', orderItemIds),
-    supabaseAdmin
-      .from('marketplace_products')
-      .select('id, grants_plan_code')
-      .in('id', productIds),
+    supabaseAdmin.from('marketplace_products').select('id, grants_plan_code').in('id', productIds),
     supabaseAdmin
       .from('subscription_plans')
       .select('code, target_scope, enabled_features')
       .eq('is_active', true)
       .in('target_scope', ['individual', 'both']),
   ]);
+  for (const result of [eventsResult, productsResult, plansResult]) {
+    if (result.error) throw new Error(result.error.message);
+  }
+  const events = eventsResult.data;
+  const products = productsResult.data;
+  const plans = plansResult.data;
   const provisionedOrderItems = new Set((events ?? []).map((event) => event.order_item_id));
   const planByProduct = new Map(
     (products ?? []).map((product) => [product.id, product.grants_plan_code as string | null])
   );
-  const pending = licenses.filter(
-    (license) => !provisionedOrderItems.has(license.order_item_id)
-  );
+  const pending = licenses.filter((license) => !provisionedOrderItems.has(license.order_item_id));
+  // Resolve all plans before creating a workspace or provisioning any purchases.
+  const pendingPurchases = pending.map((license) => {
+    const planCode = resolvePersonalLicensePlan(
+      license,
+      planByProduct.get(license.product_id),
+      plans ?? []
+    );
+    if (!planCode) {
+      throw new Error('ไม่พบแพ็กเกจรายบุคคลที่รองรับสิทธิ์ที่ซื้อ กรุณาติดต่อผู้ดูแลระบบ');
+    }
+    return { license, planCode };
+  });
   const workspace = await ensurePersonalWorkspace(authUserId);
   let recoveredCount = 0;
   const seedAttendance = licenses.some((license) =>
     license.feature_keys.includes('teacher.qr_attendance')
   );
 
-  for (const license of pending) {
-    const matchedPlan = (plans ?? []).find((plan) =>
-      sameFeatures(license.feature_keys, plan.enabled_features ?? [])
-    );
-    const planCode =
-      license.grants_plan_code || planByProduct.get(license.product_id) || matchedPlan?.code;
-    if (!planCode) {
-      throw new Error('Unable to map the individual license to an EKRU subscription plan');
-    }
-
+  for (const { license, planCode } of pendingPurchases) {
     const { error } = await supabaseAdmin.rpc('provision_personal_workspace_purchase', {
       p_order_item_id: license.order_item_id,
       p_buyer_auth_user_id: authUserId,

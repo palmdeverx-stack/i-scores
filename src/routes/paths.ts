@@ -146,6 +146,7 @@ export const paths = {
     uiSettings: `${ROOTS.MASTER}/ui-settings`,
     emailSettings: `${ROOTS.MASTER}/email-settings`,
     apps: `${ROOTS.MASTER}/apps`,
+    marketplaceCustomers: `${ROOTS.MASTER}/marketplace-customers`,
     school: {
       root: `${ROOTS.MASTER}/school`,
       new: `${ROOTS.MASTER}/school/new`,

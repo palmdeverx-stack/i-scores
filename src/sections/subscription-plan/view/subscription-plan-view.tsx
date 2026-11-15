@@ -24,7 +24,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
+import { SCHOOL_FEATURES, MASTER_ADMIN_SCHOOL_FEATURES } from 'src/lib/school-subscription-config';
 
 import { Label } from 'src/components/label';
 import { RemixIcon } from 'src/components/remix-icon';
@@ -63,6 +63,7 @@ export function SubscriptionPlanView() {
   const queryClient = useQueryClient();
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [deletingPlan, setDeletingPlan] = useState<SubscriptionPlan | null>(null);
   const [planFilter, setPlanFilter] = useState<PlanFilter>('all');
 
@@ -94,7 +95,10 @@ export function SubscriptionPlanView() {
   const activePlans = plans.filter((plan) => plan.is_active);
   const filteredPlans =
     planFilter === 'all' ? plans : plans.filter((plan) => plan.target_scope === planFilter);
-  const enabledFeatureCount = new Set(activePlans.flatMap((plan) => plan.enabled_features)).size;
+  const activeFeatureKeys = new Set(activePlans.flatMap((plan) => plan.enabled_features));
+  const enabledFeatureCount = MASTER_ADMIN_SCHOOL_FEATURES.filter((feature) =>
+    activeFeatureKeys.has(feature.key)
+  ).length;
   const filterCounts = {
     all: plans.length,
     individual: plans.filter((plan) => plan.target_scope === 'individual').length,
@@ -157,7 +161,11 @@ export function SubscriptionPlanView() {
           [
             ['แพ็กเกจทั้งหมด', plans.length, 'solar:box-minimalistic-bold'],
             ['กำลังเปิดใช้', activePlans.length, 'solar:check-circle-bold'],
-            ['ความสามารถ', enabledFeatureCount, 'solar:settings-bold-duotone'],
+            [
+              'ฟีเจอร์ที่เลือกได้',
+              MASTER_ADMIN_SCHOOL_FEATURES.length,
+              'solar:settings-bold-duotone',
+            ],
           ] as const
         ).map(([label, value, icon]) => (
           <Box key={label} sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
@@ -184,6 +192,24 @@ export function SubscriptionPlanView() {
           </Box>
         ))}
       </Box>
+
+      <Alert
+        severity="info"
+        sx={{ mb: 3 }}
+        action={
+          <Button color="inherit" onClick={() => setCatalogOpen(true)}>
+            ดูฟีเจอร์ทั้งหมด
+          </Button>
+        }
+      >
+        <Typography variant="subtitle2">
+          รายการฟีเจอร์ {MASTER_ADMIN_SCHOOL_FEATURES.length} รายการ พร้อมให้จัดแพ็กเกจ
+        </Typography>
+        <Typography variant="body2">
+          ครอบคลุมงานพัสดุและจัดซื้อ เวลาปฏิบัติงาน ตารางครูเวร วันหยุด และเวลาเรียน ·
+          แพ็กเกจที่เปิดใช้งานเลือกใช้แล้ว {enabledFeatureCount} ฟีเจอร์
+        </Typography>
+      </Alert>
 
       {plansQuery.isLoading && (
         <Box sx={{ py: 12, display: 'grid', placeItems: 'center' }}>
@@ -231,7 +257,10 @@ export function SubscriptionPlanView() {
         </Box>
       ) : null}
 
-      {!plansQuery.isLoading && !plansQuery.isError && plans.length > 0 && filteredPlans.length === 0 ? (
+      {!plansQuery.isLoading &&
+      !plansQuery.isError &&
+      plans.length > 0 &&
+      filteredPlans.length === 0 ? (
         <Box sx={{ py: 8, textAlign: 'center' }}>
           <Typography variant="h6">ยังไม่มีแพ็กเกจในกลุ่มนี้</Typography>
           <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
@@ -257,7 +286,9 @@ export function SubscriptionPlanView() {
               borderColor: plan.is_active ? 'divider' : 'text.disabled',
             }}
           >
-            <Box sx={{ gap: 2, display: 'flex', justifyContent: 'space-between' }}>
+            <Box
+              sx={{ gap: 2, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between' }}
+            >
               <Box sx={{ minWidth: 0 }}>
                 <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                   <Typography variant="h5">{plan.name}</Typography>
@@ -428,6 +459,48 @@ export function SubscriptionPlanView() {
           onSubmit={(input) => editingPlan && saveMutation.mutate({ plan: editingPlan, input })}
         />
       )}
+
+      <Dialog open={catalogOpen} onClose={() => setCatalogOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>ฟีเจอร์สำหรับจัดแพ็กเกจ ({MASTER_ADMIN_SCHOOL_FEATURES.length})</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            เลือกฟีเจอร์ได้จากปุ่มแก้ไขของแต่ละแพ็กเกจ หรือสร้างแพ็กเกจใหม่
+          </Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+              gap: 3,
+            }}
+          >
+            {Array.from(new Set(MASTER_ADMIN_SCHOOL_FEATURES.map((feature) => feature.group))).map(
+              (group) => (
+                <Box key={group}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                    {group}
+                  </Typography>
+                  {MASTER_ADMIN_SCHOOL_FEATURES.filter((feature) => feature.group === group).map(
+                    (feature) => (
+                      <Box
+                        key={feature.key}
+                        sx={{ py: 1.25, borderTop: 1, borderColor: 'divider' }}
+                      >
+                        <Typography variant="subtitle2">{feature.label}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {feature.description}
+                        </Typography>
+                      </Box>
+                    )
+                  )}
+                </Box>
+              )
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCatalogOpen(false)}>ปิด</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={Boolean(deletingPlan)} onClose={() => setDeletingPlan(null)}>
         <DialogTitle>ลบแพ็กเกจนี้?</DialogTitle>

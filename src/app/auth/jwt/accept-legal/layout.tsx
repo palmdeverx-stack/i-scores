@@ -11,7 +11,9 @@ type Props = {
 export default function Layout({ children }: Props) {
   return (
     <AuthGuard>
-      <SimpleLayout>{children}</SimpleLayout>
+      <SimpleLayout slotProps={{ header: { slots: { rightArea: null } } }}>
+        {children}
+      </SimpleLayout>
     </AuthGuard>
   );
 }

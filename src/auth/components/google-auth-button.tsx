@@ -35,7 +35,7 @@ type GoogleIdentityServices = {
           theme: 'outline';
           size: 'large';
           text: 'signin_with' | 'signup_with';
-          shape: 'rectangular';
+          shape: 'pill';
           width: number;
         }
       ) => void;
@@ -174,7 +174,7 @@ export function GoogleAuthButton({ intent, onError }: GoogleAuthButtonProps) {
           theme: 'outline',
           size: 'large',
           text: intent === 'sign-up' ? 'signup_with' : 'signin_with',
-          shape: 'rectangular',
+          shape: 'pill',
           width: Math.floor(buttonRef.current.getBoundingClientRect().width),
         });
       } catch (scriptError) {
@@ -196,7 +196,7 @@ export function GoogleAuthButton({ intent, onError }: GoogleAuthButtonProps) {
       sx={{
         position: 'relative',
         width: 1,
-        minHeight: 44,
+        minHeight: 40,
         pointerEvents: loading ? 'none' : 'auto',
       }}
     >

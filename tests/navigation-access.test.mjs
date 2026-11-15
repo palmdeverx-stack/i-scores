@@ -22,6 +22,8 @@ function load(path) {
     Map,
     Set,
     require(name) {
+      if (name === '@tanstack/react-query') return { useQuery() {} };
+      if (name === './school-subscription-actions') return {};
       if (name === 'react/jsx-runtime')
         return {
           jsx: (type, props) => ({ type, props }),
@@ -199,4 +201,65 @@ test('master menus stay role-bound and grouped separately from school workflows'
     flatten(master).some((item) => item.path.startsWith('/teacher')),
     false
   );
+});
+
+const { filterDashboardNav, requiredFeatureForPath } = load(
+  'src/sections/school-subscription/use-school-subscription.ts'
+);
+
+test('personal package hides inventory and staff tools absent from purchased features', () => {
+  const licensed = filterDashboardNav(teacher, ['teacher.lesson_plans']);
+  const visible = paths(groupPersonalWorkspaceNav(licensed));
+  assert(visible.includes('/teacher/lesson-plans'));
+  for (const path of visible) {
+    assert(!path.startsWith('/teacher/inventory'), path);
+    assert(!path.startsWith('/teacher/master-data/inventory-'), path);
+    assert.notEqual(path, '/teacher/work-attendance');
+    assert.notEqual(path, '/teacher/duty-roster');
+    assert.notEqual(path, '/teacher/attendance-scan');
+    assert.notEqual(path, '/teacher/timetable');
+    assert.notEqual(path, '/teacher/announcements');
+  }
+});
+
+test('new feature keys expose their own menus without granting other modules', () => {
+  for (const [feature, expectedPath] of [
+    ['admin.inventory', '/teacher/inventory'],
+    ['staff.work_attendance', '/teacher/work-attendance'],
+    ['staff.duty_roster', '/teacher/duty-roster'],
+  ]) {
+    const visible = paths(filterDashboardNav(teacher, [feature]));
+    assert(visible.includes(expectedPath), `${feature}: ${visible.join(', ')}`);
+    for (const other of ['/teacher/work-attendance', '/teacher/duty-roster', '/teacher/inventory']) {
+      if (other !== expectedPath) assert(!visible.includes(other));
+    }
+  }
+});
+
+test('direct URLs for new school and teacher modules require the same package feature', () => {
+  for (const [role, prefix] of [['school_admin', '/admin'], ['teacher', '/teacher']]) {
+    for (const [path, feature] of [
+      ['/inventory/assets', 'admin.inventory'],
+      ['/inventory/purchases/new', 'admin.inventory'],
+      ['/inventory/purchase-approvals', 'admin.inventory'],
+      ['/master-data/inventory-items/new', 'admin.inventory'],
+      ['/master-data/inventory-units', 'admin.inventory'],
+      ['/work-attendance', 'staff.work_attendance'],
+      ['/duty-roster', 'staff.duty_roster'],
+    ]) assert.equal(requiredFeatureForPath(role, `${prefix}${path}`), feature);
+  }
+  assert.equal(requiredFeatureForPath('school_admin', '/admin/school-holidays'), 'admin.school_holidays');
+  assert.equal(requiredFeatureForPath('school_admin', '/admin/school-time-settings'), 'admin.school_time_settings');
+  assert.equal(requiredFeatureForPath('teacher', '/teacher/inventory-other'), undefined);
+  assert.equal(requiredFeatureForPath('teacher', '/teacher'), undefined);
+});
+
+test('empty licensed groups disappear and each enabled child keeps its package metadata', () => {
+  const onlyInventory = filterDashboardNav(teacher, ['admin.inventory']);
+  assert(onlyInventory.every((group) => group.items.length > 0));
+  const inventoryItems = flatten(onlyInventory).filter((item) => item.path.includes('/inventory'));
+  assert(inventoryItems.length > 0);
+  assert(inventoryItems.every((item) => item.featureKey === 'admin.inventory'));
+  const noFeatures = paths(filterDashboardNav(admin, []));
+  for (const path of ['/admin/inventory', '/admin/work-attendance', '/admin/duty-roster', '/admin/school-holidays', '/admin/school-time-settings']) assert(!noFeatures.includes(path), path);
 });

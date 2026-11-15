@@ -381,6 +381,8 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
               onChange={(_event, value: string) => setFeatureGroup(value)}
               variant="scrollable"
               scrollButtons="auto"
+              allowScrollButtonsMobile
+              aria-label="กลุ่มฟีเจอร์ของแพ็กเกจ"
               sx={{ mt: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}
             >
               {groups.map((group) => (
@@ -392,7 +394,7 @@ export function SubscriptionPlanFormDialog({ plan, loading, error, onClose, onSu
                       (feature) =>
                         feature.group === group && form.enabledFeatures.includes(feature.key)
                     ).length
-                  })`}
+                  }/${MASTER_ADMIN_SCHOOL_FEATURES.filter((feature) => feature.group === group).length})`}
                 />
               ))}
             </Tabs>

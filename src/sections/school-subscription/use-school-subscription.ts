@@ -30,12 +30,22 @@ export function filterDashboardNav(
 
   const filterItems = (items: NavItemDataProps[]): NavItemDataProps[] =>
     items.flatMap((item) => {
-      if (item.featureKey && !enabled.has(item.featureKey as SchoolFeatureKey)) return [];
+      const role = item.path.startsWith('/admin/')
+        ? 'school_admin'
+        : item.path.startsWith('/teacher/')
+          ? 'teacher'
+          : item.path.startsWith('/student/')
+            ? 'student'
+            : null;
+      const feature =
+        item.featureKey ?? (role ? requiredFeatureForPath(role, item.path) : undefined);
+      if (feature && !enabled.has(feature as SchoolFeatureKey)) return [];
 
-      if (!item.children) return [item];
+      const licensedItem = feature ? { ...item, featureKey: feature } : item;
+      if (!item.children) return [licensedItem];
 
       const children = filterItems(item.children);
-      return children.length ? [{ ...item, children }] : [];
+      return children.length ? [{ ...licensedItem, children }] : [];
     });
 
   return data
@@ -61,6 +71,15 @@ const ROUTE_FEATURES: Record<
   Array<[string, SchoolFeatureKey]>
 > = {
   school_admin: [
+    ['/admin/inventory', 'admin.inventory'],
+    ['/admin/master-data/inventory-items', 'admin.inventory'],
+    ['/admin/master-data/inventory-categories', 'admin.inventory'],
+    ['/admin/master-data/inventory-locations', 'admin.inventory'],
+    ['/admin/master-data/inventory-units', 'admin.inventory'],
+    ['/admin/work-attendance', 'staff.work_attendance'],
+    ['/admin/duty-roster', 'staff.duty_roster'],
+    ['/admin/school-holidays', 'admin.school_holidays'],
+    ['/admin/school-time-settings', 'admin.school_time_settings'],
     ['/admin/line-notifications', 'admin.line_notifications'],
     ['/admin/master-data/staff-types', 'admin.staff_masters'],
     ['/admin/master-data/prefixes', 'admin.staff_masters'],
@@ -69,6 +88,9 @@ const ROUTE_FEATURES: Record<
     ['/admin/master-data/employment-statuses', 'admin.staff_masters'],
     ['/admin/master-data/learning-areas', 'admin.subjects'],
     ['/admin/master-data/subject-types', 'admin.subjects'],
+    ['/admin/master-data/education-stages', 'admin.subjects'],
+    ['/admin/master-data/grade-levels', 'admin.subjects'],
+    ['/admin/master-data/activity-types', 'admin.subjects'],
     ['/admin/access-permissions', 'admin.access_permissions'],
     ['/admin/department-permissions', 'admin.access_permissions'],
     ['/admin/department', 'admin.departments'],
@@ -91,11 +113,28 @@ const ROUTE_FEATURES: Record<
     ['/admin/gradebook', 'admin.teacher_assignments'],
   ],
   teacher: [
-    ['/teacher/department-work/announcements', 'admin.announcements'],
+    ['/teacher/master-data/staff-types', 'admin.staff_masters'],
+    ['/teacher/master-data/prefixes', 'admin.staff_masters'],
+    ['/teacher/master-data/positions', 'admin.staff_masters'],
+    ['/teacher/master-data/academic-ranks', 'admin.staff_masters'],
+    ['/teacher/master-data/employment-statuses', 'admin.staff_masters'],
+    ['/teacher/master-data/learning-areas', 'admin.subjects'],
+    ['/teacher/master-data/subject-types', 'admin.subjects'],
+    ['/teacher/master-data/education-stages', 'admin.subjects'],
+    ['/teacher/master-data/grade-levels', 'admin.subjects'],
+    ['/teacher/master-data/activity-types', 'admin.subjects'],
+    ['/teacher/inventory', 'admin.inventory'],
+    ['/teacher/master-data/inventory-items', 'admin.inventory'],
+    ['/teacher/master-data/inventory-categories', 'admin.inventory'],
+    ['/teacher/master-data/inventory-locations', 'admin.inventory'],
+    ['/teacher/master-data/inventory-units', 'admin.inventory'],
+    ['/teacher/work-attendance', 'staff.work_attendance'],
+    ['/teacher/duty-roster', 'staff.duty_roster'],
     ['/teacher/department-work/academic-year', 'admin.academic_years'],
-    ['/teacher/department-work/enrollment', 'admin.enrollments'],
     ['/teacher/department-work/classroom', 'admin.classrooms'],
     ['/teacher/department-work/subject', 'admin.subjects'],
+    ['/teacher/department-work/enrollment', 'admin.enrollments'],
+    ['/teacher/department-work/announcements', 'admin.announcements'],
     ['/teacher/department-work/student', 'admin.students'],
     ['/teacher/department-work/user', 'admin.staff'],
     ['/teacher/department', 'admin.departments'],

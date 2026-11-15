@@ -88,6 +88,9 @@ export function MasterDashboardView() {
           </Typography>
         </Box>
         <Box sx={{ gap: 1, display: 'flex' }}>
+          <Button component={RouterLink} href={paths.master.marketplaceCustomers} variant="outlined">
+            ลูกค้า Marketplace
+          </Button>
           <Button
             component={RouterLink}
             href={paths.master.schoolAdmin.new}

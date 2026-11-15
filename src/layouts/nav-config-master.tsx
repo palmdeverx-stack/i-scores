@@ -61,6 +61,11 @@ const rawNavData: NavSectionProps['data'] = [
         icon: ICONS.schoolAdmin,
       },
       {
+        title: 'ลูกค้า Marketplace',
+        path: paths.master.marketplaceCustomers,
+        icon: ICONS.schoolAdmin,
+      },
+      {
         title: 'ตั้งค่าแพ็กเกจ',
         path: paths.master.subscriptionPlan.root,
         icon: ICONS.subscription,
