@@ -131,7 +131,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     user: {
-      ...toPublicUser(user),
+      ...toPublicUser(user, payload.authProvider),
       ...(payload.impersonatedBy && {
         must_change_password: false,
         accepted_legal_at: user.accepted_legal_at ?? new Date(0).toISOString(),

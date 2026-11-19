@@ -203,7 +203,7 @@ type AppUserRow = {
   employment_status?: string | null;
 };
 
-export function toPublicUser(user: AppUserRow) {
+export function toPublicUser(user: AppUserRow, authProvider?: AppTokenPayload['authProvider']) {
   return {
     id: user.id,
     username: user.username,
@@ -215,7 +215,7 @@ export function toPublicUser(user: AppUserRow) {
     avatar_url: user.avatar_url ?? null,
     photoURL: user.avatar_url ?? null,
     created_at: user.created_at,
-    must_change_password: user.must_change_password ?? false,
+    must_change_password: authProvider !== 'google' && (user.must_change_password ?? false),
     is_active: user.is_active ?? true,
     accepted_legal_at: user.accepted_legal_at ?? null,
     is_school_director: user.is_school_director ?? false,

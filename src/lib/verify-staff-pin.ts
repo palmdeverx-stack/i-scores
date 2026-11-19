@@ -124,7 +124,7 @@ export async function verifyStaffPinRequest(request: Request) {
     marketplaceIdentityId: challenge.marketplaceIdentityId,
   });
 
-  const response = NextResponse.json({ user: toPublicUser(user) });
+  const response = NextResponse.json({ user: toPublicUser(user, challenge.authProvider) });
   response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, accessTokenCookieOptions);
   return response;
 }

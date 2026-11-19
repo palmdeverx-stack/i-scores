@@ -339,7 +339,7 @@ export async function POST(request: Request) {
     schoolId: appUser.school_id,
     authProvider: 'google',
   });
-  const response = NextResponse.json({ user: toPublicUser(appUser) });
+  const response = NextResponse.json({ user: toPublicUser(appUser, 'google') });
   response.cookies.set(ACCESS_TOKEN_COOKIE, accessAppToken, accessTokenCookieOptions);
   return response;
 }

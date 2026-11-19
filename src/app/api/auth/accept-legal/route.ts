@@ -27,5 +27,5 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ user: toPublicUser(user) });
+  return NextResponse.json({ user: toPublicUser(user, payload.authProvider) });
 }

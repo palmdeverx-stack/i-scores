@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { safeReturnUrl } from 'minimal-shared/utils';
 
-import { useRouter, useSearchParams } from 'src/routes/hooks';
+import { paths } from 'src/routes/paths';
+import { useRouter, usePathname, useSearchParams } from 'src/routes/hooks';
 
 import { SplashScreen } from 'src/components/loading-screen';
 
@@ -24,6 +25,12 @@ export function GuestGuard({ children }: GuestGuardProps) {
   const [isChecking, setIsChecking] = useState(true);
 
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const pinRole = searchParams.get('pinRole');
+  const hasPinChallenge =
+    pathname === paths.auth.jwt.signIn &&
+    Boolean(searchParams.get('pinChallengeToken')) &&
+    (pinRole === 'master_admin' || pinRole === 'school_admin');
   const defaultRedirect = getHomePathForRole(user?.role);
   const redirectUrl = safeReturnUrl(searchParams.get('returnTo'), defaultRedirect);
 
@@ -32,7 +39,7 @@ export function GuestGuard({ children }: GuestGuardProps) {
       return;
     }
 
-    if (authenticated) {
+    if (authenticated && !hasPinChallenge) {
       router.replace(redirectUrl);
       return;
     }
@@ -43,7 +50,7 @@ export function GuestGuard({ children }: GuestGuardProps) {
   useEffect(() => {
     checkPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, loading]);
+  }, [authenticated, hasPinChallenge, loading]);
 
   if (isChecking) {
     return <SplashScreen />;

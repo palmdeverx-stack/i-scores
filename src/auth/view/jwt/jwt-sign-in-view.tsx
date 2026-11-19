@@ -97,10 +97,9 @@ export function JwtSignInView() {
 
   const verifyPinMutation = useMutation({
     mutationFn: verifySignInPin,
-    onSuccess: async (user) => {
-      await checkUserSession?.();
-
-      router.replace(
+    onSuccess: (user) => {
+      // Load the destination using the session cookie just issued by PIN verification.
+      window.location.replace(
         safeInternalPath(searchParams.get('returnTo'), true) ?? getHomePathForRole(user.role)
       );
     },
