@@ -26,6 +26,7 @@ import { RemixIcon } from 'src/components/remix-icon';
 
 import { bulkImportStudents } from '../user-actions';
 import { parseStudentImportFile } from '../student-import-utils';
+import { getStudentImportUsername } from '../student-import-validation';
 
 // ----------------------------------------------------------------------
 
@@ -64,7 +65,7 @@ export function StudentImportDialog({ open, onClose }: Props) {
           nationality: row.nationality,
           ethnicity: row.ethnicity,
           religion: row.religion,
-          username: row.username,
+          username: row.username || undefined,
           email: row.email || undefined,
           password: row.password || undefined,
         }))
@@ -127,7 +128,7 @@ export function StudentImportDialog({ open, onClose }: Props) {
                   ลากไฟล์ Excel มาวาง หรือคลิกเพื่อเลือกไฟล์
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  รองรับไฟล์ .xlsx, .xls ที่กรอกตาม Template
+                  รองรับไฟล์ .xlsx, .xls · หากเว้นชื่อผู้ใช้งาน ระบบจะใช้ EKRU ตามด้วยรหัสนักเรียน
                 </Typography>
               </Box>
             }
@@ -161,9 +162,17 @@ export function StudentImportDialog({ open, onClose }: Props) {
               <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
                 <RemixIcon icon="solar:file-check-bold" width={20} sx={{ color: 'success.main' }} />
                 <Typography variant="body2">{file.name}</Typography>
-                <Chip size="small" color="success" label={`พร้อมนำเข้า ${validRows.length} รายการ`} />
+                <Chip
+                  size="small"
+                  color="success"
+                  label={`พร้อมนำเข้า ${validRows.length} รายการ`}
+                />
                 {!!invalidRows.length && (
-                  <Chip size="small" color="error" label={`ข้อมูลผิดพลาด ${invalidRows.length} รายการ`} />
+                  <Chip
+                    size="small"
+                    color="error"
+                    label={`ข้อมูลผิดพลาด ${invalidRows.length} รายการ`}
+                  />
                 )}
               </Box>
               <Button size="small" color="inherit" onClick={reset}>
@@ -190,7 +199,7 @@ export function StudentImportDialog({ open, onClose }: Props) {
                       <TableCell>
                         {`${row.firstName ?? ''} ${row.lastName ?? ''}`.trim() || '-'}
                       </TableCell>
-                      <TableCell>{row.username || '-'}</TableCell>
+                      <TableCell>{getStudentImportUsername(row) || '-'}</TableCell>
                       <TableCell>
                         {row.errors.length ? (
                           <Typography variant="caption" sx={{ color: 'error.main' }}>

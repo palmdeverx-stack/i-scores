@@ -24,11 +24,19 @@ type Props = {
   row: TeacherAssignment;
   detailPath: string;
   canEdit: boolean;
+  compactOnMobile?: boolean;
   onEdit: (row: TeacherAssignment) => void;
   onDelete: (row: TeacherAssignment) => void;
 };
 
-export function TeacherAssignmentCard({ row, detailPath, canEdit, onEdit, onDelete }: Props) {
+export function TeacherAssignmentCard({
+  row,
+  detailPath,
+  canEdit,
+  compactOnMobile,
+  onEdit,
+  onDelete,
+}: Props) {
   const teacherName =
     `${row.teacher.first_name ?? ''} ${row.teacher.last_name ?? ''}`.trim() || row.teacher.username;
   const teacherInitial = teacherName.charAt(0).toUpperCase();
@@ -70,10 +78,23 @@ export function TeacherAssignmentCard({ row, detailPath, canEdit, onEdit, onDele
           '&:hover .MuiCardActionArea-focusHighlight': { opacity: 0 },
         }}
       >
-        <Box sx={{ width: 1, display: 'flex', flexDirection: 'column' }}>
+        <Box
+          sx={{
+            width: 1,
+            display: compactOnMobile ? { xs: 'grid', sm: 'flex' } : 'flex',
+            flexDirection: 'column',
+            ...(compactOnMobile && {
+              gridTemplateColumns: '64px minmax(0, 1fr)',
+              alignItems: { xs: 'start', sm: 'stretch' },
+              gap: { xs: 1.25, sm: 0 },
+              p: { xs: 1.5, sm: 0 },
+            }),
+          }}
+        >
           <Box
             sx={{
-              height: 132,
+              height: compactOnMobile ? { xs: 64, sm: 132 } : 132,
+              ...(compactOnMobile && { borderRadius: { xs: 1.5, sm: 0 } }),
               overflow: 'hidden',
               position: 'relative',
               bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.1),
@@ -101,7 +122,11 @@ export function TeacherAssignmentCard({ row, detailPath, canEdit, onEdit, onDele
                     )})`,
                 }}
               >
-                <RemixIcon icon="solar:notebook-bold-duotone" width={54} />
+                <RemixIcon
+                  icon="solar:notebook-bold-duotone"
+                  width={54}
+                  sx={compactOnMobile ? { width: { xs: 30, sm: 54 } } : undefined}
+                />
               </Box>
             )}
 
@@ -111,6 +136,7 @@ export function TeacherAssignmentCard({ row, detailPath, canEdit, onEdit, onDele
               sx={{
                 top: 12,
                 left: 12,
+                ...(compactOnMobile && { display: { xs: 'none', sm: 'inline-flex' } }),
                 position: 'absolute',
                 fontWeight: 700,
                 color: 'primary.darker',
@@ -120,18 +146,38 @@ export function TeacherAssignmentCard({ row, detailPath, canEdit, onEdit, onDele
             />
           </Box>
 
-          <Box sx={{ p: { xs: 2, sm: 2 }, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+          <Box
+            sx={{
+              p: compactOnMobile ? { xs: 0, sm: 2 } : 2,
+              minWidth: 0,
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <Box sx={{ mb: 1, minWidth: 0 }}>
-              <TruncatedTypography variant="h6">
+              <TruncatedTypography
+                variant="h6"
+                sx={compactOnMobile ? { fontSize: { xs: 16, sm: 18 } } : undefined}
+              >
                 {row.subject.code || '-'} | {row.subject.name}
               </TruncatedTypography>
+              {compactOnMobile && (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: { xs: 'block', sm: 'none' }, mt: 0.25 }}
+                >
+                  {row.classroom.name} · {row.semester.name}
+                </Typography>
+              )}
               <Box sx={{ gap: 1, mt: 1, display: 'flex', alignItems: 'center' }}>
                 <Avatar
                   src={row.teacher.avatar_url ?? undefined}
                   alt={`รูปครู ${teacherName}`}
                   sx={{
-                    width: 32,
-                    height: 32,
+                    width: compactOnMobile ? { xs: 26, sm: 32 } : 32,
+                    height: compactOnMobile ? { xs: 26, sm: 32 } : 32,
                     typography: 'caption',
                     color: 'primary.main',
                     bgcolor: (theme) => varAlpha(theme.vars.palette.primary.mainChannel, 0.1),
@@ -140,7 +186,13 @@ export function TeacherAssignmentCard({ row, detailPath, canEdit, onEdit, onDele
                   {teacherInitial}
                 </Avatar>
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: compactOnMobile ? { xs: 'none', sm: 'block' } : 'block',
+                      color: 'text.secondary',
+                    }}
+                  >
                     ครูผู้สอน
                   </Typography>
                   <Typography variant="subtitle2" noWrap>

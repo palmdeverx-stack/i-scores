@@ -16,20 +16,43 @@ import {
 
 // ----------------------------------------------------------------------
 
+function googleAvatarUrl(value: unknown) {
+  if (typeof value !== 'string') return null;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol === 'https:' &&
+      url.hostname.endsWith('.googleusercontent.com') &&
+      !url.username &&
+      !url.password
+    ) {
+      return url.href;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 function googleProfile(authUser: {
   id: string;
   email?: string;
   app_metadata: Record<string, unknown>;
   user_metadata: Record<string, unknown>;
-  identities?: { provider: string }[];
+  identities?: { provider: string; identity_data?: Record<string, unknown> }[];
 }) {
-  const providers = authUser.identities?.map((identity) => identity.provider) ?? [];
-  const isGoogle = authUser.app_metadata.provider === 'google' || providers.includes('google');
+  const googleIdentity = authUser.identities?.find((identity) => identity.provider === 'google');
+  const isGoogle = authUser.app_metadata.provider === 'google' || Boolean(googleIdentity);
   const emailVerified = authUser.user_metadata.email_verified === true || isGoogle;
 
   return {
     isGoogle,
     emailVerified,
+    avatarUrl:
+      googleAvatarUrl(googleIdentity?.identity_data?.picture) ??
+      googleAvatarUrl(googleIdentity?.identity_data?.avatar_url) ??
+      googleAvatarUrl(authUser.user_metadata.picture) ??
+      googleAvatarUrl(authUser.user_metadata.avatar_url),
     email: authUser.email?.trim().toLowerCase() ?? '',
     username:
       typeof authUser.user_metadata.username === 'string'
@@ -312,6 +335,31 @@ export async function POST(request: Request) {
       { message: `ไม่สามารถอัปเดตบัญชีกลางได้: ${authSync.message}` },
       { status: 500 }
     );
+  }
+
+  const currentAvatar = appUser.avatar_url;
+  if (
+    profile.avatarUrl &&
+    profile.avatarUrl !== currentAvatar &&
+    (!currentAvatar || googleAvatarUrl(currentAvatar))
+  ) {
+    const update = supabaseAdmin
+      .from('app_users')
+      .update({ avatar_url: profile.avatarUrl })
+      .eq('id', appUser.id);
+    const { data: savedAvatar, error } = await (
+      currentAvatar === null
+        ? update.is('avatar_url', null)
+        : update.eq('avatar_url', currentAvatar)
+    )
+      .select('avatar_url')
+      .maybeSingle();
+
+    if (error) {
+      console.error('[auth/google] Could not save profile photo', { code: error.code });
+    } else if (savedAvatar) {
+      appUser.avatar_url = savedAvatar.avatar_url;
+    }
   }
 
   if (appUser.role === 'master_admin' || appUser.role === 'school_admin') {

@@ -5,7 +5,6 @@ import type { DateTimePickerProps } from '@mui/x-date-pickers/DateTimePicker';
 import type { PickersTextFieldProps } from '@mui/x-date-pickers/PickersTextField';
 
 import dayjs from 'dayjs';
-import { RiCalendarLine } from '@remixicon/react';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -15,16 +14,6 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { withRequiredAsterisk } from './required-label';
 
 // ----------------------------------------------------------------------
-
-// MUI X passes slot components internal props like `ownerState` that a plain
-// icon component doesn't know to drop, so it leaks onto the DOM <svg> as an
-// unrecognized attribute. Strip it before forwarding to the icon.
-function DatePickerOpenIcon({
-  ownerState: _ownerState,
-  ...props
-}: React.ComponentProps<typeof RiCalendarLine> & { ownerState?: unknown }) {
-  return <RiCalendarLine {...props} />;
-}
 
 type DateInput = Dayjs | Date | string | number | null | undefined;
 
@@ -49,7 +38,6 @@ export function RHFDatePicker({
   name,
   label,
   required,
-  slots,
   slotProps,
   ...other
 }: PickerProps<DatePickerProps>) {
@@ -82,7 +70,6 @@ export function RHFDatePicker({
               helperText: error?.message ?? slotProps?.textField?.helperText,
             },
           }}
-          slots={{ openPickerIcon: DatePickerOpenIcon, ...slots }}
           {...other}
         />
       )}

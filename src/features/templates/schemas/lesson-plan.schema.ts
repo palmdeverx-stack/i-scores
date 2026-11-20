@@ -12,6 +12,7 @@ export const lessonPlanTemplateSchema = z.object({
       subjectCode: z.string().trim().max(100).optional(),
       topic: z.string().trim().max(500).optional(),
       teacherName: z.string().trim().max(300).optional(),
+      teacherPosition: z.string().trim().max(300).optional(),
       teachingDate: z.string().trim().max(200).optional(),
       gradeLevel: z.string().trim().max(100).optional(),
       semester: z.string().trim().max(100).optional(),

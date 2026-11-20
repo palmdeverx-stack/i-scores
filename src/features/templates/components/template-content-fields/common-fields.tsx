@@ -10,10 +10,10 @@ import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import Autocomplete from '@mui/material/Autocomplete';
 
 import { Field } from 'src/components/hook-form';
 import { RemixIcon } from 'src/components/remix-icon';
@@ -91,17 +91,21 @@ export function TemplateSourcePicker({
   templateOptions,
   onApply,
   actionLabel = 'นำมาเพิ่ม',
+  label = `เลือก Template ${TEMPLATE_TYPE_LABELS[templateType]}`,
 }: {
   templateType: TemplateType;
   templateOptions: TemplateOption[];
   onApply: (template: TemplateOption) => void;
   actionLabel?: string;
+  label?: string;
 }) {
   const [selectedId, setSelectedId] = useState('');
   const options = useMemo(
     () => templateOptions.filter((template) => template.template_type === templateType),
     [templateOptions, templateType]
   );
+
+  const selected = options.find((template) => template.id === selectedId) ?? null;
 
   if (!options.length) return null;
 
@@ -118,27 +122,24 @@ export function TemplateSourcePicker({
         bgcolor: 'background.neutral',
       }}
     >
-      <TextField
-        select
+      <Autocomplete
         fullWidth
         size="small"
-        label={`เลือก Template ${TEMPLATE_TYPE_LABELS[templateType]}`}
-        value={selectedId}
-        onChange={(event) => setSelectedId(event.target.value)}
-      >
-        {options.map((template) => (
-          <MenuItem key={template.id} value={template.id}>
-            {template.name}
-          </MenuItem>
-        ))}
-      </TextField>
+        options={options}
+        value={selected}
+        getOptionKey={(template) => template.id}
+        getOptionLabel={(template) => template.name}
+        onChange={(_, template) => setSelectedId(template?.id ?? '')}
+        noOptionsText="ไม่พบ Template"
+        renderInput={(params) => <TextField {...params} label={label} />}
+        sx={{ minWidth: 0 }}
+      />
       <Button
         size="small"
         variant="contained"
-        disabled={!selectedId}
+        disabled={!selected}
         startIcon={<RemixIcon icon="mingcute:add-line" />}
         onClick={() => {
-          const selected = options.find((template) => template.id === selectedId);
           if (!selected) return;
           onApply(selected);
           setSelectedId('');

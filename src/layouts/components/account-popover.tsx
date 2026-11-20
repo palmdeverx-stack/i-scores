@@ -15,7 +15,7 @@ import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { useTranslate } from 'src/locales';
+import { useTranslate, languageOptions } from 'src/locales';
 
 import { Label } from 'src/components/label';
 import { CustomPopover } from 'src/components/custom-popover';
@@ -39,10 +39,13 @@ import { switchWorkspace } from 'src/auth/context/jwt';
 
 import { AccountButton } from './account-button';
 import { SignOutButton } from './sign-out-button';
+import { LanguageMenu } from './language-popover';
 
 // ----------------------------------------------------------------------
 
 export type AccountPopoverProps = IconButtonProps & {
+  showLanguageOptions?: boolean;
+  hideIdentity?: boolean;
   data?: {
     label: string;
     href: string;
@@ -65,9 +68,16 @@ const POSITION_FALLBACK: Record<string, string> = {
   student: 'นักเรียน',
 };
 
-export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps) {
+export function AccountPopover({
+  data = [],
+  showLanguageOptions = false,
+  hideIdentity = false,
+  sx,
+  ...other
+}: AccountPopoverProps) {
   const pathname = usePathname();
   const { t } = useTranslate('navbar');
+  const { t: tCommon } = useTranslate();
 
   const { open, anchorEl, onClose, onOpen } = usePopover();
 
@@ -291,6 +301,28 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
         })}
       </MenuList>
 
+      {showLanguageOptions ? (
+        <>
+          <Divider sx={{ borderStyle: 'dashed' }} />
+          <Box sx={{ p: 1 }}>
+            <Typography
+              id="account-language-heading"
+              variant="overline"
+              sx={{ px: 1, color: 'text.secondary' }}
+            >
+              {tCommon('language.select')}
+            </Typography>
+            <LanguageMenu
+              dense
+              disablePadding
+              data={languageOptions}
+              aria-labelledby="account-language-heading"
+              onSelect={onClose}
+            />
+          </Box>
+        </>
+      ) : null}
+
       <Divider sx={{ borderStyle: 'dashed' }} />
 
       <Box sx={{ p: 1 }}>
@@ -306,15 +338,17 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
 
   return (
     <>
-      <Box sx={{ p: 2, pb: 1.5 }} display="flex" flexDirection="column" alignItems="flex-end">
-        <Typography variant="subtitle2" noWrap>
-          {user?.displayName}
-        </Typography>
+      {!hideIdentity && (
+        <Box sx={{ p: 2, pb: 1.5 }} display="flex" flexDirection="column" alignItems="flex-end">
+          <Typography variant="subtitle2" noWrap>
+            {user?.displayName}
+          </Typography>
 
-        <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
-          {positionTitle}
-        </Typography>
-      </Box>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
+            {positionTitle}
+          </Typography>
+        </Box>
+      )}
 
       <AccountButton
         onClick={onOpen}

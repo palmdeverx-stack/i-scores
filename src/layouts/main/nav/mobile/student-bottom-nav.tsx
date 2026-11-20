@@ -8,6 +8,7 @@ import Portal from '@mui/material/Portal';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 
+import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
@@ -15,8 +16,16 @@ import { useTranslate } from 'src/locales';
 
 // ----------------------------------------------------------------------
 
+const mobileLabels: Record<string, string> = {
+  [paths.student.subjects]: 'วิชาเรียน',
+  [paths.student.timetable]: 'ตารางเรียน',
+  [paths.student.assignments]: 'งานที่ต้องส่ง',
+  [paths.student.attendance]: 'การเข้าเรียน',
+};
+
 export function StudentBottomNav({ data }: NavMainProps) {
   const { t } = useTranslate();
+  const { t: tNav } = useTranslate('navbar');
   const pathname = usePathname();
   const currentPath = [...data]
     .sort((a, b) => b.path.length - a.path.length)
@@ -83,7 +92,7 @@ export function StudentBottomNav({ data }: NavMainProps) {
               component={RouterLink}
               href={item.path}
               value={item.path}
-              label={item.title}
+              label={mobileLabels[item.path] ? tNav(mobileLabels[item.path]) : item.title}
               icon={
                 <Box sx={{ display: 'grid', position: 'relative', placeItems: 'center' }}>
                   {item.icon}

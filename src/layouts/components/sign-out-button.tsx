@@ -2,9 +2,12 @@
 
 import type { ButtonProps } from '@mui/material/Button';
 
-import { useCallback } from 'react';
+import { useState } from 'react';
 
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
 
 import { useRouter } from 'src/routes/hooks';
 
@@ -27,30 +30,62 @@ export function SignOutButton({ onClose, sx, ...other }: Props) {
 
   const { checkUserSession } = useAuthContext();
 
-  const handleLogout = useCallback(async () => {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleLogout = async () => {
+    setSigningOut(true);
     try {
       await signOut();
       await checkUserSession?.();
 
+      setConfirmOpen(false);
       onClose?.();
       router.refresh();
     } catch (error) {
       console.error(error);
       toast.error(t('errors.signOut'));
+    } finally {
+      setSigningOut(false);
     }
-  }, [checkUserSession, onClose, router, t]);
+  };
+
+  const closeConfirm = () => {
+    if (!signingOut) setConfirmOpen(false);
+  };
 
   return (
-    <Button
-      fullWidth
-      variant="soft"
-      size="large"
-      color="error"
-      onClick={handleLogout}
-      sx={sx}
-      {...other}
-    >
-      {t('actions.signOut')}
-    </Button>
+    <>
+      <Button
+        fullWidth
+        variant="soft"
+        size="large"
+        color="error"
+        aria-haspopup="dialog"
+        onClick={() => setConfirmOpen(true)}
+        sx={sx}
+        {...other}
+      >
+        {t('actions.signOut')}
+      </Button>
+
+      <Dialog open={confirmOpen} onClose={closeConfirm} fullWidth maxWidth="xs">
+        <DialogTitle>{t('actions.confirmSignOut')}</DialogTitle>
+        <DialogActions>
+          <Button
+            autoFocus
+            color="inherit"
+            variant="outlined"
+            disabled={signingOut}
+            onClick={closeConfirm}
+          >
+            {t('actions.cancel')}
+          </Button>
+          <Button color="error" variant="contained" loading={signingOut} onClick={handleLogout}>
+            {t('actions.signOut')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }

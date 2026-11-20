@@ -3,22 +3,20 @@
 import type { DropResult } from '@hello-pangea/dnd';
 import type { TemplateOption, LearningObjectiveItem, LearningObjectiveContent } from '../../types';
 
+import { useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
-import { useMemo, useState, useEffect } from 'react';
 import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
 
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
-import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
 import { Field } from 'src/components/hook-form';
 import { RemixIcon } from 'src/components/remix-icon';
 
-import { ObjectList, RowActions } from './common-fields';
 import { uid, contentName, useArrayValue } from './helpers';
+import { ObjectList, RowActions, TemplateSourcePicker } from './common-fields';
 
 export function TopicsFields({ contentPath }: { contentPath: string }) {
   const rows = useArrayValue<{ id: string; title: string; description?: string; order: number }>(
@@ -79,12 +77,6 @@ export function LearningObjectivesFields({
   const objectivesPath = contentName(contentPath, 'objectives');
   const rows = useArrayValue<LearningObjectiveItem>(objectivesPath);
   const { getValues, setValue } = useFormContext();
-  const [selectedTemplateId, setSelectedTemplateId] = useState('');
-  const objectiveTemplates = useMemo(
-    () => templateOptions.filter((template) => template.template_type === 'learning_objective'),
-    [templateOptions]
-  );
-
   useEffect(() => {
     if (rows.value.length) return;
     const legacy = (getValues(contentPath) ?? {}) as Partial<LearningObjectiveItem>;
@@ -110,10 +102,7 @@ export function LearningObjectivesFields({
     rows.move(source.index, destination.index);
   };
 
-  const addFromTemplate = () => {
-    const template = objectiveTemplates.find((option) => option.id === selectedTemplateId);
-    if (!template) return;
-
+  const addFromTemplate = (template: TemplateOption) => {
     const content = template.content as LearningObjectiveContent;
     const templateObjectives = content.objectives?.length
       ? content.objectives
@@ -133,7 +122,6 @@ export function LearningObjectivesFields({
       ...rows.value,
       ...templateObjectives.map((objective) => ({ ...structuredClone(objective), id: uid() })),
     ]);
-    setSelectedTemplateId('');
   };
 
   return (
@@ -154,45 +142,12 @@ export function LearningObjectivesFields({
         ])
       }
     >
-      {objectiveTemplates.length ? (
-        <Box
-          sx={{
-            gap: 1,
-            p: 1.25,
-            display: 'flex',
-            alignItems: 'center',
-            border: '1px dashed',
-            borderColor: 'divider',
-            borderRadius: 1.5,
-            bgcolor: 'background.neutral',
-          }}
-        >
-          <TextField
-            select
-            fullWidth
-            size="small"
-            label="เลือกจาก Template"
-            value={selectedTemplateId}
-            onChange={(event) => setSelectedTemplateId(event.target.value)}
-          >
-            {objectiveTemplates.map((template) => (
-              <MenuItem key={template.id} value={template.id}>
-                {template.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Button
-            size="small"
-            variant="contained"
-            disabled={!selectedTemplateId}
-            startIcon={<RemixIcon icon="mingcute:add-line" />}
-            onClick={addFromTemplate}
-            sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
-          >
-            นำมาเพิ่ม
-          </Button>
-        </Box>
-      ) : null}
+      <TemplateSourcePicker
+        templateType="learning_objective"
+        templateOptions={templateOptions}
+        label="เลือกจาก Template"
+        onApply={addFromTemplate}
+      />
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId={`learning-objectives-${contentPath}`}>
           {(droppableProvided) => (
@@ -266,23 +221,23 @@ export function LearningObjectivesFields({
                       >
                         <Field.Text
                           required
-                          size="medium"
+                          size="small"
                           name={contentName(contentPath, `objectives.${index}.behaviorVerb`)}
                           label="คำกริยาพฤติกรรม"
                         />
                         <Field.Text
                           required
-                          size="medium"
+                          size="small"
                           name={contentName(contentPath, `objectives.${index}.expectedResult`)}
                           label="ผลลัพธ์ที่คาดหวัง"
                         />
                         <Field.Text
-                          size="medium"
+                          size="small"
                           name={contentName(contentPath, `objectives.${index}.condition`)}
                           label="เงื่อนไข (ถ้ามี)"
                         />
                         <Field.Text
-                          size="medium"
+                          size="small"
                           name={contentName(contentPath, `objectives.${index}.successCriteria`)}
                           label="เกณฑ์ความสำเร็จ (ถ้ามี)"
                         />

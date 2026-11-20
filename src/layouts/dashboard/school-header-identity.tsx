@@ -22,7 +22,7 @@ import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
-export function SchoolHeaderIdentity() {
+export function SchoolHeaderIdentity({ compact = false }: { compact?: boolean }) {
   const { t } = useTranslate();
   const { user } = useAuthContext();
   const isPersonalWorkspace = user?.is_personal_workspace === true;
@@ -30,10 +30,10 @@ export function SchoolHeaderIdentity() {
   const { data: school, isLoading } = useQuery({
     queryKey: ['nav-school', schoolId],
     queryFn: () => getSchool(schoolId),
-    enabled: !!schoolId && !isPersonalWorkspace,
+    enabled: !!schoolId && (compact || !isPersonalWorkspace),
   });
 
-  if (isPersonalWorkspace) {
+  if (isPersonalWorkspace && !compact) {
     return (
       <Box sx={{ gap: 1.25, display: 'flex', minWidth: 0, alignItems: 'center' }}>
         <Logo href={paths.teacher.root} />
@@ -50,46 +50,51 @@ export function SchoolHeaderIdentity() {
   if (isLoading) {
     return (
       <>
-        <Skeleton variant="rounded" width={38} height={38} />
-        <Skeleton width={150} height={24} sx={{ ml: 1.25 }} />
+        <Skeleton variant="rounded" width={compact ? 36 : 38} height={compact ? 36 : 38} />
+        <Skeleton width={compact ? 80 : 150} height={24} sx={{ ml: 1.25 }} />
       </>
     );
   }
 
-  const schoolName = school?.name ?? t('school.mySchool');
+  const schoolName = school?.name ?? (isPersonalWorkspace ? 'EKRU' : t('school.mySchool'));
 
   return (
     <Link
       component={RouterLink}
       href={paths.teacher.root}
       underline="none"
+      title={compact ? schoolName : undefined}
       sx={{
-        gap: 1.25,
+        gap: compact ? 1 : 1.25,
         minWidth: 0,
         display: 'flex',
         alignItems: 'center',
         color: 'grey.900',
       }}
     >
-      <Avatar
-        src={school?.logo_url ?? undefined}
-        alt={schoolName}
-        variant="rounded"
-        sx={{
-          width: 40,
-          height: 40,
-          flexShrink: 0,
-          fontWeight: 700,
-          color: 'primary.main',
-          bgcolor: 'primary.lighter',
-          border: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        {schoolName.charAt(0)}
-      </Avatar>
+      {compact && isPersonalWorkspace && !school?.logo_url ? (
+        <Logo disabled sx={{ width: 36, height: 36, flexShrink: 0 }} />
+      ) : (
+        <Avatar
+          src={school?.logo_url ?? undefined}
+          alt=""
+          variant="rounded"
+          sx={{
+            width: compact ? 36 : 40,
+            height: compact ? 36 : 40,
+            flexShrink: 0,
+            fontWeight: 700,
+            color: 'primary.main',
+            bgcolor: 'primary.lighter',
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          {schoolName.charAt(0)}
+        </Avatar>
+      )}
       <Typography
-        variant="subtitle1"
+        variant={compact ? 'subtitle2' : 'subtitle1'}
         sx={{
           maxWidth: { sm: 220, md: 320 },
           overflow: 'hidden',

@@ -98,7 +98,11 @@ export async function toggleSchoolActive(id: string, isActive: boolean) {
   return json.school;
 }
 
-export async function getSchool(id: string): Promise<SchoolProfile> {
+export async function getSchool(
+  id: string
+): Promise<
+  SchoolProfile & { workspace_type: 'personal' | 'school'; workspace_description: string | null }
+> {
   const response = await fetch(`/api/schools/${id}`, {});
   const json = await response.json();
 

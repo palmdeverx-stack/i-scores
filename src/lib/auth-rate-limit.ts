@@ -59,17 +59,23 @@ async function checkRateLimit(
  * Fails closed on infrastructure errors. Authentication must not continue
  * when brute-force protection cannot make an authoritative decision.
  */
-export async function isSignInAllowed(request: Request, username: string): Promise<boolean> {
-  const ip = getClientIp(request);
+export function isSignInUsernameAllowed(username: string): Promise<boolean> {
   const normalizedUsername = username.trim().slice(0, 320).toLowerCase();
+  return checkRateLimit(
+    rateLimitIdentifier('user', normalizedUsername),
+    USERNAME_MAX_ATTEMPTS,
+    USERNAME_WINDOW_SECONDS
+  );
+}
 
+export async function isSignInAllowed(request: Request, username: string): Promise<boolean> {
   const [ipAllowed, usernameAllowed] = await Promise.all([
-    checkRateLimit(rateLimitIdentifier('ip', ip), IP_MAX_ATTEMPTS, IP_WINDOW_SECONDS),
     checkRateLimit(
-      rateLimitIdentifier('user', normalizedUsername),
-      USERNAME_MAX_ATTEMPTS,
-      USERNAME_WINDOW_SECONDS
+      rateLimitIdentifier('ip', getClientIp(request)),
+      IP_MAX_ATTEMPTS,
+      IP_WINDOW_SECONDS
     ),
+    isSignInUsernameAllowed(username),
   ]);
 
   return ipAllowed && usernameAllowed;

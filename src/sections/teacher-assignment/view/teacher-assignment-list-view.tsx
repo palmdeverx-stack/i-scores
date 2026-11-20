@@ -1,5 +1,6 @@
 'use client';
 
+import type { Theme } from '@mui/material/styles';
 import type { TeacherAssignment } from '../teacher-assignment-actions';
 
 import { varAlpha } from 'minimal-shared/utils';
@@ -28,6 +29,7 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import ToggleButton from '@mui/material/ToggleButton';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
@@ -89,6 +91,7 @@ const summaryItems = [
 export function TeacherAssignmentListView() {
   const { user } = useAuthContext();
   const isTeacher = user?.role === 'teacher';
+  const isSmallScreen = useMediaQuery<Theme>((theme) => theme.breakpoints.down('md'));
   const canManageAssignments =
     user?.role === 'school_admin' || (user?.manage_permissions ?? []).includes('schedule.manage');
   const [search, setSearch] = useState('');
@@ -96,6 +99,7 @@ export function TeacherAssignmentListView() {
   const [classroomFilter, setClassroomFilter] = useState('');
   const [semesterFilter, setSemesterFilter] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const displayMode = isTeacher && isSmallScreen ? 'grid' : viewMode;
   const [tablePage, setTablePage] = useState(0);
   const [tableRowsPerPage, setTableRowsPerPage] = useState(10);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -130,7 +134,7 @@ export function TeacherAssignmentListView() {
       if (!lastPage.hasMore) return undefined;
       return allPages.reduce((total, page) => total + page.teacherAssignments.length, 0);
     },
-    enabled: !!user?.school_id && !!user?.id && semesterFilter !== null && viewMode === 'grid',
+    enabled: !!user?.school_id && !!user?.id && semesterFilter !== null && displayMode === 'grid',
   });
 
   const tableQuery = useQuery({
@@ -153,7 +157,7 @@ export function TeacherAssignmentListView() {
         limit: tableRowsPerPage,
         offset: tablePage * tableRowsPerPage,
       }),
-    enabled: !!user?.school_id && !!user?.id && semesterFilter !== null && viewMode === 'table',
+    enabled: !!user?.school_id && !!user?.id && semesterFilter !== null && displayMode === 'table',
   });
 
   const summaryQuery = useQuery({
@@ -171,12 +175,12 @@ export function TeacherAssignmentListView() {
 
   const gridRows = gridQuery.data?.pages.flatMap((page) => page.teacherAssignments) ?? [];
   const tableRows = tableQuery.data?.teacherAssignments ?? [];
-  const rows = viewMode === 'grid' ? gridRows : tableRows;
+  const rows = displayMode === 'grid' ? gridRows : tableRows;
   const total =
-    viewMode === 'grid' ? (gridQuery.data?.pages[0]?.total ?? 0) : (tableQuery.data?.total ?? 0);
-  const isLoading = viewMode === 'grid' ? gridQuery.isLoading : tableQuery.isLoading;
-  const isError = viewMode === 'grid' ? gridQuery.isError : tableQuery.isError;
-  const refetch = viewMode === 'grid' ? gridQuery.refetch : tableQuery.refetch;
+    displayMode === 'grid' ? (gridQuery.data?.pages[0]?.total ?? 0) : (tableQuery.data?.total ?? 0);
+  const isLoading = displayMode === 'grid' ? gridQuery.isLoading : tableQuery.isLoading;
+  const isError = displayMode === 'grid' ? gridQuery.isError : tableQuery.isError;
+  const refetch = displayMode === 'grid' ? gridQuery.refetch : tableQuery.refetch;
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = gridQuery;
   const classroomOptions = summaryQuery.data?.classroomOptions ?? [];
   const semesterOptions = summaryQuery.data?.semesterOptions ?? [];
@@ -196,7 +200,7 @@ export function TeacherAssignmentListView() {
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel || viewMode !== 'grid') return undefined;
+    if (!sentinel || displayMode !== 'grid') return undefined;
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting) loadMore();
@@ -204,7 +208,7 @@ export function TeacherAssignmentListView() {
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [loadMore, viewMode]);
+  }, [loadMore, displayMode]);
 
   const deleteMutation = useMutation({
     mutationFn: deleteTeacherAssignment,
@@ -239,10 +243,10 @@ export function TeacherAssignmentListView() {
   };
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5, ...(isTeacher && { px: { xs: 1.5, sm: 3 } }) }}>
       <Card
         sx={{
-          mb: 4,
+          mb: isTeacher ? { xs: 2.5, md: 4 } : 4,
           p: { xs: 2, sm: 3 },
           color: 'common.white',
           overflow: 'hidden',
@@ -263,7 +267,7 @@ export function TeacherAssignmentListView() {
       >
         <Box
           sx={{
-            gap: 3,
+            gap: isTeacher ? { xs: 1.5, sm: 3 } : 3,
             zIndex: 1,
             display: 'flex',
             position: 'relative',
@@ -276,16 +280,29 @@ export function TeacherAssignmentListView() {
             <Typography
               component="p"
               variant="overline"
-              sx={{ mb: 0.5, opacity: 0.8, letterSpacing: 1.2 }}
+              sx={{
+                mb: 0.5,
+                opacity: 0.8,
+                letterSpacing: 1.2,
+                display: isTeacher ? { xs: 'none', sm: 'block' } : 'block',
+              }}
             >
               พื้นที่จัดการชั้นเรียน
             </Typography>
-            <Typography component="h1" variant="h3" sx={{ mb: 1 }}>
+            <Typography
+              component="h1"
+              variant="h3"
+              sx={(theme) => ({
+                mb: 1,
+                ...(isTeacher && { [theme.breakpoints.down('sm')]: { fontSize: 24 } }),
+              })}
+            >
               {isTeacher ? 'รายวิชาที่รับผิดชอบ' : 'ครูประจำวิชา'}
             </Typography>
             <Typography
               sx={(theme) => ({
                 maxWidth: 600,
+                ...(isTeacher && { typography: { xs: 'body2', sm: 'body1' } }),
                 color: varAlpha(theme.vars.palette.common.whiteChannel, 0.76),
               })}
             >
@@ -302,6 +319,10 @@ export function TeacherAssignmentListView() {
               startIcon={<RemixIcon icon="mingcute:add-line" />}
               sx={{
                 flexShrink: 0,
+                ...(isTeacher && {
+                  width: { xs: 1, sm: 'auto' },
+                  minHeight: { xs: 44, sm: 'auto' },
+                }),
                 color: 'primary.darker',
                 bgcolor: 'common.white',
                 '&:hover': { bgcolor: 'grey.200' },
@@ -318,7 +339,7 @@ export function TeacherAssignmentListView() {
           mb: 4,
           gap: 2,
           display: { xs: 'none', sm: 'grid' },
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
         }}
       >
         {summaryItems.map((item) => (
@@ -356,8 +377,8 @@ export function TeacherAssignmentListView() {
           mb: 3,
           gap: 2,
           display: 'flex',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: isTeacher ? { xs: 'stretch', lg: 'center' } : { xs: 'stretch', sm: 'center' },
+          flexDirection: isTeacher ? { xs: 'column', lg: 'row' } : { xs: 'column', sm: 'row' },
           justifyContent: 'space-between',
         }}
       >
@@ -374,15 +395,18 @@ export function TeacherAssignmentListView() {
           sx={{
             gap: 1.5,
             width: { xs: 1, sm: 'auto' },
-            display: 'flex',
+            display: isTeacher ? { xs: 'grid', md: 'flex' } : 'flex',
+            gridTemplateColumns: isTeacher ? 'repeat(2, minmax(0, 1fr))' : undefined,
             alignItems: 'center',
             flexDirection: { xs: 'column', sm: 'row' },
+            flexWrap: isTeacher ? 'wrap' : undefined,
           }}
         >
           <ToggleButtonGroup
             exclusive
             size="small"
             value={viewMode}
+            sx={isTeacher ? { display: { xs: 'none', md: 'inline-flex' } } : undefined}
             aria-label="รูปแบบการแสดงผล"
             onChange={(_, nextView: 'grid' | 'table' | null) => {
               if (nextView) setViewMode(nextView);
@@ -397,6 +421,7 @@ export function TeacherAssignmentListView() {
           </ToggleButtonGroup>
 
           <TextField
+            size={isTeacher ? 'small' : 'medium'}
             select
             label="ภาคเรียน"
             value={semesterFilter ?? ''}
@@ -406,7 +431,7 @@ export function TeacherAssignmentListView() {
               setClassroomFilter('');
               setTablePage(0);
             }}
-            sx={{ width: { xs: 1, sm: 240 } }}
+            sx={{ width: isTeacher ? { xs: 1, md: 190 } : { xs: 1, sm: 240 } }}
             slotProps={{
               input: {
                 startAdornment: (
@@ -426,6 +451,7 @@ export function TeacherAssignmentListView() {
           </TextField>
 
           <TextField
+            size={isTeacher ? 'small' : 'medium'}
             select
             label="ระดับชั้น"
             value={classroomFilter}
@@ -433,7 +459,7 @@ export function TeacherAssignmentListView() {
               setClassroomFilter(event.target.value);
               setTablePage(0);
             }}
-            sx={{ width: { xs: 1, sm: 280 } }}
+            sx={{ width: isTeacher ? { xs: 1, md: 195 } : { xs: 1, sm: 280 } }}
             slotProps={{
               input: {
                 startAdornment: (
@@ -453,6 +479,7 @@ export function TeacherAssignmentListView() {
           </TextField>
 
           <TextField
+            size={isTeacher ? 'small' : 'medium'}
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
@@ -460,7 +487,10 @@ export function TeacherAssignmentListView() {
             }}
             placeholder="ค้นหารายวิชา ห้องเรียน หรือภาคเรียน"
             aria-label="ค้นหาชั้นเรียน"
-            sx={{ width: { xs: 1, sm: 360 } }}
+            sx={{
+              width: isTeacher ? { xs: 1, md: 260 } : { xs: 1, sm: 360 },
+              gridColumn: isTeacher ? '1 / -1' : undefined,
+            }}
             slotProps={{
               input: {
                 startAdornment: (
@@ -502,7 +532,7 @@ export function TeacherAssignmentListView() {
         </Alert>
       )}
 
-      {isLoading && viewMode === 'grid' ? (
+      {isLoading && displayMode === 'grid' ? (
         <Box
           aria-label="กำลังโหลดชั้นเรียน"
           sx={{
@@ -512,17 +542,22 @@ export function TeacherAssignmentListView() {
           }}
         >
           {[0, 1, 2].map((item) => (
-            <Skeleton key={item} variant="rounded" height={235} sx={{ borderRadius: 2 }} />
+            <Skeleton
+              key={item}
+              variant="rounded"
+              height={isTeacher && isSmallScreen ? 160 : 235}
+              sx={{ borderRadius: 2 }}
+            />
           ))}
         </Box>
-      ) : viewMode === 'grid' ? (
+      ) : displayMode === 'grid' ? (
         <Box
           sx={{
             gap: 2.5,
             display: 'grid',
             gridTemplateColumns: {
               xs: '1fr',
-              sm: 'repeat(3, 1fr)',
+              sm: isTeacher ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, 1fr)',
               lg: 'repeat(3, 1fr)',
               xl: 'repeat(4, 1fr)',
             },
@@ -534,6 +569,7 @@ export function TeacherAssignmentListView() {
               row={row}
               detailPath={detailPath(row.id)}
               canEdit={canManageAssignments}
+              compactOnMobile={isTeacher}
               onEdit={openEditDialog}
               onDelete={(target) => {
                 deleteMutation.reset();
@@ -676,7 +712,7 @@ export function TeacherAssignmentListView() {
         </Card>
       )}
 
-      {viewMode === 'grid' && !isLoading && !isError && !!rows.length && (
+      {displayMode === 'grid' && !isLoading && !isError && !!rows.length && (
         <Box ref={sentinelRef} sx={{ mt: 2.5 }}>
           {isFetchingNextPage && (
             <Box
@@ -685,21 +721,26 @@ export function TeacherAssignmentListView() {
                 display: 'grid',
                 gridTemplateColumns: {
                   xs: '1fr',
-                  sm: 'repeat(3, 1fr)',
+                  sm: isTeacher ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, 1fr)',
                   lg: 'repeat(3, 1fr)',
                   xl: 'repeat(4, 1fr)',
                 },
               }}
             >
               {[0, 1].map((item) => (
-                <Skeleton key={item} variant="rounded" height={235} sx={{ borderRadius: 2 }} />
+                <Skeleton
+                  key={item}
+                  variant="rounded"
+                  height={isTeacher && isSmallScreen ? 160 : 235}
+                  sx={{ borderRadius: 2 }}
+                />
               ))}
             </Box>
           )}
         </Box>
       )}
 
-      {viewMode === 'grid' && !isLoading && !isError && !rows.length && (
+      {displayMode === 'grid' && !isLoading && !isError && !rows.length && (
         <Card variant="outlined" sx={{ py: 7, px: 3, textAlign: 'center' }}>
           <Box
             sx={{

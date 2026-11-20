@@ -29,6 +29,7 @@ import { useNavTaskCounts } from './use-nav-task-counts';
 import { DashboardBottomNav } from './dashboard-bottom-nav';
 import { AccountDrawer } from '../components/account-drawer';
 import { AccountPopover } from '../components/account-popover';
+import { SchoolHeaderIdentity } from './school-header-identity';
 import { LanguagePopover } from '../components/language-popover';
 import { MarketplaceButton } from '../components/marketplace-button';
 import { NotificationsMenu } from '../components/notifications-menu';
@@ -44,6 +45,7 @@ type LayoutBaseProps = Pick<LayoutSectionProps, 'sx' | 'children' | 'cssVars'>;
 
 export type DashboardLayoutProps = LayoutBaseProps & {
   layoutQuery?: Breakpoint;
+  compactMobileHeader?: boolean;
   tabletHorizontalNav?: boolean;
   tabletQuery?: Breakpoint;
   slotProps?: {
@@ -63,6 +65,7 @@ export function DashboardLayout({
   children,
   slotProps,
   layoutQuery = 'lg',
+  compactMobileHeader = false,
   tabletQuery = 'sm',
   tabletHorizontalNav = false,
 }: DashboardLayoutProps) {
@@ -131,7 +134,7 @@ export function DashboardLayout({
               sx={{ mr: 1, ml: -1, [theme.breakpoints.up(mobileNavQuery)]: { display: 'none' } }}
             />
           )}
-          {!mobileBottom && (
+          {(!mobileBottom || compactMobileHeader) && (
             <NavMobile
               data={navData}
               open={open}
@@ -142,8 +145,8 @@ export function DashboardLayout({
           )}
 
           {mobileBottom && (
-            <Box sx={{ display: { xs: 'flex', [mobileNavQuery]: 'none' } }}>
-              <MainSchoolLogo />
+            <Box sx={{ display: { xs: 'flex', [mobileNavQuery]: 'none' }, minWidth: 0 }}>
+              {compactMobileHeader ? <SchoolHeaderIdentity compact /> : <MainSchoolLogo />}
             </Box>
           )}
 
@@ -176,7 +179,15 @@ export function DashboardLayout({
             />
           )}
 
-          <MarketplaceButton sx={{ ml: { xs: 0.5, sm: 1 } }} />
+          <Box
+            sx={{
+              display: compactMobileHeader
+                ? { xs: 'none', [mobileNavQuery]: 'inline-flex' }
+                : 'inline-flex',
+            }}
+          >
+            <MarketplaceButton sx={{ ml: { xs: 0.5, sm: 1 } }} />
+          </Box>
           <ExperimentalFeedbackButton />
 
           {/** @slot Workspace popover */}
@@ -187,7 +198,14 @@ export function DashboardLayout({
         </>
       ),
       rightArea: (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 } }}>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 }, flexShrink: 0 }}
+        >
+          {compactMobileHeader && (
+            <Box sx={{ display: { xs: 'inline-flex', [mobileNavQuery]: 'none' } }}>
+              <MarketplaceButton aria-label="Marketplace" />
+            </Box>
+          )}
           {/** @slot Searchbar */}
           {/* <Searchbar data={navData} /> */}
 
@@ -202,7 +220,17 @@ export function DashboardLayout({
 
           {/** @slot Account drawer */}
           {mobileBottom && (
-            <AccountPopover sx={{ display: { xs: 'inline-flex', [mobileNavQuery]: 'none' } }} />
+            <Box
+              sx={{
+                display: { xs: 'inline-flex', [mobileNavQuery]: 'none' },
+                alignItems: 'center',
+              }}
+            >
+              <AccountPopover
+                hideIdentity={compactMobileHeader}
+                showLanguageOptions={compactMobileHeader}
+              />
+            </Box>
           )}
 
           <AccountDrawer
@@ -215,7 +243,14 @@ export function DashboardLayout({
           />
 
           {/** @slot Language popover */}
-          <LanguagePopover data={languageOptions} />
+          <LanguagePopover
+            data={languageOptions}
+            sx={
+              compactMobileHeader
+                ? { display: { xs: 'none', [mobileNavQuery]: 'inline-flex' } }
+                : undefined
+            }
+          />
         </Box>
       ),
     };
@@ -305,7 +340,14 @@ export function DashboardLayout({
       ]}
     >
       {renderMain()}
-      {mobileBottom && <DashboardBottomNav data={navData} layoutQuery={mobileNavQuery} />}
+      {mobileBottom && (
+        <DashboardBottomNav
+          data={navData}
+          layoutQuery={mobileNavQuery}
+          menuOpen={open}
+          onOpenMenu={compactMobileHeader ? onOpen : undefined}
+        />
+      )}
     </LayoutSection>
   );
 }

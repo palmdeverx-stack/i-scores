@@ -29,6 +29,7 @@ import { useAuthContext } from 'src/auth/hooks';
 
 import { listEnrollments } from '../enrollment-actions';
 import { BulkPromoteDialog } from '../components/bulk-promote-dialog';
+import { EnrollmentExcelDialog } from '../components/enrollment-excel-dialog';
 
 // ----------------------------------------------------------------------
 
@@ -40,6 +41,7 @@ export function EnrollmentOverviewView() {
   const [academicYearId, setAcademicYearId] = useState('');
   const [currentAcademicYearId, setCurrentAcademicYearId] = useState('');
   const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
+  const [excelDialogOpen, setExcelDialogOpen] = useState(false);
 
   const {
     data: academicYears = [],
@@ -146,8 +148,7 @@ export function EnrollmentOverviewView() {
   }, [classrooms, search]);
 
   const isLoading =
-    academicYearsLoading ||
-    (!!academicYearId && (classroomsLoading || enrollmentsLoading));
+    academicYearsLoading || (!!academicYearId && (classroomsLoading || enrollmentsLoading));
   const isError = academicYearsError || classroomsError || enrollmentsError;
   const registeredStudents = new Set(enrollments.map((enrollment) => enrollment.student.id)).size;
   const emptyClassrooms = classrooms.filter(
@@ -155,19 +156,29 @@ export function EnrollmentOverviewView() {
   ).length;
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5, ...(isTeacher && { px: { xs: 1.5, sm: 3 } }) }}>
       <Box
         sx={{
-          mb: 4,
+          mb: isTeacher ? { xs: 2.5, md: 4 } : 4,
           gap: 2,
           display: 'flex',
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: isTeacher
+            ? { xs: 'stretch', md: 'center' }
+            : { xs: 'flex-start', sm: 'center' },
+          flexDirection: isTeacher ? { xs: 'column', md: 'row' } : { xs: 'column', sm: 'row' },
           justifyContent: 'space-between',
         }}
       >
         <Box>
-          <Typography component="h1" variant="h3">
+          <Typography
+            component="h1"
+            variant="h3"
+            sx={
+              isTeacher
+                ? (theme) => ({ [theme.breakpoints.down('sm')]: { fontSize: 24 } })
+                : undefined
+            }
+          >
             ลงทะเบียนนักเรียน
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
@@ -178,9 +189,16 @@ export function EnrollmentOverviewView() {
           sx={{
             gap: 1.5,
             width: { xs: 1, sm: 'auto' },
-            display: 'flex',
+            display: isTeacher ? { xs: 'grid', sm: 'flex' } : 'flex',
+            gridTemplateColumns: isTeacher ? 'repeat(2, minmax(0, 1fr))' : undefined,
             alignItems: 'center',
             flexDirection: { xs: 'column', sm: 'row' },
+            ...(isTeacher && {
+              '& .MuiButton-root': {
+                minHeight: { xs: 44, sm: 'auto' },
+                px: { xs: 0.75, sm: 1.25 },
+              },
+            }),
           }}
         >
           <TextField
@@ -193,7 +211,7 @@ export function EnrollmentOverviewView() {
               setAcademicYearId(event.target.value);
               setSearch('');
             }}
-            sx={{ width: { xs: 1, sm: 190 } }}
+            sx={{ width: { xs: 1, sm: 190 }, gridColumn: isTeacher ? '1 / -1' : undefined }}
           >
             {academicYears.map((academicYear) => (
               <MenuItem key={academicYear.id} value={academicYear.id}>
@@ -202,6 +220,16 @@ export function EnrollmentOverviewView() {
               </MenuItem>
             ))}
           </TextField>
+          {isTeacher ? (
+            <Button
+              variant="outlined"
+              disabled={classroomsLoading || classroomsError || !classrooms.length}
+              onClick={() => setExcelDialogOpen(true)}
+              sx={{ width: { xs: 1, sm: 'auto' }, whiteSpace: 'nowrap' }}
+            >
+              นำเข้าจาก Excel
+            </Button>
+          ) : null}
           <Button
             variant="outlined"
             disabled={!academicYearId}
@@ -239,14 +267,17 @@ export function EnrollmentOverviewView() {
       <Box
         sx={{
           mb: 3,
-          gap: 2,
+          gap: isTeacher ? { xs: 1, sm: 2 } : 2,
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+          gridTemplateColumns: isTeacher
+            ? 'repeat(3, minmax(0, 1fr))'
+            : { xs: '1fr', sm: 'repeat(3, 1fr)' },
         }}
       >
         <SummaryCard
           icon="solar:users-group-rounded-bold"
           label="ชั้นเรียนทั้งหมด"
+          compactLabel={isTeacher ? 'ห้องเรียน' : undefined}
           value={classrooms.length}
           color="primary.main"
           bgcolor="primary.lighter"
@@ -254,6 +285,7 @@ export function EnrollmentOverviewView() {
         <SummaryCard
           icon="solar:user-rounded-bold"
           label="นักเรียนที่ลงทะเบียน"
+          compactLabel={isTeacher ? 'ลงทะเบียน' : undefined}
           value={registeredStudents}
           color="success.main"
           bgcolor="success.lighter"
@@ -261,6 +293,7 @@ export function EnrollmentOverviewView() {
         <SummaryCard
           icon="solar:inbox-bold"
           label="ห้องที่ยังไม่มีนักเรียน"
+          compactLabel={isTeacher ? 'ห้องว่าง' : undefined}
           value={emptyClassrooms}
           color="warning.main"
           bgcolor="warning.lighter"
@@ -319,7 +352,10 @@ export function EnrollmentOverviewView() {
         )}
 
         {groupedClassrooms.map((group) => (
-          <Box key={group.academicYearId} sx={{ '&:not(:last-of-type)': { mb: 4 } }}>
+          <Box
+            key={group.academicYearId}
+            sx={{ '&:not(:last-of-type)': { mb: { xs: 2.5, sm: 4 } } }}
+          >
             <Box sx={{ mb: 1.5, gap: 1, display: 'flex', alignItems: 'center' }}>
               <Typography variant="subtitle1">ปีการศึกษา {group.year}</Typography>
               <Label variant="soft" color="info">
@@ -344,6 +380,7 @@ export function EnrollmentOverviewView() {
                   gradeLevel={classroom.grade_level}
                   teachers={classroom.homeroom_teachers}
                   studentCount={classroomCounts.get(classroom.id) ?? 0}
+                  compact={isTeacher}
                   onClick={() =>
                     router.push(
                       isTeacher
@@ -358,6 +395,14 @@ export function EnrollmentOverviewView() {
         ))}
       </Card>
 
+      {excelDialogOpen ? (
+        <EnrollmentExcelDialog
+          academicYearId={academicYearId}
+          year={academicYears.find((item) => item.id === academicYearId)?.year ?? ''}
+          classroomNames={classrooms.map((classroom) => classroom.name)}
+          onClose={() => setExcelDialogOpen(false)}
+        />
+      ) : null}
       <BulkPromoteDialog open={promoteDialogOpen} onClose={() => setPromoteDialogOpen(false)} />
     </Container>
   );
@@ -370,10 +415,18 @@ type ClassroomCardProps = {
   gradeLevel: string | null;
   teachers: ClassroomTeacher[];
   studentCount: number;
+  compact?: boolean;
   onClick: () => void;
 };
 
-function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: ClassroomCardProps) {
+function ClassroomCard({
+  name,
+  gradeLevel,
+  teachers,
+  studentCount,
+  compact,
+  onClick,
+}: ClassroomCardProps) {
   const teacherNames = teachers.map(
     (teacher) =>
       `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.trim() || `@${teacher.username}`
@@ -385,7 +438,7 @@ function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: Cl
       type="button"
       onClick={onClick}
       sx={{
-        p: 2.5,
+        p: compact ? { xs: 1.5, sm: 2.5 } : 2.5,
         display: 'block',
         cursor: 'pointer',
         textAlign: 'left',
@@ -403,13 +456,14 @@ function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: Cl
           borderColor: 'primary.main',
           boxShadow: (theme) => theme.vars.customShadows.z8,
         },
+        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main' },
       }}
     >
-      <Box sx={{ gap: 2, display: 'flex', alignItems: 'center' }}>
+      <Box sx={{ gap: compact ? { xs: 1, sm: 2 } : 2, display: 'flex', alignItems: 'center' }}>
         <Box
           sx={{
-            width: 48,
-            height: 48,
+            width: compact ? { xs: 36, sm: 48 } : 48,
+            height: compact ? { xs: 36, sm: 48 } : 48,
             flexShrink: 0,
             display: 'grid',
             borderRadius: 1.75,
@@ -440,8 +494,8 @@ function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: Cl
       <Box
         sx={{
           gap: 1.25,
-          mt: 2,
-          pt: 1.5,
+          mt: compact ? { xs: 1.25, sm: 2 } : 2,
+          pt: compact ? { xs: 1, sm: 1.5 } : 1.5,
           display: 'flex',
           alignItems: 'flex-start',
           borderTop: '1px solid',
@@ -485,21 +539,22 @@ function ClassroomCard({ name, gradeLevel, teachers, studentCount, onClick }: Cl
 type SummaryCardProps = {
   icon: RemixIconName;
   label: string;
+  compactLabel?: string;
   value: number;
   color: string;
   bgcolor: string;
 };
 
-function SummaryCard({ icon, label, value, color, bgcolor }: SummaryCardProps) {
+function SummaryCard({ icon, label, compactLabel, value, color, bgcolor }: SummaryCardProps) {
   return (
-    <Card variant="outlined" sx={{ p: 2.5 }}>
+    <Card variant="outlined" sx={{ p: compactLabel ? { xs: 1.25, sm: 2.5 } : 2.5 }}>
       <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
         <Box
           sx={{
             width: 44,
             height: 44,
             flexShrink: 0,
-            display: 'grid',
+            display: compactLabel ? { xs: 'none', sm: 'grid' } : 'grid',
             borderRadius: 1.5,
             color,
             placeItems: 'center',
@@ -509,9 +564,22 @@ function SummaryCard({ icon, label, value, color, bgcolor }: SummaryCardProps) {
           <RemixIcon icon={icon} width={25} />
         </Box>
         <Box>
-          <Typography variant="h4">{value}</Typography>
+          <Typography variant="h4" sx={compactLabel ? { fontSize: { xs: 20, sm: 28 } } : undefined}>
+            {value}
+          </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {label}
+            {compactLabel ? (
+              <>
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                  {compactLabel}
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  {label}
+                </Box>
+              </>
+            ) : (
+              label
+            )}
           </Typography>
         </Box>
       </Box>

@@ -35,7 +35,13 @@ export type TeacherProfile = {
   academic_rank: string | null;
   avatar_url: string | null;
   created_at: string;
-  school: { id: string; name: string; code: string; logo_url: string | null } | null;
+  school: {
+    id: string;
+    name: string;
+    code: string;
+    logo_url: string | null;
+    workspace_description: string | null;
+  } | null;
   summary: { assignments: number; subjects: number; classrooms: number };
   teaching_assignments: {
     id: string;
@@ -80,6 +86,22 @@ export async function updateTeacherProfile(
   if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถบันทึกข้อมูลโปรไฟล์ได้');
 
   return json.profile;
+}
+
+export async function updateTeacherWorkspace(
+  schoolId: string,
+  values: { name: string; description: string }
+): Promise<{ name: string; description: string | null }> {
+  const response = await fetch('/api/teacher/profile', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ schoolId, ...values }),
+  });
+  const json = await response.json();
+
+  if (!response.ok) throw new Error(json.message ?? 'ไม่สามารถบันทึกชื่อพื้นที่ได้');
+
+  return { name: json.name, description: json.description };
 }
 
 export async function uploadTeacherAvatar(file: File): Promise<string> {

@@ -23,6 +23,7 @@ import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
+import Autocomplete from '@mui/material/Autocomplete';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
@@ -35,6 +36,10 @@ import { Label } from 'src/components/label';
 import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
+import {
+  mobileRecordTableSx,
+  mobileTablePaginationSx,
+} from 'src/components/table/mobile-record-table';
 
 import { listSubjectMasterItems } from 'src/sections/subject-master/subject-master-actions';
 import { listSemesters, listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
@@ -61,6 +66,7 @@ const SUBJECT_SCOPE_LABELS = {
 export function SubjectListView({
   basePath = paths.admin.subject.root,
 }: { basePath?: string } = {}) {
+  const teacherMobile = basePath === paths.teacher.departmentSubject;
   const router = useRouter();
   const table = useTable({ defaultRowsPerPage: 5 });
   const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null);
@@ -203,10 +209,10 @@ export function SubjectListView({
   });
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5, ...(teacherMobile && { px: { xs: 1.5, sm: 3 } }) }}>
       <Box
         sx={{
-          mb: 4,
+          mb: teacherMobile ? { xs: 2.5, md: 4 } : 4,
           gap: 2,
           display: 'flex',
           alignItems: { xs: 'flex-start', sm: 'center' },
@@ -215,7 +221,15 @@ export function SubjectListView({
         }}
       >
         <Box>
-          <Typography component="h1" variant="h3">
+          <Typography
+            component="h1"
+            variant="h3"
+            sx={
+              teacherMobile
+                ? { fontSize: (theme) => ({ [theme.breakpoints.down('sm')]: { fontSize: 24 } }) }
+                : undefined
+            }
+          >
             รายวิชาและหลักสูตร
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
@@ -227,6 +241,11 @@ export function SubjectListView({
           href={createPath}
           variant="contained"
           startIcon={<RemixIcon icon="mingcute:add-line" />}
+          sx={
+            teacherMobile
+              ? { width: { xs: 1, sm: 'auto' }, minHeight: { xs: 44, sm: 'auto' } }
+              : undefined
+          }
         >
           เพิ่มรายวิชา
         </Button>
@@ -250,11 +269,15 @@ export function SubjectListView({
         <Box
           sx={{
             gap: 2,
-            px: 3,
-            py: 2.5,
+            px: teacherMobile ? { xs: 2, sm: 3 } : 3,
+            py: teacherMobile ? { xs: 1.5, sm: 2.5 } : 2.5,
             display: 'flex',
-            alignItems: { xs: 'stretch', md: 'center' },
-            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: teacherMobile
+              ? { xs: 'stretch', xl: 'center' }
+              : { xs: 'stretch', md: 'center' },
+            flexDirection: teacherMobile
+              ? { xs: 'column', xl: 'row' }
+              : { xs: 'column', md: 'row' },
             justifyContent: 'space-between',
             borderBottom: '1px solid',
             borderColor: 'divider',
@@ -268,7 +291,15 @@ export function SubjectListView({
               {isLoading ? 'กำลังโหลด...' : `${subjects.length} รายการ`}
             </Typography>
           </Box>
-          <Box sx={{ gap: 1.5, display: 'flex', flexDirection: { xs: 'column', sm: 'row' } }}>
+          <Box
+            sx={{
+              gap: 1.25,
+              display: teacherMobile ? { xs: 'grid', md: 'flex' } : 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              flexWrap: teacherMobile ? 'wrap' : undefined,
+              gridTemplateColumns: teacherMobile ? 'repeat(2, minmax(0, 1fr))' : undefined,
+            }}
+          >
             <TextField
               size="small"
               value={searchQuery}
@@ -280,7 +311,10 @@ export function SubjectListView({
               slotProps={{
                 input: { startAdornment: <RemixIcon icon="solar:magnifer-linear" width={18} /> },
               }}
-              sx={{ minWidth: 220 }}
+              sx={{
+                minWidth: teacherMobile ? { xs: 0, md: 220 } : 220,
+                gridColumn: teacherMobile ? '1 / -1' : undefined,
+              }}
             />
             <TextField
               select
@@ -293,7 +327,7 @@ export function SubjectListView({
                 setSemesterFilter('');
                 table.onResetPage();
               }}
-              sx={{ minWidth: 170 }}
+              sx={{ minWidth: teacherMobile ? { xs: 0, md: 170 } : 170 }}
             >
               <MenuItem value="">ทุกปีการศึกษา</MenuItem>
               {academicYears.map((year) => (
@@ -312,7 +346,7 @@ export function SubjectListView({
                 setSemesterFilter(event.target.value);
                 table.onResetPage();
               }}
-              sx={{ minWidth: 170 }}
+              sx={{ minWidth: teacherMobile ? { xs: 0, md: 170 } : 170 }}
             >
               <MenuItem value="">ทุกภาคเรียน</MenuItem>
               {filterSemesters.map((semester) => (
@@ -321,29 +355,36 @@ export function SubjectListView({
                 </MenuItem>
               ))}
             </TextField>
-            <TextField
-              select
+            <Autocomplete
               size="small"
-              label="กลุ่มสาระ"
-              value={areaFilter}
-              onChange={(event) => {
-                setAreaFilter(event.target.value);
+              options={learningAreas}
+              value={learningAreas.find((area) => area.code === areaFilter) ?? null}
+              getOptionKey={(area) => area.code}
+              getOptionLabel={(area) => area.name}
+              onChange={(_, area) => {
+                setAreaFilter(area?.code ?? '');
                 table.onResetPage();
               }}
-              sx={{ minWidth: 200 }}
-            >
-              <MenuItem value="">ทุกกลุ่มสาระ</MenuItem>
-              {learningAreas.map((area) => (
-                <MenuItem key={area.id} value={area.code}>
-                  {area.name}
-                </MenuItem>
-              ))}
-            </TextField>
+              clearText="ล้างตัวกรองกลุ่มสาระ"
+              noOptionsText="ไม่พบกลุ่มสาระ"
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="กลุ่มสาระ"
+                  placeholder="ทุกกลุ่มสาระ"
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+              )}
+              sx={{
+                minWidth: teacherMobile ? { xs: 0, md: 200 } : 200,
+                gridColumn: teacherMobile ? '1 / -1' : undefined,
+              }}
+            />
           </Box>
         </Box>
 
         <TableContainer>
-          <Table>
+          <Table sx={teacherMobile ? mobileRecordTableSx : undefined}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ width: { sm: 140 } }}>รหัสวิชา</TableCell>
@@ -359,13 +400,13 @@ export function SubjectListView({
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={5}>กำลังโหลด...</TableCell>
+                  <TableCell colSpan={6}>กำลังโหลด...</TableCell>
                 </TableRow>
               )}
               {!isLoading && !subjects.length && (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     sx={{ py: 7, textAlign: 'center', color: 'text.secondary' }}
                   >
                     ยังไม่มีรายวิชา กด “เพิ่มรายวิชา” เพื่อเริ่มต้น
@@ -374,7 +415,7 @@ export function SubjectListView({
               )}
               {visibleSubjects.map((subject) => (
                 <TableRow key={subject.id} hover>
-                  <TableCell>
+                  <TableCell data-mobile-wide data-mobile-label="รหัสวิชา">
                     <Typography
                       variant="body2"
                       sx={{ color: subject.code ? 'text.primary' : 'text.disabled' }}
@@ -382,18 +423,31 @@ export function SubjectListView({
                       {subject.code ?? 'ไม่ระบุ'}
                     </Typography>
                   </TableCell>
-                  <TableCell>
-                    <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+                  <TableCell data-mobile-wide>
+                    <Box
+                      sx={{
+                        gap: 1.5,
+                        display: 'flex',
+                        alignItems: teacherMobile ? { xs: 'flex-start', md: 'center' } : 'center',
+                      }}
+                    >
                       <Avatar
                         variant="rounded"
                         src={subject.image_url ?? undefined}
                         alt={`รูปวิชา ${subject.name}`}
-                        sx={{ width: 56, height: 44, bgcolor: 'background.neutral' }}
+                        sx={{ width: 56, height: 44, flexShrink: 0, bgcolor: 'background.neutral' }}
                       >
                         <RemixIcon icon="solar:gallery-wide-bold" width={24} />
                       </Avatar>
                       <Box sx={{ minWidth: 0 }}>
-                        <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
+                        <Box
+                          sx={{
+                            gap: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            ...(teacherMobile && { flexWrap: { xs: 'wrap', md: 'nowrap' } }),
+                          }}
+                        >
                           <Typography variant="subtitle2">{subject.name}</Typography>
                           <Label variant="soft" color="secondary">
                             {SUBJECT_SCOPE_LABELS[subject.scope]}
@@ -469,7 +523,7 @@ export function SubjectListView({
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-mobile-label="ภาคเรียน / ปี">
                     <Typography variant="body2">
                       {subject.scope === 'school'
                         ? `${subject.semesters?.name ?? 'ยังไม่กำหนดภาคเรียน'} / ${
@@ -478,7 +532,7 @@ export function SubjectListView({
                         : 'ไม่ผูกภาคเรียน'}
                     </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-mobile-label="หน่วยกิต / ชั่วโมง">
                     <Typography variant="body2">
                       {Number(subject.credits).toLocaleString('th-TH')} หน่วยกิต
                     </Typography>
@@ -486,7 +540,7 @@ export function SubjectListView({
                       {Number(subject.study_hours ?? 0).toLocaleString('th-TH')} ชั่วโมง
                     </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-mobile-label="สถานะ">
                     <Label
                       variant="soft"
                       color={subject.status === 'published' ? 'success' : 'default'}
@@ -494,7 +548,7 @@ export function SubjectListView({
                       {subject.status === 'published' ? 'เผยแพร่แล้ว' : 'แบบร่าง'}
                     </Label>
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="right" data-mobile-actions>
                     {subject.can_edit ? (
                       <Tooltip title="แก้ไข">
                         <IconButton
@@ -554,7 +608,11 @@ export function SubjectListView({
             if (type === 'next') return 'หน้าถัดไป';
             return 'หน้าก่อนหน้า';
           }}
-          sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+          sx={{
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            ...(teacherMobile && mobileTablePaginationSx),
+          }}
         />
       </Card>
 

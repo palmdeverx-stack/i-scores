@@ -1,10 +1,10 @@
 'use client';
 
+import type { MenuListProps } from '@mui/material/MenuList';
 import type { IconButtonProps } from '@mui/material/IconButton';
 import type { LangCode } from 'src/locales';
 
 import { m } from 'framer-motion';
-import { useCallback } from 'react';
 import { usePopover } from 'minimal-shared/hooks';
 
 import MenuList from '@mui/material/MenuList';
@@ -29,6 +29,37 @@ export type LanguagePopoverProps = IconButtonProps & {
   }[];
 };
 
+export function LanguageMenu({
+  data,
+  onSelect,
+  ...menuListProps
+}: Omit<MenuListProps, 'onSelect'> & {
+  data: NonNullable<LanguagePopoverProps['data']>;
+  onSelect: () => void;
+}) {
+  const { onChangeLang, currentLang } = useTranslate();
+
+  return (
+    <MenuList {...menuListProps}>
+      {data.map((option) => (
+        <MenuItem
+          key={option.value}
+          role="menuitemradio"
+          aria-checked={option.value === currentLang.value}
+          selected={option.value === currentLang.value}
+          onClick={() => {
+            onChangeLang(option.value as LangCode);
+            onSelect();
+          }}
+        >
+          <FlagIcon code={option.countryCode} />
+          {option.label}
+        </MenuItem>
+      ))}
+    </MenuList>
+  );
+}
+
 export function LanguagePopover({
   data = [],
   sx,
@@ -36,34 +67,7 @@ export function LanguagePopover({
   ...other
 }: LanguagePopoverProps) {
   const { open, anchorEl, onClose, onOpen } = usePopover();
-
-  const { t, onChangeLang, currentLang } = useTranslate();
-
-  const handleChangeLang = useCallback(
-    (lang: LangCode) => {
-      onChangeLang(lang);
-      onClose();
-    },
-    [onChangeLang, onClose]
-  );
-
-  const renderMenuList = () => (
-    <CustomPopover open={open} anchorEl={anchorEl} onClose={onClose}>
-      <MenuList sx={{ width: 160, minHeight: 72 }}>
-        {data?.map((option) => (
-          <MenuItem
-            key={option.value}
-            selected={option.value === currentLang.value}
-            onClick={() => handleChangeLang(option.value as LangCode)}
-          >
-            <FlagIcon code={option.countryCode} />
-
-            {option.label}
-          </MenuItem>
-        ))}
-      </MenuList>
-    </CustomPopover>
-  );
+  const { t, currentLang } = useTranslate();
 
   return (
     <>
@@ -92,7 +96,9 @@ export function LanguagePopover({
         )}
       </IconButton>
 
-      {renderMenuList()}
+      <CustomPopover open={open} anchorEl={anchorEl} onClose={onClose}>
+        <LanguageMenu data={data} onSelect={onClose} sx={{ width: 160, minHeight: 72 }} />
+      </CustomPopover>
     </>
   );
 }

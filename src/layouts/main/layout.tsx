@@ -83,7 +83,7 @@ export function MainLayout({
           )}
 
           {/** @slot Logo */}
-          <MainSchoolLogo />
+          <MainSchoolLogo showWorkspaceName />
 
           <MarketplaceButton sx={{ ml: { xs: 0.5, sm: 1.5 } }} />
           <ExperimentalFeedbackButton />
@@ -101,14 +101,14 @@ export function MainLayout({
           />
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
-            <LanguagePopover data={languageOptions} />
+            {!mobileBottom && <LanguagePopover data={languageOptions} />}
 
             {/** @slot Settings button */}
             {/* <SettingsButton /> */}
 
             {/** @slot Sign in button */}
             <SignInButton />
-            <AccountPopover />
+            <AccountPopover showLanguageOptions={mobileBottom} />
           </Box>
         </>
       ),

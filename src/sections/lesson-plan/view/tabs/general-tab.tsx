@@ -2,13 +2,15 @@ import type { ComponentProps } from 'react';
 import type { LessonPlanAssignment } from '../../lesson-plan-actions';
 
 import { memo } from 'react';
+import { Controller, useFormContext } from 'react-hook-form';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import Autocomplete from '@mui/material/Autocomplete';
 
 import { TemplateCoverFields } from 'src/features/templates/components/template-cover-fields';
 
@@ -56,6 +58,9 @@ export const GeneralTab = memo(function GeneralTab({
   onLogoDrop,
   onLogoRemove,
 }: GeneralTabProps) {
+  const { control } = useFormContext();
+  const learningUnits = selectedAssignment?.subject?.learning_units_structured ?? [];
+
   return (
     <Box sx={{ gap: 3, display: 'grid' }}>
       <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 } }}>
@@ -69,6 +74,7 @@ export const GeneralTab = memo(function GeneralTab({
           }}
         >
           <Field.Text
+            size="small"
             required
             disabled={!isEditable}
             name="title"
@@ -90,7 +96,10 @@ export const GeneralTab = memo(function GeneralTab({
           sx={{
             gap: 2,
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 250px' },
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr)',
+              md: 'minmax(0, 1fr) minmax(160px, 18%)',
+            },
           }}
         >
           <Box sx={{ gridColumn: { md: '1 / -1' } }}>
@@ -109,44 +118,85 @@ export const GeneralTab = memo(function GeneralTab({
               sx={{
                 gap: 2,
                 display: 'grid',
-                gridColumn: { md: '1 / -1' },
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'minmax(0, 1fr) 112px' },
               }}
             >
-              <Field.Select
-                required
+              <Controller
                 name="teacherAssignmentId"
-                disabled={!isEditable}
-                label="รายวิชาและห้องเรียน"
-                onChange={(event) => onSelectAssignment(event.target.value)}
-                sx={{ gridColumn: { sm: '1 / -1' } }}
-              >
-                {assignmentOptions.map((option) => (
-                  <MenuItem key={option.id} value={option.id}>
-                    {option.subject?.code ? `${option.subject.code} · ` : ''}
-                    {option.subject?.name} · {option.classroom?.name} · {option.semester?.name}
-                  </MenuItem>
-                ))}
-              </Field.Select>
-              {selectedAssignment?.subject?.learning_units_structured.length ? (
-                <Field.Select
+                control={control}
+                render={({ field, fieldState: { error } }) => (
+                  <Autocomplete
+                    size="small"
+                    disabled={!isEditable}
+                    options={assignmentOptions}
+                    value={selectedAssignment ?? null}
+                    getOptionKey={(option) => option.id}
+                    getOptionLabel={(option) =>
+                      [
+                        option.subject?.code,
+                        option.subject?.name,
+                        option.classroom?.name,
+                        option.semester?.name,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    }
+                    onBlur={field.onBlur}
+                    onChange={(_, option) => {
+                      const id = option?.id ?? '';
+                      field.onChange(id);
+                      onSelectAssignment(id);
+                    }}
+                    noOptionsText="ไม่พบรายวิชาและห้องเรียน"
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        inputRef={field.ref}
+                        required
+                        label="รายวิชาและห้องเรียน"
+                        error={!!error}
+                        helperText={error?.message}
+                      />
+                    )}
+                    sx={{ gridColumn: learningUnits.length ? '1 / -1' : undefined }}
+                  />
+                )}
+              />
+              {learningUnits.length ? (
+                <Controller
                   name="unitId"
-                  label="หน่วยการเรียนรู้จากรายวิชา"
-                  disabled={!isEditable}
-                  onChange={(event) => onSelectUnit(event.target.value)}
-                  helperText="เลือกแล้วระบบจะเติมชื่อหน่วยและจำนวนคาบตั้งต้นให้"
-                  sx={{ gridColumn: { sm: '1 / -1' } }}
-                >
-                  <MenuItem value="">กำหนดหน่วยเฉพาะแผนนี้</MenuItem>
-                  {selectedAssignment.subject.learning_units_structured.map((unit) => (
-                    <MenuItem key={unit.id} value={unit.id}>
-                      {unit.code ? `${unit.code} · ` : ''}
-                      {unit.name}
-                    </MenuItem>
-                  ))}
-                </Field.Select>
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <Autocomplete
+                      size="small"
+                      disabled={!isEditable}
+                      options={learningUnits}
+                      value={learningUnits.find((unit) => unit.id === field.value) ?? null}
+                      getOptionKey={(unit) => unit.id}
+                      getOptionLabel={(unit) => [unit.code, unit.name].filter(Boolean).join(' · ')}
+                      onBlur={field.onBlur}
+                      onChange={(_, unit) => {
+                        field.onChange(unit?.id ?? null);
+                        onSelectUnit(unit?.id ?? '');
+                      }}
+                      noOptionsText="ไม่พบหน่วยการเรียนรู้"
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          inputRef={field.ref}
+                          label="หน่วยการเรียนรู้จากรายวิชา"
+                          error={!!error}
+                          helperText={
+                            error?.message ?? 'เลือกแล้วระบบจะเติมชื่อหน่วยและจำนวนคาบตั้งต้นให้'
+                          }
+                        />
+                      )}
+                    />
+                  )}
+                />
               ) : null}
               <Field.Text
+                size="small"
                 required
                 disabled={!isEditable}
                 type="number"
@@ -172,8 +222,12 @@ export const GeneralTab = memo(function GeneralTab({
             sx={{
               gap: 1,
               display: 'flex',
+              alignSelf: 'start',
               alignItems: 'center',
               flexDirection: 'column',
+              gridColumn: { md: 2 },
+              gridRow: { md: isTemplateMode ? 2 : '2 / span 2' },
+              pt: { xs: 1, md: 0 },
             }}
           >
             <Typography variant="subtitle2">โลโก้บนเอกสาร</Typography>
@@ -186,7 +240,7 @@ export const GeneralTab = memo(function GeneralTab({
                 const file = files[0];
                 if (file) onLogoDrop(file);
               }}
-              sx={{ width: 128, height: 128 }}
+              sx={{ width: 112, height: 112 }}
             />
             {templateLogo ? (
               <Button

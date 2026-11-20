@@ -1,3 +1,4 @@
+import * as z from 'zod';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
@@ -7,6 +8,7 @@ import { isSchoolAccessUsable } from 'src/lib/school-subscription';
 import { notifyPendingMarketplaceInvitation } from 'src/lib/marketplace-invitations';
 import {
   isSignInAllowed,
+  isSignInUsernameAllowed,
   AUTH_RATE_LIMIT_RETRY_AFTER_SECONDS,
 } from 'src/lib/auth-rate-limit';
 import {
@@ -25,6 +27,10 @@ import {
 
 // ----------------------------------------------------------------------
 
+const emailSchema = z.email();
+const literalLikePattern = (value: string) => value.replace(/[\\%_]/g, '\\$&');
+const INVALID_CREDENTIALS = 'ชื่อผู้ใช้งาน อีเมล หรือรหัสผ่านไม่ถูกต้อง';
+
 export async function POST(request: Request) {
   const { username, password } = await request.json();
 
@@ -36,17 +42,20 @@ export async function POST(request: Request) {
     !password ||
     password.length > 1024
   ) {
-    return NextResponse.json({ message: 'กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน' }, { status: 400 });
+    return NextResponse.json(
+      { message: 'กรุณากรอกชื่อผู้ใช้งานหรืออีเมล และรหัสผ่าน' },
+      { status: 400 }
+    );
   }
 
-  const normalizedUsername = username.trim();
+  const identifier = username.trim();
+  const isEmail = emailSchema.safeParse(identifier).success;
 
-  if (!(await isSignInAllowed(request, normalizedUsername))) {
+  const rateLimited = async () => {
     await writeSecurityAudit({
       action: 'auth.rate_limited',
       request,
       targetType: 'username',
-      metadata: { username: normalizedUsername.toLowerCase() },
     });
     return NextResponse.json(
       { message: 'พยายามเข้าสู่ระบบบ่อยเกินไป กรุณาลองใหม่อีกครั้งในภายหลัง' },
@@ -58,13 +67,32 @@ export async function POST(request: Request) {
         },
       }
     );
-  }
+  };
+  if (!(await isSignInAllowed(request, identifier))) return rateLimited();
 
-  const { data: user } = await supabaseAdmin
+  const { data: usernameMatch, error: usernameError } = await supabaseAdmin
     .from('app_users')
     .select('*')
-    .ilike('username', normalizedUsername)
-    .single();
+    .ilike('username', literalLikePattern(identifier))
+    .maybeSingle();
+
+  let user =
+    usernameMatch?.username.toLowerCase() === identifier.toLowerCase() ? usernameMatch : null;
+  if (!user && !usernameError && isEmail) {
+    const { data: emailMatch } = await supabaseAdmin
+      .from('app_users')
+      .select('*')
+      .eq('role', 'student')
+      .ilike('email', literalLikePattern(identifier))
+      .limit(2)
+      .maybeSingle();
+
+    if (emailMatch) {
+      // An email alias and its username share the same account limit.
+      if (!(await isSignInUsernameAllowed(emailMatch.username))) return rateLimited();
+      user = emailMatch;
+    }
+  }
 
   if (!user) {
     await writeSecurityAudit({
@@ -73,7 +101,7 @@ export async function POST(request: Request) {
       targetType: 'username',
       metadata: { reason: 'invalid_credentials' },
     });
-    return NextResponse.json({ message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
+    return NextResponse.json({ message: INVALID_CREDENTIALS }, { status: 401 });
   }
 
   let passwordMatches = false;
@@ -124,7 +152,7 @@ export async function POST(request: Request) {
       targetId: user.id,
       metadata: { reason: 'invalid_credentials' },
     });
-    return NextResponse.json({ message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
+    return NextResponse.json({ message: INVALID_CREDENTIALS }, { status: 401 });
   }
 
   const studentCannotAccess =

@@ -33,6 +33,10 @@ import { today, fIsBetween } from 'src/utils/format-time';
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
+import {
+  mobileRecordTableSx,
+  mobileTablePaginationSx,
+} from 'src/components/table/mobile-record-table';
 
 import { listUsers } from 'src/sections/user/user-actions';
 import { listAcademicYears } from 'src/sections/academic-year/academic-year-actions';
@@ -55,7 +59,7 @@ const CreateSchema = z.object({
   teacherIds: z.array(z.string()).min(1, { error: 'กรุณาเลือกครูประจำชั้นอย่างน้อย 1 คน!' }),
 });
 
-export function ClassroomListView() {
+export function ClassroomListView({ teacherMobile = false }: { teacherMobile?: boolean } = {}) {
   const table = useTable({ defaultRowsPerPage: 10 });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClassroom, setEditingClassroom] = useState<Classroom | null>(null);
@@ -172,10 +176,10 @@ export function ClassroomListView() {
   const onSubmit = handleSubmit((data) => saveMutation.mutate(data));
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5, ...(teacherMobile && { px: { xs: 1.5, sm: 3 } }) }}>
       <Box
         sx={{
-          mb: 4,
+          mb: teacherMobile ? { xs: 2.5, md: 4 } : 4,
           gap: 2,
           display: 'flex',
           alignItems: { xs: 'flex-start', sm: 'center' },
@@ -184,7 +188,15 @@ export function ClassroomListView() {
         }}
       >
         <Box>
-          <Typography component="h1" variant="h3">
+          <Typography
+            component="h1"
+            variant="h3"
+            sx={
+              teacherMobile
+                ? { fontSize: (theme) => ({ [theme.breakpoints.down('sm')]: { fontSize: 24 } }) }
+                : undefined
+            }
+          >
             ห้องเรียน
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
@@ -195,6 +207,11 @@ export function ClassroomListView() {
           variant="contained"
           onClick={openCreateDialog}
           startIcon={<RemixIcon icon="mingcute:add-line" />}
+          sx={
+            teacherMobile
+              ? { width: { xs: 1, sm: 'auto' }, minHeight: { xs: 44, sm: 'auto' } }
+              : undefined
+          }
         >
           เพิ่มห้องเรียน
         </Button>
@@ -215,7 +232,14 @@ export function ClassroomListView() {
       )}
 
       <Card variant="outlined">
-        <Box sx={{ px: 3, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box
+          sx={{
+            px: teacherMobile ? { xs: 2, sm: 3 } : 3,
+            py: teacherMobile ? { xs: 1.5, sm: 2.5 } : 2.5,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
           <Typography component="h2" variant="h6">
             รายการห้องเรียน
           </Typography>
@@ -225,7 +249,7 @@ export function ClassroomListView() {
         </Box>
 
         <TableContainer>
-          <Table>
+          <Table sx={teacherMobile ? mobileRecordTableSx : undefined}>
             <TableHead>
               <TableRow>
                 <TableCell>ชื่อห้อง</TableCell>
@@ -253,7 +277,7 @@ export function ClassroomListView() {
               )}
               {visibleClassrooms.map((classroom) => (
                 <TableRow key={classroom.id} hover>
-                  <TableCell>
+                  <TableCell data-mobile-wide>
                     <Typography variant="subtitle2">{classroom.name}</Typography>
                     {classroom.name_en && (
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -261,7 +285,7 @@ export function ClassroomListView() {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-mobile-label="ระดับชั้น">
                     <Typography variant="body2">{classroom.grade_level ?? 'ไม่ระบุ'}</Typography>
                     {classroom.grade_level_en && (
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -269,8 +293,10 @@ export function ClassroomListView() {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell>{classroom.academic_years?.year ?? '-'}</TableCell>
-                  <TableCell>
+                  <TableCell data-mobile-label="ปีการศึกษา">
+                    {classroom.academic_years?.year ?? '-'}
+                  </TableCell>
+                  <TableCell data-mobile-wide data-mobile-label="ครูประจำชั้น">
                     {classroom.homeroom_teachers.length
                       ? classroom.homeroom_teachers
                           .map(
@@ -281,7 +307,7 @@ export function ClassroomListView() {
                           .join(', ')
                       : 'ยังไม่ได้กำหนด'}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="right" data-mobile-actions>
                     <Tooltip title="แก้ไข">
                       <IconButton
                         size="small"
@@ -326,7 +352,11 @@ export function ClassroomListView() {
             if (type === 'next') return 'หน้าถัดไป';
             return 'หน้าก่อนหน้า';
           }}
-          sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+          sx={{
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            ...(teacherMobile && mobileTablePaginationSx),
+          }}
         />
       </Card>
 
@@ -394,7 +424,7 @@ export function ClassroomListView() {
                     ))}
                   </Field.Select>
                 </Grid>
-                <Grid size={{ xs: 6 }}>
+                <Grid size={teacherMobile ? { xs: 12, sm: 6 } : { xs: 6 }}>
                   <Field.Text
                     name="name"
                     label="ชื่อห้องเรียนภาษาไทย *"
@@ -403,7 +433,7 @@ export function ClassroomListView() {
                     autoFocus
                   />
                 </Grid>
-                <Grid size={{ xs: 6 }}>
+                <Grid size={teacherMobile ? { xs: 12, sm: 6 } : { xs: 6 }}>
                   <Field.Text
                     name="nameEn"
                     label="ชื่อห้องเรียนภาษาอังกฤษ"
@@ -412,7 +442,7 @@ export function ClassroomListView() {
                     slotProps={{ htmlInput: { lang: 'en' } }}
                   />
                 </Grid>
-                <Grid size={{ xs: 6 }}>
+                <Grid size={teacherMobile ? { xs: 12, sm: 6 } : { xs: 6 }}>
                   <Field.Text
                     name="gradeLevel"
                     label="ระดับชั้นภาษาไทย"
@@ -420,7 +450,7 @@ export function ClassroomListView() {
                     helperText="ไม่บังคับ"
                   />
                 </Grid>
-                <Grid size={{ xs: 6 }}>
+                <Grid size={teacherMobile ? { xs: 12, sm: 6 } : { xs: 6 }}>
                   <Field.Text
                     name="gradeLevelEn"
                     label="ระดับชั้นภาษาอังกฤษ"

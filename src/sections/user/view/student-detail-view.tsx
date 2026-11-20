@@ -21,6 +21,8 @@ import { RouterLink } from 'src/routes/components';
 
 import { fDate } from 'src/utils/format-time';
 
+import { hasWorkspacePermission } from 'src/lib/workspace-access';
+
 import { Label } from 'src/components/label';
 import { RemixIcon } from 'src/components/remix-icon';
 
@@ -74,7 +76,8 @@ export function StudentDetailView({
   const backPath = basePath;
   const editPath = `${basePath}/${studentId}/edit`;
   const { user: currentUser } = useAuthContext();
-  const canManageStudents = currentUser?.role === 'school_admin';
+  const canManageAvatar = currentUser?.role === 'school_admin';
+  const canEditStudent = hasWorkspacePermission(currentUser, 'students.manage', 'manage');
   const [avatarOpen, setAvatarOpen] = useState(false);
 
   const {
@@ -141,10 +144,10 @@ export function StudentDetailView({
         }}
       >
         <Box sx={{ gap: 2, display: 'flex', alignItems: 'center' }}>
-          <Tooltip title={canManageStudents ? 'เปลี่ยนรูปโปรไฟล์' : 'รูปโปรไฟล์'}>
+          <Tooltip title={canManageAvatar ? 'เปลี่ยนรูปโปรไฟล์' : 'รูปโปรไฟล์'}>
             <IconButton
-              onClick={() => canManageStudents && setAvatarOpen(true)}
-              disabled={!canManageStudents}
+              onClick={() => canManageAvatar && setAvatarOpen(true)}
+              disabled={!canManageAvatar}
               aria-label="จัดการรูปโปรไฟล์"
               sx={{ p: 0.5 }}
             >
@@ -178,7 +181,7 @@ export function StudentDetailView({
             </Typography>
           </Box>
         </Box>
-        {canManageStudents && (
+        {canEditStudent && (
           <Button
             variant="outlined"
             component={RouterLink}

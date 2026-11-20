@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx';
 
+import { getStudentImportIdentityErrors } from './student-import-validation';
+
 // ----------------------------------------------------------------------
 
 const GENDER_LABEL_TO_VALUE: Record<string, string> = {
@@ -23,7 +25,7 @@ const COLUMNS = [
   { key: 'religion', header: 'ศาสนา', example: 'พุทธ' },
   { key: 'firstNameEn', header: 'ชื่อภาษาอังกฤษ', example: 'Somchai' },
   { key: 'lastNameEn', header: 'นามสกุลภาษาอังกฤษ', example: 'Jaidee' },
-  { key: 'username', header: 'ชื่อผู้ใช้งาน*', example: '10001' },
+  { key: 'username', header: 'ชื่อผู้ใช้งาน', example: '' },
   { key: 'email', header: 'อีเมล', example: '' },
   { key: 'password', header: 'รหัสผ่าน (เว้นว่างให้ระบบสุ่มให้)', example: '' },
 ] as const;
@@ -70,22 +72,41 @@ export async function parseStudentImportFile(file: File): Promise<StudentImportR
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!sheet?.['!ref']) return [];
   const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
 
-  const headerToKey = new Map(COLUMNS.map((column) => [column.header, column.key]));
+  const range = XLSX.utils.decode_range(sheet['!ref']);
+  const headers =
+    XLSX.utils.sheet_to_json<string[]>(sheet, {
+      header: 1,
+      range: { s: range.s, e: { ...range.e, r: range.s.r } },
+    })[0] ?? [];
+  const headerToKey = new Map<string, (typeof COLUMNS)[number]['key']>(
+    COLUMNS.map((column) => [column.header, column.key])
+  );
+  headerToKey.set('ชื่อผู้ใช้งาน*', 'username');
 
-  return raw.map((record, index) => {
-    const data: Record<string, string> = {};
+  const rows = raw.map((record, index) => {
+    const data: Partial<Record<(typeof COLUMNS)[number]['key'], string>> = {};
     for (const [header, value] of Object.entries(record)) {
-      const key = headerToKey.get(header as (typeof COLUMNS)[number]['header']);
-      if (key) data[key] = cellToString(value);
+      const key = headerToKey.get(header.trim());
+      if (key) {
+        const column = headers.indexOf(header);
+        const cell =
+          typeof record.__rowNum__ === 'number' && column >= 0
+            ? sheet[XLSX.utils.encode_cell({ r: record.__rowNum__, c: range.s.c + column })]
+            : undefined;
+        data[key] = cellToString(
+          (key === 'studentCode' || key === 'username') && cell?.t === 'n'
+            ? (cell.w ?? value)
+            : value
+        );
+      }
     }
 
     const errors: string[] = [];
-    if (!data.studentCode) errors.push('ไม่มีรหัสนักเรียน');
     if (!data.firstName) errors.push('ไม่มีชื่อ');
     if (!data.lastName) errors.push('ไม่มีนามสกุล');
-    if (!data.username) errors.push('ไม่มีชื่อผู้ใช้งาน');
 
     if (data.nationalId && !/^\d{13}$/.test(data.nationalId)) {
       errors.push('เลขประจำตัวประชาชนต้องเป็นตัวเลข 13 หลัก');
@@ -108,10 +129,12 @@ export async function parseStudentImportFile(file: File): Promise<StudentImportR
     }
 
     return {
-      row: index + 2, // header is row 1
+      row: typeof record.__rowNum__ === 'number' ? record.__rowNum__ + 1 : index + 2,
       ...data,
       gender,
       errors,
     };
   });
+  const identityErrors = getStudentImportIdentityErrors(rows);
+  return rows.map((row, index) => ({ ...row, errors: [...row.errors, ...identityErrors[index]] }));
 }

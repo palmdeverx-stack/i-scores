@@ -16,6 +16,28 @@ const optionalDate = z
   .nullable()
   .refine((value) => !value || dayjs(value).isValid(), { error: 'วันที่ไม่ถูกต้อง' });
 
+const coverFieldsSchema = z.object({
+  teacherPosition: z
+    .string()
+    .trim()
+    .max(300, { error: 'ตำแหน่งต้องไม่เกิน 300 ตัวอักษร' })
+    .optional(),
+  // Existing covers can contain a free-text date. The picker emits an ISO string or null
+  // for valid input, and a Dayjs object for an invalid date.
+  teachingDate: z.string({ error: 'วันที่สอนไม่ถูกต้อง' }).max(200).nullish(),
+  durationHours: z
+    .number({ error: 'กรุณาระบุเวลาเป็นตัวเลข' })
+    .positive({ error: 'เวลาต้องมากกว่า 0 ชั่วโมง' })
+    .max(1000, { error: 'เวลาต้องไม่เกิน 1,000 ชั่วโมง' })
+    .nullish(),
+});
+
+export const COVER_FORM_FIELDS = [
+  'templateSectionContents.cover.teacherPosition',
+  'templateSectionContents.cover.teachingDate',
+  'templateSectionContents.cover.durationHours',
+] as const;
+
 const requiredRichText = (message: string, max: number) =>
   z
     .string()
@@ -183,7 +205,17 @@ export const LessonPlanSchema = z
       )
       .max(200)
       .default([]),
-    templateSectionContents: z.record(z.string(), z.unknown()).default({}),
+    templateSectionContents: z
+      .record(z.string(), z.unknown())
+      .superRefine(({ cover }, context) => {
+        if (!cover) return;
+        const result = coverFieldsSchema.safeParse(cover);
+        if (result.success) return;
+        for (const issue of result.error.issues) {
+          context.addIssue({ ...issue, path: ['cover', ...issue.path] });
+        }
+      })
+      .default({}),
   })
   .superRefine((values, context) => {
     if (
@@ -213,6 +245,11 @@ export const TemplateLessonPlanSchema = LessonPlanSchema.safeExtend({
   learningActivities: z.any(),
   learningMedia: z.any(),
   assessment: z.any(),
+});
+
+export const LessonPlanEditorSchema = TemplateLessonPlanSchema.safeExtend({
+  teacherAssignmentId: LessonPlanSchema.shape.teacherAssignmentId,
+  unitName: LessonPlanSchema.shape.unitName,
 });
 
 export type LessonPlanFormValues = z.infer<typeof LessonPlanSchema>;

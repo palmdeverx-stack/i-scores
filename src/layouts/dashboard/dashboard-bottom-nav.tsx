@@ -8,25 +8,58 @@ import Portal from '@mui/material/Portal';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 
+import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
+
+import { useTranslate } from 'src/locales';
+
+import { RiMenuLine } from 'src/components/remix-icon';
 
 // ----------------------------------------------------------------------
 
 type Props = {
   data: NavSectionProps['data'];
   layoutQuery?: Breakpoint;
+  menuOpen?: boolean;
+  onOpenMenu?: () => void;
 };
 
-export function DashboardBottomNav({ data, layoutQuery = 'sm' }: Props) {
+const TEACHER_QUICK_ACTIONS = [
+  { paths: [paths.teacher.root], label: 'หน้าหลัก' },
+  { paths: [paths.teacher.timetable], label: 'ตารางสอน' },
+  { paths: [paths.teacher.attendanceScan], label: 'สแกนเช็กชื่อ' },
+  { paths: [paths.teacher.students, paths.teacher.departmentStudent], label: 'นักเรียน' },
+  { paths: [paths.teacher.assignments], label: 'ชั้นเรียน' },
+  { paths: [paths.teacher.workAttendance], label: 'ลงเวลา' },
+  { paths: [paths.teacher.departmentEnrollment.root], label: 'ลงทะเบียน' },
+] as const;
+
+function findQuickAction(items: NavItemDataProps[], path: string): NavItemDataProps | undefined {
+  for (const item of items) {
+    const child = item.children && findQuickAction(item.children, path);
+    if (child) return child;
+    if (item.path === path && (!item.children?.length || path !== paths.teacher.students)) {
+      return item;
+    }
+  }
+  return undefined;
+}
+
+export function DashboardBottomNav({ data, layoutQuery = 'sm', menuOpen, onOpenMenu }: Props) {
   const pathname = usePathname();
-  const items = data
-    .flatMap((group) => group.items)
-    .filter(
-      (item): item is NavItemDataProps & { path: string } =>
-        !!item.path && item.path !== '#' && item.path !== '/teacher'
-    )
-    .slice(0, 5);
+  const { t } = useTranslate('navbar');
+  const topLevelItems = data.flatMap((group) => group.items);
+  const items = onOpenMenu
+    ? TEACHER_QUICK_ACTIONS.flatMap(({ paths: candidates, label }) => {
+        const item = candidates
+          .map((path) => findQuickAction(topLevelItems, path))
+          .find((candidate) => !!candidate);
+        return item ? [{ ...item, title: t(label, { defaultValue: label }) }] : [];
+      }).slice(0, 4)
+    : topLevelItems
+        .filter((item) => !!item.path && item.path !== '#' && item.path !== paths.teacher.root)
+        .slice(0, 5);
   const currentPath = [...items]
     .sort((a, b) => b.path.length - a.path.length)
     .find(
@@ -43,7 +76,7 @@ export function DashboardBottomNav({ data, layoutQuery = 'sm' }: Props) {
           bottom: 0,
           width: '100%',
           maxWidth: '100vw',
-          zIndex: (theme) => theme.zIndex.modal,
+          zIndex: (theme) => (onOpenMenu ? theme.zIndex.drawer - 1 : theme.zIndex.modal),
           display: { xs: 'block', [layoutQuery]: 'none' },
           position: 'fixed',
           overflow: 'hidden',
@@ -81,7 +114,7 @@ export function DashboardBottomNav({ data, layoutQuery = 'sm' }: Props) {
               textOverflow: 'ellipsis',
             },
             '& .MuiBottomNavigationAction-label.Mui-selected': {
-              fontSize: '0.68rem',
+              fontSize: onOpenMenu ? '0.64rem' : '0.68rem',
               fontWeight: 700,
             },
           }}
@@ -93,9 +126,20 @@ export function DashboardBottomNav({ data, layoutQuery = 'sm' }: Props) {
               href={item.path}
               value={item.path}
               label={item.title}
+              aria-current={currentPath === item.path ? 'page' : undefined}
               icon={item.icon}
             />
           ))}
+          {onOpenMenu ? (
+            <BottomNavigationAction
+              value="all-menus"
+              label={t('เมนู', { defaultValue: 'เมนู' })}
+              icon={<RiMenuLine />}
+              aria-haspopup="dialog"
+              aria-expanded={Boolean(menuOpen)}
+              onClick={onOpenMenu}
+            />
+          ) : null}
         </BottomNavigation>
       </Paper>
     </Portal>

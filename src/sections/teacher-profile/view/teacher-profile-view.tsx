@@ -4,8 +4,8 @@ import type { TeacherLineInvitation } from 'src/sections/teacher-line/teacher-li
 
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
-import { useState, useEffect } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
+import { useRef, useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -35,6 +35,7 @@ import { UploadAvatar } from 'src/components/upload';
 import { RemixIcon } from 'src/components/remix-icon';
 import { Form, Field } from 'src/components/hook-form';
 
+import { uploadSchoolLogo } from 'src/sections/school/school-actions';
 import { TeacherLineDialog } from 'src/sections/teacher-line/components/teacher-line-dialog';
 import { TeacherLineLoginCard } from 'src/sections/teacher-line-login/components/teacher-line-login-card';
 import {
@@ -51,7 +52,9 @@ import {
   getTeacherProfile,
   deleteTeacherAvatar,
   uploadTeacherAvatar,
+  type TeacherProfile,
   updateTeacherProfile,
+  updateTeacherWorkspace,
   type UpdateTeacherProfileParams,
 } from '../teacher-profile-actions';
 
@@ -457,22 +460,34 @@ export function TeacherProfileView() {
                     gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
                   }}
                 >
-                  <Field.Select name="namePrefix" label="คำนำหน้าชื่อ *">
+                  <Field.Select size="small" name="namePrefix" label="คำนำหน้าชื่อ *">
                     {(profile.prefix_options ?? []).map((option) => (
                       <MenuItem key={option.id} value={option.name}>
                         {option.name_en ? `${option.name} / ${option.name_en}` : option.name}
                       </MenuItem>
                     ))}
                   </Field.Select>
-                  <Field.Text name="nickname" label="ชื่อเล่น" />
-                  <Field.Text name="firstName" label="ชื่อภาษาไทย *" autoComplete="given-name" />
-                  <Field.Text name="lastName" label="นามสกุลภาษาไทย *" autoComplete="family-name" />
+                  <Field.Text size="small" name="nickname" label="ชื่อเล่น" />
                   <Field.Text
+                    size="small"
+                    name="firstName"
+                    label="ชื่อภาษาไทย *"
+                    autoComplete="given-name"
+                  />
+                  <Field.Text
+                    size="small"
+                    name="lastName"
+                    label="นามสกุลภาษาไทย *"
+                    autoComplete="family-name"
+                  />
+                  <Field.Text
+                    size="small"
                     name="firstNameEn"
                     label="ชื่อภาษาอังกฤษ"
                     slotProps={{ htmlInput: { lang: 'en' } }}
                   />
                   <Field.Text
+                    size="small"
                     name="lastNameEn"
                     label="นามสกุลภาษาอังกฤษ"
                     slotProps={{ htmlInput: { lang: 'en' } }}
@@ -486,6 +501,7 @@ export function TeacherProfileView() {
                   }}
                 >
                   <Field.Text
+                    size="small"
                     name="email"
                     type="email"
                     label="อีเมล"
@@ -493,6 +509,7 @@ export function TeacherProfileView() {
                     autoComplete="email"
                   />
                   <Field.Text
+                    size="small"
                     name="phone"
                     type="tel"
                     label="เบอร์โทรศัพท์"
@@ -500,8 +517,15 @@ export function TeacherProfileView() {
                     autoComplete="tel"
                   />
                 </Box>
-                <Field.Text name="address" label="ที่อยู่สำหรับติดต่อ" multiline minRows={3} />
                 <Field.Text
+                  size="small"
+                  name="address"
+                  label="ที่อยู่สำหรับติดต่อ"
+                  multiline
+                  minRows={3}
+                />
+                <Field.Text
+                  size="small"
                   name="username"
                   label="ชื่อผู้ใช้"
                   disabled
@@ -527,6 +551,10 @@ export function TeacherProfileView() {
               </Box>
             </Form>
           </Card>
+
+          {isPersonalWorkspace && profile.school ? (
+            <WorkspaceSettingsCard key={profile.school.id} school={profile.school} />
+          ) : null}
 
           <Card variant="outlined" sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'center' }}>
@@ -772,9 +800,8 @@ export function TeacherProfileView() {
                 icon="solar:home-angle-bold-duotone"
                 label={isPersonalWorkspace ? 'พื้นที่ใช้งาน' : 'โรงเรียน'}
                 value={
-                  isPersonalWorkspace
-                    ? 'พื้นที่ส่วนตัว'
-                    : (profile.school?.name ?? 'ยังไม่มีข้อมูล')
+                  profile.school?.name ??
+                  (isPersonalWorkspace ? 'พื้นที่ส่วนตัว' : 'ยังไม่มีข้อมูล')
                 }
               />
             </Box>
@@ -879,6 +906,154 @@ type SummaryFactProps = {
   label: string;
   value: string;
 };
+
+const WorkspaceSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'กรุณาระบุชื่อพื้นที่')
+    .max(100, 'ชื่อพื้นที่ยาวเกิน 100 ตัวอักษร'),
+  description: z.string().trim().max(1000, 'รายละเอียดต้องไม่เกิน 1,000 ตัวอักษร'),
+});
+
+function WorkspaceSettingsCard({ school }: { school: NonNullable<TeacherProfile['school']> }) {
+  const queryClient = useQueryClient();
+  const { checkUserSession } = useAuthContext();
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const logoInput = useRef<HTMLInputElement>(null);
+  const { id: schoolId } = school;
+  useEffect(() => {
+    if (window.location.hash === '#workspace-settings') {
+      sectionRef.current?.scrollIntoView({ block: 'start' });
+    }
+  }, []);
+
+  const methods = useForm({
+    resolver: zodResolver(WorkspaceSchema),
+    values: { name: school.name, description: school.workspace_description ?? '' },
+  });
+
+  const updateSchoolCache = (fields: Partial<NonNullable<TeacherProfile['school']>>) => {
+    queryClient.setQueryData<TeacherProfile>(['teacher-profile'], (profile) =>
+      profile?.school?.id === schoolId
+        ? { ...profile, school: { ...profile.school, ...fields } }
+        : profile
+    );
+    return queryClient.invalidateQueries({ queryKey: ['nav-school', schoolId] });
+  };
+
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof WorkspaceSchema>) =>
+      updateTeacherWorkspace(schoolId, values),
+    onSuccess: async ({ name, description }) => {
+      methods.reset({ name, description: description ?? '' });
+      await Promise.all([
+        updateSchoolCache({ name, workspace_description: description }),
+        checkUserSession?.(),
+      ]);
+    },
+  });
+
+  const logoMutation = useMutation({
+    mutationFn: (file: File) => uploadSchoolLogo(schoolId, file),
+    onSuccess: async ({ logo_url }) => {
+      await updateSchoolCache({ logo_url });
+    },
+  });
+
+  return (
+    <Card
+      id="workspace-settings"
+      ref={sectionRef}
+      variant="outlined"
+      sx={{ p: 3, scrollMarginTop: 96 }}
+    >
+      <Typography component="h2" variant="h6" sx={{ mb: 2 }}>
+        ข้อมูลพื้นที่ส่วนตัว
+      </Typography>
+      <Box sx={{ gap: 1.5, mb: 2.5, display: 'grid' }}>
+        <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Avatar
+            variant="rounded"
+            src={school.logo_url ?? undefined}
+            alt="โลโก้พื้นที่"
+            sx={{
+              width: 64,
+              height: 64,
+              bgcolor: 'background.neutral',
+              '& img': { objectFit: 'contain' },
+            }}
+          >
+            <RemixIcon icon="solar:home-angle-bold-duotone" />
+          </Avatar>
+          <Box>
+            <Button
+              variant="outlined"
+              size="small"
+              loading={logoMutation.isPending}
+              onClick={() => logoInput.current?.click()}
+            >
+              {school.logo_url ? 'เปลี่ยนโลโก้' : 'อัปโหลดโลโก้'}
+            </Button>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+              PNG, JPEG หรือ WEBP ไม่เกิน 2 MB
+            </Typography>
+          </Box>
+          <input
+            ref={logoInput}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (file) logoMutation.mutate(file);
+            }}
+          />
+        </Box>
+        {logoMutation.error ? <Alert severity="error">{logoMutation.error.message}</Alert> : null}
+        {logoMutation.isSuccess ? <Alert severity="success">บันทึกโลโก้แล้ว</Alert> : null}
+      </Box>
+      <Form methods={methods} onSubmit={methods.handleSubmit((values) => mutation.mutate(values))}>
+        <Box sx={{ gap: 1.5, display: 'grid' }}>
+          <Field.Text
+            required
+            size="small"
+            name="name"
+            label="ชื่อพื้นที่"
+            placeholder="พื้นที่ของครูสมชาย"
+            helperText="นักเรียนในพื้นที่นี้จะเห็นชื่อนี้ในแถบด้านบน"
+            slotProps={{ htmlInput: { maxLength: 100 } }}
+            disabled={mutation.isPending}
+          />
+          <Field.Text
+            size="small"
+            name="description"
+            label="รายละเอียดพื้นที่"
+            multiline
+            minRows={3}
+            helperText="รายละเอียดจะแสดงในหน้าแรกของนักเรียน"
+            slotProps={{ htmlInput: { maxLength: 1000 } }}
+            disabled={mutation.isPending}
+          />
+          {mutation.error ? <Alert severity="error">{mutation.error.message}</Alert> : null}
+          {mutation.isSuccess && !methods.formState.isDirty ? (
+            <Alert severity="success">บันทึกข้อมูลพื้นที่แล้ว</Alert>
+          ) : null}
+          <Button
+            type="submit"
+            variant="contained"
+            loading={mutation.isPending}
+            disabled={!methods.formState.isDirty}
+            sx={{ justifySelf: 'start' }}
+          >
+            บันทึกข้อมูลพื้นที่
+          </Button>
+        </Box>
+      </Form>
+    </Card>
+  );
+}
 
 function SummaryFact({ icon, label, value }: SummaryFactProps) {
   return (

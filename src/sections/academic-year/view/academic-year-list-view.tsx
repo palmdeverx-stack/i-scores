@@ -31,6 +31,10 @@ import { RouterLink } from 'src/routes/components';
 import { RemixIcon } from 'src/components/remix-icon';
 import { CustomPopover } from 'src/components/custom-popover';
 import { useTable, rowInPage, TablePaginationCustom } from 'src/components/table';
+import {
+  mobileRecordTableSx,
+  mobileTablePaginationSx,
+} from 'src/components/table/mobile-record-table';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -78,10 +82,10 @@ export function AcademicYearListView() {
   };
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
+    <Container maxWidth={false} sx={{ pb: 5, ...(isTeacher && { px: { xs: 1.5, sm: 3 } }) }}>
       <Box
         sx={{
-          mb: 4,
+          mb: isTeacher ? { xs: 2.5, md: 4 } : 4,
           gap: 2,
           display: 'flex',
           alignItems: { xs: 'flex-start', sm: 'center' },
@@ -90,7 +94,15 @@ export function AcademicYearListView() {
         }}
       >
         <Box>
-          <Typography component="h1" variant="h3">
+          <Typography
+            component="h1"
+            variant="h3"
+            sx={
+              isTeacher
+                ? { fontSize: (theme) => ({ [theme.breakpoints.down('sm')]: { fontSize: 24 } }) }
+                : undefined
+            }
+          >
             ปีการศึกษา
           </Typography>
           <Typography sx={{ mt: 1, color: 'text.secondary' }}>
@@ -104,6 +116,11 @@ export function AcademicYearListView() {
           variant="contained"
           onClick={openCreateDialog}
           startIcon={<RemixIcon icon="mingcute:add-line" />}
+          sx={
+            isTeacher
+              ? { width: { xs: 1, sm: 'auto' }, minHeight: { xs: 44, sm: 'auto' } }
+              : undefined
+          }
         >
           เพิ่มปีการศึกษา
         </Button>
@@ -126,20 +143,24 @@ export function AcademicYearListView() {
       <Box
         sx={{
           mb: 3,
-          gap: 2,
+          gap: isTeacher ? { xs: 1, sm: 2 } : 2,
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+          gridTemplateColumns: isTeacher
+            ? 'repeat(3, minmax(0, 1fr))'
+            : { xs: '1fr', sm: 'repeat(3, 1fr)' },
         }}
       >
         <SummaryCard
           icon="solar:calendar-date-bold"
           label="ปีการศึกษาทั้งหมด"
+          compactLabel={isTeacher ? 'ทั้งหมด' : undefined}
           value={academicYears.length}
           color="primary.main"
         />
         <SummaryCard
           icon="solar:check-circle-bold"
           label="ปีการศึกษาปัจจุบัน"
+          compactLabel={isTeacher ? 'ปีปัจจุบัน' : undefined}
           value={
             academicYears.filter((year) => getAcademicYearStatus(year, today).value === 'current')
               .length
@@ -149,13 +170,21 @@ export function AcademicYearListView() {
         <SummaryCard
           icon="solar:clock-circle-bold"
           label="กำหนดช่วงเวลาแล้ว"
+          compactLabel={isTeacher ? 'มีช่วงเวลา' : undefined}
           value={academicYears.filter((year) => year.start_date && year.end_date).length}
           color="info.main"
         />
       </Box>
 
       <Card variant="outlined">
-        <Box sx={{ px: 3, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box
+          sx={{
+            px: isTeacher ? { xs: 2, sm: 3 } : 3,
+            py: isTeacher ? { xs: 1.5, sm: 2.5 } : 2.5,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
           <Typography component="h2" variant="h6">
             รายการปีการศึกษา
           </Typography>
@@ -165,7 +194,7 @@ export function AcademicYearListView() {
         </Box>
 
         <TableContainer>
-          <Table sx={{ minWidth: 720 }}>
+          <Table sx={[{ minWidth: 720 }, isTeacher && mobileRecordTableSx]}>
             <TableHead>
               <TableRow>
                 <TableCell>ปีการศึกษา</TableCell>
@@ -198,10 +227,10 @@ export function AcademicYearListView() {
 
                 return (
                   <TableRow key={year.id} hover>
-                    <TableCell>
+                    <TableCell data-mobile-wide>
                       <Typography variant="subtitle2">{year.year}</Typography>
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-mobile-label="ช่วงเวลา">
                       {year.start_date && year.end_date ? (
                         <Box sx={{ gap: 0.5, display: 'flex', flexDirection: 'column' }}>
                           <Typography variant="body2">{formatThaiDate(year.start_date)}</Typography>
@@ -215,10 +244,24 @@ export function AcademicYearListView() {
                         </Typography>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-mobile-label="สถานะ">
                       <Chip size="small" variant="soft" color={status.color} label={status.label} />
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" data-mobile-actions>
+                      {isTeacher && (
+                        <Button
+                          component={RouterLink}
+                          href={paths.teacher.departmentAcademicYear.semester(year.id)}
+                          size="small"
+                          sx={{
+                            display: { xs: 'inline-flex', md: 'none' },
+                            minHeight: 44,
+                            mr: 0.5,
+                          }}
+                        >
+                          ดูภาคเรียน
+                        </Button>
+                      )}
                       <IconButton
                         size="small"
                         onClick={(event) => {
@@ -252,7 +295,11 @@ export function AcademicYearListView() {
             if (type === 'next') return 'หน้าถัดไป';
             return 'หน้าก่อนหน้า';
           }}
-          sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+          sx={{
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            ...(isTeacher && mobileTablePaginationSx),
+          }}
         />
       </Card>
 
@@ -308,14 +355,25 @@ export function AcademicYearListView() {
 type SummaryCardProps = {
   icon: 'solar:calendar-date-bold' | 'solar:check-circle-bold' | 'solar:clock-circle-bold';
   label: string;
+  compactLabel?: string;
   value: number;
   color: string;
 };
 
-function SummaryCard({ icon, label, value, color }: SummaryCardProps) {
+function SummaryCard({ icon, label, compactLabel, value, color }: SummaryCardProps) {
   return (
-    <Card variant="outlined" sx={{ p: 2.5 }}>
-      <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
+    <Card variant="outlined" sx={{ p: compactLabel ? { xs: 1.25, sm: 2.5 } : 2.5 }}>
+      <Box
+        sx={{
+          gap: 1.5,
+          display: 'flex',
+          alignItems: 'center',
+          ...(compactLabel && {
+            display: 'flex',
+            '& > :first-of-type': { display: { xs: 'none', sm: 'grid' } },
+          }),
+        }}
+      >
         <Box
           sx={{
             width: 44,
@@ -331,9 +389,22 @@ function SummaryCard({ icon, label, value, color }: SummaryCardProps) {
           <RemixIcon icon={icon} width={25} />
         </Box>
         <Box>
-          <Typography variant="h4">{value}</Typography>
+          <Typography variant="h4" sx={compactLabel ? { fontSize: { xs: 20, sm: 28 } } : undefined}>
+            {value}
+          </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {label}
+            {compactLabel ? (
+              <>
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                  {compactLabel}
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  {label}
+                </Box>
+              </>
+            ) : (
+              label
+            )}
           </Typography>
         </Box>
       </Box>

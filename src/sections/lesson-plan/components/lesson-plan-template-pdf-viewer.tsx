@@ -1414,7 +1414,9 @@ function LessonPlanTemplatePdfDocument({
                 <RendererText style={docStyles.reflectionSignatureLine}>
                   ( {cover.teacherName || '................................................'} )
                 </RendererText>
-                <RendererText style={docStyles.reflectionSignatureLine}>ตำแหน่ง ครู</RendererText>
+                <RendererText style={docStyles.reflectionSignatureLine}>
+                  ตำแหน่ง {cover.teacherPosition?.trim() || 'ครู'}
+                </RendererText>
               </RendererView>
             </RendererPage>
           );

@@ -245,12 +245,6 @@ export function StudentPageScaffold({
         {stats}
       </Box>
 
-      {!data.enrollments.length && (
-        <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-          ยังไม่มีข้อมูลการลงทะเบียนห้องเรียน กรุณาติดต่อผู้ดูแลโรงเรียน
-        </Alert>
-      )}
-
       {children}
     </Container>
   );

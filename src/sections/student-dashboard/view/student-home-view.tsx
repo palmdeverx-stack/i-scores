@@ -5,32 +5,49 @@ import type { StudentHomeDashboard } from '../student-dashboard-actions';
 import { useState } from 'react';
 
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
+import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
+import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
+import CardActionArea from '@mui/material/CardActionArea';
+
+import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
+
+import { useMainSchoolBrand } from 'src/layouts/main/school-brand';
 
 import { Label } from 'src/components/label';
 import { RemixIcon } from 'src/components/remix-icon';
 
 import {
-  HeroStat,
-  EmptyCard,
-  HeroStats,
   displayName,
   SectionHeading,
   StudentPageState,
-  StudentPageScaffold,
   getCurrentEnrollment,
   useStudentHomeDashboard,
 } from './student-dashboard-shared';
 
 // ----------------------------------------------------------------------
 
+const QUICK_LINKS = [
+  { label: 'วิชาเรียนของฉัน', href: paths.student.subjects, icon: 'solar:notebook-bold-duotone' },
+  { label: 'ตารางเรียน', href: paths.student.timetable, icon: 'solar:calendar-date-bold' },
+  {
+    label: 'งานที่ได้รับมอบหมาย',
+    href: paths.student.assignments,
+    icon: 'solar:file-check-bold-duotone',
+  },
+] as const;
+
 export function StudentHomeView() {
   const { data, isLoading, isError, refetch } = useStudentHomeDashboard();
+  const { school, studentWorkspaceName } = useMainSchoolBrand();
+  const workspaceDescription = studentWorkspaceName && school?.workspace_description;
 
   if (isLoading || isError || !data) {
     return <StudentPageState isLoading={isLoading} isError={isError || !data} onRetry={refetch} />;
@@ -41,42 +58,208 @@ export function StudentHomeView() {
     (row) => row.is_current_student && row.full_score > 0
   )?.rank;
 
+  const classroomDetails = currentEnrollment
+    ? [
+        `ห้อง ${currentEnrollment.classroom.name}`,
+        currentEnrollment.student_number && `เลขที่ ${currentEnrollment.student_number}`,
+        currentEnrollment.classroom.academic_year?.year &&
+          `ปีการศึกษา ${currentEnrollment.classroom.academic_year.year}`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : 'ยังไม่มีห้องเรียนที่ลงทะเบียน';
+  const stats = [
+    {
+      label: 'อันดับของฉัน',
+      value: currentRank ? `#${currentRank}` : '–',
+      icon: 'solar:cup-star-bold',
+    },
+    {
+      label: 'เพื่อนในห้อง',
+      value: data.class_members.filter((member) => !member.is_current_student).length,
+      icon: 'solar:users-group-rounded-bold',
+    },
+    { label: 'ประกาศใหม่', value: data.announcements.length, icon: 'solar:bell-bing-bold' },
+  ] as const;
+
   return (
-    <StudentPageScaffold
-      data={data}
-      section="home"
-      stats={
-        <HeroStats>
-          <HeroStat icon="solar:cup-star-bold" label="อันดับของฉัน" value={currentRank ?? '–'} />
-          <HeroStat
-            icon="solar:users-group-rounded-bold"
-            label="เพื่อนในห้อง"
-            value={data.class_members.filter((member) => !member.is_current_student).length}
+    <Container maxWidth="lg" sx={{ pt: { xs: 2, sm: 3 }, pb: { xs: 3, md: 5 }, minHeight: '70vh' }}>
+      <Stack spacing={{ xs: 2, sm: 2.5 }}>
+        <Card
+          variant="outlined"
+          component="section"
+          aria-labelledby="student-home-title"
+          sx={{
+            p: { xs: 2, sm: 3 },
+            display: 'grid',
+            gap: { xs: 2.5, md: 3 },
+            alignItems: 'center',
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr)',
+              md: 'minmax(0, 1fr) minmax(360px, 0.9fr)',
+            },
+            borderRadius: 3,
+            background: (theme) =>
+              `linear-gradient(120deg, ${theme.vars.palette.primary.lighter}, ${theme.vars.palette.background.paper} 78%)`,
+          }}
+        >
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={{ xs: 1.5, sm: 2 }}
+            sx={{ minWidth: 0 }}
+          >
+            <Avatar
+              src={data.student.avatar_url ?? undefined}
+              aria-hidden
+              sx={{
+                width: { xs: 52, sm: 64 },
+                height: { xs: 52, sm: 64 },
+                flexShrink: 0,
+                fontSize: { xs: 22, sm: 26 },
+                fontWeight: 700,
+                color: 'primary.darker',
+                bgcolor: 'background.paper',
+              }}
+            >
+              {(data.student.first_name ?? data.student.username).slice(0, 1).toUpperCase()}
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                id="student-home-title"
+                component="h1"
+                variant="h4"
+                sx={{ overflowWrap: 'anywhere' }}
+              >
+                {displayName(data.student)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                {classroomDetails}
+              </Typography>
+            </Box>
+          </Stack>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              '& > * + *': { borderInlineStart: '1px solid', borderColor: 'divider' },
+            }}
+          >
+            {stats.map(({ label, value, icon }) => (
+              <Box key={label} sx={{ p: { xs: 1, sm: 1.5 }, minWidth: 0, textAlign: 'center' }}>
+                <Box
+                  sx={{
+                    gap: 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'primary.main',
+                  }}
+                >
+                  <RemixIcon icon={icon} width={16} aria-hidden />
+                  <Typography variant="h6" color="text.primary" sx={{ lineHeight: 1.35 }}>
+                    {value}
+                  </Typography>
+                </Box>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mt: 0.25 }}
+                >
+                  {label}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Card>
+
+        <Box
+          component="nav"
+          aria-label="ทางลัดการเรียน"
+          sx={{ display: 'grid', gap: 1.25, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+        >
+          {QUICK_LINKS.map(({ label, href, icon }) => (
+            <Card key={href} variant="outlined" sx={{ borderRadius: 2 }}>
+              <CardActionArea
+                component={RouterLink}
+                href={href}
+                sx={{
+                  height: 1,
+                  p: { xs: 1.25, sm: 1.5 },
+                  gap: { xs: 0.5, sm: 1.25 },
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: { xs: 'center', sm: 'center' },
+                  textAlign: { xs: 'center', sm: 'start' },
+                  justifyContent: { xs: 'flex-start', sm: 'flex-start' },
+                  '&.Mui-focusVisible': {
+                    outline: '2px solid',
+                    outlineColor: 'primary.main',
+                    outlineOffset: -2,
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    display: 'grid',
+                    flexShrink: 0,
+                    placeItems: 'center',
+                    borderRadius: 1,
+                    color: 'primary.main',
+                    bgcolor: 'primary.lighter',
+                  }}
+                >
+                  <RemixIcon icon={icon} width={18} aria-hidden />
+                </Box>
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontSize: { xs: 12, sm: 14 }, lineHeight: 1.4 }}
+                >
+                  {label}
+                </Typography>
+              </CardActionArea>
+            </Card>
+          ))}
+        </Box>
+
+        {workspaceDescription ? (
+          <Card variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2.5 }}>
+            <Typography component="h2" variant="subtitle1">
+              {studentWorkspaceName}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 0.5, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}
+            >
+              {workspaceDescription}
+            </Typography>
+          </Card>
+        ) : null}
+
+        <Box
+          sx={{
+            gap: { xs: 2, sm: 2.5 },
+            display: 'grid',
+            alignItems: 'start',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1.25fr) minmax(0, 1fr)' },
+          }}
+        >
+          <RankingSection
+            ranking={data.ranking}
+            subjectRankings={data.subject_rankings}
+            classroomName={currentEnrollment?.classroom.name}
           />
-          <HeroStat
-            icon="solar:bell-bing-bold"
-            label="ประกาศใหม่"
-            value={data.announcements.length}
-          />
-        </HeroStats>
-      }
-    >
-      <Box
-        sx={{
-          gap: 3,
-          display: 'grid',
-          alignItems: 'start',
-          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 2fr) minmax(360px, 1.5fr)' },
-        }}
-      >
-        <RankingSection
-          ranking={data.ranking}
-          subjectRankings={data.subject_rankings}
-          classroomName={currentEnrollment?.classroom.name}
-        />
-        <AnnouncementsSection announcements={data.announcements} />
-      </Box>
-    </StudentPageScaffold>
+          <AnnouncementsSection announcements={data.announcements} />
+        </Box>
+      </Stack>
+    </Container>
   );
 }
 
@@ -91,98 +274,94 @@ function RankingSection({
   subjectRankings: StudentHomeDashboard['subject_rankings'];
   classroomName?: string;
 }) {
+  const [rankingView, setRankingView] = useState<'overall' | 'subject'>('overall');
   const [selectedSubjectId, setSelectedSubjectId] = useState(subjectRankings[0]?.id ?? '');
   const selectedSubject =
     subjectRankings.find((item) => item.id === selectedSubjectId) ?? subjectRankings[0];
+  const isOverall = rankingView === 'overall';
 
   return (
-    <Stack spacing={3}>
-      <Card
-        component="section"
-        aria-label="อันดับรวมทุกวิชา"
-        variant="outlined"
-        sx={{
-          p: { xs: 2, md: 2.75 },
-          overflow: 'hidden',
-          borderRadius: 3,
-          borderTop: '4px solid',
-          borderTopColor: 'warning.main',
-          boxShadow: (theme) => theme.shadows[4],
-        }}
+    <Card
+      component="section"
+      aria-label="อันดับการเรียน"
+      variant="outlined"
+      sx={{ p: { xs: 2, sm: 2.5 }, minWidth: 0, borderRadius: 2.5 }}
+    >
+      <SectionHeading
+        compact
+        icon="solar:cup-star-bold"
+        title="อันดับการเรียน"
+        subtitle={classroomName ? `ห้อง ${classroomName}` : 'คะแนนรวมและอันดับรายวิชา'}
+      />
+      <Tabs
+        value={rankingView}
+        onChange={(_, value: 'overall' | 'subject') => setRankingView(value)}
+        aria-label="ประเภทอันดับการเรียน"
+        variant="fullWidth"
+        sx={{ mb: 1.5, minHeight: 40, '& .MuiTab-root': { minHeight: 40 } }}
       >
-        <SectionHeading
-          compact
-          icon="solar:cup-star-bold"
-          title="อันดับรวมทุกวิชา"
-          subtitle={classroomName ? `คะแนนรวมของห้อง ${classroomName}` : 'คะแนนรวมของห้องเรียน'}
+        <Tab
+          id="ranking-tab-overall"
+          aria-controls="ranking-panel-overall"
+          value="overall"
+          label="อันดับรวม"
         />
-        <RankingList
-          ranking={ranking}
-          emptyText="ยังไม่มีคะแนนสำหรับคำนวณอันดับรวม"
-          note="คำนวณจากงานทั้งหมดของทุกวิชา · งานที่ยังไม่มีคะแนนนับเป็น 0 คะแนน"
+        <Tab
+          id="ranking-tab-subject"
+          aria-controls="ranking-panel-subject"
+          value="subject"
+          label="อันดับรายวิชา"
         />
-      </Card>
+      </Tabs>
 
-      <Card
-        component="section"
-        aria-label="อันดับแยกตามรายวิชา"
-        variant="outlined"
-        sx={{
-          p: { xs: 2, md: 2.75 },
-          overflow: 'hidden',
-          borderRadius: 3,
-          borderTop: '4px solid',
-          borderTopColor: 'primary.main',
-          boxShadow: (theme) => theme.shadows[4],
-        }}
+      <Box
+        role="tabpanel"
+        id="ranking-panel-overall"
+        aria-labelledby="ranking-tab-overall"
+        hidden={!isOverall}
       >
-        <SectionHeading
-          compact
-          icon="solar:notebook-bold-duotone"
-          title="อันดับรายวิชา"
-          subtitle="เลือกวิชาเพื่อดูอันดับเฉพาะรายวิชา"
-        />
-
-        {!!subjectRankings.length && (
-          <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" sx={{ mb: 2 }}>
-            {subjectRankings.map((item) => (
-              <Chip
-                clickable
-                key={item.id}
-                label={item.subject.code || item.subject.name}
-                title={`${item.subject.name} · ${item.semester.name}`}
-                color={selectedSubject?.id === item.id ? 'primary' : 'default'}
-                variant={selectedSubject?.id === item.id ? 'filled' : 'outlined'}
-                onClick={() => setSelectedSubjectId(item.id)}
-                aria-pressed={selectedSubject?.id === item.id}
-                aria-label={`ดูอันดับวิชา ${item.subject.name}`}
-                sx={{
-                  height: 40,
-                  px: 0.75,
-                  fontSize: '0.95rem',
-                  fontWeight: 700,
-                  borderRadius: 1.5,
-                  '&:focus-visible': {
-                    outline: '3px solid',
-                    outlineColor: 'primary.light',
-                    outlineOffset: 2,
-                  },
-                }}
-              />
-            ))}
-          </Stack>
-        )}
-
-        {selectedSubject ? (
+        {isOverall ? (
+          <RankingList
+            ranking={ranking}
+            emptyText="ยังไม่มีคะแนนสำหรับคำนวณอันดับรวม"
+            note="คำนวณจากงานทั้งหมดของทุกวิชา · งานที่ยังไม่มีคะแนนนับเป็น 0 คะแนน"
+          />
+        ) : null}
+      </Box>
+      <Box
+        role="tabpanel"
+        id="ranking-panel-subject"
+        aria-labelledby="ranking-tab-subject"
+        hidden={isOverall}
+      >
+        {!isOverall && selectedSubject ? (
           <>
-            <Box sx={{ mb: 1.5 }}>
-              <Typography component="h3" variant="subtitle1">
-                {selectedSubject.subject.name}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {selectedSubject.semester.name}
-              </Typography>
-            </Box>
+            <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" sx={{ mb: 1.75 }}>
+              {subjectRankings.map((item) => (
+                <Chip
+                  clickable
+                  key={item.id}
+                  label={item.subject.code || item.subject.name}
+                  title={`${item.subject.name} · ${item.semester.name}`}
+                  color={selectedSubject.id === item.id ? 'primary' : 'default'}
+                  variant={selectedSubject.id === item.id ? 'filled' : 'outlined'}
+                  onClick={() => setSelectedSubjectId(item.id)}
+                  aria-pressed={selectedSubject.id === item.id}
+                  aria-label={`ดูอันดับวิชา ${item.subject.name}`}
+                  sx={{ maxWidth: '100%' }}
+                />
+              ))}
+            </Stack>
+            <Typography component="h3" variant="subtitle2" sx={{ mb: 0.25 }}>
+              {selectedSubject.subject.name}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mb: 1.25, display: 'block' }}
+            >
+              {selectedSubject.semester.name}
+            </Typography>
             <RankingList
               ranking={selectedSubject.ranking}
               emptyText="วิชานี้ยังไม่มีงานสำหรับคำนวณอันดับ"
@@ -190,10 +369,12 @@ function RankingSection({
             />
           </>
         ) : (
-          <EmptyCard text="ยังไม่มีรายวิชาสำหรับแสดงอันดับ" compact />
+          <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+            ยังไม่มีรายวิชาสำหรับแสดงอันดับ
+          </Typography>
         )}
-      </Card>
-    </Stack>
+      </Box>
+    </Card>
   );
 }
 
@@ -211,7 +392,13 @@ function RankingList({
   const hasScoreItems = ranking.some((row) => row.full_score > 0);
   const medalColors = ['warning.main', 'grey.500', 'secondary.dark'];
 
-  if (!ranking.length || !hasScoreItems) return <EmptyCard text={emptyText} compact />;
+  if (!hasScoreItems) {
+    return (
+      <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+        {emptyText}
+      </Typography>
+    );
+  }
 
   return (
     <>
@@ -245,7 +432,11 @@ function RankingList({
                 fontWeight: 800,
               }}
             >
-              {index < 3 ? <RemixIcon icon="solar:cup-star-bold" width={19} aria-hidden /> : row.rank}
+              {index < 3 ? (
+                <RemixIcon icon="solar:cup-star-bold" width={19} aria-hidden />
+              ) : (
+                row.rank
+              )}
             </Box>
             <Avatar
               sx={{
@@ -311,13 +502,7 @@ function AnnouncementsSection({
       component="section"
       aria-label="ประกาศจากโรงเรียน"
       variant="outlined"
-      sx={{
-        p: { xs: 2, md: 2.75 },
-        borderRadius: 3,
-        borderTop: '4px solid',
-        borderTopColor: 'info.main',
-        boxShadow: (theme) => theme.shadows[4],
-      }}
+      sx={{ p: { xs: 2, sm: 2.5 }, minWidth: 0, borderRadius: 2.5 }}
     >
       <SectionHeading
         compact
@@ -351,8 +536,18 @@ function AnnouncementsSection({
                   justifyContent="space-between"
                   sx={{ mb: 0.75 }}
                 >
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography component="h3" variant="subtitle1">
+                  <Stack
+                    direction="row"
+                    spacing={0.75}
+                    alignItems="center"
+                    useFlexGap
+                    flexWrap="wrap"
+                  >
+                    <Typography
+                      component="h3"
+                      variant="subtitle1"
+                      sx={{ overflowWrap: 'anywhere' }}
+                    >
                       {announcement.title}
                     </Typography>
                     <Label variant="soft" color={priority.color}>
@@ -376,7 +571,12 @@ function AnnouncementsSection({
                 </Stack>
                 <Typography
                   variant="body2"
-                  sx={{ color: 'text.secondary', whiteSpace: 'pre-line', lineHeight: 1.75 }}
+                  sx={{
+                    color: 'text.secondary',
+                    whiteSpace: 'pre-line',
+                    lineHeight: 1.75,
+                    overflowWrap: 'anywhere',
+                  }}
                 >
                   {announcement.content}
                 </Typography>
@@ -420,7 +620,9 @@ function AnnouncementsSection({
           })}
         </Stack>
       ) : (
-        <EmptyCard text="ยังไม่มีประกาศใหม่จากโรงเรียน" compact />
+        <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+          ยังไม่มีประกาศใหม่จากโรงเรียน
+        </Typography>
       )}
     </Card>
   );

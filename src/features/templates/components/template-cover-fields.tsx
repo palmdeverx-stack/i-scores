@@ -44,6 +44,7 @@ export function TemplateCoverFields({
   const { setValue } = useFormContext();
   const subjectNames = unique(subjects.map((subject) => subject.name));
   const subjectCodes = unique(subjects.map((subject) => subject.code));
+  const fullRow = hideSubjectFields ? undefined : { gridColumn: { sm: '1 / -1' } };
 
   const setSubjectDefaults = (subject: CoverSubject | undefined) => {
     if (!subject) return;
@@ -65,6 +66,7 @@ export function TemplateCoverFields({
     sx?: object
   ) => (
     <Field.Autocomplete
+      size="small"
       name={name}
       label={label}
       freeSolo
@@ -92,7 +94,10 @@ export function TemplateCoverFields({
       sx={{
         gap: 2,
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+        gridTemplateColumns: {
+          xs: 'minmax(0, 1fr)',
+          sm: hideSubjectFields ? 'minmax(0, 2fr) minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
+        },
       }}
     >
       {autocomplete(
@@ -100,13 +105,9 @@ export function TemplateCoverFields({
         'ชื่อหน่วยการเรียนรู้ / กลุ่มสาระการเรียนรู้',
         learningAreas,
         undefined,
-        {
-          gridColumn: { sm: '1 / -1' },
-        }
+        fullRow
       )}
-      {autocomplete(`${prefix}.gradeLevel`, 'ระดับชั้น', gradeLevels, undefined, {
-        gridColumn: { sm: '1 / -1' },
-      })}
+      {autocomplete(`${prefix}.gradeLevel`, 'ระดับชั้น', gradeLevels, undefined, fullRow)}
       {hideSubjectFields
         ? null
         : autocomplete(`${prefix}.subjectName`, 'ชื่อรายวิชา', subjectNames, (value) =>
@@ -118,27 +119,31 @@ export function TemplateCoverFields({
             setSubjectDefaults(subjects.find((subject) => subject.code === value))
           )}
       <Field.Text
+        size="small"
         disabled={disabled}
         name={`${prefix}.topic`}
         label="เรื่อง"
         sx={{ gridColumn: { sm: '1 / -1' } }}
       />
+      <Field.Text size="small" disabled={disabled} name={`${prefix}.teacherName`} label="ผู้สอน" />
       <Field.Text
+        size="small"
         disabled={disabled}
-        name={`${prefix}.teacherName`}
-        label="ผู้สอน"
-        sx={{ gridColumn: { sm: '1 / -1' } }}
+        name={`${prefix}.teacherPosition`}
+        label="ตำแหน่งผู้สอน"
+        placeholder="ครู"
       />
       <Field.DatePicker
         name={`${prefix}.teachingDate`}
         label="วันที่สอน"
         disabled={disabled}
         format="DD/MM/YYYY"
-        slotProps={{ textField: { fullWidth: true } }}
+        slotProps={{ textField: { fullWidth: true, size: 'small' } }}
       />
       {autocomplete(`${prefix}.semester`, 'ภาคเรียนที่', semesters)}
       {autocomplete(`${prefix}.academicYear`, 'ปีการศึกษา', academicYears)}
       <Field.Text
+        size="small"
         type="number"
         disabled={disabled}
         name={`${prefix}.durationHours`}

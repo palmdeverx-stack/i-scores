@@ -28,14 +28,24 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
+  const fields =
+    'id, name, name_en, code, document_prefix, document_sequence_current, logo_url, is_active, created_at, workspace_type';
   const { data: school, error } = await supabaseAdmin
     .from('schools')
-    .select(
-      'id, name, name_en, code, document_prefix, document_sequence_current, logo_url, is_active, created_at'
-    )
+    .select(`${fields}, workspace_description`)
     .eq('id', id)
     .single();
 
+  if (error?.code === '42703') {
+    const { data: legacySchool, error: legacyError } = await supabaseAdmin
+      .from('schools')
+      .select(fields)
+      .eq('id', id)
+      .single();
+    if (!legacyError && legacySchool) {
+      return NextResponse.json({ school: { ...legacySchool, workspace_description: null } });
+    }
+  }
   if (error || !school) {
     return NextResponse.json({ message: 'ไม่พบโรงเรียนนี้' }, { status: 404 });
   }

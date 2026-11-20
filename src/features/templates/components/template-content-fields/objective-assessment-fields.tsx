@@ -102,6 +102,7 @@ export function ObjectiveAssessmentFields({
               ).map(([field, label]) => (
                 <Box key={field} sx={{ p: 1, borderLeft: '1px solid', borderColor: 'divider' }}>
                   <Field.Text
+                    size="small"
                     multiline
                     minRows={3}
                     name={`${rowsPath}.${index}.${field}`}

@@ -1,7 +1,7 @@
 import * as z from 'zod';
 
 export const SignInSchema = z.object({
-  username: z.string().min(1, { error: 'กรุณากรอกชื่อผู้ใช้งาน!' }),
+  username: z.string().min(1, { error: 'กรุณากรอกชื่อผู้ใช้งานหรืออีเมล' }),
   password: z
     .string()
     .min(1, { error: 'กรุณากรอกรหัสผ่าน!' })

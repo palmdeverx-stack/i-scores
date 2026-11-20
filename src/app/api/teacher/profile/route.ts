@@ -2,8 +2,26 @@ import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
+import { getTeacherWorkspaceOwner } from 'src/lib/personal-workspace-owner';
 
 // ----------------------------------------------------------------------
+
+async function loadProfileSchool(schoolId: string) {
+  const fields = 'id, name, code, logo_url';
+  const result = await supabaseAdmin
+    .from('schools')
+    .select(`${fields}, workspace_description`)
+    .eq('id', schoolId)
+    .maybeSingle();
+  if (result.error?.code !== '42703') return result;
+
+  const { data, error } = await supabaseAdmin
+    .from('schools')
+    .select(fields)
+    .eq('id', schoolId)
+    .maybeSingle();
+  return { data: data ? { ...data, workspace_description: null } : null, error };
+}
 
 async function loadTeacherProfile(teacherId: string, schoolId: string | null) {
   const [teacherResult, schoolResult, assignmentsResult] = await Promise.all([
@@ -18,13 +36,7 @@ async function loadTeacherProfile(teacherId: string, schoolId: string | null) {
       .eq('id', teacherId)
       .eq('role', 'teacher')
       .maybeSingle(),
-    schoolId
-      ? supabaseAdmin
-          .from('schools')
-          .select('id, name, code, logo_url')
-          .eq('id', schoolId)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
+    schoolId ? loadProfileSchool(schoolId) : Promise.resolve({ data: null, error: null }),
     supabaseAdmin
       .from('teacher_assignments')
       .select(
@@ -217,4 +229,87 @@ export async function PUT(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function PATCH(request: Request) {
+  const caller = requireRole(request, ['teacher']);
+  if (!caller?.schoolId) {
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์แก้ไขชื่อพื้นที่' }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => null);
+  if (body?.schoolId !== caller.schoolId) {
+    return NextResponse.json(
+      { message: 'กรุณาเปิดโปรไฟล์ในพื้นที่ที่ต้องการแก้ไข' },
+      { status: 403 }
+    );
+  }
+  const name = typeof body?.name === 'string' ? body.name.trim() : '';
+  if (!name || name.length > 100) {
+    return NextResponse.json(
+      { message: 'กรุณาระบุชื่อพื้นที่ไม่เกิน 100 ตัวอักษร' },
+      { status: 400 }
+    );
+  }
+
+  if (
+    body.description !== undefined &&
+    (typeof body.description !== 'string' || body.description.trim().length > 1000)
+  ) {
+    return NextResponse.json({ message: 'รายละเอียดต้องไม่เกิน 1,000 ตัวอักษร' }, { status: 400 });
+  }
+  const description =
+    typeof body.description === 'string' ? body.description.trim() || null : undefined;
+
+  const { data: owner, error: ownerError } = await getTeacherWorkspaceOwner(
+    caller.sub,
+    caller.schoolId
+  );
+
+  if (ownerError) {
+    return NextResponse.json({ message: 'ไม่สามารถตรวจสอบเจ้าของพื้นที่ได้' }, { status: 500 });
+  }
+  const ownerAuthId = owner?.auth_user_id;
+  if (!ownerAuthId) {
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์แก้ไขชื่อพื้นที่' }, { status: 403 });
+  }
+
+  const updateWorkspace = (fields: { name: string; workspace_description?: string | null }) =>
+    supabaseAdmin
+      .from('schools')
+      .update(fields)
+      .eq('id', caller.schoolId)
+      .eq('workspace_type', 'personal')
+      .eq('owner_auth_user_id', ownerAuthId);
+
+  const { data: school, error } = await updateWorkspace({
+    name,
+    ...(description === undefined ? {} : { workspace_description: description }),
+  })
+    .select('name, workspace_description')
+    .maybeSingle();
+
+  if (error?.code === '42703' || error?.code === 'PGRST204') {
+    if (description) {
+      return NextResponse.json(
+        { message: 'ยังไม่สามารถบันทึกรายละเอียดพื้นที่ได้ กรุณาติดต่อผู้ดูแลระบบ' },
+        { status: 503 }
+      );
+    }
+    const legacy = await updateWorkspace({ name }).select('name').maybeSingle();
+    if (!legacy.error && legacy.data) {
+      return NextResponse.json({ name: legacy.data.name, description: null });
+    }
+    if (!legacy.error) {
+      return NextResponse.json({ message: 'ไม่มีสิทธิ์แก้ไขชื่อพื้นที่' }, { status: 403 });
+    }
+  }
+  if (error) {
+    return NextResponse.json({ message: 'บันทึกข้อมูลพื้นที่ไม่สำเร็จ' }, { status: 500 });
+  }
+  if (!school) {
+    return NextResponse.json({ message: 'ไม่มีสิทธิ์แก้ไขชื่อพื้นที่' }, { status: 403 });
+  }
+
+  return NextResponse.json({ name: school.name, description: school.workspace_description });
 }

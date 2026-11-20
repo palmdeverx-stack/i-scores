@@ -61,8 +61,14 @@ export function BehaviorObservationFields({
       <Alert severity="info">
         แบบสังเกตพฤติกรรมจะเริ่มหน้า PDF ใหม่เสมอ และสรุปผ่าน/ไม่ผ่านจากจำนวนรายการที่พบ
       </Alert>
-      <Field.Text required name={contentName(contentPath, 'title')} label="หัวข้อเอกสาร" />
       <Field.Text
+        size="small"
+        required
+        name={contentName(contentPath, 'title')}
+        label="หัวข้อเอกสาร"
+      />
+      <Field.Text
+        size="small"
         multiline
         minRows={2}
         name={contentName(contentPath, 'instructions')}
@@ -180,21 +186,35 @@ export function BehaviorObservationFields({
 
       <Box sx={{ gap: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '180px 1fr' } }}>
         <Field.Text
+          size="small"
           type="number"
           name={contentName(contentPath, 'passingMinimum')}
           label="จำนวนรายการขั้นต่ำที่ผ่าน"
           slotProps={{ htmlInput: { min: 0, max: behaviors.value.length } }}
         />
-        <Field.Text name={contentName(contentPath, 'passingNote')} label="เกณฑ์การประเมิน" />
+        <Field.Text
+          size="small"
+          name={contentName(contentPath, 'passingNote')}
+          label="เกณฑ์การประเมิน"
+        />
       </Box>
       <Divider />
       <Typography variant="subtitle1">ข้อมูลผู้ประเมิน</Typography>
       <Box
         sx={{ gap: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' } }}
       >
-        <Field.Text name={contentName(contentPath, 'evaluatorName')} label="ชื่อผู้ประเมิน" />
-        <Field.Text name={contentName(contentPath, 'evaluatorRole')} label="ตำแหน่ง / บทบาท" />
         <Field.Text
+          size="small"
+          name={contentName(contentPath, 'evaluatorName')}
+          label="ชื่อผู้ประเมิน"
+        />
+        <Field.Text
+          size="small"
+          name={contentName(contentPath, 'evaluatorRole')}
+          label="ตำแหน่ง / บทบาท"
+        />
+        <Field.Text
+          size="small"
           type="date"
           name={contentName(contentPath, 'evaluationDate')}
           label="วันที่ประเมิน"

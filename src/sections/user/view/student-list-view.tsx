@@ -83,6 +83,7 @@ export function StudentListView({
   basePath?: string;
   view?: 'combined' | 'pending' | 'confirmed';
 } = {}) {
+  const isTeacherDirectory = basePath === paths.teacher.departmentStudent;
   const newPath = `${basePath}/new`;
   const detailPath = (id: string) => `${basePath}/${id}`;
   const editPath = (id: string) => `${basePath}/${id}/edit`;
@@ -174,12 +175,16 @@ export function StudentListView({
   );
   const isImportView = view === 'pending';
   const showImportActions = view !== 'confirmed';
+  const canConfirmAll = canManageStudents && tab === 'pending' && !!filteredStudents.length;
 
   return (
-    <Container maxWidth={false} sx={{ pb: 5 }}>
+    <Container
+      maxWidth={false}
+      sx={{ pb: 5, ...(isTeacherDirectory && { px: { xs: 1.5, sm: 3 } }) }}
+    >
       <Box
         sx={{
-          mb: 4,
+          mb: isTeacherDirectory ? { xs: 2.5, md: 4 } : 4,
           gap: 2,
           display: 'flex',
           alignItems: { xs: 'flex-start', sm: 'center' },
@@ -188,23 +193,63 @@ export function StudentListView({
         }}
       >
         <Box>
-          <Typography component="h1" variant="h3">
+          <Typography
+            component="h1"
+            variant="h3"
+            sx={isTeacherDirectory ? { fontSize: { xs: 24, sm: 32 } } : undefined}
+          >
             {isImportView ? 'นำเข้าข้อมูลนักเรียน' : 'ข้อมูลนักเรียน'}
           </Typography>
-          <Typography sx={{ mt: 1, color: 'text.secondary' }}>
+          <Typography
+            sx={{
+              mt: 0.75,
+              color: 'text.secondary',
+              ...(isTeacherDirectory && { typography: { xs: 'body2', sm: 'body1' } }),
+            }}
+          >
             {isImportView
               ? 'สร้างข้อมูลใหม่หรือนำเข้าจากไฟล์ Excel แล้วตรวจสอบก่อนยืนยัน'
               : 'ข้อมูลนักเรียนที่ผ่านการตรวจสอบและยืนยันแล้ว'}
           </Typography>
         </Box>
         {showImportActions && (
-          <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
+          <Box
+            sx={{
+              gap: 1,
+              display: isTeacherDirectory ? { xs: 'grid', sm: 'flex' } : 'flex',
+              flexWrap: 'wrap',
+              ...(isTeacherDirectory && {
+                width: { xs: '100%', sm: 'auto' },
+                gridTemplateColumns: canManageStudents ? 'repeat(3, minmax(0, 1fr))' : '1fr',
+                '& .MuiButton-root': {
+                  minWidth: 0,
+                  minHeight: { xs: 52, sm: 'auto' },
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  gap: { xs: 0.25, sm: 0 },
+                  px: { xs: 0.75, sm: 1.5 },
+                  whiteSpace: 'nowrap',
+                },
+                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: 0 },
+              }),
+            }}
+          >
             <Button
               color="inherit"
               onClick={downloadStudentImportTemplate}
               startIcon={<RemixIcon icon="solar:download-bold" />}
             >
-              ดาวน์โหลด Template
+              {isTeacherDirectory ? (
+                <>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                    เทมเพลต
+                  </Box>
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    ดาวน์โหลด Template
+                  </Box>
+                </>
+              ) : (
+                'ดาวน์โหลด Template'
+              )}
             </Button>
             {canManageStudents && (
               <>
@@ -213,7 +258,18 @@ export function StudentListView({
                   onClick={() => setImportDialogOpen(true)}
                   startIcon={<RemixIcon icon="solar:upload-bold" />}
                 >
-                  นำเข้าจาก Excel
+                  {isTeacherDirectory ? (
+                    <>
+                      <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                        นำเข้า Excel
+                      </Box>
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                        นำเข้าจาก Excel
+                      </Box>
+                    </>
+                  ) : (
+                    'นำเข้าจาก Excel'
+                  )}
                 </Button>
                 <Button
                   variant="contained"
@@ -221,7 +277,18 @@ export function StudentListView({
                   href={newPath}
                   startIcon={<RemixIcon icon="solar:user-plus-bold" />}
                 >
-                  สร้างข้อมูลใหม่
+                  {isTeacherDirectory ? (
+                    <>
+                      <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                        เพิ่มนักเรียน
+                      </Box>
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                        สร้างข้อมูลใหม่
+                      </Box>
+                    </>
+                  ) : (
+                    'สร้างข้อมูลใหม่'
+                  )}
                 </Button>
               </>
             )}
@@ -262,13 +329,21 @@ export function StudentListView({
               setTab(value);
               table.onResetPage();
             }}
-            sx={{ px: 2, borderBottom: '1px solid', borderColor: 'divider' }}
+            aria-label="กลุ่มนักเรียน"
+            sx={{
+              px: isTeacherDirectory ? { xs: 1, sm: 2 } : 2,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              ...(isTeacherDirectory && {
+                '& .MuiTab-root': { flex: { xs: 1, sm: 'initial' }, minWidth: 0 },
+              }),
+            }}
           >
             <Tab
               value="confirmed"
               label={
                 <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
-                  ยืนยันสำเร็จ
+                  {isTeacherDirectory ? 'ยืนยันแล้ว' : 'ยืนยันสำเร็จ'}
                   <Chip size="small" label={confirmedStudents.length} />
                 </Box>
               }
@@ -289,11 +364,15 @@ export function StudentListView({
         <Box
           sx={{
             gap: 2,
-            px: 3,
-            py: 2.5,
+            px: isTeacherDirectory ? { xs: 1.5, sm: 3 } : 3,
+            py: isTeacherDirectory ? { xs: 1.5, sm: 2.5 } : 2.5,
             display: 'flex',
-            alignItems: { xs: 'stretch', sm: 'center' },
-            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: isTeacherDirectory
+              ? { xs: 'stretch', lg: 'center' }
+              : { xs: 'stretch', sm: 'center' },
+            flexDirection: isTeacherDirectory
+              ? { xs: 'column', lg: 'row' }
+              : { xs: 'column', sm: 'row' },
             borderBottom: '1px solid',
             borderColor: 'divider',
             justifyContent: 'space-between',
@@ -311,8 +390,18 @@ export function StudentListView({
                   : `${filteredStudents.length} บัญชี · ยืนยันข้อมูลแล้ว`}
             </Typography>
           </Box>
-          <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
-            {tab === 'pending' && !!filteredStudents.length && (
+          <Box
+            sx={{
+              gap: 1.25,
+              display: isTeacherDirectory ? { xs: 'grid', md: 'flex' } : 'flex',
+              alignItems: 'center',
+              ...(isTeacherDirectory && {
+                gridTemplateColumns: canConfirmAll ? 'minmax(0, 1fr) auto' : 'minmax(0, 1fr)',
+                '& > *': { minWidth: 0 },
+              }),
+            }}
+          >
+            {canConfirmAll && (
               <Button
                 variant="contained"
                 color="warning"
@@ -322,6 +411,10 @@ export function StudentListView({
                   confirmMutation.mutate(filteredStudents.map((student) => student.id))
                 }
                 startIcon={<RemixIcon icon="solar:check-circle-bold" />}
+                sx={{
+                  alignSelf: 'stretch',
+                  ...(isTeacherDirectory && { gridColumn: 2, gridRow: 2, whiteSpace: 'nowrap' }),
+                }}
               >
                 ยืนยันทั้งหมด ({filteredStudents.length})
               </Button>
@@ -334,8 +427,11 @@ export function StudentListView({
                 setStatusFilter(event.target.value as StudentStatus | 'all');
                 table.onResetPage();
               }}
-              aria-label="กรองตามสถานะนักเรียน"
-              sx={{ width: { xs: 1, sm: 170 } }}
+              slotProps={{ select: { inputProps: { 'aria-label': 'กรองตามสถานะนักเรียน' } } }}
+              sx={{
+                width: isTeacherDirectory ? { xs: '100%', md: 160 } : { xs: 1, sm: 170 },
+                ...(isTeacherDirectory && { gridColumn: 1, gridRow: 2 }),
+              }}
             >
               {STUDENT_STATUS_FILTERS.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
@@ -350,10 +446,17 @@ export function StudentListView({
                 setSearch(event.target.value);
                 table.onResetPage();
               }}
-              placeholder="ค้นหารหัสนักเรียน ชื่อ หรือเลขประจำตัว"
-              aria-label="ค้นหานักเรียน"
-              sx={{ width: { xs: 1, sm: 320 } }}
+              placeholder={
+                isTeacherDirectory
+                  ? 'ค้นหาชื่อหรือรหัสนักเรียน'
+                  : 'ค้นหารหัสนักเรียน ชื่อ หรือเลขประจำตัว'
+              }
+              sx={{
+                width: isTeacherDirectory ? { xs: '100%', md: 300 } : { xs: 1, sm: 320 },
+                ...(isTeacherDirectory && { gridColumn: '1 / -1', gridRow: 1 }),
+              }}
               slotProps={{
+                htmlInput: { 'aria-label': 'ค้นหานักเรียน' },
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
@@ -366,7 +469,133 @@ export function StudentListView({
           </Box>
         </Box>
 
-        <TableContainer>
+        {isTeacherDirectory && (
+          <>
+            {(isLoading || !filteredStudents.length) && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ display: { xs: 'block', md: 'none' }, py: 4, textAlign: 'center' }}
+              >
+                {isLoading ? 'กำลังโหลด...' : 'ไม่พบนักเรียน'}
+              </Typography>
+            )}
+            {visibleStudents.length > 0 && (
+              <Box
+                component="ul"
+                sx={{ display: { xs: 'block', md: 'none' }, m: 0, p: 0, listStyle: 'none' }}
+              >
+                {visibleStudents.map((student) => {
+                  const fullName =
+                    `${student.name_prefix ?? ''}${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() ||
+                    student.username;
+                  const status = STUDENT_STATUS_META[student.student_status ?? 'studying'];
+                  return (
+                    <Box
+                      component="li"
+                      key={student.id}
+                      sx={{
+                        px: 1.5,
+                        py: 1.25,
+                        gap: 0.75,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        '&:not(:last-child)': { borderBottom: '1px solid', borderColor: 'divider' },
+                      }}
+                    >
+                      <Box
+                        component={RouterLink}
+                        href={detailPath(student.id)}
+                        sx={{
+                          display: 'flex',
+                          gap: 1.25,
+                          flex: 1,
+                          minWidth: 0,
+                          color: 'inherit',
+                          textDecoration: 'none',
+                          borderRadius: 1,
+                        }}
+                      >
+                        <Avatar
+                          src={student.avatar_url ?? undefined}
+                          alt=""
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            flexShrink: 0,
+                            bgcolor: 'primary.lighter',
+                            color: 'primary.darker',
+                          }}
+                        >
+                          {fullName.charAt(0).toUpperCase()}
+                        </Avatar>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography variant="subtitle2" sx={{ overflowWrap: 'anywhere' }}>
+                            {fullName}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ overflowWrap: 'anywhere' }}
+                          >
+                            รหัส {student.student_code ?? '–'}
+                            {student.nickname ? ` · ${student.nickname}` : ''}
+                          </Typography>
+                          <Box
+                            sx={{
+                              mt: 0.5,
+                              gap: 0.5,
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Label variant="soft" color={status.color}>
+                              {status.label}
+                            </Label>
+                            {student.is_active === false && (
+                              <Label variant="soft" color="default">
+                                ปิดบัญชี
+                              </Label>
+                            )}
+                            {!!student.line_guardian_count && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: 'inline-flex',
+                                  gap: 0.5,
+                                  alignItems: 'center',
+                                  color: 'text.secondary',
+                                }}
+                                aria-label={`ผู้ปกครองเชื่อม LINE ${student.line_guardian_count} คน`}
+                              >
+                                <RiLineFill size={15} /> {student.line_guardian_count}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                      </Box>
+                      <IconButton
+                        onClick={(event) => {
+                          setMenuStudent(student);
+                          rowMenu.onOpen(event);
+                        }}
+                        aria-label={`ตัวเลือกเพิ่มเติมสำหรับ ${fullName}`}
+                        sx={{ width: 44, height: 44, flexShrink: 0 }}
+                      >
+                        <RemixIcon icon="eva:more-vertical-fill" width={20} />
+                      </IconButton>
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+          </>
+        )}
+
+        <TableContainer
+          sx={isTeacherDirectory ? { display: { xs: 'none', md: 'block' } } : undefined}
+        >
           <Table sx={{ minWidth: 860 }}>
             <TableHead>
               <TableRow>
@@ -543,7 +772,15 @@ export function StudentListView({
             if (type === 'next') return 'หน้าถัดไป';
             return 'หน้าก่อนหน้า';
           }}
-          sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+          sx={{
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            ...(isTeacherDirectory && {
+              '& .MuiTablePagination-toolbar': { px: { xs: 0.5, sm: 2 } },
+              '& .MuiTablePagination-selectLabel': { display: { xs: 'none', sm: 'block' } },
+              '& .MuiTablePagination-actions': { ml: { xs: 0.5, sm: 2 } },
+            }),
+          }}
         />
       </Card>
 
@@ -568,6 +805,26 @@ export function StudentListView({
               แก้ไข
             </MenuItem>
           )}
+
+          {isTeacherDirectory && canManageStudents && menuStudent ? (
+            <MenuItem
+              sx={{ display: { xs: 'flex', md: 'none' } }}
+              disabled={
+                (menuStudent.student_status ?? 'studying') !== 'studying' ||
+                activeMutation.isPending
+              }
+              onClick={() => {
+                activeMutation.mutate({
+                  id: menuStudent.id,
+                  isActive: menuStudent.is_active === false,
+                });
+                rowMenu.onClose();
+              }}
+            >
+              <RemixIcon icon="solar:check-circle-bold" width={18} />
+              {menuStudent.is_active === false ? 'เปิดใช้งานบัญชี' : 'ปิดใช้งานบัญชี'}
+            </MenuItem>
+          ) : null}
 
           {canManageStudents && tab === 'pending' && (
             <MenuItem

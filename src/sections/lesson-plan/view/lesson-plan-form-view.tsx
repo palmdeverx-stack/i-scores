@@ -74,10 +74,12 @@ import {
   EMPTY_FORM,
   TAB_LABELS,
   TAB_FORM_FIELDS,
+  COVER_FORM_FIELDS,
   DEFAULT_TAB_ORDER,
   EVALUATION_TAB_IDS,
   TAB_TEMPLATE_TYPES,
   TAB_ORDER_STORAGE_KEY,
+  LessonPlanEditorSchema,
   TemplateLessonPlanSchema,
 } from './lesson-plan-form.schema';
 import {
@@ -269,7 +271,9 @@ export function LessonPlanFormView({
     []
   );
   const methods = useForm<LessonPlanFormValues>({
-    resolver: zodResolver(TemplateLessonPlanSchema) as Resolver<LessonPlanFormValues>,
+    resolver: zodResolver(
+      isTemplateMode ? TemplateLessonPlanSchema : LessonPlanEditorSchema
+    ) as Resolver<LessonPlanFormValues>,
     defaultValues: defaultFormValues,
     mode: 'onTouched',
   });
@@ -513,6 +517,14 @@ export function LessonPlanFormView({
       });
     }
   }, [getValues, isTemplateMode, lessonPlanId, setValue, user]);
+
+  useEffect(() => {
+    if (isTemplateMode || !user || (lessonPlanId && !planQuery.data)) return;
+    const field = 'templateSectionContents.cover.teacherPosition' as const;
+    if (getValues(field) === undefined) {
+      setValue(field, user.position_title?.trim() || 'ครู', { shouldDirty: false });
+    }
+  }, [getValues, isTemplateMode, lessonPlanId, planQuery.data, setValue, user]);
 
   useEffect(() => {
     if (!templateId || lessonPlanId || initializedTemplateId.current === templateId) return;
@@ -793,6 +805,7 @@ export function LessonPlanFormView({
       setTemplateLogoRemoved(false);
       if (variables.saveMode === 'draft') {
         markTabClean(variables.tab);
+        void queryClient.invalidateQueries({ queryKey: ['lesson-plans'] });
         toast.success(`บันทึก “${activeNavigationSection.label}” เป็นฉบับร่างแล้ว`);
         if (lessonPlanId) {
           queryClient.setQueryData(
@@ -888,7 +901,7 @@ export function LessonPlanFormView({
       const assignment = optionsQuery.data?.find((option) => option.id === assignmentId);
       const subject = assignment?.subject;
 
-      setValue('teacherAssignmentId', assignmentId, { shouldDirty: true, shouldValidate: true });
+      setValue('unitId', null, { shouldDirty: true });
       setValue('subjectId', subject?.id ?? null, { shouldDirty: true });
       setValue('curriculumId', subject?.curriculum_id ?? null, { shouldDirty: true });
       setValue(
@@ -918,7 +931,6 @@ export function LessonPlanFormView({
       const unit = selectedAssignment?.subject?.learning_units_structured.find(
         (item) => item.id === unitId
       );
-      setValue('unitId', unit?.id ?? null, { shouldDirty: true });
       if (!unit) return;
       setValue('unitName', unit.name, { shouldDirty: true, shouldValidate: true });
       if (unit.estimated_periods) {
@@ -929,7 +941,10 @@ export function LessonPlanFormView({
   );
 
   const isEditable = !planQuery.data || ['draft', 'revision'].includes(planQuery.data.status);
-  const onSubmit = handleSubmit((values) => saveMutation.mutate({ values }));
+  const onSubmit = handleSubmit(
+    (values) => saveMutation.mutate({ values }),
+    () => setActiveSection('lesson-plan-general')
+  );
   const navigationSectionCandidates = [
     {
       id: 'lesson-plan-general',
@@ -1141,20 +1156,20 @@ export function LessonPlanFormView({
   );
 
   const saveCurrentTab = useCallback(async () => {
-    const values = getValues();
-    if (!isTemplateMode && !values.teacherAssignmentId) {
-      toast.warning('กรุณาเลือกรายวิชาและห้องเรียนก่อนบันทึกฉบับร่าง');
-      goToSection('lesson-plan-general');
-      return;
-    }
-
     const currentTabFields = TAB_FORM_FIELDS[activeSection] ?? [];
-    const isCurrentTabValid =
+    const draftFields = currentTabFields.filter((field) => {
+      if (field === 'unitName' || (field === 'title' && !isTemplateMode)) {
+        return Boolean(getValues(field).trim());
+      }
+      return true;
+    });
+    const fields =
       activeSection === 'lesson-plan-general'
-        ? await trigger(currentTabFields, { shouldFocus: true })
-        : true;
-    if (!isCurrentTabValid) {
-      toast.warning('กรุณากรอกข้อมูลใน Step นี้ให้ครบก่อนบันทึก');
+        ? [...draftFields, ...COVER_FORM_FIELDS]
+        : (['teacherAssignmentId', ...COVER_FORM_FIELDS] as const);
+    if (!(await trigger([...fields], { shouldFocus: true }))) {
+      goToSection('lesson-plan-general');
+      toast.warning('กรุณาตรวจสอบข้อมูลทั่วไปก่อนบันทึก');
       return;
     }
 
@@ -1164,7 +1179,7 @@ export function LessonPlanFormView({
   const publishTemplate = useCallback(
     async (scope: PublishTemplateScope) => {
       const generalFields = TAB_FORM_FIELDS['lesson-plan-general'] ?? [];
-      if (!(await trigger(generalFields, { shouldFocus: true }))) {
+      if (!(await trigger([...generalFields, ...COVER_FORM_FIELDS], { shouldFocus: true }))) {
         setPublishDialogOpen(false);
         goToSection('lesson-plan-general');
         toast.warning('กรุณากรอกข้อมูลทั่วไปให้ครบก่อนเผยแพร่');
@@ -1195,6 +1210,15 @@ export function LessonPlanFormView({
 
       reset({
         ...templateValues,
+        templateSectionContents: {
+          ...templateValues.templateSectionContents,
+          cover: {
+            ...content.cover,
+            teacherPosition:
+              getValues('templateSectionContents.cover.teacherPosition') ??
+              (user?.position_title?.trim() || 'ครู'),
+          },
+        },
         teacherAssignmentId: currentValues.teacherAssignmentId,
         curriculumId: hasAssignment ? currentValues.curriculumId : templateValues.curriculumId,
         subjectId: hasAssignment ? currentValues.subjectId : templateValues.subjectId,
@@ -1220,7 +1244,7 @@ export function LessonPlanFormView({
       setSelectedFullPlanTemplateName(template.name);
       setActiveSection('lesson-plan-general');
     },
-    [getValues, reset]
+    [getValues, reset, user?.position_title]
   );
 
   useEffect(() => {
@@ -1449,27 +1473,28 @@ export function LessonPlanFormView({
           </Typography>
         </Box>
 
-        {!isTemplateMode && !lessonPlanId ? (
+        <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap', flexShrink: 0, maxWidth: 1 }}>
+          {!isTemplateMode && !lessonPlanId ? (
+            <Button
+              size="large"
+              variant="contained"
+              startIcon={<RemixIcon icon="solar:documents-linear" />}
+              onClick={onOpenTemplatePicker}
+            >
+              เลือกจาก Template
+            </Button>
+          ) : null}
           <Button
+            type="button"
+            color="inherit"
             size="large"
-            variant="contained"
-            startIcon={<RemixIcon icon="solar:documents-linear" />}
-            onClick={onOpenTemplatePicker}
-            sx={{ flexShrink: 0 }}
+            variant="outlined"
+            startIcon={<RemixIcon icon="solar:printer-minimalistic-linear" />}
+            onClick={onPreviewPdf}
           >
-            เลือกจาก Template
+            พรีวิว PDF
           </Button>
-        ) : null}
-        <Button
-          type="button"
-          color="inherit"
-          size="large"
-          variant="outlined"
-          startIcon={<RemixIcon icon="solar:printer-minimalistic-linear" />}
-          onClick={onPreviewPdf}
-        >
-          พรีวิว PDF
-        </Button>
+        </Box>
       </Box>
 
       {planQuery.data?.review_note ? (
@@ -1592,7 +1617,7 @@ export function LessonPlanFormView({
           isEditable={isEditable}
           isSaving={saveMutation.isPending}
           showPublishButton={isTemplateMode}
-          saveLabel={isTemplateMode ? 'บันทึกฉบับร่าง' : 'บันทึก'}
+          saveLabel={isTemplateMode || !lessonPlanId ? 'บันทึกฉบับร่าง' : 'บันทึก'}
           returnPath={returnPath}
           onOpenTemplatePicker={onOpenTemplatePicker}
           onPreviewPdf={onPreviewPdf}

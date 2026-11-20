@@ -104,7 +104,7 @@ export function HomeFooter({ sx, ...other }: FooterProps) {
 
 function BrandSummary() {
   const { t } = useTranslate();
-  const { school } = useMainSchoolBrand();
+  const { school, studentWorkspaceName } = useMainSchoolBrand();
 
   return (
     <Box sx={{ maxWidth: 390 }}>
@@ -119,7 +119,7 @@ function BrandSummary() {
         <MainSchoolLogo size={48} />
         <Box>
           <Typography variant="subtitle1" sx={{ lineHeight: 1.2 }}>
-            {school?.name ?? 'EKRU'}
+            {studentWorkspaceName ?? school?.name ?? 'EKRU'}
           </Typography>
           <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
             {t('brand.tagline')}

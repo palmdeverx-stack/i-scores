@@ -11,6 +11,7 @@
   "actions": {
     "signIn": "Sign in",
     "signOut": "Sign out",
+    "confirmSignOut": "Sign out of your account?",
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",

@@ -84,6 +84,7 @@ export default function Layout({ children }: Props) {
         <MustChangePasswordGuard mustChangePassword={user?.must_change_password}>
           <AcceptLegalGuard acceptedLegalAt={user?.accepted_legal_at}>
             <DashboardLayout
+              compactMobileHeader
               tabletHorizontalNav
               tabletQuery="sm"
               cssVars={{

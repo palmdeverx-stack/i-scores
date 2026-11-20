@@ -251,9 +251,6 @@ export function RHFAutocomplete({
                   '& .MuiFormLabel-asterisk': {
                     color: theme.palette.error.main,
                   },
-                  '& .MuiFormHelperText-root.Mui-error': {
-                    display: helperText ? 'block' : 'none',
-                  },
                 }}
                 slotProps={{
                   ...textfield?.slotProps,

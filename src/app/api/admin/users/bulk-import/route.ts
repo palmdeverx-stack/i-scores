@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server';
 import { requireRole } from 'src/lib/auth-token';
 import { createManagedUser } from 'src/lib/create-managed-user';
 
+import {
+  getStudentImportUsername,
+  getStudentImportIdentityErrors,
+} from 'src/sections/user/student-import-validation';
+
 // ----------------------------------------------------------------------
 
 const MAX_ROWS = 500;
@@ -46,19 +51,45 @@ export async function POST(request: Request) {
     );
   }
 
+  if (
+    rows.some(
+      (row) =>
+        !row ||
+        !Number.isInteger(row.row) ||
+        (row.studentCode !== undefined && typeof row.studentCode !== 'string') ||
+        (row.username !== undefined && typeof row.username !== 'string')
+    )
+  ) {
+    return NextResponse.json(
+      { message: 'ข้อมูลรหัสนักเรียนหรือชื่อผู้ใช้งานไม่ถูกต้อง' },
+      { status: 400 }
+    );
+  }
+  const identityErrors = getStudentImportIdentityErrors(rows);
+
   // Sequential, not parallel: each row's seat-limit and duplicate checks must
   // see the effect of rows already inserted earlier in this same batch.
   const results: Array<{ row: number; success: boolean; studentCode?: string; message?: string }> =
     [];
 
-  for (const row of rows) {
+  for (const [index, row] of rows.entries()) {
+    const errors = identityErrors[index];
+    if (errors.length) {
+      results.push({
+        row: row.row,
+        success: false,
+        studentCode: row.studentCode,
+        message: errors.join(', '),
+      });
+      continue;
+    }
     const result = await createManagedUser(caller, {
-      username: row.username ?? '',
+      username: getStudentImportUsername(row),
       email: row.email,
       firstName: row.firstName ?? '',
       lastName: row.lastName ?? '',
       role: 'student',
-      studentCode: row.studentCode,
+      studentCode: row.studentCode?.trim(),
       nationalId: row.nationalId,
       namePrefix: row.namePrefix,
       firstNameEn: row.firstNameEn,

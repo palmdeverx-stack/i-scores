@@ -269,7 +269,7 @@ export function LessonPlanListView() {
               <LessonPlanDocumentCard
                 key={plan.id}
                 data={{
-                  title: plan.title,
+                  title: plan.title || 'แผนการสอนยังไม่มีชื่อ',
                   unitNumber: plan.unit_number,
                   unitName: plan.unit_name,
                   previewText:

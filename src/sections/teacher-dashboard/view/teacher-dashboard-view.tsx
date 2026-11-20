@@ -18,6 +18,7 @@ import Typography from '@mui/material/Typography';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
+import { toast } from 'src/components/snackbar';
 import {
   RemixIcon,
   RiMore2Line,
@@ -26,6 +27,8 @@ import {
   RiPresentationLine,
   RiCalendarScheduleLine,
 } from 'src/components/remix-icon';
+
+import { getSchool } from 'src/sections/school/school-actions';
 
 import { useAuthContext } from 'src/auth/hooks';
 
@@ -36,6 +39,17 @@ import {
 } from '../teacher-dashboard-actions';
 
 // ----------------------------------------------------------------------
+
+const STUDENT_SIGN_IN_URL = new URL(paths.auth.jwt.signIn, 'https://e-kru.com').href;
+
+async function copyStudentSignInLink() {
+  try {
+    await navigator.clipboard.writeText(STUDENT_SIGN_IN_URL);
+    toast.success('คัดลอกลิงก์เข้าสู่ระบบสำหรับนักเรียนแล้ว');
+  } catch {
+    toast.error('คัดลอกลิงก์ไม่สำเร็จ', { description: STUDENT_SIGN_IN_URL });
+  }
+}
 
 const summaryCards = [
   {
@@ -88,6 +102,12 @@ function timeToMinutes(value: string) {
 export function TeacherDashboardView() {
   const { user } = useAuthContext();
   const isPersonalWorkspace = user?.is_personal_workspace === true;
+  const schoolId = typeof user?.school_id === 'string' ? user.school_id : '';
+  const { data: workspace } = useQuery({
+    queryKey: ['nav-school', schoolId],
+    queryFn: () => getSchool(schoolId),
+    enabled: isPersonalWorkspace && !!schoolId,
+  });
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['teacher-dashboard', 'summary'],
     queryFn: getTeacherDashboardSummary,
@@ -187,16 +207,16 @@ export function TeacherDashboardView() {
               {todayText}
             </Typography>
             <Box sx={{ gap: 0.75, mt: 1.5, display: 'flex', flexWrap: 'wrap' }}>
-              <Chip
-                size="small"
-                label={
-                  isPersonalWorkspace ? 'พื้นที่ส่วนตัว' : (data.school?.name ?? 'ยังไม่มีข้อมูลโรงเรียน')
-                }
-                sx={(theme) => ({
-                  color: 'common.white',
-                  bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.15),
-                })}
-              />
+              {!isPersonalWorkspace && (
+                <Chip
+                  size="small"
+                  label={data.school?.name ?? 'ยังไม่มีข้อมูลโรงเรียน'}
+                  sx={(theme) => ({
+                    color: 'common.white',
+                    bgcolor: varAlpha(theme.vars.palette.common.whiteChannel, 0.15),
+                  })}
+                />
+              )}
               <Chip
                 size="small"
                 label={`วันนี้มี ${data.today_schedules.length} คาบ`}
@@ -220,7 +240,7 @@ export function TeacherDashboardView() {
               component={RouterLink}
               href={paths.teacher.timetable}
               variant="contained"
-              color="inherit"
+              color="white"
               startIcon={<RemixIcon icon="solar:calendar-date-bold" />}
               sx={{ minHeight: 44, color: 'primary.darker', bgcolor: 'common.white' }}
             >
@@ -246,6 +266,87 @@ export function TeacherDashboardView() {
           </Box>
         </Box>
       </Card>
+
+      {isPersonalWorkspace && (
+        <Card
+          component="section"
+          aria-labelledby="teacher-workspace-title"
+          variant="outlined"
+          sx={{
+            mb: { xs: 2, sm: 3 },
+            p: { xs: 2, sm: 2.5 },
+            gap: 2,
+            display: 'flex',
+            alignItems: { xs: 'stretch', sm: 'center' },
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box sx={{ gap: 1.5, display: 'flex', alignItems: 'flex-start', minWidth: 0 }}>
+            <Avatar
+              variant="rounded"
+              alt=""
+              src={workspace?.logo_url ?? data.school?.logo_url ?? undefined}
+              sx={{
+                width: 48,
+                height: 48,
+                flexShrink: 0,
+                color: 'primary.main',
+                bgcolor: 'primary.lighter',
+                '& img': { objectFit: 'contain' },
+              }}
+            >
+              <RemixIcon icon="solar:home-angle-bold-duotone" width={24} />
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                id="teacher-workspace-title"
+                component="h2"
+                variant="body2"
+                color="text.secondary"
+              >
+                พื้นที่ของฉัน
+              </Typography>
+              <Typography variant="h6" sx={{ overflowWrap: 'anywhere' }}>
+                {workspace?.name ?? data.school?.name ?? 'พื้นที่ส่วนตัว'}
+              </Typography>
+              {workspace?.workspace_description && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}
+                >
+                  {workspace.workspace_description}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              gap: 1,
+              display: 'grid',
+              gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', sm: 'repeat(2, auto)' },
+              flexShrink: 0,
+              '& .MuiButton-root': { minHeight: 44 },
+            }}
+          >
+            <Button
+              variant="contained"
+              startIcon={<RemixIcon icon="solar:copy-linear" />}
+              onClick={copyStudentSignInLink}
+            >
+              คัดลอกลิงก์นักเรียน
+            </Button>
+            <Button
+              component={RouterLink}
+              href={`${paths.teacher.profile}#workspace-settings`}
+              variant="outlined"
+            >
+              ตั้งค่าพื้นที่
+            </Button>
+          </Box>
+        </Card>
+      )}
 
       {data.summary.waiting_to_grade > 0 && (
         <Alert

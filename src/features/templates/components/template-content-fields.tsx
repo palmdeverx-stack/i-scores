@@ -306,6 +306,7 @@ function TemplateContentFieldsComponent({
           ['criteria', 'เกณฑ์'],
         ].map(([name, label]) => (
           <Field.Text
+            size="small"
             key={name}
             required
             multiline
@@ -315,11 +316,13 @@ function TemplateContentFieldsComponent({
         ))}
         <Box sx={{ gap: 2, display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
           <Field.Text
+            size="small"
             type="number"
             name={contentName(contentPath, 'maximumScore')}
             label="คะแนนเต็ม"
           />
           <Field.Text
+            size="small"
             type="number"
             name={contentName(contentPath, 'passingScore')}
             label="คะแนนผ่าน"

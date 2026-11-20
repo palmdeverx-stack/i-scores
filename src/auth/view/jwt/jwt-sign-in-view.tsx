@@ -132,8 +132,8 @@ export function JwtSignInView() {
         <>
           <Field.Text
             name="username"
-            label="ชื่อผู้ใช้"
-            placeholder="กรอกชื่อผู้ใช้หรือรหัสประจำตัว"
+            label="ชื่อผู้ใช้หรืออีเมล"
+            placeholder="นักเรียนใช้อีเมลที่ลงทะเบียนไว้ได้"
             slotProps={{
               inputLabel: { shrink: true },
               input: {

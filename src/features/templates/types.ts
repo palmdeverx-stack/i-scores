@@ -266,6 +266,7 @@ export type LessonPlanTemplateCover = {
   subjectCode?: string;
   topic?: string;
   teacherName?: string;
+  teacherPosition?: string;
   teachingDate?: string;
   gradeLevel?: string;
   semester?: string;
