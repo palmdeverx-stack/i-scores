@@ -117,6 +117,8 @@ test('one identity can switch isolated workspaces and carry personal teacher lic
   const switchRoute = read('src/app/api/auth/switch-workspace/route.ts');
   const entitlements = read('src/lib/school-subscription.ts');
   const accountPopover = read('src/layouts/components/account-popover.tsx');
+  const accountDrawer = read('src/layouts/components/account-drawer.tsx');
+  const workspaceSwitcher = read('src/layouts/components/workspace-switcher.tsx');
 
   assert.match(migration, /app_users_auth_user_workspace_key/);
   assert.match(migration, /accept_marketplace_school_invitation/);
@@ -127,8 +129,10 @@ test('one identity can switch isolated workspaces and carry personal teacher lic
   assert.match(switchRoute, /response\.cookies\.set\(ACCESS_TOKEN_COOKIE/);
   assert.match(entitlements, /marketplace_user_licenses/);
   assert.match(entitlements, /activePersonalLicenses: personalLicenses/);
-  assert.match(accountPopover, /handleWorkspaceSwitch/);
-  assert.match(accountPopover, /พื้นที่ใช้งาน/);
+  assert.match(accountPopover, /<WorkspaceSwitcher \/>/);
+  assert.match(accountDrawer, /<WorkspaceSwitcher \/>/);
+  assert.match(workspaceSwitcher, /handleWorkspaceSwitch/);
+  assert.match(workspaceSwitcher, /พื้นที่ใช้งาน/);
 });
 
 test('editing a subscription plan synchronizes active issued entitlements', () => {

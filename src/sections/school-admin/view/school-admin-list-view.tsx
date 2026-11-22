@@ -32,9 +32,10 @@ import TableContainer from '@mui/material/TableContainer';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
+import { toast } from 'src/components/snackbar';
 import { RemixIcon } from 'src/components/remix-icon';
 
-import { listSchools } from 'src/sections/school/school-actions';
+import { listSchools, resendSchoolInvite } from 'src/sections/school/school-actions';
 import { listUsers, updateSchoolAdmin, deleteSchoolAdmin } from 'src/sections/user/user-actions';
 
 // ----------------------------------------------------------------------
@@ -43,6 +44,7 @@ export function SchoolAdminListView() {
   const [search, setSearch] = useState('');
   const [editingAdmin, setEditingAdmin] = useState<UserRow | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [resendOpen, setResendOpen] = useState(false);
   const [deletingAdmin, setDeletingAdmin] = useState<UserRow | null>(null);
   const [editForm, setEditForm] = useState<UpdateSchoolAdminParams>({
     firstName: '',
@@ -81,6 +83,15 @@ export function SchoolAdminListView() {
     },
   });
 
+  const resendMutation = useMutation({
+    mutationFn: ({ schoolId, administratorId }: { schoolId: string; administratorId: string }) =>
+      resendSchoolInvite(schoolId, administratorId),
+    onSuccess: () => {
+      setResendOpen(false);
+      toast.success('ผู้ให้บริการรับคำขอส่งอีเมลเชิญแล้ว');
+    },
+  });
+
   const openEditDialog = (admin: UserRow) => {
     updateMutation.reset();
     setShowPassword(false);
@@ -105,6 +116,14 @@ export function SchoolAdminListView() {
     editForm.username.trim() &&
     editForm.schoolId &&
     (!editForm.password || editForm.password.length >= 6);
+
+  const canResend =
+    editingAdmin?.is_active &&
+    editingAdmin.email &&
+    editingAdmin.school_id === editForm.schoolId &&
+    editingAdmin.email === editForm.email?.trim() &&
+    editingAdmin.username === editForm.username.trim() &&
+    !editForm.password;
 
   const filteredAdmins = useMemo(() => {
     const keyword = search.trim().toLocaleLowerCase('th');
@@ -461,6 +480,17 @@ export function SchoolAdminListView() {
         </DialogContent>
         <DialogActions>
           <Button
+            variant="outlined"
+            disabled={!canResend || updateMutation.isPending}
+            onClick={() => {
+              resendMutation.reset();
+              setResendOpen(true);
+            }}
+            sx={{ mr: 'auto' }}
+          >
+            ส่งอีเมลเชิญอีกครั้ง
+          </Button>
+          <Button
             color="inherit"
             onClick={() => setEditingAdmin(null)}
             disabled={updateMutation.isPending}
@@ -490,6 +520,48 @@ export function SchoolAdminListView() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {editingAdmin?.school_id && (
+        <Dialog
+          open={resendOpen}
+          onClose={() => !resendMutation.isPending && setResendOpen(false)}
+          fullWidth
+          maxWidth="xs"
+        >
+          <DialogTitle>ส่งอีเมลเชิญอีกครั้ง</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2">
+              ส่งคำเชิญไปที่ <strong>{editingAdmin.email}</strong> ผู้รับใช้รหัสผ่านปัจจุบันของบัญชี
+            </Typography>
+            {resendMutation.error && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {resendMutation.error.message}
+              </Alert>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button
+              color="inherit"
+              disabled={resendMutation.isPending}
+              onClick={() => setResendOpen(false)}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              variant="contained"
+              loading={resendMutation.isPending}
+              onClick={() =>
+                resendMutation.mutate({
+                  schoolId: editingAdmin.school_id!,
+                  administratorId: editingAdmin.id,
+                })
+              }
+            >
+              ส่งอีเมล
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
       <Dialog
         open={!!deletingAdmin}

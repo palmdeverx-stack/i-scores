@@ -32,7 +32,23 @@ const literalLikePattern = (value: string) => value.replace(/[\\%_]/g, '\\$&');
 const INVALID_CREDENTIALS = 'ชื่อผู้ใช้งาน อีเมล หรือรหัสผ่านไม่ถูกต้อง';
 
 export async function POST(request: Request) {
-  const { username, password } = await request.json();
+  try {
+    return await signIn(request);
+  } catch (error) {
+    console.error('[auth] Password sign-in failed unexpectedly', {
+      errorType: error instanceof Error ? error.name : typeof error,
+    });
+    return NextResponse.json(
+      { message: 'ระบบเข้าสู่ระบบขัดข้อง กรุณาลองใหม่อีกครั้ง' },
+      { status: 500 }
+    );
+  }
+}
+
+async function signIn(request: Request) {
+  const body = await request.json().catch(() => null);
+  const username = body?.username;
+  const password = body?.password;
 
   if (
     typeof username !== 'string' ||

@@ -32,6 +32,7 @@ export function Editor({
   sx,
   error,
   onChange,
+  changeDelay = 200,
   slotProps,
   helperText,
   resetValue,
@@ -53,8 +54,8 @@ export function Editor({
     () =>
       debounce((html: string) => {
         onChange?.(html);
-      }, 200),
-    [onChange]
+      }, changeDelay),
+    [changeDelay, onChange]
   );
 
   const editor = useEditor({
@@ -64,7 +65,8 @@ export function Editor({
     shouldRerenderOnTransaction: !!rerenderKey,
     onUpdate: (ctx) => {
       const html = ctx.editor.getHTML();
-      debouncedOnChange(html);
+      if (changeDelay > 0) debouncedOnChange(html);
+      else onChange?.(html);
     },
     extensions: [
       StarterKitExtension.configure({

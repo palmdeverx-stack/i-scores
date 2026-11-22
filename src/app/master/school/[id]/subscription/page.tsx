@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { SchoolSubscriptionView } from 'src/sections/school-subscription/view/school-subscription-view';
 
 export const metadata: Metadata = {
+  title: 'แพ็กเกจและสิทธิ์โรงเรียน | E-KRU',
 };
 
 type Props = {
@@ -11,5 +12,5 @@ type Props = {
 
 export default async function Page({ params }: Props) {
   const { id } = await params;
-  return <SchoolSubscriptionView schoolId={id} />;
+  return <SchoolSubscriptionView key={id} schoolId={id} />;
 }

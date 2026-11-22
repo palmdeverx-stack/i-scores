@@ -147,9 +147,23 @@ export const paths = {
     emailSettings: `${ROOTS.MASTER}/email-settings`,
     apps: `${ROOTS.MASTER}/apps`,
     marketplaceCustomers: `${ROOTS.MASTER}/marketplace-customers`,
+    salesDocuments: `${ROOTS.MASTER}/sales-documents`,
+    salesCustomers: `${ROOTS.MASTER}/sales-documents/customers`,
+    salesSellers: `${ROOTS.MASTER}/sales-documents/sellers`,
+    salesDocumentsByKind: (kind: string) =>
+      `${ROOTS.MASTER}/sales-documents/${kind.replaceAll('_', '-')}`,
+    salesDocumentNew: (kind?: string) =>
+      kind
+        ? `${ROOTS.MASTER}/sales-documents/${kind.replaceAll('_', '-')}/new`
+        : `${ROOTS.MASTER}/sales-documents/new`,
+    salesDocumentEdit: (id: string, kind?: string) =>
+      kind
+        ? `${ROOTS.MASTER}/sales-documents/${kind.replaceAll('_', '-')}/edit/${encodeURIComponent(id)}`
+        : `${ROOTS.MASTER}/sales-documents/edit/${encodeURIComponent(id)}`,
     school: {
       root: `${ROOTS.MASTER}/school`,
       new: `${ROOTS.MASTER}/school/new`,
+      edit: (id: string) => `${ROOTS.MASTER}/school/new?edit=${encodeURIComponent(id)}`,
       subscription: (id: string) => `${ROOTS.MASTER}/school/${id}/subscription`,
     },
     schoolAdmin: {

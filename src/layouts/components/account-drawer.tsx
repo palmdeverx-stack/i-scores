@@ -42,6 +42,7 @@ import { useAuthContext } from 'src/auth/hooks';
 
 import { AccountButton } from './account-button';
 import { SignOutButton } from './sign-out-button';
+import { WorkspaceSwitcher } from './workspace-switcher';
 
 // ----------------------------------------------------------------------
 
@@ -228,7 +229,8 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
         <Scrollbar>
           <Box
             sx={{
-              p: 3,
+              px: 2,
+              pb: 3,
               pt: 5.5,
               color: isAdmin ? 'primary.contrastText' : 'text.primary',
               position: 'relative',
@@ -327,11 +329,10 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
             )}
           </Box>
 
-          <Box sx={{ px: 2, py: 2.5 }}>
-            <Typography
-              variant="overline"
-              sx={{ px: 1.5, mb: 1, display: 'block', color: 'text.disabled' }}
-            >
+          <WorkspaceSwitcher />
+
+          <Box sx={{ px: 2, pt: 1.5, pb: 2.5 }}>
+            <Typography variant="overline" sx={{ mb: 1, display: 'block', color: 'text.disabled' }}>
               {isAdmin ? t('เมนูผู้ดูแล') : t('เมนูบัญชี')}
             </Typography>
             <MenuList
@@ -366,8 +367,9 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
                       onClick={onClose}
                       aria-current={selected ? 'page' : undefined}
                       sx={{
-                        p: 1.25,
-                        gap: 1.5,
+                        px: '9px',
+                        py: 1,
+                        gap: 1,
                         width: 1,
                         minHeight: 48,
                         display: 'flex',
@@ -376,14 +378,25 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
                         alignItems: 'center',
                         color: selected ? 'primary.main' : 'text.secondary',
                         bgcolor: selected ? 'transparent' : 'transparent',
-                        '& svg': { width: 23, height: 23, flexShrink: 0 },
                         '&:hover': {
                           color: 'text.primary',
                           bgcolor: 'transparent',
                         },
                       }}
                     >
-                      {option.icon}
+                      <Box
+                        aria-hidden
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          flexShrink: 0,
+                          display: 'grid',
+                          placeItems: 'center',
+                          '& svg': { width: 20, height: 20, display: 'block' },
+                        }}
+                      >
+                        {option.icon}
+                      </Box>
                       <Box component="span" sx={{ minWidth: 0, flexGrow: 1 }}>
                         {t(option.label, { defaultValue: option.label })}
                       </Box>
@@ -402,7 +415,8 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
 
         <Box
           sx={{
-            p: 2.5,
+            px: 2,
+            py: 2.5,
             bgcolor: 'transparent',
           }}
         >

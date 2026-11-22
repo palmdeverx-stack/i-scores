@@ -53,10 +53,14 @@ export function EmailSettingsView() {
   }
 
   const settings = settingsQuery.data;
-  const hasChanges = fromEmail.trim() !== (settings?.resendFromEmail ?? '');
+  const usesGmail = settings?.emailProvider === 'gmail';
+  const senderConfigured = usesGmail
+    ? Boolean(settings?.effectiveFromEmail)
+    : settings?.resendApiKeyConfigured;
+  const hasChanges = !usesGmail && fromEmail.trim() !== (settings?.resendFromEmail ?? '');
 
   return (
-    <Container maxWidth="lg" sx={{ pb: 7 }}>
+    <Container maxWidth="xl" sx={{ pb: { xs: 5, md: 7 } }}>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={2}
@@ -65,7 +69,7 @@ export function EmailSettingsView() {
         sx={{ mb: 4 }}
       >
         <Box>
-          <Typography component="h1" variant="h4">
+          <Typography component="h1" variant="h3">
             ตั้งค่าการส่งอีเมล
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -93,7 +97,7 @@ export function EmailSettingsView() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 300px' },
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 2fr) minmax(0, 1fr)' },
           gap: 3,
           alignItems: 'start',
         }}
@@ -143,11 +147,17 @@ export function EmailSettingsView() {
                   fullWidth
                   label="ชื่อและอีเมลผู้ส่ง"
                   placeholder="EKRU <invite@notify.example.com>"
-                  value={fromEmail}
+                  value={usesGmail ? (settings?.effectiveFromEmail ?? '') : fromEmail}
                   disabled={saveMutation.isPending || settingsQuery.isError}
-                  helperText="ระบุอีเมล หรือชื่อผู้ส่งตามด้วย <อีเมล> โดยใช้โดเมนที่ยืนยันแล้วใน Resend"
+                  slotProps={{ input: { readOnly: usesGmail } }}
+                  helperText={
+                    usesGmail
+                      ? 'บัญชีผู้ส่งตั้งจาก GMAIL_USER บนเซิร์ฟเวอร์'
+                      : 'ใช้โดเมนที่ยืนยันแล้วใน Resend'
+                  }
                   onChange={(event) => setFromEmail(event.target.value)}
                 />
+                {settings?.senderError && <Alert severity="warning">{settings.senderError}</Alert>}
                 <Box sx={{ p: 2.5, borderRadius: 2, bgcolor: 'background.neutral' }}>
                   <Typography variant="overline" color="text.secondary">
                     ผู้ส่งที่ใช้งานปัจจุบัน
@@ -155,95 +165,98 @@ export function EmailSettingsView() {
                   <Typography variant="subtitle2" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>
                     {settings?.effectiveFromEmail || 'ยังไม่ได้กำหนดอีเมลผู้ส่ง'}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    การเปลี่ยนแปลงจะมีผลหลังบันทึกการตั้งค่า
-                  </Typography>
                 </Box>
               </Stack>
-              <Divider />
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
-                alignItems={{ xs: 'stretch', sm: 'center' }}
-                justifyContent="space-between"
-                sx={{ px: { xs: 2.5, sm: 3 }, py: 2 }}
-              >
-                <Typography variant="caption" color="text.secondary" aria-live="polite">
-                  {hasChanges ? 'มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก' : 'การตั้งค่าเป็นปัจจุบัน'}
-                </Typography>
-                <Button
-                  type="submit"
-                  color="primary"
-                  variant="contained"
-                  loading={saveMutation.isPending}
-                  disabled={!fromEmail.trim() || !hasChanges || settingsQuery.isError}
-                >
-                  บันทึกการตั้งค่า
-                </Button>
-              </Stack>
+              {!usesGmail && (
+                <>
+                  <Divider />
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={2}
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                    justifyContent="space-between"
+                    sx={{ px: { xs: 2.5, sm: 3 }, py: 2 }}
+                  >
+                    <Typography variant="caption" color="text.secondary" aria-live="polite">
+                      {hasChanges ? 'มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก' : 'การตั้งค่าเป็นปัจจุบัน'}
+                    </Typography>
+                    <Button
+                      type="submit"
+                      color="primary"
+                      variant="contained"
+                      loading={saveMutation.isPending}
+                      disabled={!fromEmail.trim() || !hasChanges || settingsQuery.isError}
+                    >
+                      บันทึกการตั้งค่า
+                    </Button>
+                  </Stack>
+                </>
+              )}
             </Box>
           </Card>
 
-          <Card
-            variant="outlined"
-            sx={{ p: { xs: 2.5, sm: 3 }, borderRadius: 3, boxShadow: 'none' }}
-          >
-            <Typography component="h2" variant="h6">
-              การใช้งาน Resend
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2.5 }}>
-              ข้อมูลโควตาและจำนวนคำขอที่รายงานโดยผู้ให้บริการ
-            </Typography>
-            <Box
-              sx={{
-                gap: 2,
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' },
-              }}
+          {!usesGmail && (
+            <Card
+              variant="outlined"
+              sx={{ p: { xs: 2.5, sm: 3 }, borderRadius: 3, boxShadow: 'none' }}
             >
-              {[
-                {
-                  label: 'โควตารายเดือน',
-                  value: settings?.resendUsage?.monthlyQuota ?? '—',
-                  helper: 'ข้อมูลจาก Resend',
-                },
-                {
-                  label: 'โควตารายวัน',
-                  value: settings?.resendUsage?.dailyQuota ?? '—',
-                  helper: 'แสดงเฉพาะ Free plan',
-                },
-                {
-                  label: 'คำขอ API คงเหลือ',
-                  value:
-                    settings?.resendUsage?.rateLimitRemaining != null &&
-                    settings.resendUsage.rateLimit != null
-                      ? `${settings.resendUsage.rateLimitRemaining} / ${settings.resendUsage.rateLimit}`
-                      : '—',
-                  helper: 'ต่อรอบจำกัดคำขอ',
-                },
-              ].map((item) => (
-                <Box
-                  key={item.label}
-                  sx={{ p: 2, borderRadius: 2, bgcolor: 'background.neutral', minWidth: 0 }}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    {item.label}
-                  </Typography>
-                  <Typography variant="h5" sx={{ my: 1, overflowWrap: 'anywhere' }}>
-                    {item.value}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {item.helper}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-            {settings?.resendUsageError && (
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                {settings.resendUsageError}
-              </Alert>
-            )}
-          </Card>
+              <Typography component="h2" variant="h6">
+                การใช้งาน Resend
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2.5 }}>
+                ข้อมูลโควตาและจำนวนคำขอที่รายงานโดยผู้ให้บริการ
+              </Typography>
+              <Box
+                sx={{
+                  gap: 2,
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' },
+                }}
+              >
+                {[
+                  {
+                    label: 'โควตารายเดือน',
+                    value: settings?.resendUsage?.monthlyQuota ?? '—',
+                    helper: 'ใช้แล้ว / ขีดจำกัด',
+                  },
+                  {
+                    label: 'โควตารายวัน',
+                    value: settings?.resendUsage?.dailyQuota ?? '—',
+                    helper: 'ใช้แล้ว / ขีดจำกัด',
+                  },
+                  {
+                    label: 'คำขอ API คงเหลือ',
+                    value:
+                      settings?.resendUsage?.rateLimitRemaining != null &&
+                      settings.resendUsage.rateLimit != null
+                        ? `${settings.resendUsage.rateLimitRemaining} / ${settings.resendUsage.rateLimit}`
+                        : '—',
+                    helper: 'ต่อรอบจำกัดคำขอ',
+                  },
+                ].map((item) => (
+                  <Box
+                    key={item.label}
+                    sx={{ p: 2, borderRadius: 2, bgcolor: 'background.neutral', minWidth: 0 }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      {item.label}
+                    </Typography>
+                    <Typography variant="h5" sx={{ my: 1, overflowWrap: 'anywhere' }}>
+                      {item.value}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {item.helper}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+              {settings?.resendUsageError && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  {settings.resendUsageError}
+                </Alert>
+              )}
+            </Card>
+          )}
         </Stack>
 
         <Stack spacing={3}>
@@ -252,44 +265,42 @@ export function EmailSettingsView() {
               สถานะบริการ
             </Typography>
             <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-              <Typography variant="body2">Resend API</Typography>
+              <Typography variant="body2">{usesGmail ? 'Gmail SMTP' : 'Resend API'}</Typography>
               <Chip
                 size="small"
                 variant="soft"
-                color={
-                  !settings ? 'default' : settings.resendApiKeyConfigured ? 'success' : 'warning'
-                }
+                color={!settings ? 'default' : senderConfigured ? 'success' : 'warning'}
                 label={
-                  !settings
-                    ? 'ไม่มีข้อมูล'
-                    : settings.resendApiKeyConfigured
-                      ? 'ตั้งค่าแล้ว'
-                      : 'ยังไม่ได้ตั้งค่า'
+                  !settings ? 'ไม่มีข้อมูล' : senderConfigured ? 'ตั้งค่าแล้ว' : 'ยังไม่ได้ตั้งค่า'
                 }
               />
             </Stack>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-              {settings?.resendApiKeyConfigured
-                ? 'พบคีย์สำหรับบริการส่งอีเมลแล้ว สถานะนี้ยังไม่ใช่ผลทดสอบการส่ง'
-                : 'ผู้ดูแลเซิร์ฟเวอร์สามารถกำหนดคีย์ผ่าน RESEND_API_KEY'}
+              {senderConfigured
+                ? 'พบค่าตั้งค่าสำหรับส่งอีเมล'
+                : usesGmail
+                  ? 'กำหนด GMAIL_USER และ GMAIL_APP_PASSWORD บนเซิร์ฟเวอร์'
+                  : 'กำหนด RESEND_API_KEY บนเซิร์ฟเวอร์'}
             </Typography>
           </Card>
-          <Card variant="outlined" sx={{ p: 3, borderRadius: 3, boxShadow: 'none' }}>
-            <Typography component="h2" variant="subtitle1" sx={{ mb: 2 }}>
-              ก่อนตั้งค่าผู้ส่ง
-            </Typography>
-            <Stack spacing={2}>
-              <Typography variant="body2" color="text.secondary">
-                1. ยืนยันโดเมนสำหรับส่งอีเมลใน Resend ให้เรียบร้อย
+          {!usesGmail && (
+            <Card variant="outlined" sx={{ p: 3, borderRadius: 3, boxShadow: 'none' }}>
+              <Typography component="h2" variant="subtitle1" sx={{ mb: 2 }}>
+                ก่อนตั้งค่าผู้ส่ง
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                2. ระบุชื่อและอีเมล เช่น EKRU &lt;invite@notify.example.com&gt;
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                3. บันทึกเพื่อใช้กับคำเชิญและอีเมลฉบับถัดไป
-              </Typography>
-            </Stack>
-          </Card>
+              <Stack spacing={2}>
+                <Typography variant="body2" color="text.secondary">
+                  1. ยืนยันโดเมนสำหรับส่งอีเมลใน Resend ให้เรียบร้อย
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  2. ระบุชื่อและอีเมล เช่น EKRU &lt;invite@notify.example.com&gt;
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  3. บันทึกเพื่อใช้กับคำเชิญและอีเมลฉบับถัดไป
+                </Typography>
+              </Stack>
+            </Card>
+          )}
         </Stack>
       </Box>
     </Container>

@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 
+import { MARKETPLACE_NOTIFICATION_PATTERN } from 'src/sections/notifications/notification-system';
+
 // ----------------------------------------------------------------------
 
 export async function POST(request: Request) {
@@ -23,6 +25,7 @@ export async function POST(request: Request) {
     .from('notifications')
     .update({ read_at: new Date().toISOString() })
     .eq('user_id', caller.sub)
+    .not('type', 'like', MARKETPLACE_NOTIFICATION_PATTERN)
     .is('read_at', null);
   if (caller.schoolId) query = query.eq('school_id', caller.schoolId);
 

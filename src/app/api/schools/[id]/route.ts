@@ -1,8 +1,14 @@
+import { z } from 'zod';
 import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { writeSecurityAudit } from 'src/lib/security-audit';
+
+import {
+  SCHOOL_ADMIN_USERNAME_ERROR,
+  SCHOOL_ADMIN_USERNAME_PATTERN,
+} from 'src/sections/school/school-admin-username';
 
 // ----------------------------------------------------------------------
 
@@ -28,29 +34,60 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
+  const includeAdminContact =
+    caller.role === 'master_admin' &&
+    new URL(request.url).searchParams.get('includeAdminContact') === '1';
   const fields =
-    'id, name, name_en, code, document_prefix, document_sequence_current, logo_url, is_active, created_at, workspace_type';
-  const { data: school, error } = await supabaseAdmin
+    'id, name, name_en, code, document_prefix, document_sequence_current, logo_url, is_active, created_at, workspace_type, email';
+  const result = await supabaseAdmin
     .from('schools')
     .select(`${fields}, workspace_description`)
     .eq('id', id)
     .single();
 
-  if (error?.code === '42703') {
+  let school = result.data;
+  if (result.error?.code === '42703') {
     const { data: legacySchool, error: legacyError } = await supabaseAdmin
       .from('schools')
       .select(fields)
       .eq('id', id)
       .single();
     if (!legacyError && legacySchool) {
-      return NextResponse.json({ school: { ...legacySchool, workspace_description: null } });
+      school = { ...legacySchool, workspace_description: null };
     }
   }
-  if (error || !school) {
+  if (!school) {
     return NextResponse.json({ message: 'ไม่พบโรงเรียนนี้' }, { status: 404 });
   }
 
-  return NextResponse.json({ school });
+  const { email, ...schoolDetails } = school;
+  if (!includeAdminContact) return NextResponse.json({ school: schoolDetails });
+
+  const { data: administrator, error } = await supabaseAdmin
+    .from('app_users')
+    .select('id, username, email, must_change_password')
+    .eq('school_id', id)
+    .eq('role', 'school_admin')
+    .order('created_at')
+    .order('id')
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    return NextResponse.json(
+      { message: 'ไม่สามารถโหลดข้อมูลบัญชีผู้ดูแลโรงเรียนได้' },
+      { status: 500 }
+    );
+  }
+  return NextResponse.json({
+    school: {
+      ...schoolDetails,
+      email,
+      adminUsername: administrator?.username ?? null,
+      administratorId: administrator?.id ?? null,
+      administratorEmail: administrator?.email ?? null,
+      administratorNeedsPasswordChange: administrator?.must_change_password ?? false,
+    },
+  });
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
@@ -66,8 +103,54 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
 
-  const { name, nameEn, code, isActive, documentPrefix, documentSequenceCurrent } =
-    await request.json();
+  const {
+    name,
+    nameEn,
+    code,
+    isActive,
+    documentPrefix,
+    documentSequenceCurrent,
+    email,
+    adminUsername,
+    administratorId,
+  } = await request.json();
+
+  const updatesContact = email !== undefined || adminUsername !== undefined;
+  if (updatesContact && caller.role !== 'master_admin') {
+    return NextResponse.json(
+      { message: 'ไม่มีสิทธิ์แก้ไขข้อมูลบัญชีผู้ดูแลโรงเรียน' },
+      { status: 403 }
+    );
+  }
+  if (adminUsername !== undefined && !z.uuid().safeParse(administratorId).success) {
+    return NextResponse.json(
+      { message: 'กรุณาโหลดบัญชีผู้ดูแลโรงเรียนใหม่ก่อนบันทึก' },
+      { status: 400 }
+    );
+  }
+  if (
+    updatesContact &&
+    [isActive, documentPrefix, documentSequenceCurrent].some((value) => value !== undefined)
+  ) {
+    return NextResponse.json(
+      { message: 'กรุณาบันทึกข้อมูลบัญชีแยกจากสถานะโรงเรียนและการตั้งค่าเอกสาร' },
+      { status: 400 }
+    );
+  }
+  if (
+    adminUsername !== undefined &&
+    (typeof adminUsername !== 'string' || !SCHOOL_ADMIN_USERNAME_PATTERN.test(adminUsername.trim()))
+  ) {
+    return NextResponse.json({ message: SCHOOL_ADMIN_USERNAME_ERROR }, { status: 400 });
+  }
+  if (
+    email !== undefined &&
+    (typeof email !== 'string' ||
+      email.trim().length > 320 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+  ) {
+    return NextResponse.json({ message: 'อีเมลรับคำเชิญไม่ถูกต้อง' }, { status: 400 });
+  }
 
   const updates: Record<string, unknown> = {};
 
@@ -147,6 +230,46 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
     updates.is_active = isActive;
+  }
+
+  if (updatesContact) {
+    const { data: school, error } = await supabaseAdmin.rpc('update_school_admin_contact', {
+      p_school_id: id,
+      p_school_updates: { ...updates, ...(email !== undefined && { email: email.trim() }) },
+      p_administrator_id: adminUsername === undefined ? null : administratorId,
+      p_admin_username: adminUsername?.trim() ?? null,
+    });
+    if (error?.code === '23505') {
+      const message = error.message.includes('app_users_username_key')
+        ? 'ชื่อผู้ใช้งานนี้ถูกใช้แล้ว'
+        : 'รหัสโรงเรียนนี้ถูกใช้แล้ว';
+      return NextResponse.json({ message }, { status: 409 });
+    }
+    if (error?.code === 'P0002') {
+      return NextResponse.json(
+        { message: 'ไม่พบโรงเรียนหรือบัญชีผู้ดูแลสำหรับแก้ไข' },
+        { status: 404 }
+      );
+    }
+    if (error || !school) {
+      return NextResponse.json(
+        { message: 'ไม่สามารถอัปเดตข้อมูลโรงเรียนและบัญชีผู้ดูแลได้' },
+        { status: 500 }
+      );
+    }
+    await writeSecurityAudit({
+      action: 'school.admin_contact_updated',
+      actorUserId: caller.sub,
+      schoolId: id,
+      request,
+      targetType: 'school',
+      targetId: id,
+      metadata: {
+        usernameChanged: adminUsername !== undefined,
+        invitationEmailChanged: email !== undefined,
+      },
+    });
+    return NextResponse.json({ school });
   }
 
   if (Object.keys(updates).length === 0) {

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { supabaseAdmin } from './supabase-admin';
+import { loadEffectiveSchoolEntitlements } from './school-subscription';
 
 // ----------------------------------------------------------------------
 
@@ -29,6 +30,8 @@ export type UserWorkspace = {
   logo_url: string | null;
   workspace_type: 'school' | 'personal';
   role: WorkspaceProfile['role'];
+  access_usable?: boolean;
+  access_days_remaining?: number | null;
 };
 
 function singleSchool(value: WorkspaceProfile['school']) {
@@ -49,7 +52,7 @@ export async function listUserWorkspaces(authUserId: string): Promise<UserWorksp
 
   if (error) throw new Error(error.message);
 
-  return ((data ?? []) as unknown as WorkspaceProfile[])
+  const workspaces = ((data ?? []) as unknown as WorkspaceProfile[])
     .flatMap((profile) => {
       const school = singleSchool(profile.school);
       if (!profile.school_id || !school?.is_active) return [];
@@ -60,7 +63,7 @@ export async function listUserWorkspaces(authUserId: string): Promise<UserWorksp
         {
           profile_id: profile.id,
           school_id: profile.school_id,
-          name: school.workspace_type === 'personal' ? 'พื้นที่ส่วนตัว' : school.name,
+          name: school.name,
           code: school.code,
           logo_url: school.logo_url,
           workspace_type: school.workspace_type,
@@ -74,6 +77,23 @@ export async function listUserWorkspaces(authUserId: string): Promise<UserWorksp
       }
       return left.name.localeCompare(right.name, 'th');
     });
+
+  if (workspaces.length <= 1) return workspaces;
+
+  const now = Date.now();
+  return Promise.all(
+    workspaces.map(async (workspace) => {
+      if (workspace.role === 'master_admin') return workspace;
+      const { usable, accessEndsAt } = await loadEffectiveSchoolEntitlements(workspace.school_id, {
+        userId: workspace.profile_id,
+        role: workspace.role,
+      });
+      const daysRemaining = accessEndsAt
+        ? Math.max(1, Math.ceil((Date.parse(accessEndsAt) - now) / 86_400_000))
+        : null;
+      return { ...workspace, access_usable: usable, access_days_remaining: daysRemaining };
+    })
+  );
 }
 
 export async function getWorkspaceProfile(profileId: string, authUserId: string) {

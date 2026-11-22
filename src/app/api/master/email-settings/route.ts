@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
 
 import { requireRole } from 'src/lib/auth-token';
+import { getGmailSender } from 'src/lib/gmail-email';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import {
+  isGmailSender,
   getResendUsage,
+  getEmailProvider,
   getResendFromEmail,
   isResendApiKeyConfigured,
+  RESEND_GMAIL_SENDER_ERROR,
+  isResendUsageKeyConfigured,
 } from 'src/lib/resend';
 
 // ----------------------------------------------------------------------
@@ -41,20 +46,34 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
+  const emailProvider = getEmailProvider();
   let resendUsage = null;
   let resendUsageError = null;
-  if (isResendApiKeyConfigured()) {
+  if (emailProvider === 'resend' && isResendUsageKeyConfigured()) {
     try {
       resendUsage = await getResendUsage();
     } catch (usageError) {
       resendUsageError =
-        usageError instanceof Error ? usageError.message : 'ไม่สามารถอ่านข้อมูลการใช้งาน Resend ได้';
+        usageError instanceof Error
+          ? usageError.message
+          : 'ไม่สามารถอ่านข้อมูลการใช้งาน Resend ได้';
     }
   }
 
+  const effectiveFromEmail =
+    emailProvider === 'gmail' ? getGmailSender() : await getResendFromEmail();
   return NextResponse.json({
+    emailProvider,
     resendFromEmail: data?.resend_from_email ?? '',
-    effectiveFromEmail: await getResendFromEmail(),
+    effectiveFromEmail,
+    senderError:
+      emailProvider === 'gmail'
+        ? effectiveFromEmail
+          ? null
+          : 'ยังไม่ได้ตั้งค่า GMAIL_USER หรือ GMAIL_APP_PASSWORD'
+        : effectiveFromEmail && isGmailSender(effectiveFromEmail)
+          ? RESEND_GMAIL_SENDER_ERROR
+          : null,
     resendApiKeyConfigured: isResendApiKeyConfigured(),
     environmentFallbackConfigured: Boolean(process.env.RESEND_FROM_EMAIL),
     updatedAt: data?.updated_at ?? null,
@@ -68,6 +87,12 @@ export async function PATCH(request: Request) {
   if (!caller) {
     return NextResponse.json({ message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
   }
+  if (getEmailProvider() === 'gmail') {
+    return NextResponse.json(
+      { message: 'ผู้ส่งของ Gmail ถูกกำหนดจาก GMAIL_USER บนเซิร์ฟเวอร์' },
+      { status: 409 }
+    );
+  }
 
   const body = await request.json().catch(() => null);
   const resendFromEmail = normalizeFromEmail(body?.resendFromEmail);
@@ -76,6 +101,9 @@ export async function PATCH(request: Request) {
       { message: 'รูปแบบอีเมลผู้ส่งไม่ถูกต้อง เช่น EKRU <invite@example.com>' },
       { status: 400 }
     );
+  }
+  if (isGmailSender(resendFromEmail)) {
+    return NextResponse.json({ message: RESEND_GMAIL_SENDER_ERROR }, { status: 400 });
   }
 
   const { data, error } = await supabaseAdmin
@@ -98,6 +126,7 @@ export async function PATCH(request: Request) {
   }
 
   return NextResponse.json({
+    emailProvider: 'resend',
     resendFromEmail: data.resend_from_email,
     effectiveFromEmail: data.resend_from_email,
     resendApiKeyConfigured: isResendApiKeyConfigured(),

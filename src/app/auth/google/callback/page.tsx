@@ -15,6 +15,7 @@ import { getSupabaseBrowserClient } from 'src/lib/supabase-browser';
 import { useAuthContext } from 'src/auth/hooks';
 import { getHomePathForRole } from 'src/auth/utils';
 import { safeInternalPath } from 'src/auth/utils/safe-internal-path';
+import { readGoogleAuthResponse } from 'src/auth/utils/google-auth-response';
 
 // ----------------------------------------------------------------------
 
@@ -37,18 +38,13 @@ export default function GoogleAuthCallbackPage() {
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
         if (error || !data.session) throw error ?? new Error('ไม่พบ Google session');
 
-        const response = await fetch('/api/auth/google', {
+        const result = await fetch('/api/auth/google', {
           method: 'POST',
           credentials: 'include',
           headers: { Authorization: `Bearer ${data.session.access_token}` },
-        });
-        const result = await response.json();
-        if (!response.ok) {
-          await supabase.auth.signOut();
-          throw new Error(result.message ?? 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
-        }
-
-        await supabase.auth.signOut({ scope: 'local' });
+        })
+          .then(readGoogleAuthResponse)
+          .finally(() => supabase.auth.signOut({ scope: 'local' }));
 
         const returnTo = safeInternalPath(
           new URLSearchParams(window.location.search).get('returnTo'),
@@ -83,7 +79,10 @@ export default function GoogleAuthCallbackPage() {
           callbackError instanceof Error
             ? callbackError.message
             : 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้';
-        router.replace(`${paths.auth.jwt.signIn}?googleError=${encodeURIComponent(message)}`);
+        const params = new URLSearchParams({ googleError: message });
+        const returnTo = safeInternalPath(searchParams.get('returnTo'), true);
+        if (returnTo) params.set('returnTo', returnTo);
+        router.replace(`${paths.auth.jwt.signIn}?${params.toString()}`);
       }
     };
 

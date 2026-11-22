@@ -9,16 +9,22 @@ import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Card from '@mui/material/Card';
-import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
+import Table from '@mui/material/Table';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { paths } from 'src/routes/paths';
@@ -62,7 +68,8 @@ function quotaLabel(value: number) {
 export function SubscriptionPlanView() {
   const queryClient = useQueryClient();
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
+  const [detailPlan, setDetailPlan] = useState<SubscriptionPlan | null>(null);
+  const [search, setSearch] = useState('');
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [deletingPlan, setDeletingPlan] = useState<SubscriptionPlan | null>(null);
   const [planFilter, setPlanFilter] = useState<PlanFilter>('all');
@@ -79,7 +86,6 @@ export function SubscriptionPlanView() {
         queryClient.invalidateQueries({ queryKey: ['subscription-plans'] }),
         queryClient.invalidateQueries({ queryKey: ['school-subscription-access'] }),
       ]);
-      setFormOpen(false);
       setEditingPlan(null);
     },
   });
@@ -92,13 +98,17 @@ export function SubscriptionPlanView() {
   });
 
   const plans = plansQuery.data ?? [];
-  const activePlans = plans.filter((plan) => plan.is_active);
-  const filteredPlans =
-    planFilter === 'all' ? plans : plans.filter((plan) => plan.target_scope === planFilter);
-  const activeFeatureKeys = new Set(activePlans.flatMap((plan) => plan.enabled_features));
-  const enabledFeatureCount = MASTER_ADMIN_SCHOOL_FEATURES.filter((feature) =>
-    activeFeatureKeys.has(feature.key)
-  ).length;
+  const keyword = search.trim().toLocaleLowerCase('th');
+  const filteredPlans = plans.filter(
+    (plan) =>
+      (planFilter === 'all' || plan.target_scope === planFilter) &&
+      `${plan.name} ${plan.code}`.toLocaleLowerCase('th').includes(keyword)
+  );
+  const openEditor = (plan: SubscriptionPlan) => {
+    saveMutation.reset();
+    setDetailPlan(null);
+    setEditingPlan(plan);
+  };
   const filterCounts = {
     all: plans.length,
     individual: plans.filter((plan) => plan.target_scope === 'individual').length,
@@ -123,102 +133,28 @@ export function SubscriptionPlanView() {
             ตั้งค่าแพ็กเกจ
           </Typography>
           <Typography sx={{ mt: 0.75, color: 'text.secondary' }}>
-            สร้างแพ็กเกจกลางสำหรับบุคคล โรงเรียน หรือใช้ร่วมกันทั้งสองแบบ
+            กำหนดฟีเจอร์และโควตาของแต่ละแพ็กเกจ ราคาขายตั้งที่ Marketplace
           </Typography>
         </Box>
-        <Button
-          size="large"
-          variant="contained"
-          component={RouterLink}
-          href={paths.master.subscriptionPlan.new}
-          startIcon={<RemixIcon icon="mingcute:add-line" />}
-        >
-          สร้างแพ็กเกจ
-        </Button>
-      </Box>
-
-      <Alert
-        severity="info"
-        icon={<RemixIcon icon="solar:layers-minimalistic-bold-duotone" width={24} />}
-        sx={{ mb: 3, alignItems: 'center' }}
-      >
-        <Typography variant="subtitle2">แพ็กเกจบุคคลทำงานแบบรวมสิทธิ์</Typography>
-        <Typography variant="body2">
-          ผู้ซื้อสามารถมีหลายแพ็กเกจได้ ระบบจะแสดงเมนูที่ได้รับทั้งหมดในพื้นที่ส่วนตัวเดียวกัน
-          และเมนูที่ซ้ำจะแสดงเพียงครั้งเดียว
-        </Typography>
-      </Alert>
-
-      <Box
-        sx={{
-          mb: 4,
-          gap: { xs: 1, sm: 3 },
-          display: 'grid',
-          gridTemplateColumns: { xs: 'repeat(3, 1fr)', md: 'repeat(3, minmax(0, 220px))' },
-        }}
-      >
-        {(
-          [
-            ['แพ็กเกจทั้งหมด', plans.length, 'solar:box-minimalistic-bold'],
-            ['กำลังเปิดใช้', activePlans.length, 'solar:check-circle-bold'],
-            [
-              'ฟีเจอร์ที่เลือกได้',
-              MASTER_ADMIN_SCHOOL_FEATURES.length,
-              'solar:settings-bold-duotone',
-            ],
-          ] as const
-        ).map(([label, value, icon]) => (
-          <Box key={label} sx={{ gap: 1.5, display: 'flex', alignItems: 'center' }}>
-            <Box
-              sx={{
-                width: 44,
-                height: 44,
-                flexShrink: 0,
-                display: { xs: 'none', sm: 'grid' },
-                borderRadius: 1.5,
-                color: 'primary.main',
-                placeItems: 'center',
-                bgcolor: 'primary.lighter',
-              }}
-            >
-              <RemixIcon icon={icon} width={24} />
-            </Box>
-            <Box>
-              <Typography variant="h4">{String(value)}</Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {String(label)}
-              </Typography>
-            </Box>
-          </Box>
-        ))}
-      </Box>
-
-      <Alert
-        severity="info"
-        sx={{ mb: 3 }}
-        action={
-          <Button color="inherit" onClick={() => setCatalogOpen(true)}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button variant="outlined" onClick={() => setCatalogOpen(true)}>
             ดูฟีเจอร์ทั้งหมด
           </Button>
-        }
-      >
-        <Typography variant="subtitle2">
-          รายการฟีเจอร์ {MASTER_ADMIN_SCHOOL_FEATURES.length} รายการ พร้อมให้จัดแพ็กเกจ
-        </Typography>
-        <Typography variant="body2">
-          ครอบคลุมงานพัสดุและจัดซื้อ เวลาปฏิบัติงาน ตารางครูเวร วันหยุด และเวลาเรียน ·
-          แพ็กเกจที่เปิดใช้งานเลือกใช้แล้ว {enabledFeatureCount} ฟีเจอร์
-        </Typography>
-      </Alert>
-
-      {plansQuery.isLoading && (
-        <Box sx={{ py: 12, display: 'grid', placeItems: 'center' }}>
-          <CircularProgress />
+          <Button
+            variant="contained"
+            component={RouterLink}
+            href={paths.master.subscriptionPlan.new}
+            startIcon={<RemixIcon icon="mingcute:add-line" />}
+          >
+            สร้างแพ็กเกจ
+          </Button>
         </Box>
-      )}
+      </Box>
+
       {plansQuery.isError && (
         <Alert
           severity="error"
+          sx={{ mb: 2 }}
           action={
             <Button color="inherit" size="small" onClick={() => plansQuery.refetch()}>
               ลองอีกครั้ง
@@ -228,236 +164,191 @@ export function SubscriptionPlanView() {
           {planQueryErrorMessage(plansQuery.error)}
         </Alert>
       )}
-      {!plansQuery.isLoading && !plansQuery.isError && plans.length === 0 && (
-        <Box sx={{ py: 10, textAlign: 'center', borderTop: '1px solid', borderColor: 'divider' }}>
-          <RemixIcon icon="solar:box-minimalistic-bold" width={56} color="text.disabled" />
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            ยังไม่มีแพ็กเกจ
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            สร้างแพ็กเกจแรกเพื่อเริ่มกำหนดสิทธิ์ให้ผู้ใช้งาน
-          </Typography>
-        </Box>
-      )}
 
-      {!plansQuery.isLoading && !plansQuery.isError && plans.length > 0 ? (
-        <Box sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs
-            value={planFilter}
-            onChange={(_, value: PlanFilter) => setPlanFilter(value)}
-            variant="scrollable"
-            scrollButtons="auto"
-            aria-label="กรองแพ็กเกจตามกลุ่มผู้ซื้อ"
+      <Card variant="outlined">
+        <Tabs
+          value={planFilter}
+          onChange={(_, value: PlanFilter) => setPlanFilter(value)}
+          variant="scrollable"
+          scrollButtons="auto"
+          aria-label="กรองแพ็กเกจตามกลุ่มผู้ซื้อ"
+          sx={{ px: { xs: 1, sm: 2 } }}
+        >
+          <Tab value="all" label={`ทั้งหมด (${filterCounts.all})`} />
+          <Tab value="individual" label={`บุคคล (${filterCounts.individual})`} />
+          <Tab value="school" label={`โรงเรียน (${filterCounts.school})`} />
+          <Tab value="both" label={`บุคคลและโรงเรียน (${filterCounts.both})`} />
+        </Tabs>
+        <Divider />
+        <Box sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
+          <TextField
+            size="small"
+            label="ค้นหาชื่อหรือรหัสแพ็กเกจ"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            sx={{ width: { xs: 1, sm: 320 } }}
+          />
+        </Box>
+
+        <TableContainer>
+          <Table
+            aria-label="รายการแพ็กเกจ"
+            aria-busy={plansQuery.isFetching}
+            sx={{ minWidth: 680 }}
           >
-            <Tab value="all" label={`ทั้งหมด ${filterCounts.all}`} />
-            <Tab value="individual" label={`บุคคล ${filterCounts.individual}`} />
-            <Tab value="school" label={`โรงเรียน ${filterCounts.school}`} />
-            <Tab value="both" label={`ทั้งสองแบบ ${filterCounts.both}`} />
-          </Tabs>
-        </Box>
-      ) : null}
+            <TableHead>
+              <TableRow>
+                <TableCell>แพ็กเกจ</TableCell>
+                <TableCell>กลุ่มผู้ซื้อ</TableCell>
+                <TableCell>สถานะ</TableCell>
+                <TableCell>ฟีเจอร์</TableCell>
+                <TableCell align="right">จัดการ</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {plansQuery.isLoading && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                    <CircularProgress size={28} aria-label="กำลังโหลดแพ็กเกจ" />
+                  </TableCell>
+                </TableRow>
+              )}
+              {!plansQuery.isLoading && !plansQuery.isError && filteredPlans.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                    {plans.length ? 'ไม่พบแพ็กเกจที่ตรงกับตัวกรอง' : 'ยังไม่มีแพ็กเกจ'}
+                  </TableCell>
+                </TableRow>
+              )}
+              {filteredPlans.map((plan) => (
+                <TableRow key={plan.id} hover>
+                  <TableCell component="th" scope="row" sx={{ minWidth: 200 }}>
+                    <Typography variant="subtitle2" sx={{ overflowWrap: 'anywhere' }}>
+                      {plan.name}
+                    </Typography>
+                    <Typography
+                      component="div"
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ overflowWrap: 'anywhere' }}
+                    >
+                      {plan.code} · ลำดับ {plan.sort_order}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{TARGET_SCOPE_LABEL[plan.target_scope]}</TableCell>
+                  <TableCell>
+                    <Label color={plan.is_active ? 'success' : 'default'}>
+                      {plan.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                    </Label>
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {plan.enabled_features.length} ฟีเจอร์
+                  </TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                    <Button size="small" color="inherit" onClick={() => setDetailPlan(plan)}>
+                      ดูรายละเอียด
+                    </Button>
+                    <Button size="small" onClick={() => openEditor(plan)}>
+                      แก้ไข
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
 
-      {!plansQuery.isLoading &&
-      !plansQuery.isError &&
-      plans.length > 0 &&
-      filteredPlans.length === 0 ? (
-        <Box sx={{ py: 8, textAlign: 'center' }}>
-          <Typography variant="h6">ยังไม่มีแพ็กเกจในกลุ่มนี้</Typography>
-          <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-            เลือกกลุ่มอื่น หรือสร้างแพ็กเกจใหม่
-          </Typography>
-        </Box>
-      ) : null}
-
-      <Box
-        sx={{
-          gap: 2.5,
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' },
-        }}
-      >
-        {filteredPlans.map((plan) => (
-          <Card
-            key={plan.id}
-            variant="outlined"
-            sx={{
-              p: { xs: 2.5, sm: 3 },
-              opacity: plan.is_active ? 1 : 0.72,
-              borderColor: plan.is_active ? 'divider' : 'text.disabled',
-            }}
-          >
-            <Box
-              sx={{ gap: 2, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between' }}
-            >
-              <Box sx={{ minWidth: 0 }}>
-                <Box sx={{ gap: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Typography variant="h5">{plan.name}</Typography>
-                  <Label color={plan.is_active ? 'success' : 'default'}>
-                    {plan.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
-                  </Label>
-                  <Label color={plan.target_scope === 'individual' ? 'info' : 'default'}>
-                    {TARGET_SCOPE_LABEL[plan.target_scope]}
-                  </Label>
-                </Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  {plan.code} · ลำดับ {plan.sort_order}
-                </Typography>
-              </Box>
-              <Chip size="small" variant="outlined" label="ราคาอยู่ที่ Marketplace" />
-            </Box>
-
-            <Typography variant="body2" sx={{ mt: 2, minHeight: 42, color: 'text.secondary' }}>
-              {plan.description || 'ไม่มีคำอธิบาย'}
-            </Typography>
-
-            {plan.target_scope === 'individual' ? (
-              <Box
-                sx={{
-                  mt: 2,
-                  px: 1.5,
-                  py: 1,
-                  gap: 1,
-                  display: 'flex',
-                  borderRadius: 1,
-                  alignItems: 'center',
-                  color: 'info.dark',
-                  bgcolor: 'info.lighter',
-                }}
-              >
-                <RemixIcon icon="solar:layers-bold-duotone" width={20} />
-                <Typography variant="caption">
-                  รวมสิทธิ์และข้อมูลกับแพ็กเกจบุคคลอื่นในพื้นที่เดียวกัน
-                </Typography>
-              </Box>
-            ) : null}
-
-            {plan.target_scope !== 'individual' ? (
-              <>
-                <Divider sx={{ my: 2.5 }} />
-                <Box
-                  sx={{
-                    gap: 2,
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                  }}
-                >
-                  {[
-                    ['ผู้ดูแล', plan.max_school_admins],
-                    ['ครู', plan.max_teachers],
-                    ['นักเรียน', plan.max_students],
-                  ].map(([label, value]) => (
-                    <Box key={label}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {label}
-                      </Typography>
-                      <Typography variant="subtitle1">{quotaLabel(Number(value))}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </>
-            ) : null}
-
-            <Divider sx={{ my: 2.5 }} />
-
-            <Box>
-              <Box sx={{ gap: 1, display: 'flex', alignItems: 'center' }}>
-                <Typography variant="subtitle2">เมนูและความสามารถ</Typography>
-                <Chip size="small" label={`${plan.enabled_features.length} เมนู`} />
-              </Box>
-              {plan.source_bundles.length ? (
-                <Box sx={{ gap: 0.75, mt: 1.25, display: 'flex', flexWrap: 'wrap' }}>
-                  {plan.source_bundles.map((bundle) => (
-                    <Chip
-                      key={`${bundle.id}:${bundle.version}`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      label={`${bundle.name} · v${bundle.version}`}
-                    />
-                  ))}
-                </Box>
-              ) : null}
-              <Box sx={{ gap: 0.75, mt: 1.25, display: 'flex', flexWrap: 'wrap' }}>
-                {plan.enabled_features.slice(0, 6).map((featureKey) => (
-                  <Chip
-                    key={featureKey}
-                    size="small"
-                    variant="outlined"
-                    label={FEATURE_BY_KEY.get(featureKey)?.label ?? featureKey}
-                  />
-                ))}
-                {plan.enabled_features.length > 6 ? (
-                  <Chip size="small" label={`+${plan.enabled_features.length - 6} เมนู`} />
-                ) : null}
-              </Box>
-            </Box>
-
-            <Box
-              sx={{
-                mt: 2.5,
-                gap: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Box>
-                {plan.target_scope !== 'individual' ? (
-                  <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                    LINE:{' '}
-                    {plan.enabled_features.includes('admin.line_notifications')
-                      ? plan.max_line_notifications === 0
-                        ? 'ไม่จำกัด'
-                        : `${quotaLabel(plan.max_line_notifications)} ครั้ง/เดือน`
-                      : 'ไม่ใช้'}
-                  </Typography>
-                ) : (
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    ไม่มีโควตาผู้ใช้งาน
-                  </Typography>
-                )}
-              </Box>
-              <Box>
-                <Button
-                  size="small"
-                  color="inherit"
-                  startIcon={<RemixIcon icon="solar:pen-bold" />}
-                  onClick={() => {
-                    saveMutation.reset();
-                    setEditingPlan(plan);
-                    setFormOpen(true);
-                  }}
-                >
-                  แก้ไข
-                </Button>
-                <Button
-                  size="small"
-                  color="error"
-                  startIcon={<RemixIcon icon="solar:trash-bin-trash-bold" />}
-                  onClick={() => {
-                    deleteMutation.reset();
-                    setDeletingPlan(plan);
-                  }}
-                >
-                  ลบ
-                </Button>
-              </Box>
-            </Box>
-          </Card>
-        ))}
-      </Box>
-
-      {formOpen && (
+      {editingPlan && (
         <SubscriptionPlanFormDialog
           plan={editingPlan}
           loading={saveMutation.isPending}
           error={saveMutation.error?.message}
-          onClose={() => {
-            setFormOpen(false);
-            setEditingPlan(null);
-          }}
-          onSubmit={(input) => editingPlan && saveMutation.mutate({ plan: editingPlan, input })}
+          onClose={() => setEditingPlan(null)}
+          onSubmit={(input) => saveMutation.mutate({ plan: editingPlan, input })}
         />
+      )}
+
+      {detailPlan && (
+        <Dialog open onClose={() => setDetailPlan(null)} fullWidth maxWidth="sm">
+          <DialogTitle>{detailPlan.name}</DialogTitle>
+          <DialogContent dividers>
+            <Typography variant="body2" color="text.secondary">
+              {detailPlan.code} · {TARGET_SCOPE_LABEL[detailPlan.target_scope]}
+            </Typography>
+            {detailPlan.description && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                {detailPlan.description}
+              </Typography>
+            )}
+            {detailPlan.target_scope !== 'individual' && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2">โควตาโรงเรียน</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  ผู้ดูแล {quotaLabel(detailPlan.max_school_admins)} · ครู{' '}
+                  {quotaLabel(detailPlan.max_teachers)} · นักเรียน{' '}
+                  {quotaLabel(detailPlan.max_students)}
+                </Typography>
+                {detailPlan.enabled_features.includes('admin.line_notifications') && (
+                  <Typography variant="body2" color="text.secondary">
+                    แจ้งเตือน LINE{' '}
+                    {detailPlan.max_line_notifications
+                      ? `${quotaLabel(detailPlan.max_line_notifications)} ครั้งต่อเดือน`
+                      : 'ไม่จำกัด'}
+                  </Typography>
+                )}
+              </Box>
+            )}
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2">
+              ฟีเจอร์ในแพ็กเกจ ({detailPlan.enabled_features.length})
+            </Typography>
+            {detailPlan.enabled_features.length ? (
+              <Box component="ul" sx={{ my: 1, pl: 2.5 }}>
+                {detailPlan.enabled_features.map((key) => (
+                  <Typography component="li" variant="body2" key={key}>
+                    {FEATURE_BY_KEY.get(key)?.label ?? key}
+                  </Typography>
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                ยังไม่ได้เลือกฟีเจอร์
+              </Typography>
+            )}
+            {detailPlan.source_bundles.length > 0 && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: 'block', mt: 1.5 }}
+              >
+                ชุดฟีเจอร์ที่ใช้{' '}
+                {detailPlan.source_bundles
+                  .map((bundle) => `${bundle.name} (v${bundle.version})`)
+                  .join(', ')}
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button
+              color="error"
+              sx={{ mr: 'auto' }}
+              onClick={() => {
+                deleteMutation.reset();
+                setDeletingPlan(detailPlan);
+                setDetailPlan(null);
+              }}
+            >
+              ลบแพ็กเกจ
+            </Button>
+            <Button color="inherit" onClick={() => setDetailPlan(null)}>
+              ปิด
+            </Button>
+            <Button variant="contained" onClick={() => openEditor(detailPlan)}>
+              แก้ไข
+            </Button>
+          </DialogActions>
+        </Dialog>
       )}
 
       <Dialog open={catalogOpen} onClose={() => setCatalogOpen(false)} fullWidth maxWidth="md">

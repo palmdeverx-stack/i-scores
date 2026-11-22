@@ -261,3 +261,70 @@ export async function recoverPersonalWorkspacePurchases(authUserId: string) {
   await finalizePersonalWorkspace(authUserId, workspace.id, { seedAttendance });
   return { recovered: recoveredCount > 0, count: recoveredCount };
 }
+
+export async function recoverMissingMarketplaceWorkspaces() {
+  const now = new Date().toISOString();
+  const batchSize = 100;
+  const buyerIds = new Set<string>();
+
+  for (let offset = 0; ; offset += batchSize) {
+    const { data: licenses, error } = await supabaseAdmin
+      .from('marketplace_user_licenses')
+      .select('buyer_id, order_item_id')
+      .eq('status', 'active')
+      .lte('starts_at', now)
+      .gt('expires_at', now)
+      .not('order_item_id', 'is', null)
+      .overlaps('feature_keys', [...PERSONAL_WORKSPACE_FEATURES])
+      .order('id')
+      .range(offset, offset + batchSize - 1);
+    if (error) throw error;
+    if (!licenses.length) break;
+
+    const { data: events, error: eventError } = await supabaseAdmin
+      .from('marketplace_provision_events')
+      .select('order_item_id')
+      .in(
+        'order_item_id',
+        licenses.map((license) => license.order_item_id)
+      );
+    if (eventError) throw eventError;
+    const completedItems = new Set(events.map((event) => event.order_item_id));
+    for (const license of licenses) {
+      if (!completedItems.has(license.order_item_id)) buyerIds.add(license.buyer_id);
+    }
+    if (licenses.length < batchSize) break;
+  }
+
+  const pendingBuyers = [...buyerIds];
+  let recoveredPurchases = 0;
+  let failedBuyers = 0;
+  for (let offset = 0; offset < pendingBuyers.length; offset += batchSize) {
+    const { data: buyers, error } = await supabaseAdmin
+      .from('marketplace_users')
+      .select('id, auth_user_id')
+      .eq('is_active', true)
+      .not('auth_user_id', 'is', null)
+      .in('id', pendingBuyers.slice(offset, offset + batchSize));
+    if (error) throw error;
+
+    for (const buyer of buyers) {
+      try {
+        const { count } = await recoverPersonalWorkspacePurchases(buyer.auth_user_id);
+        recoveredPurchases += count;
+      } catch (recoveryError) {
+        failedBuyers += 1;
+        console.error('[marketplace] Personal workspace recovery failed', {
+          buyerId: buyer.id,
+          message: recoveryError instanceof Error ? recoveryError.message : String(recoveryError),
+        });
+      }
+    }
+  }
+  if (failedBuyers) {
+    throw new Error(
+      `Recovered ${recoveredPurchases} purchase(s), ${failedBuyers} buyer(s) need retry`
+    );
+  }
+  return { recoveredPurchases };
+}

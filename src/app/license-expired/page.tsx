@@ -1,9 +1,10 @@
-
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 
 import { CONFIG } from 'src/global-config';
+import { WorkspaceSwitcher } from 'src/layouts/components/workspace-switcher';
 
 import { RemixIcon } from 'src/components/remix-icon';
 
@@ -43,6 +44,12 @@ export default function LicenseExpiredPage() {
           ต่ออายุที่ EKRU Marketplace
         </Button>
       ) : null}
+      <Box sx={{ mt: 2, width: 1, maxWidth: 360, mx: 'auto', textAlign: 'left' }}>
+        <WorkspaceSwitcher showRenewal={false} />
+      </Box>
+      <Button href="/" size="large" variant="outlined" sx={{ mt: 2, mx: 'auto' }}>
+        ย้อนกลับหน้าหลัก
+      </Button>
     </Container>
   );
 }

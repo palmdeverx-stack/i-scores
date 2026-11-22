@@ -52,10 +52,20 @@ async function postJson(url: string, body: unknown) {
     body: JSON.stringify(body),
   });
 
-  const json = await response.json();
+  const json = await response.json().catch((error: unknown) => {
+    if (!(error instanceof SyntaxError)) throw error;
+    return null;
+  });
 
   if (!response.ok) {
-    throw new Error(json.message ?? 'Request failed');
+    throw new Error(
+      json?.message ??
+        `ระบบยืนยันตัวตนไม่สามารถดำเนินการได้ (HTTP ${response.status}) กรุณาลองใหม่อีกครั้ง`
+    );
+  }
+
+  if (json === null || typeof json !== 'object' || Array.isArray(json)) {
+    throw new Error('ระบบยืนยันตัวตนส่งข้อมูลกลับมาไม่ครบ กรุณาลองใหม่อีกครั้ง');
   }
 
   return json;

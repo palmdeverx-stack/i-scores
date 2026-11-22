@@ -9,7 +9,7 @@ import type {
 } from '../school-subscription-actions';
 
 import dayjs from 'dayjs';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
@@ -45,6 +45,13 @@ import { getSchoolSubscription, updateSchoolSubscription } from '../school-subsc
 
 type FormState = UpdateSchoolSubscriptionParams;
 
+const expirationFormatter = new Intl.DateTimeFormat('th-TH', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
 const STATUS_COLOR: Record<
   SubscriptionStatus,
   'success' | 'info' | 'warning' | 'error' | 'default'
@@ -54,13 +61,6 @@ const STATUS_COLOR: Record<
   past_due: 'warning',
   suspended: 'error',
   canceled: 'default',
-};
-
-const BILLING_CYCLE_LABEL: Record<BillingCycle, string> = {
-  monthly: 'เดือน',
-  yearly: 'ปี',
-  one_time: 'ครั้งเดียว',
-  custom: 'ตามสัญญา',
 };
 
 function toForm(data: Awaited<ReturnType<typeof getSchoolSubscription>>): FormState {
@@ -83,7 +83,9 @@ function toForm(data: Awaited<ReturnType<typeof getSchoolSubscription>>): FormSt
 
 export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<FormState | null>(null);
+  const [draft, setDraft] = useState<FormState | null>(null);
+  const [templateId, setTemplateId] = useState('');
+  const [featureSearch, setFeatureSearch] = useState('');
   const [featureGroup, setFeatureGroup] = useState('ผู้ดูแลโรงเรียน');
 
   const subscriptionQuery = useQuery({
@@ -96,19 +98,21 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
   });
   const updateMutation = useMutation({
     mutationFn: (values: FormState) => updateSchoolSubscription(schoolId, values),
-    onSuccess: async () => {
+    onSuccess: async (subscription, submitted) => {
+      queryClient.setQueryData<Awaited<ReturnType<typeof getSchoolSubscription>>>(
+        ['school-subscription-management', schoolId],
+        (current) => (current ? { ...current, subscription } : current)
+      );
+      setDraft((current) => (current === submitted ? null : current));
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ['school-subscription-management', schoolId],
         }),
         queryClient.invalidateQueries({ queryKey: ['school-subscription-access', schoolId] }),
+        queryClient.invalidateQueries({ queryKey: ['schools'] }),
       ]);
     },
   });
-
-  useEffect(() => {
-    if (subscriptionQuery.data) setForm(toForm(subscriptionQuery.data));
-  }, [subscriptionQuery.data]);
 
   if (subscriptionQuery.isLoading) {
     return (
@@ -120,7 +124,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
 
   if (subscriptionQuery.isError || !subscriptionQuery.data) {
     return (
-      <Container maxWidth={false}>
+      <Container maxWidth="xl">
         <Alert
           severity="error"
           action={
@@ -135,15 +139,16 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
     );
   }
 
-  if (!form) {
-    return (
-      <Box sx={{ py: 12, display: 'grid', placeItems: 'center' }}>
-        <Typography sx={{ color: 'text.secondary' }}>กำลังเตรียมข้อมูลแพ็กเกจ...</Typography>
-      </Box>
-    );
-  }
-
-  const { school } = subscriptionQuery.data;
+  const { school, subscription } = subscriptionQuery.data;
+  const form = draft ?? toForm(subscriptionQuery.data);
+  const setForm = (update: (current: FormState) => FormState) =>
+    setDraft((current) => update(current ?? form));
+  const templates = (plansQuery.data ?? []).filter((plan) =>
+    school.workspace_type === 'personal'
+      ? plan.target_scope !== 'school'
+      : plan.target_scope !== 'individual'
+  );
+  const selectedTemplate = templates.find((template) => template.id === templateId);
   const usage = subscriptionQuery.data.usage ?? {
     schoolAdmins: 0,
     teachers: 0,
@@ -153,6 +158,12 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
   const hasFeatures = form.enabledFeatures.length > 0;
   const groups = Array.from(new Set(SCHOOL_FEATURES.map((feature) => feature.group)));
   const currentGroupFeatures = SCHOOL_FEATURES.filter((feature) => feature.group === featureGroup);
+  const featureKeyword = featureSearch.trim().toLocaleLowerCase('th');
+  const visibleFeatures = currentGroupFeatures.filter((feature) =>
+    `${feature.label} ${feature.description} ${feature.key}`
+      .toLocaleLowerCase('th')
+      .includes(featureKeyword)
+  );
   const currentGroupKeys = currentGroupFeatures.map((feature) => feature.key);
   const currentGroupAllEnabled = currentGroupKeys.every((key) =>
     form.enabledFeatures.includes(key)
@@ -193,7 +204,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ pb: 7 }}>
+    <Container maxWidth="xl" sx={{ pb: { xs: 5, md: 7 } }}>
       <Button
         component={RouterLink}
         href={paths.master.school.root}
@@ -206,7 +217,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
 
       <Box
         sx={{
-          mb: 4,
+          mb: 3,
           gap: 2,
           display: 'flex',
           alignItems: { xs: 'flex-start', md: 'center' },
@@ -227,8 +238,8 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
               <Typography component="h1" variant="h3">
                 แพ็กเกจและสิทธิ์ใช้งาน
               </Typography>
-              <Label color={STATUS_COLOR[form.status]}>
-                {SUBSCRIPTION_STATUS_LABEL[form.status]}
+              <Label color={STATUS_COLOR[subscription.status]}>
+                {SUBSCRIPTION_STATUS_LABEL[subscription.status]}
               </Label>
             </Box>
             <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
@@ -239,7 +250,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
         <Button
           size="large"
           variant="contained"
-          disabled={!validDates || !hasFeatures}
+          disabled={!draft || !form.planName.trim() || !validDates || !hasFeatures}
           loading={updateMutation.isPending}
           onClick={() => updateMutation.mutate(form)}
           startIcon={<RemixIcon icon="solar:check-circle-bold" />}
@@ -248,7 +259,40 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
         </Button>
       </Box>
 
-      {updateMutation.isSuccess && (
+      <Card
+        variant="outlined"
+        sx={{
+          mb: 3,
+          p: { xs: 2, sm: 3 },
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: { xs: 2, md: 4 },
+          alignItems: 'center',
+        }}
+      >
+        {[
+          ['แพ็กเกจปัจจุบัน', subscription.plan_name],
+          [
+            'วันหมดอายุ',
+            subscription.ends_at
+              ? expirationFormatter.format(new Date(subscription.ends_at))
+              : 'ไม่กำหนด',
+          ],
+          ['ฟีเจอร์ที่เปิดใช้', `${subscription.enabled_features.length} รายการ`],
+        ].map(([label, value]) => (
+          <Box key={label} sx={{ flex: '1 1 150px', minWidth: 0 }}>
+            <Typography variant="caption" color="text.secondary">
+              {label}
+            </Typography>
+            <Typography variant="subtitle1" sx={{ overflowWrap: 'anywhere' }}>
+              {value}
+            </Typography>
+          </Box>
+        ))}
+        {draft && <Label color="warning">มีการแก้ไขที่ยังไม่ได้บันทึก</Label>}
+      </Card>
+
+      {updateMutation.isSuccess && !draft && (
         <Alert severity="success" sx={{ mb: 2 }}>
           บันทึกแพ็กเกจและสิทธิ์ใช้งานแล้ว
         </Alert>
@@ -269,219 +313,203 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
         </Alert>
       )}
 
-      <Typography variant="h5" sx={{ mb: 2 }}>
-        เลือกแพ็กเกจเริ่มต้น
-      </Typography>
-      {plansQuery.isError && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          โหลดแพ็กเกจกลางไม่สำเร็จ แต่ยังสามารถกำหนดค่าโรงเรียนนี้ด้วยตนเองได้
-        </Alert>
-      )}
-      {!plansQuery.isLoading && !plansQuery.isError && plansQuery.data?.length === 0 && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          ยังไม่มีแพ็กเกจที่เปิดใช้งาน กรุณาสร้างหรือเปิดแพ็กเกจจากเมนูตั้งค่าแพ็กเกจ
-        </Alert>
-      )}
-      <Box
-        sx={{
-          mb: 4,
-          gap: 2,
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' },
-        }}
-      >
-        {(plansQuery.data ?? []).map((template) => (
-          <Card
-            key={template.id}
-            variant="outlined"
-            sx={{
-              p: 2.5,
-              borderColor: form.planName === template.name ? 'primary.main' : 'divider',
-              bgcolor: form.planName === template.name ? 'primary.lighter' : 'background.paper',
-            }}
-          >
-            <Typography variant="h6">{template.name}</Typography>
-            <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-              {template.description || 'ไม่มีคำอธิบาย'}
-            </Typography>
-            <Typography variant="h4" sx={{ mt: 2 }}>
-              {Number(template.price)
-                ? template.billing_cycle === 'one_time'
-                  ? `฿${Number(template.price).toLocaleString('th-TH')} จ่ายครั้งเดียว`
-                  : `฿${Number(template.price).toLocaleString('th-TH')}/${
-                      BILLING_CYCLE_LABEL[template.billing_cycle]
-                    }`
-                : template.billing_cycle === 'custom'
-                  ? 'ราคาตามสัญญา'
-                  : 'ฟรี'}
-            </Typography>
-            <Button
-              fullWidth
-              variant={form.planName === template.name ? 'contained' : 'outlined'}
-              onClick={() => applyTemplate(template)}
-              sx={{ mt: 2 }}
-            >
-              ใช้แพ็กเกจนี้
-            </Button>
-          </Card>
-        ))}
-      </Box>
-
-      <Box
-        sx={{
-          gap: 3,
-          display: 'grid',
-          alignItems: 'start',
-          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, .8fr) minmax(0, 1.2fr)' },
-        }}
-      >
-        <Box sx={{ gap: 3, display: 'grid' }}>
-          <Card variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography variant="h6">สัญญาและการเรียกเก็บเงิน</Typography>
+      <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
+        <Card variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+          <Typography component="h2" variant="h6">
+            ใช้ค่าจากแพ็กเกจกลาง
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            นำค่าของแพ็กเกจมาใส่ในฟอร์ม แล้วตรวจข้อมูลก่อนกดบันทึก
+          </Typography>
+          {plansQuery.isError ? (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              โหลดแพ็กเกจกลางไม่สำเร็จ ยังสามารถกรอกค่าด้วยตนเองได้
+            </Alert>
+          ) : (
             <Box
-              sx={{
-                gap: 2,
-                mt: 2.5,
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-              }}
+              sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'flex-start' }}
             >
-              <TextField
-                size="small"
-                label="ชื่อแพ็กเกจ"
-                value={form.planName}
-                onChange={(event) => setField('planName', event.target.value)}
-              />
               <TextField
                 select
                 size="small"
-                label="สถานะ"
-                value={form.status}
-                onChange={(event) => setField('status', event.target.value as SubscriptionStatus)}
+                label="แพ็กเกจกลาง"
+                value={selectedTemplate?.id ?? ''}
+                disabled={!templates.length}
+                onChange={(event) => setTemplateId(event.target.value)}
+                helperText={
+                  plansQuery.isLoading
+                    ? 'กำลังโหลดแพ็กเกจกลาง'
+                    : !templates.length
+                      ? 'ไม่มีแพ็กเกจที่เปิดใช้งานสำหรับพื้นที่ประเภทนี้'
+                      : selectedTemplate?.description
+                }
+                sx={{ width: { xs: 1, sm: 360 } }}
               >
-                {Object.entries(SUBSCRIPTION_STATUS_LABEL).map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
+                <MenuItem value="">เลือกแพ็กเกจ</MenuItem>
+                {templates.map((template) => (
+                  <MenuItem key={template.id} value={template.id}>
+                    {template.name} · {template.code}
                   </MenuItem>
                 ))}
               </TextField>
-              <TextField
-                select
-                size="small"
-                label="รอบเรียกเก็บ"
-                value={form.billingCycle}
-                onChange={(event) => {
-                  const billingCycle = event.target.value as BillingCycle;
-                  setForm((current) =>
-                    current
-                      ? {
-                          ...current,
-                          billingCycle,
-                          endsAt: billingCycle === 'one_time' ? null : current.endsAt,
-                        }
-                      : current
-                  );
-                }}
+              <Button
+                variant="outlined"
+                disabled={!selectedTemplate || updateMutation.isPending}
+                onClick={() => selectedTemplate && applyTemplate(selectedTemplate)}
               >
-                <MenuItem value="monthly">รายเดือน</MenuItem>
-                <MenuItem value="yearly">รายปี</MenuItem>
-                <MenuItem value="one_time">ซื้อขาด (จ่ายครั้งเดียว)</MenuItem>
-                <MenuItem value="custom">ตามสัญญา</MenuItem>
-              </TextField>
-              <TextField
-                size="small"
-                type="number"
-                label="ราคา (บาท)"
-                value={form.price}
-                onChange={(event) => setField('price', Math.max(0, Number(event.target.value)))}
-                slotProps={{ htmlInput: { min: 0 } }}
-              />
-              <DatePicker
-                label="วันเริ่มต้น"
-                value={dayjs(form.startsAt)}
-                onChange={(value) => {
-                  if (value?.isValid()) setField('startsAt', value.format('YYYY-MM-DD'));
-                }}
-                format="DD/MM/YYYY"
-                slotProps={{ textField: { size: 'small' } }}
-              />
-              <DatePicker
-                label="วันสิ้นสุด"
-                disabled={form.billingCycle === 'one_time'}
-                value={form.endsAt ? dayjs(form.endsAt) : null}
-                onChange={(value) =>
-                  setField('endsAt', value?.isValid() ? value.format('YYYY-MM-DD') : null)
-                }
-                format="DD/MM/YYYY"
-                slotProps={{
-                  field: { clearable: true },
-                  textField: {
-                    size: 'small',
-                    helperText:
-                      form.billingCycle === 'one_time'
-                        ? 'ซื้อขาดไม่มีวันหมดอายุ'
-                        : 'เว้นว่าง = ไม่หมดอายุ',
-                  },
-                }}
-              />
+                ใช้ค่าจากแพ็กเกจ
+              </Button>
             </Box>
-          </Card>
-
-          <Card variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography variant="h6">โควตาผู้ใช้งาน</Typography>
-            <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-              กำหนด 0 หมายถึงไม่จำกัด เฉพาะบัญชีที่เปิดใช้งานจะนับโควตา
-            </Typography>
-            <Box sx={{ gap: 2, mt: 2.5, display: 'grid' }}>
-              <UsageLimit
-                label="ผู้ดูแลโรงเรียน"
-                used={usage.schoolAdmins}
-                value={form.maxSchoolAdmins}
-                onChange={(value) => setField('maxSchoolAdmins', value)}
-              />
-              <UsageLimit
-                label="ครูและบุคลากร"
-                used={usage.teachers}
-                value={form.maxTeachers}
-                onChange={(value) => setField('maxTeachers', value)}
-              />
-              <UsageLimit
-                label="นักเรียน"
-                used={usage.students}
-                value={form.maxStudents}
-                onChange={(value) => setField('maxStudents', value)}
-              />
-              <TextField
-                size="small"
-                type="number"
-                label="แจ้งเตือน LINE ต่อเดือน"
-                value={form.maxLineNotifications}
-                onChange={(event) =>
-                  setField(
-                    'maxLineNotifications',
-                    Math.max(0, Math.floor(Number(event.target.value)))
-                  )
-                }
-                helperText="0 = ไม่จำกัดจากระบบ (โควตาของ LINE OA ยังมีผล)"
-                slotProps={{ htmlInput: { min: 0, step: 1 } }}
-              />
-            </Box>
-          </Card>
-
-          <Card variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography variant="h6">หมายเหตุภายใน</Typography>
+          )}
+        </Card>
+        <Card variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+          <Typography component="h2" variant="h6">
+            ข้อมูลแพ็กเกจและระยะเวลา
+          </Typography>
+          <Box
+            sx={{
+              gap: 2,
+              mt: 2.5,
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+            }}
+          >
             <TextField
-              multiline
-              fullWidth
-              minRows={4}
-              value={form.notes}
-              onChange={(event) => setField('notes', event.target.value)}
-              placeholder="เลขที่สัญญา เงื่อนไขพิเศษ ผู้ติดต่อ หรือข้อมูลการชำระเงิน"
-              slotProps={{ htmlInput: { maxLength: 2000 } }}
-              sx={{ mt: 2 }}
+              size="small"
+              label="ชื่อแพ็กเกจ"
+              value={form.planName}
+              onChange={(event) => setField('planName', event.target.value)}
             />
-          </Card>
-        </Box>
+            <TextField
+              select
+              size="small"
+              label="สถานะ"
+              value={form.status}
+              onChange={(event) => setField('status', event.target.value as SubscriptionStatus)}
+            >
+              {Object.entries(SUBSCRIPTION_STATUS_LABEL).map(([value, label]) => (
+                <MenuItem key={value} value={value}>
+                  {label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="รอบเรียกเก็บ"
+              value={form.billingCycle}
+              onChange={(event) => {
+                const billingCycle = event.target.value as BillingCycle;
+                setForm((current) =>
+                  current
+                    ? {
+                        ...current,
+                        billingCycle,
+                        endsAt: billingCycle === 'one_time' ? null : current.endsAt,
+                      }
+                    : current
+                );
+              }}
+            >
+              <MenuItem value="monthly">รายเดือน</MenuItem>
+              <MenuItem value="yearly">รายปี</MenuItem>
+              <MenuItem value="one_time">ซื้อขาด (จ่ายครั้งเดียว)</MenuItem>
+              <MenuItem value="custom">ตามสัญญา</MenuItem>
+            </TextField>
+            <TextField
+              size="small"
+              type="number"
+              label="ราคา (บาท)"
+              value={form.price}
+              onChange={(event) => setField('price', Math.max(0, Number(event.target.value)))}
+              slotProps={{ htmlInput: { min: 0 } }}
+            />
+            <DatePicker
+              label="วันเริ่มต้น"
+              value={dayjs(form.startsAt)}
+              onChange={(value) => {
+                if (value?.isValid()) setField('startsAt', value.format('YYYY-MM-DD'));
+              }}
+              format="DD/MM/YYYY"
+              slotProps={{ textField: { size: 'small' } }}
+            />
+            <DatePicker
+              label="วันสิ้นสุด"
+              disabled={form.billingCycle === 'one_time'}
+              value={form.endsAt ? dayjs(form.endsAt) : null}
+              onChange={(value) => {
+                if (value === null) setField('endsAt', null);
+                else if (value.isValid()) setField('endsAt', value.format('YYYY-MM-DD'));
+              }}
+              format="DD/MM/YYYY"
+              slotProps={{
+                field: { clearable: true },
+                textField: {
+                  size: 'small',
+                  helperText:
+                    form.billingCycle === 'one_time'
+                      ? 'ซื้อขาดไม่มีวันหมดอายุ'
+                      : 'เว้นว่าง = ไม่หมดอายุ',
+                },
+              }}
+            />
+          </Box>
+        </Card>
+
+        <Card variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+          <Typography variant="h6">โควตาผู้ใช้งาน</Typography>
+          <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+            กำหนด 0 หมายถึงไม่จำกัด เฉพาะบัญชีที่เปิดใช้งานจะนับโควตา
+          </Typography>
+          <Box sx={{ gap: 2, mt: 2.5, display: 'grid' }}>
+            <UsageLimit
+              label="ผู้ดูแลโรงเรียน"
+              used={usage.schoolAdmins}
+              value={form.maxSchoolAdmins}
+              onChange={(value) => setField('maxSchoolAdmins', value)}
+            />
+            <UsageLimit
+              label="ครูและบุคลากร"
+              used={usage.teachers}
+              value={form.maxTeachers}
+              onChange={(value) => setField('maxTeachers', value)}
+            />
+            <UsageLimit
+              label="นักเรียน"
+              used={usage.students}
+              value={form.maxStudents}
+              onChange={(value) => setField('maxStudents', value)}
+            />
+            <TextField
+              size="small"
+              type="number"
+              label="แจ้งเตือน LINE ต่อเดือน"
+              value={form.maxLineNotifications}
+              onChange={(event) =>
+                setField(
+                  'maxLineNotifications',
+                  Math.max(0, Math.floor(Number(event.target.value)))
+                )
+              }
+              helperText="0 = ไม่จำกัดจากระบบ (โควตาของ LINE OA ยังมีผล)"
+              slotProps={{ htmlInput: { min: 0, step: 1 } }}
+            />
+          </Box>
+        </Card>
+
+        <Card variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+          <Typography variant="h6">หมายเหตุภายใน</Typography>
+          <TextField
+            multiline
+            fullWidth
+            minRows={4}
+            value={form.notes}
+            onChange={(event) => setField('notes', event.target.value)}
+            placeholder="เลขที่สัญญา เงื่อนไขพิเศษ ผู้ติดต่อ หรือข้อมูลการชำระเงิน"
+            slotProps={{ htmlInput: { maxLength: 2000 } }}
+            sx={{ mt: 2 }}
+          />
+        </Card>
 
         <Card variant="outlined">
           <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -496,7 +524,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
               <Box>
                 <Typography variant="h6">เมนูและความสามารถที่เปิดใช้</Typography>
                 <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-                  เปิดแล้ว {form.enabledFeatures.length} จาก {SCHOOL_FEATURES.length} รายการ
+                  เลือกไว้ {form.enabledFeatures.length} จาก {SCHOOL_FEATURES.length} รายการ
                 </Typography>
               </Box>
               <Button
@@ -511,7 +539,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
                   );
                 }}
               >
-                {currentGroupAllEnabled ? 'ปิดทั้งหมดใน Tab' : 'เปิดทั้งหมดใน Tab'}
+                {currentGroupAllEnabled ? 'ปิดทุกฟีเจอร์ในกลุ่ม' : 'เปิดทุกฟีเจอร์ในกลุ่ม'}
               </Button>
             </Box>
           </Box>
@@ -539,7 +567,21 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
             })}
           </Tabs>
           <Box role="tabpanel" aria-label={featureGroup}>
-            {currentGroupFeatures.map((feature) => (
+            <Box sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
+              <TextField
+                size="small"
+                label="ค้นหาฟีเจอร์ในกลุ่ม"
+                value={featureSearch}
+                onChange={(event) => setFeatureSearch(event.target.value)}
+                sx={{ width: { xs: 1, sm: 320 } }}
+              />
+            </Box>
+            {!visibleFeatures.length && (
+              <Typography color="text.secondary" sx={{ px: 3, pb: 3 }}>
+                ไม่พบฟีเจอร์ที่ตรงกับคำค้นหา
+              </Typography>
+            )}
+            {visibleFeatures.map((feature) => (
               <Box
                 key={feature.key}
                 sx={{
@@ -563,6 +605,7 @@ export function SchoolSubscriptionView({ schoolId }: { schoolId: string }) {
                   control={
                     <Switch
                       checked={form.enabledFeatures.includes(feature.key)}
+                      slotProps={{ input: { 'aria-label': feature.label } }}
                       onChange={() => toggleFeature(feature.key)}
                     />
                   }

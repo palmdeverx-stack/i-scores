@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     await Promise.all([
       supabaseAdmin
         .from('schools')
-        .select('id, name, name_en, code, logo_url, is_active')
+        .select('id, name, name_en, code, logo_url, is_active, workspace_type')
         .eq('id', id)
         .maybeSingle(),
       supabaseAdmin

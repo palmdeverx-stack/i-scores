@@ -203,7 +203,7 @@ export function organizeMasterNavigation(data: NavSectionProps['data']): NavSect
           ? groups[1]
           : path.includes('subscription') || path.endsWith('/apps')
             ? groups[2]
-            : path.includes('system-flow')
+            : path.includes('system-flow') || path.includes('sales-documents')
               ? groups[4]
               : groups[3];
     bucket.set(group, [...(bucket.get(group) ?? []), { ...item, allowedRoles: ['master_admin'] }]);

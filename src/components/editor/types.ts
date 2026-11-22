@@ -7,6 +7,7 @@ import type { ButtonBaseProps } from '@mui/material/ButtonBase';
 
 export type EditorProps = UseEditorOptions & {
   value?: string;
+  changeDelay?: number;
   error?: boolean;
   fullItem?: boolean;
   className?: string;

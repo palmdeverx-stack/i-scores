@@ -3,8 +3,10 @@
 // ----------------------------------------------------------------------
 
 export type EmailSettings = {
+  emailProvider: 'gmail' | 'resend';
   resendFromEmail: string;
   effectiveFromEmail: string | null;
+  senderError?: string | null;
   resendApiKeyConfigured: boolean;
   environmentFallbackConfigured: boolean;
   updatedAt: string | null;

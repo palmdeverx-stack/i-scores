@@ -319,7 +319,19 @@ export function MyDocumentListView({
         />
       </Card>
 
-      <Menu anchorEl={menu?.anchor} open={Boolean(menu)} onClose={() => setMenu(null)}>
+      <Menu
+        anchorEl={menu?.anchor}
+        open={Boolean(menu)}
+        onClose={() => setMenu(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: { sx: { maxWidth: 'calc(100vw - 32px)' } },
+          list: {
+            sx: { '& .MuiMenuItem-root': { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
+          },
+        }}
+      >
         <MenuItem
           component={RouterLink}
           href={`${detailBasePath}/my/${menu?.document.id}`}

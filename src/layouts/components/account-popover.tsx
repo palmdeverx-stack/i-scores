@@ -1,6 +1,5 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import { useState } from 'react';
 import { usePopover } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
@@ -9,7 +8,6 @@ import Divider from '@mui/material/Divider';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
 
 import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
@@ -24,22 +22,19 @@ import {
   RiGuideLine,
   RiHome5Line,
   RiUser3Line,
-  RiCheckLine,
   RiQrCodeLine,
   RiContractLine,
   RiFileTextLine,
-  RiBuildingLine,
   RiShieldUserLine,
   RiShieldKeyholeLine,
 } from 'src/components/remix-icon';
 
 import { useAuthContext } from 'src/auth/hooks';
-import { getHomePathForRole } from 'src/auth/utils';
-import { switchWorkspace } from 'src/auth/context/jwt';
 
 import { AccountButton } from './account-button';
 import { SignOutButton } from './sign-out-button';
 import { LanguageMenu } from './language-popover';
+import { WorkspaceSwitcher } from './workspace-switcher';
 
 // ----------------------------------------------------------------------
 
@@ -52,13 +47,6 @@ export type AccountPopoverProps = IconButtonProps & {
     icon?: React.ReactNode;
     info?: React.ReactNode;
   }[];
-};
-
-type WorkspaceOption = {
-  profile_id: string;
-  name: string;
-  code: string;
-  workspace_type: 'school' | 'personal';
 };
 
 const POSITION_FALLBACK: Record<string, string> = {
@@ -81,37 +69,11 @@ export function AccountPopover({
 
   const { open, anchorEl, onClose, onOpen } = usePopover();
 
-  const { user, checkUserSession } = useAuthContext();
-  const [switchingProfileId, setSwitchingProfileId] = useState('');
-  const [workspaceError, setWorkspaceError] = useState('');
+  const { user } = useAuthContext();
   const positionTitle =
     user?.is_personal_workspace || user?.role === 'marketplace_user'
       ? 'EKRU Marketplace'
       : user?.position_title || POSITION_FALLBACK[user?.role] || '-';
-  const workspaces: WorkspaceOption[] = Array.isArray(user?.workspaces) ? user.workspaces : [];
-
-  const handleWorkspaceSwitch = async (profileId: string) => {
-    if (profileId === user?.active_workspace_profile_id || switchingProfileId) return;
-    setWorkspaceError('');
-    setSwitchingProfileId(profileId);
-    try {
-      const result = await switchWorkspace(profileId);
-      if (result.requiresPin) {
-        const params = new URLSearchParams({
-          pinChallengeToken: result.pinChallengeToken,
-          pinRole: result.role,
-        });
-        window.location.assign(`${paths.auth.jwt.signIn}?${params.toString()}`);
-        return;
-      }
-      await checkUserSession?.();
-      window.location.replace(getHomePathForRole(result.role));
-    } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : 'ไม่สามารถสลับพื้นที่ใช้งานได้');
-      setSwitchingProfileId('');
-    }
-  };
-
   const studentMenu = [
     {
       label: 'โปรไฟล์ของฉัน',
@@ -199,61 +161,7 @@ export function AccountPopover({
         </Typography>
       </Box>
 
-      {workspaces.length > 1 && (
-        <>
-          <Divider sx={{ borderStyle: 'dashed' }} />
-          <Box sx={{ p: 1 }}>
-            <Typography variant="overline" sx={{ px: 1, color: 'text.secondary' }}>
-              พื้นที่ใช้งาน
-            </Typography>
-            <MenuList dense disablePadding sx={{ mt: 0.5 }}>
-              {workspaces.map((workspace) => {
-                const active = workspace.profile_id === user?.active_workspace_profile_id;
-                const switching = workspace.profile_id === switchingProfileId;
-                return (
-                  <MenuItem
-                    key={workspace.profile_id}
-                    selected={active}
-                    disabled={Boolean(switchingProfileId)}
-                    onClick={() => void handleWorkspaceSwitch(workspace.profile_id)}
-                    sx={{ gap: 1.25, borderRadius: 1 }}
-                  >
-                    <Box sx={{ display: 'flex', color: 'text.secondary' }}>
-                      {workspace.workspace_type === 'personal' ? (
-                        <RiUser3Line size={20} />
-                      ) : (
-                        <RiBuildingLine size={20} />
-                      )}
-                    </Box>
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography variant="body2" noWrap>
-                        {workspace.name}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
-                        {workspace.workspace_type === 'personal' ? 'ส่วนตัว' : workspace.code}
-                      </Typography>
-                    </Box>
-                    {switching ? (
-                      <CircularProgress size={16} />
-                    ) : active ? (
-                      <RiCheckLine size={18} />
-                    ) : null}
-                  </MenuItem>
-                );
-              })}
-            </MenuList>
-            {workspaceError && (
-              <Typography
-                variant="caption"
-                color="error"
-                sx={{ px: 1, pt: 0.75, display: 'block' }}
-              >
-                {workspaceError}
-              </Typography>
-            )}
-          </Box>
-        </>
-      )}
+      <WorkspaceSwitcher />
 
       <Divider sx={{ borderStyle: 'dashed' }} />
 

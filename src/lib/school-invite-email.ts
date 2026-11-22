@@ -5,50 +5,66 @@ import { escapeEmailHtml, renderBrandedEmail } from 'src/lib/branded-email-templ
 
 // ----------------------------------------------------------------------
 
-export async function sendSchoolInviteEmail(params: {
-  to: string;
+type SchoolInviteDetails = {
   schoolName: string;
   schoolCode: string;
   adminUsername: string;
-  adminPassword: string;
+  adminPassword?: string;
   signInUrl: string;
-}): Promise<void> {
-  const { to, schoolName, schoolCode, adminUsername, adminPassword, signInUrl } = params;
+};
+
+export function renderSchoolInviteEmail(params: SchoolInviteDetails) {
+  const { schoolName, schoolCode, adminUsername, adminPassword, signInUrl } = params;
 
   const html = renderBrandedEmail({
     preheader: `บัญชีผู้ดูแลโรงเรียน ${schoolName} พร้อมใช้งานแล้ว`,
     title: 'ยินดีต้อนรับสู่ระบบ EKRU',
+    logoUrl: 'https://e-kru.com/logo/logo-single.png',
     actionLabel: 'เข้าสู่ระบบ EKRU',
     actionUrl: signInUrl,
     contentHtml: `
       <p style="margin:0 0 14px;">
         โรงเรียน <strong style="color:#1f2937;">${escapeEmailHtml(schoolName)}</strong>
-        (รหัสโรงเรียน ${escapeEmailHtml(schoolCode)}) ถูกสร้างเรียบร้อยแล้ว
+        (รหัสโรงเรียน ${escapeEmailHtml(schoolCode)}) ${adminPassword ? 'ถูกสร้างเรียบร้อยแล้ว' : 'พร้อมให้เข้าใช้งาน'}
       </p>
-      <p style="margin:0 0 14px;">ใช้ข้อมูลต่อไปนี้เพื่อเข้าสู่ระบบครั้งแรกในฐานะผู้ดูแลโรงเรียน</p>
+      <p style="margin:0 0 14px;">${
+        adminPassword
+          ? 'ใช้ข้อมูลต่อไปนี้เพื่อเข้าสู่ระบบครั้งแรกในฐานะผู้ดูแลโรงเรียน'
+          : 'เข้าสู่ระบบด้วยชื่อผู้ใช้งานด้านล่างและรหัสผ่านเดิมของบัญชี หากยังไม่มีรหัสผ่าน กรุณาติดต่อผู้ดูแลระบบ EKRU'
+      }</p>
       <table role="presentation" style="width:100%; border-collapse:collapse; margin:16px 0;
-        background:#f8fafc; border-radius:10px;">
+        background:#eaf2fd; border-radius:10px; text-align:left;">
         <tr>
           <td style="padding:12px 14px; color:#7b8798;">ชื่อผู้ใช้งาน</td>
-          <td style="padding:12px 14px; font-family:monospace; color:#1f2937;">${escapeEmailHtml(adminUsername)}</td>
+          <td style="padding:12px 14px; font-weight:700; color:#1f2937;">${escapeEmailHtml(adminUsername)}</td>
         </tr>
-        <tr>
+        ${
+          adminPassword
+            ? `<tr>
           <td style="padding:12px 14px; color:#7b8798;">รหัสผ่านชั่วคราว</td>
-          <td style="padding:12px 14px; font-family:monospace; color:#1f2937;">${escapeEmailHtml(adminPassword)}</td>
-        </tr>
+          <td style="padding:12px 14px; font-weight:700; color:#1f2937;">${escapeEmailHtml(adminPassword)}</td>
+        </tr>`
+            : ''
+        }
         <tr>
           <td style="padding:12px 14px; color:#7b8798;">รหัสโรงเรียน (PIN)</td>
-          <td style="padding:12px 14px; font-family:monospace; color:#1f2937;">${escapeEmailHtml(schoolCode)}</td>
+          <td style="padding:12px 14px; font-weight:700; color:#1f2937;">${escapeEmailHtml(schoolCode)}</td>
         </tr>
       </table>
-      <p style="margin:0;">ระบบจะให้เปลี่ยนรหัสผ่านทันทีหลังเข้าสู่ระบบครั้งแรก</p>
+      ${adminPassword ? '<p style="margin:0;">ระบบจะให้เปลี่ยนรหัสผ่านทันทีหลังเข้าสู่ระบบครั้งแรก</p>' : ''}
     `,
     footerHtml: 'หากคุณไม่ได้เป็นผู้ดำเนินการนี้ กรุณาติดต่อผู้ดูแลระบบ EKRU',
   });
 
-  await sendEmail({
-    to,
+  return {
     subject: `เชิญเข้าใช้งานระบบ EKRU — โรงเรียน${schoolName}`,
     html,
-  });
+  };
+}
+
+export async function sendSchoolInviteEmail({
+  to,
+  ...details
+}: SchoolInviteDetails & { to: string }): Promise<void> {
+  await sendEmail({ to, ...renderSchoolInviteEmail(details) });
 }

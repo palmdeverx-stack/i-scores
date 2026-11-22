@@ -50,14 +50,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'ไม่พบสิทธิ์เข้าใช้งาน Workspace นี้' }, { status: 403 });
   }
 
-  if (target.school.workspace_type === 'school') {
+  if (target.role !== 'master_admin') {
     const usable = await isSchoolAccessUsable(target.school_id, {
       userId: target.id,
       role: target.role,
     });
     if (!usable) {
       return NextResponse.json(
-        { message: 'License ของโรงเรียนยังไม่พร้อมใช้งาน' },
+        { message: 'แพ็กเกจของพื้นที่นี้หมดอายุหรือยังไม่พร้อมใช้งาน' },
         { status: 403 }
       );
     }

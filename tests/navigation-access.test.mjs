@@ -34,6 +34,8 @@ function load(path) {
       if (name === 'src/routes/paths') return load('src/routes/paths.ts');
       if (name === 'src/sections/documents/document-catalog')
         return load('src/sections/documents/document-catalog.ts');
+      if (name === 'src/sections/sales-documents/sales-document-kinds')
+        return load('src/sections/sales-documents/sales-document-kinds.ts');
       if (name === 'src/lib/workspace-access') return load('src/lib/workspace-access.ts');
       if (name === './organize-school-navigation')
         return load('src/layouts/organize-school-navigation.ts');
@@ -197,6 +199,9 @@ test('director status alone does not grant approval rights, and explicit persona
 test('master menus stay role-bound and grouped separately from school workflows', () => {
   assert.ok(master.some((group) => group.subheader === 'ดูแลโรงเรียนและบัญชี'));
   assert.ok(flatten(master).every((item) => item.allowedRoles?.includes('master_admin')));
+  const sales = flatten(master).find((item) => item.path === '/master/sales-documents');
+  assert.ok(sales.children.some((item) => item.path === '/master/sales-documents/billing-note'));
+  assert.ok(sales.children.some((item) => item.path === '/master/sales-documents/invoice'));
   assert.equal(
     flatten(master).some((item) => item.path.startsWith('/teacher')),
     false
@@ -230,14 +235,21 @@ test('new feature keys expose their own menus without granting other modules', (
   ]) {
     const visible = paths(filterDashboardNav(teacher, [feature]));
     assert(visible.includes(expectedPath), `${feature}: ${visible.join(', ')}`);
-    for (const other of ['/teacher/work-attendance', '/teacher/duty-roster', '/teacher/inventory']) {
+    for (const other of [
+      '/teacher/work-attendance',
+      '/teacher/duty-roster',
+      '/teacher/inventory',
+    ]) {
       if (other !== expectedPath) assert(!visible.includes(other));
     }
   }
 });
 
 test('direct URLs for new school and teacher modules require the same package feature', () => {
-  for (const [role, prefix] of [['school_admin', '/admin'], ['teacher', '/teacher']]) {
+  for (const [role, prefix] of [
+    ['school_admin', '/admin'],
+    ['teacher', '/teacher'],
+  ]) {
     for (const [path, feature] of [
       ['/inventory/assets', 'admin.inventory'],
       ['/inventory/purchases/new', 'admin.inventory'],
@@ -246,10 +258,17 @@ test('direct URLs for new school and teacher modules require the same package fe
       ['/master-data/inventory-units', 'admin.inventory'],
       ['/work-attendance', 'staff.work_attendance'],
       ['/duty-roster', 'staff.duty_roster'],
-    ]) assert.equal(requiredFeatureForPath(role, `${prefix}${path}`), feature);
+    ])
+      assert.equal(requiredFeatureForPath(role, `${prefix}${path}`), feature);
   }
-  assert.equal(requiredFeatureForPath('school_admin', '/admin/school-holidays'), 'admin.school_holidays');
-  assert.equal(requiredFeatureForPath('school_admin', '/admin/school-time-settings'), 'admin.school_time_settings');
+  assert.equal(
+    requiredFeatureForPath('school_admin', '/admin/school-holidays'),
+    'admin.school_holidays'
+  );
+  assert.equal(
+    requiredFeatureForPath('school_admin', '/admin/school-time-settings'),
+    'admin.school_time_settings'
+  );
   assert.equal(requiredFeatureForPath('teacher', '/teacher/inventory-other'), undefined);
   assert.equal(requiredFeatureForPath('teacher', '/teacher'), undefined);
 });
@@ -261,5 +280,12 @@ test('empty licensed groups disappear and each enabled child keeps its package m
   assert(inventoryItems.length > 0);
   assert(inventoryItems.every((item) => item.featureKey === 'admin.inventory'));
   const noFeatures = paths(filterDashboardNav(admin, []));
-  for (const path of ['/admin/inventory', '/admin/work-attendance', '/admin/duty-roster', '/admin/school-holidays', '/admin/school-time-settings']) assert(!noFeatures.includes(path), path);
+  for (const path of [
+    '/admin/inventory',
+    '/admin/work-attendance',
+    '/admin/duty-roster',
+    '/admin/school-holidays',
+    '/admin/school-time-settings',
+  ])
+    assert(!noFeatures.includes(path), path);
 });

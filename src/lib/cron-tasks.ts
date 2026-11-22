@@ -4,6 +4,7 @@ import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { processGradeSubmissionReminders } from 'src/lib/grade-reminders';
 import { processPendingLineNotifications } from 'src/lib/line-notifications';
 import { processSchoolHolidayAnnouncements } from 'src/lib/school-holiday-announcements';
+import { recoverMissingMarketplaceWorkspaces } from 'src/lib/personal-workspace-provisioning';
 
 // ----------------------------------------------------------------------
 
@@ -72,6 +73,11 @@ function tasksForSlot(slot: DailyCronSlot): CronTask[] {
   tasks.push({
     name: 'line-notifications',
     run: processAllPendingLineNotifications,
+  });
+
+  tasks.push({
+    name: 'marketplace-personal-workspaces',
+    run: recoverMissingMarketplaceWorkspaces,
   });
 
   return tasks;

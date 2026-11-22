@@ -151,7 +151,7 @@ export async function loadEffectiveSchoolEntitlements(
       accessibleLicenses.length > 0 ||
       personalLicenses.length > 0 ||
       (purchases?.length ?? 0) > 0,
-    accessEndsAt: expirations.length
+    accessEndsAt: expirations.length && !(usesSchoolSubscription && !subscription?.ends_at)
       ? new Date(Math.max(...expirations)).toISOString()
       : null,
   };

@@ -37,7 +37,6 @@ import { RemixIcon } from 'src/components/remix-icon';
 import {
   listSchools,
   deleteSchool,
-  updateSchool,
   startImpersonation,
   toggleSchoolActive,
   getImpersonationOptions,
@@ -51,14 +50,17 @@ const IMPERSONATION_ROLE_LABELS = {
   student: 'นักเรียน',
 } as const;
 
+const expirationDateFormatter = new Intl.DateTimeFormat('th-TH', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'Asia/Bangkok',
+});
+
 export function SchoolListView() {
   const [search, setSearch] = useState('');
-  const [editingSchool, setEditingSchool] = useState<School | null>(null);
   const [deletingSchool, setDeletingSchool] = useState<School | null>(null);
   const [impersonatingSchool, setImpersonatingSchool] = useState<School | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editNameEn, setEditNameEn] = useState('');
-  const [editCode, setEditCode] = useState('');
   const queryClient = useQueryClient();
 
   const {
@@ -72,24 +74,6 @@ export function SchoolListView() {
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       toggleSchoolActive(id, isActive),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['schools'] }),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({
-      id,
-      name,
-      nameEn,
-      code,
-    }: {
-      id: string;
-      name: string;
-      nameEn?: string;
-      code: string;
-    }) => updateSchool(id, { name, nameEn, code }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['schools'] });
-      setEditingSchool(null);
-    },
   });
 
   const deleteMutation = useMutation({
@@ -111,29 +95,18 @@ export function SchoolListView() {
     onSuccess: ({ redirectUrl }) => window.location.assign(redirectUrl),
   });
 
-  const openEditDialog = (school: School) => {
-    updateMutation.reset();
-    setEditingSchool(school);
-    setEditName(school.name);
-    setEditNameEn(school.name_en ?? '');
-    setEditCode(school.code);
-  };
-
-  const saveSchool = () => {
-    if (!editingSchool || !editName.trim() || !/^\d{8}$/.test(editCode.trim())) return;
-    updateMutation.mutate({
-      id: editingSchool.id,
-      name: editName.trim(),
-      nameEn: editNameEn.trim(),
-      code: editCode.trim(),
-    });
-  };
-
   const filteredSchools = useMemo(() => {
     const keyword = search.trim().toLocaleLowerCase('th');
     if (!keyword) return schools;
     return schools.filter((school) =>
-      `${school.name} ${school.name_en ?? ''} ${school.code}`
+      [
+        school.name,
+        school.name_en,
+        school.code,
+        school.ownerName,
+        ...(school.administratorNames ?? []),
+      ]
+        .join(' ')
         .toLocaleLowerCase('th')
         .includes(keyword)
     );
@@ -251,7 +224,7 @@ export function SchoolListView() {
             size="small"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="ค้นหาชื่อหรือรหัสโรงเรียน"
+            placeholder="ค้นหาโรงเรียน รหัส หรือชื่อเจ้าของ"
             aria-label="ค้นหาโรงเรียน"
             sx={{ width: { xs: 1, sm: 320 } }}
             slotProps={{
@@ -271,8 +244,10 @@ export function SchoolListView() {
             <TableHead>
               <TableRow>
                 <TableCell>โรงเรียน</TableCell>
+                <TableCell>เจ้าของ / ผู้ดูแล</TableCell>
                 <TableCell>รหัส</TableCell>
                 <TableCell>แพ็กเกจ</TableCell>
+                <TableCell>วันหมดอายุ</TableCell>
                 <TableCell align="center">ครู</TableCell>
                 <TableCell align="center">นักเรียน</TableCell>
                 <TableCell align="center">ห้องเรียน</TableCell>
@@ -285,7 +260,7 @@ export function SchoolListView() {
               {isLoading && (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={11}
                     sx={{ py: 6, textAlign: 'center', color: 'text.secondary' }}
                   >
                     กำลังโหลดข้อมูล...
@@ -294,7 +269,7 @@ export function SchoolListView() {
               )}
               {!isLoading && !filteredSchools.length && (
                 <TableRow>
-                  <TableCell colSpan={9} sx={{ py: 8, textAlign: 'center' }}>
+                  <TableCell colSpan={11} sx={{ py: 8, textAlign: 'center' }}>
                     <RemixIcon
                       icon="solar:inbox-in-bold"
                       width={36}
@@ -351,6 +326,16 @@ export function SchoolListView() {
                       </Box>
                     </Box>
                   </TableCell>
+                  <TableCell sx={{ minWidth: 160 }}>
+                    <Typography variant="body2">
+                      {school.ownerName ?? (school.administratorNames?.join(', ') || '—')}
+                    </Typography>
+                    {(school.ownerName || Boolean(school.administratorNames?.length)) && (
+                      <Typography variant="caption" color="text.secondary">
+                        {school.ownerName ? 'เจ้าของพื้นที่' : 'ผู้ดูแลโรงเรียน'}
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Chip size="small" variant="outlined" label={school.code} />
                   </TableCell>
@@ -377,6 +362,13 @@ export function SchoolListView() {
                             ? 'ต้องตรวจสอบ'
                             : '-'}
                     </Typography>
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {school.expiresAt
+                      ? expirationDateFormatter.format(new Date(school.expiresAt))
+                      : school.noExpiration
+                        ? 'ไม่กำหนดวันหมดอายุ'
+                        : '—'}
                   </TableCell>
                   <TableCell align="center">
                     {school.teacherCount.toLocaleString('th-TH')}
@@ -447,7 +439,8 @@ export function SchoolListView() {
                       <Tooltip title="แก้ไขโรงเรียน">
                         <IconButton
                           size="small"
-                          onClick={() => openEditDialog(school)}
+                          component={RouterLink}
+                          href={paths.master.school.edit(school.id)}
                           aria-label={`แก้ไข ${school.name}`}
                         >
                           <RemixIcon icon="solar:pen-bold" width={18} />
@@ -484,8 +477,7 @@ export function SchoolListView() {
         <DialogTitle>เข้าสู่ระบบในนาม</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-            เลือกมุมมองของ “{impersonatingSchool?.name}” ระบบจะเปิดทุก Feature
-            ในโหมดดูอย่างเดียว
+            เลือกมุมมองของ “{impersonatingSchool?.name}” ระบบจะเปิดทุก Feature ในโหมดดูอย่างเดียว
           </Typography>
 
           {impersonationQuery.isError && (
@@ -506,9 +498,7 @@ export function SchoolListView() {
           ) : (
             <Box sx={{ gap: 1.25, display: 'grid' }}>
               {(impersonationQuery.data?.targets ?? []).map((target) => {
-                const displayName = [target.first_name, target.last_name]
-                  .filter(Boolean)
-                  .join(' ');
+                const displayName = [target.first_name, target.last_name].filter(Boolean).join(' ');
                 return (
                   <Button
                     key={target.id}
@@ -555,65 +545,6 @@ export function SchoolListView() {
             onClick={() => setImpersonatingSchool(null)}
           >
             ยกเลิก
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog
-        open={!!editingSchool}
-        onClose={() => !updateMutation.isPending && setEditingSchool(null)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>แก้ไขโรงเรียน</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Typography variant="body2" sx={{ mb: 2.5, color: 'text.secondary' }}>
-            แก้ไขชื่อและรหัสอ้างอิงของโรงเรียน
-          </Typography>
-          {updateMutation.error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {updateMutation.error.message}
-            </Alert>
-          )}
-          <Box sx={{ gap: 2.5, display: 'flex', flexDirection: 'column' }}>
-            <TextField
-              autoFocus
-              label="ชื่อโรงเรียนภาษาไทย"
-              value={editName}
-              onChange={(event) => setEditName(event.target.value)}
-              required
-            />
-            <TextField
-              label="ชื่อโรงเรียนภาษาอังกฤษ"
-              value={editNameEn}
-              onChange={(event) => setEditNameEn(event.target.value)}
-              slotProps={{ htmlInput: { lang: 'en' } }}
-            />
-            <TextField
-              label="รหัสโรงเรียน"
-              value={editCode}
-              onChange={(event) => setEditCode(event.target.value)}
-              helperText="ตัวเลข 8 หลัก ใช้เป็น PIN สำหรับผู้ดูแลโรงเรียน"
-              slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 8 } }}
-              required
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            color="inherit"
-            onClick={() => setEditingSchool(null)}
-            disabled={updateMutation.isPending}
-          >
-            ยกเลิก
-          </Button>
-          <Button
-            variant="contained"
-            onClick={saveSchool}
-            loading={updateMutation.isPending}
-            disabled={!editName.trim() || !/^\d{8}$/.test(editCode.trim())}
-          >
-            บันทึกการแก้ไข
           </Button>
         </DialogActions>
       </Dialog>

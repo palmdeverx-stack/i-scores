@@ -4,6 +4,8 @@ import { requireRole } from 'src/lib/auth-token';
 import { supabaseAdmin } from 'src/lib/supabase-admin';
 import { flushWorkflowNotifications } from 'src/lib/workflow-notifications';
 
+import { MARKETPLACE_NOTIFICATION_PATTERN } from 'src/sections/notifications/notification-system';
+
 // ----------------------------------------------------------------------
 
 export async function GET(request: Request) {
@@ -22,12 +24,14 @@ export async function GET(request: Request) {
     .from('notifications')
     .select('id, type, title, body, link, read_at, created_at')
     .eq('user_id', caller.sub)
+    .not('type', 'like', MARKETPLACE_NOTIFICATION_PATTERN)
     .order('created_at', { ascending: false })
     .limit(30);
   let countQuery = supabaseAdmin
     .from('notifications')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', caller.sub)
+    .not('type', 'like', MARKETPLACE_NOTIFICATION_PATTERN)
     .is('read_at', null);
   if (caller.schoolId) {
     listQuery = listQuery.eq('school_id', caller.schoolId);

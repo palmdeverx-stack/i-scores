@@ -10,6 +10,10 @@ export type School = {
   logo_url: string | null;
   is_active: boolean;
   created_at: string;
+  ownerName?: string | null;
+  administratorNames?: string[];
+  expiresAt?: string | null;
+  noExpiration?: boolean;
   subscription: {
     plan_name: string;
     status: 'trialing' | 'active' | 'past_due' | 'suspended' | 'canceled';
@@ -38,12 +42,14 @@ export type CreateSchoolParams = {
   nameEn?: string;
   code: string;
   email: string;
+  adminUsername?: string;
 };
 
 export type CreateSchoolResult = {
   school: School;
   adminCreated: boolean;
   emailSent?: boolean;
+  emailError?: string;
   adminUsername?: string;
   /** Only present when the invite email failed to send. */
   adminPassword?: string;
@@ -99,11 +105,22 @@ export async function toggleSchoolActive(id: string, isActive: boolean) {
 }
 
 export async function getSchool(
-  id: string
+  id: string,
+  includeAdminContact = false
 ): Promise<
-  SchoolProfile & { workspace_type: 'personal' | 'school'; workspace_description: string | null }
+  SchoolProfile & {
+    workspace_type: 'personal' | 'school';
+    workspace_description: string | null;
+    email?: string | null;
+    adminUsername?: string | null;
+    administratorId?: string | null;
+    administratorEmail?: string | null;
+    administratorNeedsPasswordChange?: boolean;
+  }
 > {
-  const response = await fetch(`/api/schools/${id}`, {});
+  const response = await fetch(
+    `/api/schools/${encodeURIComponent(id)}${includeAdminContact ? '?includeAdminContact=1' : ''}`
+  );
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message ?? 'Failed to load school');
@@ -117,6 +134,9 @@ export async function updateSchool(
     name?: string;
     nameEn?: string;
     code?: string;
+    email?: string;
+    adminUsername?: string;
+    administratorId?: string;
     documentPrefix?: string;
     documentSequenceCurrent?: number;
   }
@@ -131,6 +151,25 @@ export async function updateSchool(
   if (!response.ok) throw new Error(json.message ?? 'Failed to update school');
 
   return json.school;
+}
+
+export async function resendSchoolInvite(
+  id: string,
+  administratorId?: string,
+  temporaryPassword?: string
+): Promise<void> {
+  const query = administratorId ? `?${new URLSearchParams({ administratorId })}` : '';
+  const response = await fetch(`/api/schools/${encodeURIComponent(id)}/resend-invite${query}`, {
+    method: 'POST',
+    ...(temporaryPassword && {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ temporaryPassword }),
+    }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.message ?? 'ส่งอีเมลเชิญไม่สำเร็จ');
+  }
 }
 
 export async function deleteSchool(id: string): Promise<void> {

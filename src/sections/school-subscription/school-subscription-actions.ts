@@ -33,6 +33,7 @@ export type SchoolSubscriptionData = {
     code: string;
     logo_url: string | null;
     is_active: boolean;
+    workspace_type?: 'school' | 'personal';
   };
   subscription: SchoolSubscription;
   usage: {
