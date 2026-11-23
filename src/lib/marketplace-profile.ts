@@ -53,7 +53,9 @@ export async function ensureMarketplaceUser(params: {
         .select('id, auth_user_id, email')
         .maybeSingle();
       if (recoverError || !recoveredProfile) {
-        throw new Error(recoverError?.message ?? 'ไม่สามารถกู้คืนการเชื่อมบัญชี Marketplace ได้');
+        throw new Error('เชื่อมบัญชี Marketplace เดิมไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', {
+          cause: recoverError,
+        });
       }
       return recoveredProfile;
     }
@@ -71,8 +73,8 @@ export async function ensureMarketplaceUser(params: {
       auth_user_id: params.authUserId,
       username,
       email,
-      first_name: params.firstName || null,
-      last_name: params.lastName || null,
+      first_name: params.firstName?.trim() || usernamePrefix,
+      last_name: params.lastName?.trim() || '',
       role: 'marketplace_user',
       is_active: true,
     })
@@ -80,7 +82,10 @@ export async function ensureMarketplaceUser(params: {
     .single();
 
   if (error || !data) {
-    throw new Error(error?.message ?? 'ไม่สามารถสร้างโปรไฟล์ Marketplace ได้');
+    throw new Error(
+      'เตรียมบัญชี Marketplace ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง หากยังพบปัญหาให้ติดต่อผู้ดูแลระบบ',
+      { cause: error }
+    );
   }
   return data;
 }

@@ -180,13 +180,24 @@ export async function POST(request: Request) {
   // Personal purchases must not block existing staff or administrator logins.
   // Recover only the personal fallback, then reload rows created by provisioning.
   if (!realSchoolLinked && !emailUser) {
+    const googleDetails = authUser.identities?.find(
+      (identity) => identity.provider === 'google'
+    )?.identity_data;
+    const name =
+      googleDetails?.full_name ??
+      googleDetails?.name ??
+      authUser.user_metadata.full_name ??
+      authUser.user_metadata.name;
+    const [givenName, ...familyNameParts] =
+      typeof name === 'string' ? name.trim().split(/\s+/) : [];
+
     try {
       marketplaceProfile = await ensureMarketplaceUser({
         authUserId: authUser.id,
         email: profile.email,
         usernameHint: profile.username,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
+        firstName: profile.firstName || givenName,
+        lastName: profile.lastName || familyNameParts.join(' '),
       });
     } catch (profileError) {
       return NextResponse.json(
